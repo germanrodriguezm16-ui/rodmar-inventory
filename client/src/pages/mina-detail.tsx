@@ -48,12 +48,13 @@ export default function MinaDetail() {
   const [activeTab, setActiveTab] = useState<string>("viajes");
 
   // Función para ejecutar limpieza de transacciones ocultas
-  const ejecutarLimpiezaTransaccionesOcultas = useCallback(() => {
+  const ejecutarLimpiezaTransaccionesOcultas = useCallback(async () => {
     if (minaId) {
       console.log('🔄 LIMPIEZA: Mostrando transacciones ocultas de la mina', minaId);
+      const { apiUrl } = await import('@/lib/api');
       
       // Llamar a la API para mostrar todas las transacciones ocultas de la mina
-      fetch(`/api/transacciones/socio/mina/${minaId}/show-all`, {
+      fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}/show-all`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       }).catch(error => {
@@ -61,7 +62,7 @@ export default function MinaDetail() {
       });
       
       // También mostrar viajes ocultos de la mina
-      fetch(`/api/viajes/mina/${minaId}/show-all`, {
+      fetch(apiUrl(`/api/viajes/mina/${minaId}/show-all`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       }).catch(error => {
@@ -155,14 +156,15 @@ export default function MinaDetail() {
   // Mutación para mostrar todas las transacciones ocultas (manuales y viajes)
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
+      const { apiUrl } = await import('@/lib/api');
       // Restaurar transacciones manuales ocultas
-      const transaccionesResponse = await fetch('/api/transacciones/show-all-hidden', {
+      const transaccionesResponse = await fetch(apiUrl('/api/transacciones/show-all-hidden'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' }
       });
       
       // Restaurar viajes ocultos
-      const viajesResponse = await fetch('/api/viajes/show-all-hidden', {
+      const viajesResponse = await fetch(apiUrl('/api/viajes/show-all-hidden'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' }
       });

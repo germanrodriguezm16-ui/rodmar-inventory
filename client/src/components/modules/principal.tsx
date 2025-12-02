@@ -146,7 +146,8 @@ export default function Principal({ onOpenCargue, onOpenDescargue }: PrincipalPr
   }>({
     queryKey: ["/api/viajes", currentPage, pageSize],
     queryFn: async () => {
-      const response = await fetch(`/api/viajes?page=${currentPage}&limit=${pageSize}`);
+      const { apiUrl } = await import('@/lib/api');
+      const response = await fetch(apiUrl(`/api/viajes?page=${currentPage}&limit=${pageSize}`));
       if (!response.ok) throw new Error('Error al obtener viajes');
       return response.json();
     },

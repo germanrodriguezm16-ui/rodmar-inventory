@@ -530,14 +530,15 @@ export default function CompradorDetail() {
   // Mutación para mostrar todas las transacciones y viajes ocultos
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
+      const { apiUrl } = await import('@/lib/api');
       // Mostrar transacciones ocultas
-      const transaccionesResponse = await fetch(`/api/transacciones/socio/comprador/${compradorId}/show-all`, {
+      const transaccionesResponse = await fetch(apiUrl(`/api/transacciones/socio/comprador/${compradorId}/show-all`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       
       // Mostrar viajes ocultos
-      const viajesResponse = await fetch(`/api/viajes/comprador/${compradorId}/show-all`, {
+      const viajesResponse = await fetch(apiUrl(`/api/viajes/comprador/${compradorId}/show-all`), {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }
       });

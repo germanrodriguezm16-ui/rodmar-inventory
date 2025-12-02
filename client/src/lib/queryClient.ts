@@ -59,6 +59,14 @@ export const getQueryFn: <T>(options: {
     // En producción usa VITE_API_URL, en desarrollo usa URL relativa
     const baseUrl = import.meta.env.VITE_API_URL || '';
     const fullUrl = baseUrl ? `${baseUrl}${url}` : url;
+    
+    // Debug: verificar que VITE_API_URL esté configurada
+    if (!baseUrl && import.meta.env.PROD) {
+      console.error('❌ VITE_API_URL no está configurada en producción!');
+      console.error('   Las peticiones irán a:', window.location.origin, '(incorrecto)');
+      console.error('   Deberían ir a Railway. Configura VITE_API_URL en Vercel.');
+    }
+    
     const cacheBuster = `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
     
     const res = await fetch(cacheBuster, {
