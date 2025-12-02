@@ -484,7 +484,11 @@ function VolqueteroTabContent({ volquetero, activeTab, onEditTransaction, onDele
   // Always fetch data - hooks must be called unconditionally
   const { data: transacciones = [] } = useQuery<TransaccionWithSocio[]>({
     queryKey: ["/api/transacciones/socio", "volquetero", volquetero.id],
-    queryFn: () => fetch(`/api/transacciones/socio/volquetero/${volquetero.id}`).then(res => res.json()),
+    queryFn: async () => {
+      const { apiUrl } = await import('@/lib/api');
+      const response = await fetch(apiUrl(`/api/transacciones/socio/volquetero/${volquetero.id}`));
+      return response.json();
+    },
   });
 
   if (activeTab === "transacciones") {

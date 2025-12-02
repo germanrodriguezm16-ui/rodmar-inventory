@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import TripCard from "@/components/trip-card";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 import { formatCurrency } from "@/lib/utils";
+import { apiUrl } from "@/lib/api";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
@@ -138,7 +139,7 @@ export default function VolqueteroDetail() {
 
   const { data: transaccionesData = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
-    queryFn: () => fetch(`/api/volqueteros/${volqueteroIdActual}/transacciones`).then(res => res.json()),
+    queryFn: () => fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/transacciones`)).then(res => res.json()),
     enabled: volqueteroIdActual > 0,
   });
 
@@ -146,7 +147,7 @@ export default function VolqueteroDetail() {
   const { data: todasTransaccionesIncOcultas = [] } = useQuery({
     queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"],
     queryFn: async () => {
-      const response = await fetch(`/api/transacciones/socio/volquetero/${volqueteroIdActual}?includeHidden=true`);
+      const response = await fetch(apiUrl(`/api/transacciones/socio/volquetero/${volqueteroIdActual}?includeHidden=true`));
       if (!response.ok) throw new Error('Error al obtener transacciones');
       return response.json();
     },
@@ -407,7 +408,7 @@ export default function VolqueteroDetail() {
   // Mutación para ocultar transacciones individuales
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
-      const response = await fetch(`/api/transacciones/${transactionId}/hide-volquetero`, {
+      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide-volquetero`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -435,7 +436,7 @@ export default function VolqueteroDetail() {
   // Mutación para ocultar viajes individuales
   const hideViajeMutation = useMutation({
     mutationFn: async (viajeId: string) => {
-      const response = await fetch(`/api/viajes/${viajeId}/hide`, {
+      const response = await fetch(apiUrl(`/api/viajes/${viajeId}/hide`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -465,13 +466,13 @@ export default function VolqueteroDetail() {
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
       // Restaurar transacciones manuales ocultas
-      const transaccionesResponse = await fetch('/api/transacciones/show-all-hidden', {
+      const transaccionesResponse = await fetch(apiUrl('/api/transacciones/show-all-hidden'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' }
       });
       
       // Restaurar viajes ocultos
-      const viajesResponse = await fetch('/api/viajes/show-all-hidden', {
+      const viajesResponse = await fetch(apiUrl('/api/viajes/show-all-hidden'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' }
       });
