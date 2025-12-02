@@ -56,18 +56,20 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     // Agregar timestamp para evitar caché del navegador
     const url = queryKey[0] as string;
-    // En producción usa VITE_API_URL, en desarrollo usa URL relativa
-    const baseUrl = import.meta.env.VITE_API_URL || '';
-    const fullUrl = baseUrl ? `${baseUrl}${url}` : url;
-    
-    // Debug: verificar que VITE_API_URL esté configurada
-    if (!baseUrl && import.meta.env.PROD) {
-      console.error('❌ VITE_API_URL no está configurada en producción!');
-      console.error('   Las peticiones irán a:', window.location.origin, '(incorrecto)');
-      console.error('   Deberían ir a Railway. Configura VITE_API_URL en Vercel.');
-    }
+    // Usar la función helper para obtener la URL base
+    const { apiUrl } = await import('@/lib/api');
+    const fullUrl = apiUrl(url);
     
     const cacheBuster = `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
+    
+    // Debug solo para las primeras peticiones
+    if (queryKey[0] === '/api/transacciones' || queryKey[0] === '/api/minas' || queryKey[0] === '/api/compradores') {
+      console.log('🌐 API Request:', {
+        originalUrl: url,
+        fullUrl: cacheBuster,
+        VITE_API_URL: import.meta.env.VITE_API_URL
+      });
+    }
     
     const res = await fetch(cacheBuster, {
       credentials: "include",
