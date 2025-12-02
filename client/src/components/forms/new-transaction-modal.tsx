@@ -12,6 +12,7 @@ import { ReceiptImageUpload } from "@/components/ui/receipt-image-upload";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 // import { useOptimalMobileForm } from "@/hooks/useOptimalMobileForm";
 
@@ -196,16 +197,18 @@ function NewTransactionModal({
         return dataWithConcepto;
       }
       
-      const response = await fetch("/api/transacciones", {
+      const response = await fetch(apiUrl("/api/transacciones"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(dataWithConcepto),
+        credentials: "include",
       });
 
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
 
       return response.json();

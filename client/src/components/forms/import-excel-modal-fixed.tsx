@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Upload, Download, X, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiUrl } from "@/lib/api";
 import * as XLSX from 'xlsx';
 
 interface ImportExcelModalProps {
@@ -242,17 +243,19 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
         console.log("Checking conflicts for IDs:", tripIds);
         
         // Force refresh of server data to avoid cache issues
-        const serverViajesResponse = await fetch("/api/viajes", {
+        const serverViajesResponse = await fetch(apiUrl("/api/viajes"), {
           cache: 'no-cache',
-          headers: { 'Cache-Control': 'no-cache' }
+          headers: { 'Cache-Control': 'no-cache' },
+          credentials: 'include',
         });
         const serverViajes = await serverViajesResponse.json();
         console.log("Current server viajes:", serverViajes.map((v: any) => v.id));
         
-        const conflictResponse = await fetch("/api/check-conflicts", {
+        const conflictResponse = await fetch(apiUrl("/api/check-conflicts"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ids: tripIds }),
+          credentials: 'include',
         });
         
         const conflictData = await conflictResponse.json();

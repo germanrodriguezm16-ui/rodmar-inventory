@@ -142,7 +142,7 @@ export default function Transacciones({ onOpenTransaction }: TransaccionesProps 
 
   const confirmBulkDelete = async () => {
     try {
-      const response = await fetch('/api/transacciones/bulk-delete', {
+      const response = await fetch(apiUrl('/api/transacciones/bulk-delete'), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -150,6 +150,7 @@ export default function Transacciones({ onOpenTransaction }: TransaccionesProps 
         body: JSON.stringify({
           ids: Array.from(selectedTransactions)
         }),
+        credentials: 'include',
       });
 
       if (response.ok) {
