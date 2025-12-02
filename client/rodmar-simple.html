@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RodMar - Sistema de Gestión Minera</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #1e40af;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #6b7280;
+            font-size: 1.1rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-card h3 {
+            color: #374151;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-value {
+            color: #1f2937;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-value.loading {
+            color: #6b7280;
+            font-size: 1rem;
+        }
+        
+        .stat-description {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+        
+        .trips-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .trips-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .trips-header h2 {
+            color: #1f2937;
+            font-size: 1.5rem;
+        }
+        
+        .refresh-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .refresh-btn:hover {
+            background: #1d4ed8;
+        }
+        
+        .trips-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .trips-table th,
+        .trips-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .trips-table th {
+            background: #f9fafb;
+            color: #374151;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-completed {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .loading-message {
+            text-align: center;
+            color: #6b7280;
+            padding: 2rem;
+        }
+        
+        .error-message {
+            text-align: center;
+            color: #dc2626;
+            padding: 2rem;
+            background: #fef2f2;
+            border-radius: 6px;
+            margin-top: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .trips-table {
+                font-size: 0.9rem;
+            }
+            
+            .trips-table th,
+            .trips-table td {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚛 RodMar</h1>
+            <p>Sistema de Gestión de Operaciones Mineras</p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Viajes</h3>
+                <div class="stat-value loading" id="total-viajes">Cargando...</div>
+                <div class="stat-description">Todos los viajes registrados</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Minas Activas</h3>
+                <div class="stat-value loading" id="total-minas">Cargando...</div>
+                <div class="stat-description">Ubicaciones de extracción</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Compradores</h3>
+                <div class="stat-value loading" id="total-compradores">Cargando...</div>
+                <div class="stat-description">Clientes registrados</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Estado del Sistema</h3>
+                <div class="stat-value" style="color: #16a34a;">✓ Activo</div>
+                <div class="stat-description">Funcional sin autenticación</div>
+            </div>
+        </div>
+        
+        <div class="trips-section">
+            <div class="trips-header">
+                <h2>Últimos Viajes</h2>
+                <button class="refresh-btn" onclick="loadData()">Actualizar</button>
+            </div>
+            
+            <div id="trips-content">
+                <div class="loading-message">Cargando datos...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let viajesData = [];
+        let minasData = [];
+        let compradoresData = [];
+
+        async function loadData() {
+            try {
+                // Cargar viajes
+                const viajesResponse = await fetch('/api/viajes');
+                if (viajesResponse.ok) {
+                    viajesData = await viajesResponse.json();
+                    document.getElementById('total-viajes').innerHTML = viajesData.length;
+                    document.getElementById('total-viajes').classList.remove('loading');
+                }
+
+                // Cargar minas
+                const minasResponse = await fetch('/api/minas');
+                if (minasResponse.ok) {
+                    minasData = await minasResponse.json();
+                    document.getElementById('total-minas').innerHTML = minasData.length;
+                    document.getElementById('total-minas').classList.remove('loading');
+                }
+
+                // Cargar compradores
+                const compradoresResponse = await fetch('/api/compradores');
+                if (compradoresResponse.ok) {
+                    compradoresData = await compradoresResponse.json();
+                    document.getElementById('total-compradores').innerHTML = compradoresData.length;
+                    document.getElementById('total-compradores').classList.remove('loading');
+                }
+
+                // Mostrar tabla de viajes
+                displayTrips();
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('trips-content').innerHTML = 
+                    '<div class="error-message">Error al cargar los datos. Verifique la conexión.</div>';
+            }
+        }
+
+        function displayTrips() {
+            const tripsContent = document.getElementById('trips-content');
+            
+            if (viajesData.length === 0) {
+                tripsContent.innerHTML = '<div class="loading-message">No hay viajes registrados</div>';
+                return;
+            }
+
+            // Mostrar últimos 10 viajes
+            const recentTrips = viajesData.slice(0, 10);
+            
+            let tableHTML = `
+                <table class="trips-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Conductor</th>
+                            <th>Mina</th>
+                            <th>Comprador</th>
+                            <th>Fecha Cargue</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            recentTrips.forEach(viaje => {
+                const fechaCargue = viaje.fechaCargue ? 
+                    new Date(viaje.fechaCargue).toLocaleDateString('es-ES') : '-';
+                
+                const status = viaje.fechaDescargue ? 'Completado' : 'Pendiente';
+                const statusClass = viaje.fechaDescargue ? 'status-completed' : 'status-pending';
+                
+                // Buscar nombres de mina y comprador
+                const mina = minasData.find(m => m.id === viaje.minaId);
+                const comprador = compradoresData.find(c => c.id === viaje.compradorId);
+
+                tableHTML += `
+                    <tr>
+                        <td><strong>${viaje.id}</strong></td>
+                        <td>${viaje.conductor || '-'}</td>
+                        <td>${mina ? mina.nombre : 'ID: ' + viaje.minaId}</td>
+                        <td>${comprador ? comprador.nombre : 'ID: ' + viaje.compradorId}</td>
+                        <td>${fechaCargue}</td>
+                        <td><span class="status-badge ${statusClass}">${status}</span></td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table>';
+            tripsContent.innerHTML = tableHTML;
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-CO', {
+                style: 'currency',
+                currency: 'COP',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        // Cargar datos al iniciar la página
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

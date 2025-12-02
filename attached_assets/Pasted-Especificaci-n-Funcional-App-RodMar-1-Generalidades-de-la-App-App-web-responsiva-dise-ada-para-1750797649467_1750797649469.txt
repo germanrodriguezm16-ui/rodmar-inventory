@@ -1,0 +1,62 @@
+Especificación Funcional – App RodMar
+1. Generalidades de la App
+• App web responsiva, diseñada para usarse principalmente en celulares.
+• Funciona sin conexión a internet (almacenamiento local).
+• Usuario único: Germán Rodríguez (administrador).
+• Estructura con barra inferior fija para navegación entre módulos.
+2. Módulos Principales (barra inferior)
+1. Principal
+2. Minas
+3. Compradores
+4. Volqueteros
+5. Transacciones
+6. RodMar (perfil, ajustes y cuentas)
+3. Pantalla Principal – Historial de Viajes
+• Muestra historial de viajes directamente al iniciar.
+• Botones superiores: Registrar Cargue, Registrar Descargue.
+• Filtros por mina, comprador, ID, tipo de fecha (cargue/descargue) y fechas rápidas (hoy, ayer, esta semana, etc.).
+• Vista resumida: ID, F. Cargue, F. Descargue, Conductor, Placa, Mina, Comprador, Peso (Ton.), Recibo.
+• Botón 'Ver más': muestra columnas extendidas (VUT, CUT, FUT, Total Venta, Compra, Flete, Ganancia, etc.).
+• Edición: ventana flotante al tocar un viaje.
+• Exportar historial a Excel.
+4. Registrar Cargue
+• Formulario con: Fecha, Conductor, Tipo de carro, Placa, Mina, Precio Compra x Ton.
+• Al guardar: genera ID automático y crea viaje 'pendiente de descargue'.
+• Incluye botón flotante para cancelar.
+5. Registrar Descargue
+• Selección de viaje pendiente.
+• Campos: Fecha Descargue, Comprador, Peso, Venta x Ton., Flete x Ton., Recibo.
+• Calcula automáticamente: Total Venta, Total Flete, Total Compra, Valor a Consignar, Ganancia.
+• Al guardar: actualiza viaje y cambia estado a 'completado'.
+6. Módulo Minas
+• Crear mina (solo nombre).
+• Lista muestra nombre y saldo actual.
+• Submódulos:
+  - Viajes (con filtros, edición de viajes).
+  - Transacciones (historial editable con comentarios).
+  - Balance (Total Compras - Pagos/Adelantos + Saldos a favor).
+7. Módulo Compradores
+• Crear comprador (solo nombre).
+• Lista muestra nombre y saldo actual.
+• Submódulos:
+  - Viajes (con filtros, edición de viajes).
+  - Transacciones (historial editable con comentarios).
+  - Balance (Total Ventas - Abonos/Saldos + Préstamos).
+8. Módulo Volqueteros
+• Se crean automáticamente al registrar transacción.
+• Lista muestra nombre, placa y saldo.
+• Submódulos:
+  - Transacciones (con filtros y edición).
+  - Balance: (Pagos + Préstamos) * (−1) + Saldos a Favor.
+9. Módulo Transacciones
+• Filtros avanzados por tipo de socio, concepto, forma de pago, fechas, valores, voucher, texto libre.
+• Vista con columnas: Tipo socio, Nombre, Concepto, Valor, Fecha, Voucher.
+• Edición completa desde ventana flotante.
+• Exportación a Excel solo de transacciones filtradas.
+• Botón flotante para registrar nueva transacción (formulario dinámico).
+10. Módulo RodMar (Perfil, Cuentas y Ajustes)
+• Secciones: Mis cuentas, Mi perfil, Ajustes generales.
+• Mis cuentas: resumen global de ventas, compras, fletes, ganancias, saldos por tipo de socio.
+• Incluye gráficas (barras, tortas, líneas).
+• Mi perfil: nombre, empresa, fecha de inicio, total viajes, transacciones, minas, compradores, volqueteros.
+• Ajustes: cambiar nombre empresa, exportar toda la app, reiniciar sistema, cambiar formato numérico, activar clave de acceso.

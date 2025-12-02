@@ -1,0 +1,51 @@
+9856-22cb2ff151e48c24.js:1 Unrecognized feature: 'pointer-lock'.
+9856-22cb2ff151e48c24.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+9856-22cb2ff151e48c24.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html:32 Unrecognized feature: 'battery'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+sw.js:167 RodMar PWA: Serving core asset from cache
+sw.js:146 RodMar PWA: Fetching manifest/icons without cache
+2
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+(índice):131 [REPLIT] Preview funcionando normalmente para desarrollo
+sw.js:146 RodMar PWA: Fetching manifest/icons without cache
+14
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+sw.js:146 RodMar PWA: Fetching manifest/icons without cache
+86
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+App.tsx:30 
+ GET https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/rodmar-cuenta-detail.tsx net::ERR_ABORTED 503 (Service Unavailable)
+3
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+(índice):113 Service Worker registrado correctamente: https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/
+6
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+client:536 WebSocket connection to 'wss://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/?token=fuatOk1rdYtP' failed: 
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=fuatOk1rdYtP' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+45bcfd32-fc8f-4603-9…way.replit.dev/:125 
+ GET https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-192-1751394032734.png 503 (Service Unavailable)
+45bcfd32-fc8f-4603-9…way.replit.dev/:126 
+ GET https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-512-1751394032734.png 503 (Service Unavailable)
+45bcfd32-fc8f-4603-9…neway.replit.dev/:1 Uncaught (in promise) TypeError: Failed to update a ServiceWorker for scope ('https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/') with script ('https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/sw.js'): A bad HTTP response code (503) was received when fetching the script.
+45bcfd32-fc8f-4603-9…neway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-192-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+45bcfd32-fc8f-4603-9…neway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-512-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+﻿
+

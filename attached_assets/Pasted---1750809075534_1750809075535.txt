@@ -1,0 +1,1461 @@
+
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+_app-f1648e34dd1e08d6.js:38 [LaunchDarkly] LaunchDarkly client initialized
+content.js:1 Uncaught (in promise) The message port closed before a response was received.Understand this error
+/~:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+recaptcha__es_419.js:546 Cross-Origin-Opener-Policy policy would block the window.length call.
+(anonymous) @ recaptcha__es_419.js:546Understand this error
+recaptcha__es_419.js:546 Cross-Origin-Opener-Policy policy would block the window.length call.
+(anonymous) @ recaptcha__es_419.js:546Understand this error
+32Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1
+(anonymous) @ framework-3f1963d5faa8e2fa.js:1
+uD @ framework-3f1963d5faa8e2fa.js:1
+uI @ framework-3f1963d5faa8e2fa.js:1
+uM @ framework-3f1963d5faa8e2fa.js:1
+uS @ framework-3f1963d5faa8e2fa.js:1
+C @ framework-3f1963d5faa8e2fa.js:1
+z @ framework-3f1963d5faa8e2fa.js:1Understand this error
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar11g%3A:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1
+(anonymous) @ framework-3f1963d5faa8e2fa.js:1
+uD @ framework-3f1963d5faa8e2fa.js:1
+uI @ framework-3f1963d5faa8e2fa.js:1
+uM @ framework-3f1963d5faa8e2fa.js:1
+uS @ framework-3f1963d5faa8e2fa.js:1
+C @ framework-3f1963d5faa8e2fa.js:1
+z @ framework-3f1963d5faa8e2fa.js:1Understand this error
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar13e%3A:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1
+(anonymous) @ framework-3f1963d5faa8e2fa.js:1
+uD @ framework-3f1963d5faa8e2fa.js:1
+uI @ framework-3f1963d5faa8e2fa.js:1
+uM @ framework-3f1963d5faa8e2fa.js:1
+uS @ framework-3f1963d5faa8e2fa.js:1
+C @ framework-3f1963d5faa8e2fa.js:1
+z @ framework-3f1963d5faa8e2fa.js:1Understand this error
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+framework-3f1963d5faa8e2fa.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-3f1963d5faa8e2fa.js:1
+(anonymous) @ framework-3f1963d5faa8e2fa.js:1
+uD @ framework-3f1963d5faa8e2fa.js:1
+uI @ framework-3f1963d5faa8e2fa.js:1
+uM @ framework-3f1963d5faa8e2fa.js:1
+uS @ framework-3f1963d5faa8e2fa.js:1
+C @ framework-3f1963d5faa8e2fa.js:1
+z @ framework-3f1963d5faa8e2fa.js:1Understand this error
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+8Unrecognized feature: 'ambient-light-sensor'.Understand this warning
+8Unrecognized feature: 'battery'.Understand this warning
+8Unrecognized feature: 'execution-while-not-rendered'.Understand this warning
+8Unrecognized feature: 'execution-while-out-of-viewport'.Understand this warning
+8Unrecognized feature: 'layout-animations'.Understand this warning
+8Unrecognized feature: 'legacy-image-formats'.Understand this warning
+8Unrecognized feature: 'navigation-override'.Understand this warning
+8Unrecognized feature: 'oversized-images'.Understand this warning
+8Unrecognized feature: 'publickey-credentials'.Understand this warning
+8Unrecognized feature: 'speaker-selection'.Understand this warning
+8Unrecognized feature: 'unoptimized-images'.Understand this warning
+8Unrecognized feature: 'unsized-media'.Understand this warning
+framework-3f1963d5faa8e2fa.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-3f1963d5faa8e2fa.js:1Understand this warning
+8Allow attribute will take precedence over 'allowfullscreen'.Understand this warning
+8Allow attribute will take precedence over 'allowpaymentrequest'.Understand this warning
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ VM1437 eruda.js:2
+(anonymous) @ VM1530 @radix-ui_react-dialog.js:335
+commitHookEffectListMount @ VM1467 chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ VM1467 chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ VM1467 chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ VM1467 chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ VM1467 chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ VM1467 chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ VM1467 chunk-RPCDYKBN.js:19447
+commitRootImpl @ VM1467 chunk-RPCDYKBN.js:19416
+commitRoot @ VM1467 chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ VM1467 chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ VM1467 chunk-RPCDYKBN.js:9119
+(anonymous) @ VM1467 chunk-RPCDYKBN.js:18627Understand this warning
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 [vite] server connection lost. Polling for restart...
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 Viajes button clicked for: Mina El Dorado
+eruda.js:2 Opening mina: Mina El Dorado
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ eruda.js:2
+(anonymous) @ @radix-ui_react-dialog.js:337
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this warning
+eruda.js:2 
+            
+            
+           GET https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/api/viajes/mina 404 (Not Found)
+window.fetch @ eruda.js:2
+(anonymous) @ queryClient.ts:19
+fetchFn @ @tanstack_react-query.js:840
+run @ @tanstack_react-query.js:494
+start @ @tanstack_react-query.js:536
+fetch @ @tanstack_react-query.js:926
+executeFetch_fn @ @tanstack_react-query.js:2211
+onSubscribe @ @tanstack_react-query.js:1898
+subscribe @ @tanstack_react-query.js:24
+(anonymous) @ @tanstack_react-query.js:3022
+subscribeToStore @ chunk-RPCDYKBN.js:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this error
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 Modal open state changed: false
+eruda.js:2 MinaDetailModalInline render: {open: false, minaName: 'Mina El Dorado'}
+eruda.js:2 Transacciones button clicked for: Mina El Dorado
+eruda.js:2 Opening mina: Mina El Dorado
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ eruda.js:2
+(anonymous) @ @radix-ui_react-dialog.js:337
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this warning
+eruda.js:2 
+            
+            
+           GET https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/api/viajes/mina 404 (Not Found)
+window.fetch @ eruda.js:2
+(anonymous) @ queryClient.ts:19
+fetchFn @ @tanstack_react-query.js:840
+run @ @tanstack_react-query.js:494
+start @ @tanstack_react-query.js:536
+fetch @ @tanstack_react-query.js:926
+executeFetch_fn @ @tanstack_react-query.js:2211
+setOptions @ @tanstack_react-query.js:1955
+(anonymous) @ @tanstack_react-query.js:3032
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this error
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 Modal open state changed: false
+eruda.js:2 MinaDetailModalInline render: {open: false, minaName: 'Mina El Dorado'}
+eruda.js:2 Transacciones button clicked for: Mina El Dorado
+eruda.js:2 Opening mina: Mina El Dorado
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ eruda.js:2
+(anonymous) @ @radix-ui_react-dialog.js:337
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this warning
+eruda.js:2 
+            
+            
+           GET https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/api/viajes/mina 404 (Not Found)
+window.fetch @ eruda.js:2
+(anonymous) @ queryClient.ts:19
+fetchFn @ @tanstack_react-query.js:840
+run @ @tanstack_react-query.js:494
+start @ @tanstack_react-query.js:536
+fetch @ @tanstack_react-query.js:926
+executeFetch_fn @ @tanstack_react-query.js:2211
+setOptions @ @tanstack_react-query.js:1955
+(anonymous) @ @tanstack_react-query.js:3032
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this error
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 Modal open state changed: false
+eruda.js:2 MinaDetailModalInline render: {open: false, minaName: 'Mina El Dorado'}
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ eruda.js:2
+(anonymous) @ @radix-ui_react-dialog.js:337
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this warning
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ eruda.js:2
+(anonymous) @ @radix-ui_react-dialog.js:337
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this warning
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: [{…}]
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 Viajes button clicked for: Mina El Dorado
+eruda.js:2 Opening mina: Mina El Dorado
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ eruda.js:2
+(anonymous) @ @radix-ui_react-dialog.js:337
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this warning
+eruda.js:2 
+            
+            
+           GET https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/api/viajes/mina 404 (Not Found)
+window.fetch @ eruda.js:2
+(anonymous) @ queryClient.ts:19
+fetchFn @ @tanstack_react-query.js:840
+run @ @tanstack_react-query.js:494
+start @ @tanstack_react-query.js:536
+fetch @ @tanstack_react-query.js:926
+executeFetch_fn @ @tanstack_react-query.js:2211
+onSubscribe @ @tanstack_react-query.js:1898
+subscribe @ @tanstack_react-query.js:24
+(anonymous) @ @tanstack_react-query.js:3022
+subscribeToStore @ chunk-RPCDYKBN.js:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this error
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 Modal open state changed: false
+eruda.js:2 MinaDetailModalInline render: {open: false, minaName: 'Mina El Dorado'}
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ eruda.js:2
+(anonymous) @ @radix-ui_react-dialog.js:337
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this warning
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 Viajes button clicked for: Mina El Dorado
+eruda.js:2 Opening mina: Mina El Dorado
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ eruda.js:2
+(anonymous) @ @radix-ui_react-dialog.js:337
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this warning
+eruda.js:2 
+            
+            
+           GET https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/api/viajes/mina 404 (Not Found)
+window.fetch @ eruda.js:2
+(anonymous) @ queryClient.ts:19
+fetchFn @ @tanstack_react-query.js:840
+run @ @tanstack_react-query.js:494
+start @ @tanstack_react-query.js:536
+fetch @ @tanstack_react-query.js:926
+executeFetch_fn @ @tanstack_react-query.js:2211
+onSubscribe @ @tanstack_react-query.js:1898
+subscribe @ @tanstack_react-query.js:24
+(anonymous) @ @tanstack_react-query.js:3022
+subscribeToStore @ chunk-RPCDYKBN.js:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this error
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 Modal open state changed: false
+eruda.js:2 MinaDetailModalInline render: {open: false, minaName: 'Mina El Dorado'}
+eruda.js:2 Transacciones button clicked for: Mina San Pedro
+eruda.js:2 Opening mina: Mina San Pedro
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina San Pedro'}
+eruda.js:2 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ eruda.js:2
+(anonymous) @ @radix-ui_react-dialog.js:337
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this warning
+eruda.js:2 
+            
+            
+           GET https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/api/viajes/mina 404 (Not Found)
+window.fetch @ eruda.js:2
+(anonymous) @ queryClient.ts:19
+fetchFn @ @tanstack_react-query.js:840
+run @ @tanstack_react-query.js:494
+start @ @tanstack_react-query.js:536
+fetch @ @tanstack_react-query.js:926
+executeFetch_fn @ @tanstack_react-query.js:2211
+setOptions @ @tanstack_react-query.js:1955
+(anonymous) @ @tanstack_react-query.js:3032
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this error
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina San Pedro'}
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina San Pedro'}
+eruda.js:2 Modal open state changed: false
+eruda.js:2 MinaDetailModalInline render: {open: false, minaName: 'Mina San Pedro'}
+eruda.js:2 Viajes button clicked for: Mina El Dorado
+eruda.js:2 Opening mina: Mina El Dorado
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ eruda.js:2
+(anonymous) @ @radix-ui_react-dialog.js:337
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this warning
+eruda.js:2 
+            
+            
+           GET https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/api/viajes/mina 404 (Not Found)
+window.fetch @ eruda.js:2
+(anonymous) @ queryClient.ts:19
+fetchFn @ @tanstack_react-query.js:840
+run @ @tanstack_react-query.js:494
+start @ @tanstack_react-query.js:536
+fetch @ @tanstack_react-query.js:926
+executeFetch_fn @ @tanstack_react-query.js:2211
+setOptions @ @tanstack_react-query.js:1955
+(anonymous) @ @tanstack_react-query.js:3032
+commitHookEffectListMount @ chunk-RPCDYKBN.js:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js:19447
+commitRootImpl @ chunk-RPCDYKBN.js:19416
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+(anonymous) @ chunk-RPCDYKBN.js:18627Understand this error
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 MinaDetailModalInline render: {open: true, minaName: 'Mina El Dorado'}
+eruda.js:2 Modal open state changed: false
+eruda.js:2 MinaDetailModalInline render: {open: false, minaName: 'Mina El Dorado'}
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/minas.tsx?t=1750808167537:320 Uncaught ReferenceError: selectedMina is not defined
+    at Minas (45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/minas.tsx?t=1750808167537:320:5)
+    at renderWithHooks (chunk-RPCDYKBN.js:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js:14926:21)
+    at beginWork (chunk-RPCDYKBN.js:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js:19137:13)
+Minas @ 45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/minas.tsx?t=1750808167537:320
+renderWithHooks @ chunk-RPCDYKBN.js:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js:14926
+beginWork @ chunk-RPCDYKBN.js:15914
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+beginWork$1 @ chunk-RPCDYKBN.js:19765
+performUnitOfWork @ chunk-RPCDYKBN.js:19198
+workLoopSync @ chunk-RPCDYKBN.js:19137
+renderRootSync @ chunk-RPCDYKBN.js:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+flushSync @ chunk-RPCDYKBN.js:18959
+scheduleRefresh @ chunk-RPCDYKBN.js:20004
+(anonymous) @ @react-refresh:188
+performReactRefresh @ @react-refresh:180
+(anonymous) @ @react-refresh:474
+setTimeout
+(anonymous) @ @react-refresh:465
+validateRefreshBoundaryAndEnqueueUpdate @ @react-refresh:512
+(anonymous) @ minas.tsx:948
+(anonymous) @ client:34
+(anonymous) @ client:218
+(anonymous) @ client:193
+queueUpdate @ client:193
+await in queueUpdate
+(anonymous) @ client:642
+handleMessage @ client:640
+(anonymous) @ client:550Understand this error
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/minas.tsx?t=1750808167537:320 Uncaught ReferenceError: selectedMina is not defined
+    at Minas (45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/minas.tsx?t=1750808167537:320:5)
+    at renderWithHooks (chunk-RPCDYKBN.js:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js:14926:21)
+    at beginWork (chunk-RPCDYKBN.js:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js:19137:13)
+Minas @ 45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/minas.tsx?t=1750808167537:320
+renderWithHooks @ chunk-RPCDYKBN.js:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js:14926
+beginWork @ chunk-RPCDYKBN.js:15914
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+beginWork$1 @ chunk-RPCDYKBN.js:19765
+performUnitOfWork @ chunk-RPCDYKBN.js:19198
+workLoopSync @ chunk-RPCDYKBN.js:19137
+renderRootSync @ chunk-RPCDYKBN.js:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js:18736
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18879
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+flushSync @ chunk-RPCDYKBN.js:18959
+scheduleRefresh @ chunk-RPCDYKBN.js:20004
+(anonymous) @ @react-refresh:188
+performReactRefresh @ @react-refresh:180
+(anonymous) @ @react-refresh:474
+setTimeout
+(anonymous) @ @react-refresh:465
+validateRefreshBoundaryAndEnqueueUpdate @ @react-refresh:512
+(anonymous) @ minas.tsx:948
+(anonymous) @ client:34
+(anonymous) @ client:218
+(anonymous) @ client:193
+queueUpdate @ client:193
+await in queueUpdate
+(anonymous) @ client:642
+handleMessage @ client:640
+(anonymous) @ client:550Understand this error
+eruda.js:2 The above error occurred in the <Minas> component:
+
+    at Minas (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/minas.tsx?t=1750808167537:32:41)
+    at div
+    at main
+    at div
+    at Dashboard (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/dashboard.tsx:34:43)
+    at Route (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=effaf83f:323:16)
+    at Switch (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=effaf83f:379:17)
+    at Router
+    at Provider (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M3NVYRND.js?v=effaf83f:48:15)
+    at TooltipProvider (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=effaf83f:58:5)
+    at QueryClientProvider (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=effaf83f:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+Mt.forEach.n.<computed> @ eruda.js:2
+logCapturedError @ chunk-RPCDYKBN.js:14032
+update.callback @ chunk-RPCDYKBN.js:14052
+callCallback @ chunk-RPCDYKBN.js:11248
+commitUpdateQueue @ chunk-RPCDYKBN.js:11265
+commitLayoutEffectOnFiber @ chunk-RPCDYKBN.js:17093
+commitLayoutMountEffects_complete @ chunk-RPCDYKBN.js:17980
+commitLayoutEffects_begin @ chunk-RPCDYKBN.js:17969
+commitLayoutEffects @ chunk-RPCDYKBN.js:17920
+commitRootImpl @ chunk-RPCDYKBN.js:19353
+commitRoot @ chunk-RPCDYKBN.js:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+flushSync @ chunk-RPCDYKBN.js:18959
+scheduleRefresh @ chunk-RPCDYKBN.js:20004
+(anonymous) @ @react-refresh:188
+performReactRefresh @ @react-refresh:180
+(anonymous) @ @react-refresh:474
+setTimeout
+(anonymous) @ @react-refresh:465
+validateRefreshBoundaryAndEnqueueUpdate @ @react-refresh:512
+(anonymous) @ minas.tsx:948
+(anonymous) @ client:34
+(anonymous) @ client:218
+(anonymous) @ client:193
+queueUpdate @ client:193
+await in queueUpdate
+(anonymous) @ client:642
+handleMessage @ client:640
+(anonymous) @ client:550Understand this error
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/minas.tsx?t=1750808167537:320 Uncaught (in promise) ReferenceError: selectedMina is not defined
+    at Minas (45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/minas.tsx?t=1750808167537:320:5)
+    at renderWithHooks (chunk-RPCDYKBN.js:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js:14926:21)
+    at beginWork (chunk-RPCDYKBN.js:15914:22)
+    at beginWork$1 (chunk-RPCDYKBN.js:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js:19137:13)
+    at renderRootSync (chunk-RPCDYKBN.js:19116:15)
+    at recoverFromConcurrentError (chunk-RPCDYKBN.js:18736:28)
+    at performSyncWorkOnRoot (chunk-RPCDYKBN.js:18879:28)
+Minas @ 45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/minas.tsx?t=1750808167537:320
+renderWithHooks @ chunk-RPCDYKBN.js:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js:14926
+beginWork @ chunk-RPCDYKBN.js:15914
+beginWork$1 @ chunk-RPCDYKBN.js:19753
+performUnitOfWork @ chunk-RPCDYKBN.js:19198
+workLoopSync @ chunk-RPCDYKBN.js:19137
+renderRootSync @ chunk-RPCDYKBN.js:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js:18736
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js:18879
+flushSyncCallbacks @ chunk-RPCDYKBN.js:9119
+flushSync @ chunk-RPCDYKBN.js:18959
+scheduleRefresh @ chunk-RPCDYKBN.js:20004
+(anonymous) @ @react-refresh:188
+performReactRefresh @ @react-refresh:180
+(anonymous) @ @react-refresh:474
+setTimeout
+(anonymous) @ @react-refresh:465
+validateRefreshBoundaryAndEnqueueUpdate @ @react-refresh:512
+(anonymous) @ minas.tsx:948
+(anonymous) @ client:34
+(anonymous) @ client:218
+(anonymous) @ client:193
+queueUpdate @ client:193
+await in queueUpdate
+(anonymous) @ client:642
+handleMessage @ client:640
+(anonymous) @ client:550Understand this error
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 [vite] server connection lost. Polling for restart...
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 Viajes button clicked for: Mina El Dorado
+minas.tsx:221 Uncaught ReferenceError: handleOpenMina is not defined
+    at onClick (minas.tsx:221:17)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-RPCDYKBN.js:3736:33)
+    at executeDispatch (chunk-RPCDYKBN.js:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-RPCDYKBN.js:7034:15)
+    at processDispatchQueue (chunk-RPCDYKBN.js:7043:13)
+    at dispatchEventsForPlugins (chunk-RPCDYKBN.js:7051:11)
+    at chunk-RPCDYKBN.js:7174:20
+onClick @ minas.tsx:221
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js:3736
+executeDispatch @ chunk-RPCDYKBN.js:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js:7034
+processDispatchQueue @ chunk-RPCDYKBN.js:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js:7051
+(anonymous) @ chunk-RPCDYKBN.js:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js:18913
+batchedUpdates @ chunk-RPCDYKBN.js:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js:5478
+dispatchEvent @ chunk-RPCDYKBN.js:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js:5449Understand this error
+chunk-RPCDYKBN.js:3750 Uncaught ReferenceError: handleOpenMina is not defined
+    at onClick (minas.tsx:221:17)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-RPCDYKBN.js:3736:33)
+    at executeDispatch (chunk-RPCDYKBN.js:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-RPCDYKBN.js:7034:15)
+    at processDispatchQueue (chunk-RPCDYKBN.js:7043:13)
+    at dispatchEventsForPlugins (chunk-RPCDYKBN.js:7051:11)
+    at chunk-RPCDYKBN.js:7174:20
+onClick @ minas.tsx:221
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js:3736
+executeDispatch @ chunk-RPCDYKBN.js:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js:7034
+processDispatchQueue @ chunk-RPCDYKBN.js:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js:7051
+(anonymous) @ chunk-RPCDYKBN.js:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js:18913
+batchedUpdates @ chunk-RPCDYKBN.js:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js:5478
+dispatchEvent @ chunk-RPCDYKBN.js:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js:5449Understand this error
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 Transacciones button clicked for: Mina El Dorado
+minas.tsx:245 Uncaught ReferenceError: handleOpenMina is not defined
+    at onClick (minas.tsx:245:17)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-RPCDYKBN.js:3736:33)
+    at executeDispatch (chunk-RPCDYKBN.js:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-RPCDYKBN.js:7034:15)
+    at processDispatchQueue (chunk-RPCDYKBN.js:7043:13)
+    at dispatchEventsForPlugins (chunk-RPCDYKBN.js:7051:11)
+    at chunk-RPCDYKBN.js:7174:20
+onClick @ minas.tsx:245
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js:3736
+executeDispatch @ chunk-RPCDYKBN.js:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js:7034
+processDispatchQueue @ chunk-RPCDYKBN.js:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js:7051
+(anonymous) @ chunk-RPCDYKBN.js:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js:18913
+batchedUpdates @ chunk-RPCDYKBN.js:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js:5478
+dispatchEvent @ chunk-RPCDYKBN.js:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js:5449Understand this error
+chunk-RPCDYKBN.js:3750 Uncaught ReferenceError: handleOpenMina is not defined
+    at onClick (minas.tsx:245:17)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-RPCDYKBN.js:3736:33)
+    at executeDispatch (chunk-RPCDYKBN.js:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-RPCDYKBN.js:7034:15)
+    at processDispatchQueue (chunk-RPCDYKBN.js:7043:13)
+    at dispatchEventsForPlugins (chunk-RPCDYKBN.js:7051:11)
+    at chunk-RPCDYKBN.js:7174:20
+onClick @ minas.tsx:245
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js:3736
+executeDispatch @ chunk-RPCDYKBN.js:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js:7034
+processDispatchQueue @ chunk-RPCDYKBN.js:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js:7051
+(anonymous) @ chunk-RPCDYKBN.js:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js:18913
+batchedUpdates @ chunk-RPCDYKBN.js:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js:5478
+dispatchEvent @ chunk-RPCDYKBN.js:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js:5449Understand this error
+eruda.js:2 Viajes button clicked for: Mina El Dorado
+minas.tsx:221 Uncaught ReferenceError: handleOpenMina is not defined
+    at onClick (minas.tsx:221:17)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-RPCDYKBN.js:3736:33)
+    at executeDispatch (chunk-RPCDYKBN.js:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-RPCDYKBN.js:7034:15)
+    at processDispatchQueue (chunk-RPCDYKBN.js:7043:13)
+    at dispatchEventsForPlugins (chunk-RPCDYKBN.js:7051:11)
+    at chunk-RPCDYKBN.js:7174:20
+onClick @ minas.tsx:221
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js:3736
+executeDispatch @ chunk-RPCDYKBN.js:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js:7034
+processDispatchQueue @ chunk-RPCDYKBN.js:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js:7051
+(anonymous) @ chunk-RPCDYKBN.js:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js:18913
+batchedUpdates @ chunk-RPCDYKBN.js:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js:5478
+dispatchEvent @ chunk-RPCDYKBN.js:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js:5449Understand this error
+chunk-RPCDYKBN.js:3750 Uncaught ReferenceError: handleOpenMina is not defined
+    at onClick (minas.tsx:221:17)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-RPCDYKBN.js:3736:33)
+    at executeDispatch (chunk-RPCDYKBN.js:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-RPCDYKBN.js:7034:15)
+    at processDispatchQueue (chunk-RPCDYKBN.js:7043:13)
+    at dispatchEventsForPlugins (chunk-RPCDYKBN.js:7051:11)
+    at chunk-RPCDYKBN.js:7174:20
+onClick @ minas.tsx:221
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js:3736
+executeDispatch @ chunk-RPCDYKBN.js:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js:7034
+processDispatchQueue @ chunk-RPCDYKBN.js:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js:7051
+(anonymous) @ chunk-RPCDYKBN.js:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js:18913
+batchedUpdates @ chunk-RPCDYKBN.js:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js:5478
+dispatchEvent @ chunk-RPCDYKBN.js:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js:5449Understand this error
+eruda.js:2 Viajes button clicked for: Mina El Dorado
+minas.tsx:221 Uncaught ReferenceError: handleOpenMina is not defined
+    at onClick (minas.tsx:221:17)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-RPCDYKBN.js:3736:33)
+    at executeDispatch (chunk-RPCDYKBN.js:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-RPCDYKBN.js:7034:15)
+    at processDispatchQueue (chunk-RPCDYKBN.js:7043:13)
+    at dispatchEventsForPlugins (chunk-RPCDYKBN.js:7051:11)
+    at chunk-RPCDYKBN.js:7174:20
+onClick @ minas.tsx:221
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js:3736
+executeDispatch @ chunk-RPCDYKBN.js:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js:7034
+processDispatchQueue @ chunk-RPCDYKBN.js:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js:7051
+(anonymous) @ chunk-RPCDYKBN.js:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js:18913
+batchedUpdates @ chunk-RPCDYKBN.js:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js:5478
+dispatchEvent @ chunk-RPCDYKBN.js:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js:5449Understand this error
+chunk-RPCDYKBN.js:3750 Uncaught ReferenceError: handleOpenMina is not defined
+    at onClick (minas.tsx:221:17)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-RPCDYKBN.js:3736:33)
+    at executeDispatch (chunk-RPCDYKBN.js:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-RPCDYKBN.js:7034:15)
+    at processDispatchQueue (chunk-RPCDYKBN.js:7043:13)
+    at dispatchEventsForPlugins (chunk-RPCDYKBN.js:7051:11)
+    at chunk-RPCDYKBN.js:7174:20
+onClick @ minas.tsx:221
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js:3736
+executeDispatch @ chunk-RPCDYKBN.js:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js:7034
+processDispatchQueue @ chunk-RPCDYKBN.js:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js:7051
+(anonymous) @ chunk-RPCDYKBN.js:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js:18913
+batchedUpdates @ chunk-RPCDYKBN.js:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js:5478
+dispatchEvent @ chunk-RPCDYKBN.js:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js:5449Understand this error
+eruda.js:2 Viajes button clicked for: Mina El Dorado
+minas.tsx:221 Uncaught ReferenceError: handleOpenMina is not defined
+    at onClick (minas.tsx:221:17)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-RPCDYKBN.js:3736:33)
+    at executeDispatch (chunk-RPCDYKBN.js:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-RPCDYKBN.js:7034:15)
+    at processDispatchQueue (chunk-RPCDYKBN.js:7043:13)
+    at dispatchEventsForPlugins (chunk-RPCDYKBN.js:7051:11)
+    at chunk-RPCDYKBN.js:7174:20
+onClick @ minas.tsx:221
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js:3736
+executeDispatch @ chunk-RPCDYKBN.js:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js:7034
+processDispatchQueue @ chunk-RPCDYKBN.js:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js:7051
+(anonymous) @ chunk-RPCDYKBN.js:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js:18913
+batchedUpdates @ chunk-RPCDYKBN.js:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js:5478
+dispatchEvent @ chunk-RPCDYKBN.js:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js:5449Understand this error
+chunk-RPCDYKBN.js:3750 Uncaught ReferenceError: handleOpenMina is not defined
+    at onClick (minas.tsx:221:17)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-RPCDYKBN.js:3736:33)
+    at executeDispatch (chunk-RPCDYKBN.js:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-RPCDYKBN.js:7034:15)
+    at processDispatchQueue (chunk-RPCDYKBN.js:7043:13)
+    at dispatchEventsForPlugins (chunk-RPCDYKBN.js:7051:11)
+    at chunk-RPCDYKBN.js:7174:20
+onClick @ minas.tsx:221
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js:3736
+executeDispatch @ chunk-RPCDYKBN.js:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js:7034
+processDispatchQueue @ chunk-RPCDYKBN.js:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js:7051
+(anonymous) @ chunk-RPCDYKBN.js:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js:18913
+batchedUpdates @ chunk-RPCDYKBN.js:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js:5478
+dispatchEvent @ chunk-RPCDYKBN.js:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js:5449Understand this error
+eruda.js:2 Viajes button clicked for: Mina El Dorado
+minas.tsx:221 Uncaught ReferenceError: handleOpenMina is not defined
+    at onClick (minas.tsx:221:17)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-RPCDYKBN.js:3736:33)
+    at executeDispatch (chunk-RPCDYKBN.js:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-RPCDYKBN.js:7034:15)
+    at processDispatchQueue (chunk-RPCDYKBN.js:7043:13)
+    at dispatchEventsForPlugins (chunk-RPCDYKBN.js:7051:11)
+    at chunk-RPCDYKBN.js:7174:20
+onClick @ minas.tsx:221
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js:3736
+executeDispatch @ chunk-RPCDYKBN.js:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js:7034
+processDispatchQueue @ chunk-RPCDYKBN.js:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js:7051
+(anonymous) @ chunk-RPCDYKBN.js:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js:18913
+batchedUpdates @ chunk-RPCDYKBN.js:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js:5478
+dispatchEvent @ chunk-RPCDYKBN.js:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js:5449Understand this error
+chunk-RPCDYKBN.js:3750 Uncaught ReferenceError: handleOpenMina is not defined
+    at onClick (minas.tsx:221:17)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-RPCDYKBN.js:3736:33)
+    at executeDispatch (chunk-RPCDYKBN.js:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-RPCDYKBN.js:7034:15)
+    at processDispatchQueue (chunk-RPCDYKBN.js:7043:13)
+    at dispatchEventsForPlugins (chunk-RPCDYKBN.js:7051:11)
+    at chunk-RPCDYKBN.js:7174:20
+onClick @ minas.tsx:221
+callCallback2 @ chunk-RPCDYKBN.js:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js:3736
+executeDispatch @ chunk-RPCDYKBN.js:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js:7034
+processDispatchQueue @ chunk-RPCDYKBN.js:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js:7051
+(anonymous) @ chunk-RPCDYKBN.js:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js:18913
+batchedUpdates @ chunk-RPCDYKBN.js:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js:5478
+dispatchEvent @ chunk-RPCDYKBN.js:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js:5449Understand this error
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+3content.js:1 Uncaught (in promise) The message port closed before a response was received.
+(anonymous) @ content.js:1Understand this error
+content.js:2 The message port closed before a response was received.
+eruda.js:2 RegisterDescargueModal - viajes pendientes: []
+eruda.js:2 [vite] server connection lost. Polling for restart...
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 Toggling mina: 1
+queryClient.ts:32 
+            
+            
+           GET https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/api/viajes/mina 404 (Not Found)
+window.fetch @ Network.js:219
+(anonymous) @ queryClient.ts:32
+fetchFn @ @tanstack_react-query.js?v=0f26d224:840
+run @ @tanstack_react-query.js?v=0f26d224:494
+start @ @tanstack_react-query.js?v=0f26d224:536
+fetch @ @tanstack_react-query.js?v=0f26d224:926
+executeFetch_fn @ @tanstack_react-query.js?v=0f26d224:2211
+onSubscribe @ @tanstack_react-query.js?v=0f26d224:1898
+subscribe @ @tanstack_react-query.js?v=0f26d224:24
+(anonymous) @ @tanstack_react-query.js?v=0f26d224:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=0f26d224:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=0f26d224:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=0f26d224:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=0f26d224:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=0f26d224:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=0f26d224:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=0f26d224:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=0f26d224:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=0f26d224:19416
+commitRoot @ chunk-RPCDYKBN.js?v=0f26d224:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0f26d224:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0f26d224:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0f26d224:18627Understand this error
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ Console.js:61
+(anonymous) @ @radix-ui_react-dialog.js?v=0f26d224:337
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=0f26d224:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=0f26d224:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=0f26d224:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=0f26d224:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=0f26d224:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=0f26d224:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=0f26d224:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=0f26d224:19416
+commitRoot @ chunk-RPCDYKBN.js?v=0f26d224:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0f26d224:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0f26d224:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0f26d224:18627Understand this warning
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ Console.js:61
+(anonymous) @ @radix-ui_react-dialog.js?v=0f26d224:337
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=0f26d224:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=0f26d224:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=0f26d224:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=0f26d224:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=0f26d224:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=0f26d224:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=0f26d224:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=0f26d224:19416
+commitRoot @ chunk-RPCDYKBN.js?v=0f26d224:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0f26d224:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0f26d224:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0f26d224:18627Understand this warning
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: [{…}]
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 Toggling mina: 1
+queryClient.ts:32 
+            
+            
+           GET https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/api/viajes/mina 404 (Not Found)
+window.fetch @ Network.js:219
+(anonymous) @ queryClient.ts:32
+fetchFn @ @tanstack_react-query.js?v=0f26d224:840
+run @ @tanstack_react-query.js?v=0f26d224:494
+start @ @tanstack_react-query.js?v=0f26d224:536
+fetch @ @tanstack_react-query.js?v=0f26d224:926
+executeFetch_fn @ @tanstack_react-query.js?v=0f26d224:2211
+onSubscribe @ @tanstack_react-query.js?v=0f26d224:1898
+subscribe @ @tanstack_react-query.js?v=0f26d224:24
+(anonymous) @ @tanstack_react-query.js?v=0f26d224:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=0f26d224:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=0f26d224:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=0f26d224:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=0f26d224:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=0f26d224:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=0f26d224:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=0f26d224:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=0f26d224:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=0f26d224:19416
+commitRoot @ chunk-RPCDYKBN.js?v=0f26d224:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0f26d224:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0f26d224:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0f26d224:18627Understand this error
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+Console.js:61 RegisterDescargueModal - viajes pendientes: []
+@radix-ui_react-select.js?v=0f26d224:880 Uncaught Error: A <Select.Item /> must have a value prop that is not an empty string. This is because the Select value can be set to an empty string to clear the selection and show the placeholder.
+    at @radix-ui_react-select.js?v=0f26d224:880:13
+    at renderWithHooks (chunk-RPCDYKBN.js?v=0f26d224:11548:26)
+    at updateForwardRef (chunk-RPCDYKBN.js?v=0f26d224:14325:28)
+    at beginWork (chunk-RPCDYKBN.js?v=0f26d224:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=0f26d224:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=0f26d224:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=0f26d224:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=0f26d224:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=0f26d224:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=0f26d224:19137:13)
+(anonymous) @ @radix-ui_react-select.js?v=0f26d224:880
+renderWithHooks @ chunk-RPCDYKBN.js?v=0f26d224:11548
+updateForwardRef @ chunk-RPCDYKBN.js?v=0f26d224:14325
+beginWork @ chunk-RPCDYKBN.js?v=0f26d224:15946
+callCallback2 @ chunk-RPCDYKBN.js?v=0f26d224:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=0f26d224:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=0f26d224:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=0f26d224:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=0f26d224:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=0f26d224:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=0f26d224:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0f26d224:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0f26d224:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0f26d224:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=0f26d224:555
+flush @ @tanstack_react-query.js?v=0f26d224:569
+batch @ @tanstack_react-query.js?v=0f26d224:587
+dispatch_fn @ @tanstack_react-query.js?v=0f26d224:996
+setData @ @tanstack_react-query.js?v=0f26d224:696
+onSuccess @ @tanstack_react-query.js?v=0f26d224:897
+resolve @ @tanstack_react-query.js?v=0f26d224:456
+Promise.then
+run @ @tanstack_react-query.js?v=0f26d224:498
+start @ @tanstack_react-query.js?v=0f26d224:536
+fetch @ @tanstack_react-query.js?v=0f26d224:926
+executeFetch_fn @ @tanstack_react-query.js?v=0f26d224:2211
+onSubscribe @ @tanstack_react-query.js?v=0f26d224:1898
+subscribe @ @tanstack_react-query.js?v=0f26d224:24
+(anonymous) @ @tanstack_react-query.js?v=0f26d224:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=0f26d224:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=0f26d224:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=0f26d224:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=0f26d224:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=0f26d224:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=0f26d224:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=0f26d224:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=0f26d224:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=0f26d224:19416
+commitRoot @ chunk-RPCDYKBN.js?v=0f26d224:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0f26d224:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0f26d224:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0f26d224:18627Understand this error
+@radix-ui_react-select.js?v=0f26d224:880 Uncaught Error: A <Select.Item /> must have a value prop that is not an empty string. This is because the Select value can be set to an empty string to clear the selection and show the placeholder.
+    at @radix-ui_react-select.js?v=0f26d224:880:13
+    at renderWithHooks (chunk-RPCDYKBN.js?v=0f26d224:11548:26)
+    at updateForwardRef (chunk-RPCDYKBN.js?v=0f26d224:14325:28)
+    at beginWork (chunk-RPCDYKBN.js?v=0f26d224:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=0f26d224:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=0f26d224:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=0f26d224:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=0f26d224:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=0f26d224:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=0f26d224:19137:13)
+(anonymous) @ @radix-ui_react-select.js?v=0f26d224:880
+renderWithHooks @ chunk-RPCDYKBN.js?v=0f26d224:11548
+updateForwardRef @ chunk-RPCDYKBN.js?v=0f26d224:14325
+beginWork @ chunk-RPCDYKBN.js?v=0f26d224:15946
+callCallback2 @ chunk-RPCDYKBN.js?v=0f26d224:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=0f26d224:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=0f26d224:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=0f26d224:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=0f26d224:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=0f26d224:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=0f26d224:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=0f26d224:18736
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0f26d224:18879
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0f26d224:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0f26d224:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=0f26d224:555
+flush @ @tanstack_react-query.js?v=0f26d224:569
+batch @ @tanstack_react-query.js?v=0f26d224:587
+dispatch_fn @ @tanstack_react-query.js?v=0f26d224:996
+setData @ @tanstack_react-query.js?v=0f26d224:696
+onSuccess @ @tanstack_react-query.js?v=0f26d224:897
+resolve @ @tanstack_react-query.js?v=0f26d224:456
+Promise.then
+run @ @tanstack_react-query.js?v=0f26d224:498
+start @ @tanstack_react-query.js?v=0f26d224:536
+fetch @ @tanstack_react-query.js?v=0f26d224:926
+executeFetch_fn @ @tanstack_react-query.js?v=0f26d224:2211
+onSubscribe @ @tanstack_react-query.js?v=0f26d224:1898
+subscribe @ @tanstack_react-query.js?v=0f26d224:24
+(anonymous) @ @tanstack_react-query.js?v=0f26d224:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=0f26d224:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=0f26d224:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=0f26d224:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=0f26d224:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=0f26d224:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=0f26d224:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=0f26d224:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=0f26d224:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=0f26d224:19416
+commitRoot @ chunk-RPCDYKBN.js?v=0f26d224:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0f26d224:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0f26d224:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0f26d224:18627Understand this error
+Console.js:61 The above error occurred in the <SelectItem> component:
+
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=0f26d224:853:7
+    at _c11 (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/components/ui/select.tsx:208:13)
+    at div
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-BOL2CCOG.js?v=0f26d224:42:13
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-EVLBUYTV.js?v=0f26d224:79:13
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-EVLBUYTV.js?v=0f26d224:56:13
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-V4TB3EZ5.js?v=0f26d224:39:15
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=0f26d224:764:13
+    at div
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-EVLBUYTV.js?v=0f26d224:79:13
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-EVLBUYTV.js?v=0f26d224:56:13
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-V4TB3EZ5.js?v=0f26d224:39:15
+    at Provider (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M3NVYRND.js?v=0f26d224:48:15)
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=0f26d224:307:58
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-EVLBUYTV.js?v=0f26d224:79:13
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-EVLBUYTV.js?v=0f26d224:56:13
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-BOL2CCOG.js?v=0f26d224:42:13
+    at https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-BOSJNSOH.js?v=0f26d224:258:22
+    at SelectPortal
+    at _c7 (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/components/ui/select.tsx:123:12)
+    at Provider (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M3NVYRND.js?v=0f26d224:48:15)
+    at Provider (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M3NVYRND.js?v=0f26d224:48:15)
+    at CollectionProvider (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-V4TB3EZ5.js?v=0f26d224:29:13)
+    at Provider (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M3NVYRND.js?v=0f26d224:48:15)
+    at Provider (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M3NVYRND.js?v=0f26d224:48:15)
+    at Popper (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LYRNC3O4.js?v=0f26d224:1953:11)
+    at Select (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=0f26d224:95:5)
+    at div
+    at div
+    at TransaccionesDND (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/transacciones-dnd.tsx:229:39)
+    at main
+    at div
+    at Dashboard (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/src/pages/dashboard.tsx:34:43)
+    at Route (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0f26d224:323:16)
+    at Switch (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0f26d224:379:17)
+    at Router
+    at Provider (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M3NVYRND.js?v=0f26d224:48:15)
+    at TooltipProvider (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=0f26d224:58:5)
+    at QueryClientProvider (https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=0f26d224:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+Mt.forEach.n.<computed> @ Console.js:61
+logCapturedError @ chunk-RPCDYKBN.js?v=0f26d224:14032
+update.callback @ chunk-RPCDYKBN.js?v=0f26d224:14052
+callCallback @ chunk-RPCDYKBN.js?v=0f26d224:11248
+commitUpdateQueue @ chunk-RPCDYKBN.js?v=0f26d224:11265
+commitLayoutEffectOnFiber @ chunk-RPCDYKBN.js?v=0f26d224:17093
+commitLayoutMountEffects_complete @ chunk-RPCDYKBN.js?v=0f26d224:17980
+commitLayoutEffects_begin @ chunk-RPCDYKBN.js?v=0f26d224:17969
+commitLayoutEffects @ chunk-RPCDYKBN.js?v=0f26d224:17920
+commitRootImpl @ chunk-RPCDYKBN.js?v=0f26d224:19353
+commitRoot @ chunk-RPCDYKBN.js?v=0f26d224:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0f26d224:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0f26d224:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0f26d224:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=0f26d224:555
+flush @ @tanstack_react-query.js?v=0f26d224:569
+batch @ @tanstack_react-query.js?v=0f26d224:587
+dispatch_fn @ @tanstack_react-query.js?v=0f26d224:996
+setData @ @tanstack_react-query.js?v=0f26d224:696
+onSuccess @ @tanstack_react-query.js?v=0f26d224:897
+resolve @ @tanstack_react-query.js?v=0f26d224:456
+Promise.then
+run @ @tanstack_react-query.js?v=0f26d224:498
+start @ @tanstack_react-query.js?v=0f26d224:536
+fetch @ @tanstack_react-query.js?v=0f26d224:926
+executeFetch_fn @ @tanstack_react-query.js?v=0f26d224:2211
+onSubscribe @ @tanstack_react-query.js?v=0f26d224:1898
+subscribe @ @tanstack_react-query.js?v=0f26d224:24
+(anonymous) @ @tanstack_react-query.js?v=0f26d224:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=0f26d224:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=0f26d224:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=0f26d224:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=0f26d224:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=0f26d224:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=0f26d224:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=0f26d224:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=0f26d224:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=0f26d224:19416
+commitRoot @ chunk-RPCDYKBN.js?v=0f26d224:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0f26d224:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0f26d224:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0f26d224:18627Understand this error
+chunk-RPCDYKBN.js?v=0f26d224:9129 Uncaught Error: A <Select.Item /> must have a value prop that is not an empty string. This is because the Select value can be set to an empty string to clear the selection and show the placeholder.
+    at @radix-ui_react-select.js?v=0f26d224:880:13
+    at renderWithHooks (chunk-RPCDYKBN.js?v=0f26d224:11548:26)
+    at updateForwardRef (chunk-RPCDYKBN.js?v=0f26d224:14325:28)
+    at beginWork (chunk-RPCDYKBN.js?v=0f26d224:15946:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=0f26d224:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=0f26d224:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=0f26d224:19137:13)
+    at renderRootSync (chunk-RPCDYKBN.js?v=0f26d224:19116:15)
+    at recoverFromConcurrentError (chunk-RPCDYKBN.js?v=0f26d224:18736:28)
+    at performSyncWorkOnRoot (chunk-RPCDYKBN.js?v=0f26d224:18879:28)
+(anonymous) @ @radix-ui_react-select.js?v=0f26d224:880
+renderWithHooks @ chunk-RPCDYKBN.js?v=0f26d224:11548
+updateForwardRef @ chunk-RPCDYKBN.js?v=0f26d224:14325
+beginWork @ chunk-RPCDYKBN.js?v=0f26d224:15946
+beginWork$1 @ chunk-RPCDYKBN.js?v=0f26d224:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=0f26d224:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=0f26d224:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=0f26d224:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=0f26d224:18736
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0f26d224:18879
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0f26d224:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0f26d224:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=0f26d224:555
+flush @ @tanstack_react-query.js?v=0f26d224:569
+batch @ @tanstack_react-query.js?v=0f26d224:587
+dispatch_fn @ @tanstack_react-query.js?v=0f26d224:996
+setData @ @tanstack_react-query.js?v=0f26d224:696
+onSuccess @ @tanstack_react-query.js?v=0f26d224:897
+resolve @ @tanstack_react-query.js?v=0f26d224:456
+Promise.then
+run @ @tanstack_react-query.js?v=0f26d224:498
+start @ @tanstack_react-query.js?v=0f26d224:536
+fetch @ @tanstack_react-query.js?v=0f26d224:926
+executeFetch_fn @ @tanstack_react-query.js?v=0f26d224:2211
+onSubscribe @ @tanstack_react-query.js?v=0f26d224:1898
+subscribe @ @tanstack_react-query.js?v=0f26d224:24
+(anonymous) @ @tanstack_react-query.js?v=0f26d224:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=0f26d224:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=0f26d224:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=0f26d224:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=0f26d224:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=0f26d224:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=0f26d224:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=0f26d224:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=0f26d224:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=0f26d224:19416
+commitRoot @ chunk-RPCDYKBN.js?v=0f26d224:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0f26d224:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0f26d224:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0f26d224:18627Understand this error

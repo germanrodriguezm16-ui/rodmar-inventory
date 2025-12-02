@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <!-- Fondo circular azul corporativo -->
+  <circle cx="96" cy="96" r="96" fill="#1e3a8a"/>
+  
+  <!-- Camión minero muy simplificado en el centro -->
+  <g transform="translate(48, 70)">
+    <!-- Carrocería principal en amarillo -->
+    <rect x="10" y="25" width="70" height="20" rx="3" fill="#fbbf24"/>
+    <!-- Cabina -->
+    <rect x="65" y="15" width="20" height="20" rx="2" fill="#fbbf24"/>
+    <!-- Ruedas grandes -->
+    <circle cx="20" cy="50" r="8" fill="#374151"/>
+    <circle cx="70" cy="50" r="8" fill="#374151"/>
+  </g>
+  
+  <!-- Texto "RM" grande y centrado -->
+  <text x="96" y="130" text-anchor="middle" 
+        font-family="Arial, sans-serif" 
+        font-weight="bold" 
+        font-size="48" 
+        fill="white" 
+        letter-spacing="2px">RM</text>
+  
+  <!-- Pequeña línea decorativa -->
+  <line x1="70" y1="140" x2="122" y2="140" stroke="white" stroke-width="2" opacity="0.6"/>
+</svg>

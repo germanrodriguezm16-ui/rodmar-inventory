@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo azul corporativo con bordes redondeados -->
+  <rect width="512" height="512" fill="#1d4ed8" rx="96"/>
+  
+  <!-- Texto "RM" centrado, grande y legible -->
+  <text x="256" y="320" 
+        font-family="Arial, sans-serif" 
+        font-size="240" 
+        font-weight="bold" 
+        text-anchor="middle" 
+        fill="white"
+        letter-spacing="-10">RM</text>
+        
+  <!-- Sutil sombra para profundidad -->
+  <text x="258" y="322" 
+        font-family="Arial, sans-serif" 
+        font-size="240" 
+        font-weight="bold" 
+        text-anchor="middle" 
+        fill="rgba(0,0,0,0.2)"
+        letter-spacing="-10">RM</text>
+</svg>

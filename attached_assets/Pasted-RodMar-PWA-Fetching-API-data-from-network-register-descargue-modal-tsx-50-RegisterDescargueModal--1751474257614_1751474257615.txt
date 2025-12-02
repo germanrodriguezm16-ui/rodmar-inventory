@@ -1,0 +1,41 @@
+RodMar PWA: Fetching API data from network
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: [{…}]
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: [{…}]
+queryClient.ts:15 Making PATCH request to /api/viajes/G24 {fechaDescargue: '2025-07-02T05:00:00.000Z', compradorId: '97', peso: '22', ventaTon: '285000', fleteTon: '125000', …}
+queryClient.ts:17  PATCH https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/api/viajes/G24 500 (Internal Server Error)
+apiRequest @ queryClient.ts:17
+mutationFn @ register-descargue-modal.tsx:126
+fn @ @tanstack_react-query.js?v=6842d40a:1189
+run @ @tanstack_react-query.js?v=6842d40a:494
+start @ @tanstack_react-query.js?v=6842d40a:536
+execute @ @tanstack_react-query.js?v=6842d40a:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=6842d40a:2630
+(anónimas) @ @tanstack_react-query.js?v=6842d40a:3295
+onSubmit @ register-descargue-modal.tsx:156
+(anónimas) @ chunk-AO6B2ZZ6.js?v=6842d40a:1465
+await in (anónimas)
+callCallback2 @ chunk-XQLYTHWV.js?v=6842d40a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=6842d40a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=6842d40a:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-XQLYTHWV.js?v=6842d40a:3736
+executeDispatch @ chunk-XQLYTHWV.js?v=6842d40a:7014
+processDispatchQueueItemsInOrder @ chunk-XQLYTHWV.js?v=6842d40a:7034
+processDispatchQueue @ chunk-XQLYTHWV.js?v=6842d40a:7043
+dispatchEventsForPlugins @ chunk-XQLYTHWV.js?v=6842d40a:7051
+(anónimas) @ chunk-XQLYTHWV.js?v=6842d40a:7174
+batchedUpdates$1 @ chunk-XQLYTHWV.js?v=6842d40a:18913
+batchedUpdates @ chunk-XQLYTHWV.js?v=6842d40a:3579
+dispatchEventForPluginEventSystem @ chunk-XQLYTHWV.js?v=6842d40a:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-XQLYTHWV.js?v=6842d40a:5478
+dispatchEvent @ chunk-XQLYTHWV.js?v=6842d40a:5472
+dispatchDiscreteEvent @ chunk-XQLYTHWV.js?v=6842d40a:5449Comprende este error
+queryClient.ts:24 Response: 500 Internal Server Error
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: [{…}]
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: [{…}]
+sw.js:104 RodMar PWA: Fetching API data from network
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-192-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-512-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+2sw.js:104 RodMar PWA: Fetching API data from network
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-192-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-512-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia

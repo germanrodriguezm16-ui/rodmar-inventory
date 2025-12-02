@@ -1,0 +1,55 @@
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+sw.js:167 RodMar PWA: Serving core asset from cache
+sw.js:146 RodMar PWA: Fetching manifest/icons without cache
+2
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+(índice):131 [REPLIT] Preview funcionando normalmente para desarrollo
+sw.js:146 RodMar PWA: Fetching manifest/icons without cache
+14
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+sw.js:146 RodMar PWA: Fetching manifest/icons without cache
+100
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+client:536 WebSocket connection to 'wss://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/?token=hqJL-5fSsFuN' failed: 
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=hqJL-5fSsFuN' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+sw.js:208 RodMar PWA: No cache available, waiting for network
+sw.js:104 RodMar PWA: Fetching API data from network
+PreviewErrorSuppressor.tsx:18 [PreviewErrorSuppressor] Activando supresión para preview de Replit
+(índice):113 Service Worker registrado correctamente: https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: 
+[]
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: 
+[]
+2
+sw.js:104 RodMar PWA: Fetching API data from network
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: 
+[]
+sw.js:104 RodMar PWA: Fetching API data from network
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: 
+[]
+8
+The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+3
+sw.js:104 RodMar PWA: Fetching API data from network
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: 
+[]
+4
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+6
+sw.js:104 RodMar PWA: Fetching API data from network
+edit-transaction-modal.tsx:270 === Modal closed, clearing form
+﻿
+

@@ -1,0 +1,196 @@
+RodMar PWA: Serving from cache, updating in background
+register-descargue-modal.tsx:59 RegisterDescargueModal - viajes pendientes: []
+register-descargue-modal.tsx:59 RegisterDescargueModal - viajes pendientes: []
+4sw.js:203 RodMar PWA: Serving from cache, updating in background
+4sw.js:104 RodMar PWA: Fetching API data from network
+register-descargue-modal.tsx:59 RegisterDescargueModal - viajes pendientes: []
+3sw.js:104 RodMar PWA: Fetching API data from network
+edit-transaction-modal.tsx:201 === Modal closed, clearing form
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/transacciones:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/volqueteros/rodmar-white-512-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/transacciones:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/volqueteros/rodmar-white-192-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende este error
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'battery'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'layout-animations'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'navigation-override'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'oversized-images'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'publickey-credentials'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'speaker-selection'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'unoptimized-images'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'unsized-media'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+framework-c33bc67c88ebd260.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-c33bc67c88ebd260.js:1
+(anónimas) @ framework-c33bc67c88ebd260.js:1
+uD @ framework-c33bc67c88ebd260.js:1
+uI @ framework-c33bc67c88ebd260.js:1
+uM @ framework-c33bc67c88ebd260.js:1
+uS @ framework-c33bc67c88ebd260.js:1
+C @ framework-c33bc67c88ebd260.js:1
+z @ framework-c33bc67c88ebd260.js:1Comprende esta advertencia
+sw.js:208 RodMar PWA: No cache available, waiting for network
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Comprende este error
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.Comprende esta advertencia
+workspace_iframe.html:32 Unrecognized feature: 'battery'.Comprende esta advertencia
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.Comprende esta advertencia
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.Comprende esta advertencia
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.Comprende esta advertencia
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.Comprende esta advertencia
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.Comprende esta advertencia
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.Comprende esta advertencia
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.Comprende esta advertencia
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.Comprende esta advertencia
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.Comprende esta advertencia
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.Comprende esta advertencia
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.Comprende esta advertencia
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.Comprende esta advertencia
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+sw.js:146 RodMar PWA: Fetching manifest/icons without cache
+sw.js:208 RodMar PWA: No cache available, waiting for network
+sw.js:203 RodMar PWA: Serving from cache, updating in background
+Esteban Poveda:110 Service Worker desactivado para desarrollo
+Esteban Poveda:120 [REPLIT] Preview funcionando normalmente para desarrollo
+sw.js:146 RodMar PWA: Fetching manifest/icons without cache
+2sw.js:203 RodMar PWA: Serving from cache, updating in background
+2sw.js:208 RodMar PWA: No cache available, waiting for network
+5sw.js:203 RodMar PWA: Serving from cache, updating in background
+client:536 WebSocket connection to 'wss://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/?token=EgL780FxGBrB' failed: 
+setupWebSocket @ client:536
+(anónimas) @ client:531Comprende este error
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=EgL780FxGBrB' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+setupWebSocket @ client:536
+fallback @ client:509
+(anónimas) @ client:555Comprende este error
+sw.js:146 RodMar PWA: Fetching manifest/icons without cache
+90sw.js:203 RodMar PWA: Serving from cache, updating in background
+sw.js:208 RodMar PWA: No cache available, waiting for network
+4sw.js:104 RodMar PWA: Fetching API data from network
+Esteban%20Poveda:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/volqueteros/rodmar-white-512-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+Esteban%20Poveda:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/volqueteros/rodmar-white-192-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia

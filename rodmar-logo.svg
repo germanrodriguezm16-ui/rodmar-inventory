@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <!-- Fondo circular con gradiente -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="truckGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="mountainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#065f46;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Círculo de fondo -->
+  <circle cx="96" cy="96" r="96" fill="url(#bgGradient)"/>
+  
+  <!-- Montañas estilizadas -->
+  <path d="M20 120 L50 80 L80 100 L110 60 L140 85 L172 70 L172 140 L20 140 Z" 
+        fill="url(#mountainGradient)" opacity="0.8"/>
+  
+  <!-- Camión minero simplificado -->
+  <g transform="translate(45, 95)">
+    <!-- Carrocería principal -->
+    <rect x="0" y="15" width="80" height="25" rx="3" fill="url(#truckGradient)"/>
+    <!-- Cabina -->
+    <rect x="65" y="5" width="25" height="20" rx="2" fill="url(#truckGradient)"/>
+    <!-- Tolva de carga -->
+    <path d="M5 15 L75 15 L70 5 L10 5 Z" fill="#fbbf24"/>
+    <!-- Ruedas -->
+    <circle cx="15" cy="45" r="8" fill="#374151"/>
+    <circle cx="15" cy="45" r="5" fill="#6b7280"/>
+    <circle cx="65" cy="45" r="8" fill="#374151"/>
+    <circle cx="65" cy="45" r="5" fill="#6b7280"/>
+    <!-- Detalles de la cabina -->
+    <rect x="70" y="8" width="8" height="6" fill="#60a5fa" opacity="0.7"/>
+  </g>
+  
+  <!-- Texto RodMar -->
+  <text x="96" y="165" text-anchor="middle" 
+        font-family="Arial, sans-serif" 
+        font-weight="bold" 
+        font-size="24" 
+        fill="white" 
+        letter-spacing="1px">RodMar</text>
+  
+  <!-- Línea decorativa debajo del texto -->
+  <line x1="40" y1="175" x2="152" y2="175" stroke="white" stroke-width="2" opacity="0.6"/>
+  
+  <!-- Elementos decorativos (puntos de actividad) -->
+  <circle cx="30" cy="50" r="3" fill="#fbbf24" opacity="0.8"/>
+  <circle cx="162" cy="45" r="2" fill="#10b981" opacity="0.9"/>
+  <circle cx="170" cy="120" r="2.5" fill="#f59e0b" opacity="0.7"/>
+</svg>

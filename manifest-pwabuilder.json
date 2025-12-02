@@ -1,0 +1,43 @@
+{
+  "name": "RodMar - Sistema de Gestión Minera",
+  "short_name": "RodMar",
+  "description": "Aplicación profesional para gestión de operaciones mineras, transporte y finanzas empresariales",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#1d4ed8",
+  "background_color": "#ffffff",
+  "lang": "es",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/rodmar-nuclear-192-1751391033997.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/rodmar-nuclear-512-1751391033997.png", 
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/rodmar-nuclear-192-1751391033997.png",
+      "sizes": "192x192", 
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/rodmar-nuclear-512-1751391033997.png",
+      "sizes": "512x512",
+      "type": "image/png", 
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "finance"],
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

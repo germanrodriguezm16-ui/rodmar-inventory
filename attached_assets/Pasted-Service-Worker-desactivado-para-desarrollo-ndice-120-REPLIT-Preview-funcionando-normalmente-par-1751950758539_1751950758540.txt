@@ -1,0 +1,65 @@
+Service Worker desactivado para desarrollo
+(índice):120 [REPLIT] Preview funcionando normalmente para desarrollo
+chunk-XQLYTHWV.js?v=ea47461d:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: Array(0)
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: Array(0)
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: Array(0)
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: Array(0)
+6The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: Array(0)
+7rodmar.tsx:57 RodMar render - showInvestmentForm: false
+rodmar.tsx:898 Button clicked - filterType: cimitarra
+rodmar.tsx:899 Uncaught ReferenceError: setSelectedSubAccount is not defined
+    at onClick (rodmar.tsx:899:19)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=ea47461d:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=ea47461d:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=ea47461d:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-XQLYTHWV.js?v=ea47461d:3736:33)
+    at executeDispatch (chunk-XQLYTHWV.js?v=ea47461d:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-XQLYTHWV.js?v=ea47461d:7034:15)
+    at processDispatchQueue (chunk-XQLYTHWV.js?v=ea47461d:7043:13)
+    at dispatchEventsForPlugins (chunk-XQLYTHWV.js?v=ea47461d:7051:11)
+    at chunk-XQLYTHWV.js?v=ea47461d:7174:20
+onClick @ rodmar.tsx:899
+callCallback2 @ chunk-XQLYTHWV.js?v=ea47461d:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=ea47461d:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=ea47461d:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-XQLYTHWV.js?v=ea47461d:3736
+executeDispatch @ chunk-XQLYTHWV.js?v=ea47461d:7014
+processDispatchQueueItemsInOrder @ chunk-XQLYTHWV.js?v=ea47461d:7034
+processDispatchQueue @ chunk-XQLYTHWV.js?v=ea47461d:7043
+dispatchEventsForPlugins @ chunk-XQLYTHWV.js?v=ea47461d:7051
+(anónimas) @ chunk-XQLYTHWV.js?v=ea47461d:7174
+batchedUpdates$1 @ chunk-XQLYTHWV.js?v=ea47461d:18913
+batchedUpdates @ chunk-XQLYTHWV.js?v=ea47461d:3579
+dispatchEventForPluginEventSystem @ chunk-XQLYTHWV.js?v=ea47461d:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-XQLYTHWV.js?v=ea47461d:5478
+dispatchEvent @ chunk-XQLYTHWV.js?v=ea47461d:5472
+dispatchDiscreteEvent @ chunk-XQLYTHWV.js?v=ea47461d:5449Comprende este error
+chunk-XQLYTHWV.js?v=ea47461d:3750 Uncaught ReferenceError: setSelectedSubAccount is not defined
+    at onClick (rodmar.tsx:899:19)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=ea47461d:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=ea47461d:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=ea47461d:3733:39)
+    at invokeGuardedCallbackAndCatchFirstError (chunk-XQLYTHWV.js?v=ea47461d:3736:33)
+    at executeDispatch (chunk-XQLYTHWV.js?v=ea47461d:7014:11)
+    at processDispatchQueueItemsInOrder (chunk-XQLYTHWV.js?v=ea47461d:7034:15)
+    at processDispatchQueue (chunk-XQLYTHWV.js?v=ea47461d:7043:13)
+    at dispatchEventsForPlugins (chunk-XQLYTHWV.js?v=ea47461d:7051:11)
+    at chunk-XQLYTHWV.js?v=ea47461d:7174:20
+onClick @ rodmar.tsx:899
+callCallback2 @ chunk-XQLYTHWV.js?v=ea47461d:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=ea47461d:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=ea47461d:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-XQLYTHWV.js?v=ea47461d:3736
+executeDispatch @ chunk-XQLYTHWV.js?v=ea47461d:7014
+processDispatchQueueItemsInOrder @ chunk-XQLYTHWV.js?v=ea47461d:7034
+processDispatchQueue @ chunk-XQLYTHWV.js?v=ea47461d:7043
+dispatchEventsForPlugins @ chunk-XQLYTHWV.js?v=ea47461d:7051
+(anónimas) @ chunk-XQLYTHWV.js?v=ea47461d:7174
+batchedUpdates$1 @ chunk-XQLYTHWV.js?v=ea47461d:18913
+batchedUpdates @ chunk-XQLYTHWV.js?v=ea47461d:3579
+dispatchEventForPluginEventSystem @ chunk-XQLYTHWV.js?v=ea47461d:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-XQLYTHWV.js?v=ea47461d:5478
+dispatchEvent @ chunk-XQLYTHWV.js?v=ea47461d:5472
+dispatchDiscreteEvent @ chunk-XQLYTHWV.js?v=ea47461d:5449Comprende este error

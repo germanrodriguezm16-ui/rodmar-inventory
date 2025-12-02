@@ -1,0 +1,132 @@
+RodMar PWA: No cache available, waiting for network
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []
+10The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+4sw.js:203 RodMar PWA: Serving from cache, updating in background
+4sw.js:104 RodMar PWA: Fetching API data from network
+queryClient.ts:81 INTERCEPTING TRANSACCIONES - Raw text sample: [{"id":396,"deQuienTipo":"banco","deQuienId":"banco","paraQuienTipo":"banco","paraQuienId":"banco","concepto":"Otros de Banco (Banco) a Banco (Banco)","valor":"1500.00","fecha":"2025-07-03T00:00:00.000Z","formaPago":"Otros","voucher":null,"comentario":null,"userId":"main_user","createdAt":"2025-07-0
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-03T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-03T05:17:11.848Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-03T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-03T05:14:57.271Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-03T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-03T05:13:02.982Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-03T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-03T05:12:18.237Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-03T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-03T05:11:08.628Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-03T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-03T05:14:22.146Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T17:06:42.996Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:27:44.452Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T14:48:34.240Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T22:11:13.607Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T22:18:57.045Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-03T01:54:55.668Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-03T04:16:35.094Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-01T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T07:05:33.300Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-01T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-03T01:27:38.186Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-01T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T07:03:52.014Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-01T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T22:23:17.413Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-07-01T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-03T01:33:26.810Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2025-06-30T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-03T01:03:13.564Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-03T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-03T01:01:41.429Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:17:06.371Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:17:37.589Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:19:36.284Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:20:10.446Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:22:18.849Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T15:19:18.366Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T15:20:25.103Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T15:21:16.846Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T15:21:59.350Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T15:22:40.652Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T15:14:38.036Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T15:15:35.001Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T15:16:27.071Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T05:06:12.332Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T15:24:40.675Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T18:03:56.568Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T18:40:06.663Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T18:41:16.965Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T15:24:02.750Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T06:30:34.842Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T06:32:37.131Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T06:35:16.353Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T06:36:30.729Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T06:41:03.735Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T07:01:04.784Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T07:02:15.359Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T07:18:21.357Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T15:17:27.670Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T06:39:29.204Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T07:41:23.396Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T15:18:20.417Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:05:29.799Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:06:29.147Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:11:53.952Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:12:50.047Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:15:01.267Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:15:44.225Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: fecha 2023-07-02T00:00:00.000Z
+queryClient.ts:89 INTERCEPTING TRANSACCIONES - Preserving date: createdAt 2025-07-02T08:16:29.149Z
+queryClient.ts:97 INTERCEPTING TRANSACCIONES - Result sample: [{"id":396,"deQuienTipo":"banco","deQuienId":"banco","paraQuienTipo":"banco","paraQuienId":"banco","concepto":"Otros de Banco (Banco) a Banco (Banco)","valor":"1500.00","fecha":"2025-07-03T00:00:00.000Z","formaPago":"Otros","voucher":null,"comentario":null,"userId":"main_user","createdAt":"2025-07-0
+3sw.js:104 RodMar PWA: Fetching API data from network
+edit-transaction-modal.tsx:270 === Modal closed, clearing form
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []
+3sw.js:104 RodMar PWA: Fetching API data from network
+receipt-image-upload.tsx:32 === ReceiptImageUpload - value prop changed: 
+receipt-image-upload.tsx:34 === ReceiptImageUpload - parsed: {text: '', image: ''}
+new-transaction-modal.tsx:161 === Creating new transaction with data: {deQuienTipo: 'banco', deQuienId: 'banco', paraQuienTipo: 'banco', paraQuienId: 'banco', valor: '1700', …}
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []

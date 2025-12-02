@@ -1,0 +1,67 @@
+MODAL IMAGEN TRANSACCIONES DEBUG: {totalTransacciones: 289, tiposTransacciones: Array(289), transaccionesManuales: Array(1), transaccionesViajes: Array(288)}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 1: {id: 'viaje-G26', tipo: 'Viaje', concepto: 'Viaje G26'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 2: {id: 'viaje-G24', tipo: 'Viaje', concepto: 'Viaje G24'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 3: {id: 'viaje-G23', tipo: 'Viaje', concepto: 'Viaje G23'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 4: {id: 'viaje-G22', tipo: 'Viaje', concepto: 'Viaje G22'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 5: {id: 'viaje-G14', tipo: 'Viaje', concepto: 'Viaje G14'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 6: {id: 'viaje-G18', tipo: 'Viaje', concepto: 'Viaje G18'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 7: {id: 'viaje-G15', tipo: 'Viaje', concepto: 'Viaje G15'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 8: {id: 'viaje-G16', tipo: 'Viaje', concepto: 'Viaje G16'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 9: {id: 'viaje-G13', tipo: 'Viaje', concepto: 'Viaje G13'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 10: {id: 'viaje-G11', tipo: 'Viaje', concepto: 'Viaje G11'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 11: {id: 'viaje-G7', tipo: 'Viaje', concepto: 'Viaje G7'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 12: {id: 'viaje-G8', tipo: 'Viaje', concepto: 'Viaje G8'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 13: {id: 'viaje-G2', tipo: 'Viaje', concepto: 'Viaje G2'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 14: {id: 'viaje-G3', tipo: 'Viaje', concepto: 'Viaje G3'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 15: {id: 'viaje-G4', tipo: 'Viaje', concepto: 'Viaje G4'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 16: {id: 'viaje-F99', tipo: 'Viaje', concepto: 'Viaje F99'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 17: {id: 'viaje-G5', tipo: 'Viaje', concepto: 'Viaje G5'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 18: {id: 'viaje-F97', tipo: 'Viaje', concepto: 'Viaje F97'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 19: {id: 'viaje-F95', tipo: 'Viaje', concepto: 'Viaje F95'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 20: {id: 'viaje-F94', tipo: 'Viaje', concepto: 'Viaje F94'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 21: {id: 'viaje-F93', tipo: 'Viaje', concepto: 'Viaje F93'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 22: {id: 'viaje-F92', tipo: 'Viaje', concepto: 'Viaje F92'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 23: {id: 'viaje-F90', tipo: 'Viaje', concepto: 'Viaje F90'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 24: {id: 'viaje-F89', tipo: 'Viaje', concepto: 'Viaje F89'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 25: {id: 'viaje-F86', tipo: 'Viaje', concepto: 'Viaje F86'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 26: {id: 'viaje-F87', tipo: 'Viaje', concepto: 'Viaje F87'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 27: {id: 'viaje-F81', tipo: 'Viaje', concepto: 'Viaje F81'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 28: {id: 'viaje-F85', tipo: 'Viaje', concepto: 'Viaje F85'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 29: {id: 'viaje-F78', tipo: 'Viaje', concepto: 'Viaje F78'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 30: {id: 'viaje-F69', tipo: 'Viaje', concepto: 'Viaje F69'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 31: {id: 'viaje-F68', tipo: 'Viaje', concepto: 'Viaje F68'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 32: {id: 'viaje-F65', tipo: 'Viaje', concepto: 'Viaje F65'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 33: {id: 'viaje-F62', tipo: 'Viaje', concepto: 'Viaje F62'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 34: {id: 'viaje-F55', tipo: 'Viaje', concepto: 'Viaje F55'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 35: {id: 'viaje-F51', tipo: 'Viaje', concepto: 'Viaje F51'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 36: {id: 'viaje-F53', tipo: 'Viaje', concepto: 'Viaje F53'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 37: {id: 'viaje-F49', tipo: 'Viaje', concepto: 'Viaje F49'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 38: {id: 'viaje-F50', tipo: 'Viaje', concepto: 'Viaje F50'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 39: {id: 'viaje-F42', tipo: 'Viaje', concepto: 'Viaje F42'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 40: {id: 'viaje-F46', tipo: 'Viaje', concepto: 'Viaje F46'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 41: {id: 'viaje-F44', tipo: 'Viaje', concepto: 'Viaje F44'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 42: {id: 'viaje-F22', tipo: 'Viaje', concepto: 'Viaje F22'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 43: {id: 'viaje-F23', tipo: 'Viaje', concepto: 'Viaje F23'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 44: {id: 'viaje-F19', tipo: 'Viaje', concepto: 'Viaje F19'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 45: {id: 'viaje-F17', tipo: 'Viaje', concepto: 'Viaje F17'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 46: {id: 'viaje-F18', tipo: 'Viaje', concepto: 'Viaje F18'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 47: {id: 'viaje-F12', tipo: 'Viaje', concepto: 'Viaje F12'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 48: {id: 'viaje-F14', tipo: 'Viaje', concepto: 'Viaje F14'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 49: {id: 'viaje-F7', tipo: 'Viaje', concepto: 'Viaje F7'}
+comprador-transacciones-image-modal.tsx:221 🖼️ TRANSACCIÓN 50: {id: 'viaje-F8', tipo: 'Viaje', concepto: 'Viaje F8'}
+chunk-U7DDPKDG.js?v=ea47461d:337 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anónimas) @ chunk-U7DDPKDG.js?v=ea47461d:337
+commitHookEffectListMount @ chunk-XQLYTHWV.js?v=ea47461d:16915
+commitPassiveMountOnFiber @ chunk-XQLYTHWV.js?v=ea47461d:18156
+commitPassiveMountEffects_complete @ chunk-XQLYTHWV.js?v=ea47461d:18129
+commitPassiveMountEffects_begin @ chunk-XQLYTHWV.js?v=ea47461d:18119
+commitPassiveMountEffects @ chunk-XQLYTHWV.js?v=ea47461d:18109
+flushPassiveEffectsImpl @ chunk-XQLYTHWV.js?v=ea47461d:19490
+flushPassiveEffects @ chunk-XQLYTHWV.js?v=ea47461d:19447
+commitRootImpl @ chunk-XQLYTHWV.js?v=ea47461d:19416
+commitRoot @ chunk-XQLYTHWV.js?v=ea47461d:19277
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=ea47461d:18895
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=ea47461d:9119
+(anónimas) @ chunk-XQLYTHWV.js?v=ea47461d:18627Comprende esta advertencia
+97:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/minas/rodmar-white-192-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+97:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/minas/rodmar-white-512-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia

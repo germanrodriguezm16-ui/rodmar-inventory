@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <!-- SEO Meta Tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RodMar - Sistema de gestión minera profesional. Controla viajes, transacciones y balances financieros de manera eficiente.">
+    <meta name="keywords" content="gestión minera, logística, transporte, finanzas, viajes">
+    <meta name="author" content="RodMar">
+    
+    <!-- PWA Meta Tags -->
+    <title>RodMar.app - Gestión Minera</title>
+    <meta name="application-name" content="RodMar">
+    <meta name="theme-color" content="#1d4ed8">
+    <meta name="msapplication-TileColor" content="#1d4ed8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="RodMar">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="RodMar.app - Sistema de Gestión Minera">
+    <meta property="og:description" content="Aplicación profesional para gestión de operaciones mineras, logística y finanzas.">
+    <meta property="og:url" content="https://replit.app">
+    <meta property="og:image" content="/rodmar-logo.svg">
+    <meta property="og:type" content="website">
+    
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/png" sizes="72x72" href="rodmar-icon-72-1751394032734.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="rodmar-icon-96-1751394032734.png">
+    <link rel="icon" type="image/png" sizes="128x128" href="rodmar-icon-128-1751394032734.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="rodmar-circular-192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="rodmar-apple-touch-152-1751394032734.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="rodmar-apple-touch-180-1751394032734.png">
+    <link rel="icon" sizes="512x512" href="rodmar-circular-512.png">
+    <link rel="shortcut icon" href="rodmar-circular-192.png">
+    
+    <!-- Manifest PWA -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Window Controls Overlay CSS for PWA -->
+    <style>
+      /* Support for Window Controls Overlay PWA feature */
+      @supports (top: env(titlebar-area-height, 0px)) {
+        .app-title-bar {
+          position: fixed;
+          top: 0;
+          left: env(titlebar-area-x, 0px);
+          width: env(titlebar-area-width, 100%);
+          height: env(titlebar-area-height, 0px);
+          background: var(--background);
+          border-bottom: 1px solid var(--border);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          padding: 0 16px;
+          -webkit-app-region: drag;
+        }
+        
+        .app-content {
+          margin-top: env(titlebar-area-height, 0px);
+        }
+        
+        .app-title {
+          color: var(--foreground);
+          font-weight: 600;
+          font-size: 14px;
+          -webkit-app-region: no-drag;
+        }
+      }
+    </style>
+
+    <!-- Service Worker Registration - Temporalmente desactivado -->
+    <script>
+      // Service Worker desactivado temporalmente para evitar errores 503
+      console.log('Service Worker desactivado para desarrollo');
+    </script>
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="rodmar-white-192-1751394032734.png" as="image">
+    <link rel="preload" href="rodmar-white-512-1751394032734.png" as="image">
+    
+    <!-- Preview funcionando normalmente como siempre -->
+    <script>
+      // Sin redirecciones - preview normal habilitado
+      console.log('[REPLIT] Preview funcionando normalmente para desarrollo');
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

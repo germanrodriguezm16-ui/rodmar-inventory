@@ -1,0 +1,61 @@
+{
+  "name": "RodMar - Gestión Minera",
+  "short_name": "RodMar",
+  "version": "8.0",
+  "description": "Sistema de gestión y logística para operaciones mineras. Administra viajes, transacciones y socios comerciales.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#1e3a8a",
+  "background_color": "#1e3a8a",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "es",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/rodmar-ultra-simple-192.png?v=8",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/rodmar-ultra-simple-512.png?v=8",
+      "sizes": "512x512", 
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "shortcuts": [
+    {
+      "name": "Registrar Viaje",
+      "short_name": "Nuevo Viaje",
+      "description": "Crear un nuevo viaje de cargue",
+      "url": "/?action=new-trip",
+      "icons": [
+        {
+          "src": "/rodmar-ultra-simple-192.png?v=8",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Transacciones",
+      "short_name": "Transacciones",
+      "description": "Ver historial de transacciones",
+      "url": "/?module=transacciones",
+      "icons": [
+        {
+          "src": "/rodmar-ultra-simple-192.png?v=8",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

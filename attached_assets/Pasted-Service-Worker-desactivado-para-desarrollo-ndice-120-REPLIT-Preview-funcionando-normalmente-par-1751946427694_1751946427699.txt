@@ -1,0 +1,26 @@
+Service Worker desactivado para desarrollo
+(índice):120 [REPLIT] Preview funcionando normalmente para desarrollo
+chunk-XQLYTHWV.js?v=ea47461d:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []
+6The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-192-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-512-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-192-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-512-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-192-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-512-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []
+rodmar.tsx:48 💡 RodMar render - Estado modal: {showInvestmentModal: false, selectedSubAccount: ''}
+rodmar.tsx:48 💡 RodMar render - Estado modal: {showInvestmentModal: false, selectedSubAccount: ''}
+rodmar.tsx:48 💡 RodMar render - Estado modal: {showInvestmentModal: false, selectedSubAccount: ''}
+rodmar.tsx:48 💡 RodMar render - Estado modal: {showInvestmentModal: false, selectedSubAccount: ''}
+rodmar.tsx:48 💡 RodMar render - Estado modal: {showInvestmentModal: false, selectedSubAccount: ''}
+rodmar.tsx:48 💡 RodMar render - Estado modal: {showInvestmentModal: false, selectedSubAccount: ''}
+rodmar.tsx:897 CLICK BOTÓN INVERSIÓN - Filter: cimitarra
+rodmar.tsx:899 Selected sub account set to: cimitarra
+rodmar.tsx:901 Modal state should be true now
+rodmar.tsx:48 💡 RodMar render - Estado modal: {showInvestmentModal: true, selectedSubAccount: 'cimitarra'}
+rodmar.tsx:52 🔥 MODAL DEBERÍA MOSTRARSE - Estado: {showInvestmentModal: true, selectedSubAccount: 'cimitarra'}

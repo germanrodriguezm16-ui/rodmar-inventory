@@ -1,0 +1,354 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 98%);
+  --foreground: hsl(240, 10%, 26%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(240, 10%, 26%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(240, 10%, 26%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(0, 0%, 98%);
+  --secondary: hsl(210, 40%, 98%);
+  --secondary-foreground: hsl(240, 10%, 26%);
+  --muted: hsl(210, 40%, 98%);
+  --muted-foreground: hsl(240, 5%, 44%);
+  --accent: hsl(210, 40%, 98%);
+  --accent-foreground: hsl(240, 10%, 26%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --border: hsl(220, 13%, 91%);
+  --input: hsl(220, 13%, 91%);
+  --ring: hsl(207, 90%, 54%);
+  --success: hsl(142, 76%, 36%);
+  --warning: hsl(32, 95%, 44%);
+  --error: hsl(0, 84%, 60%);
+  --surface: hsl(0, 0%, 100%);
+  --radius: 0.5rem;
+}
+
+/* Optimizaciones para el teclado virtual en móviles */
+@media screen and (max-width: 768px) {
+  /* Ajustes del viewport para el teclado virtual */
+  html {
+    height: -webkit-fill-available;
+  }
+  
+  body {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Ajuste automático cuando el teclado aparece */
+  .keyboard-adjust {
+    transition: padding-bottom 0.3s ease;
+    padding-bottom: env(keyboard-inset-height, 0px);
+  }
+  
+  /* Contenedores de formularios con scroll suave */
+  .form-container {
+    max-height: 100vh;
+    max-height: -webkit-fill-available;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 120px; /* Espacio extra para navegación + teclado */
+  }
+  
+  /* Input focus con scroll automático */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    scroll-margin-top: 100px;
+    scroll-margin-bottom: 150px;
+  }
+  
+  /* Modales responsivos al teclado */
+  .modal-content {
+    max-height: 90vh;
+    max-height: calc(100vh - env(keyboard-inset-height, 0px) - 20px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Asegurar que la navegación inferior esté siempre fija y visible - más específico */
+nav[class*="fixed"][class*="bottom-0"],
+nav[style*="position: fixed"][style*="bottom: 0"],
+nav[style*="zIndex: 9999"] {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 99999 !important;
+  background-color: white !important;
+  border-top: 1px solid hsl(220, 13%, 91%) !important;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  width: 100% !important;
+  transform: none !important;
+  /* Ocultar navegación cuando el teclado esté activo */
+  bottom: env(keyboard-inset-height, 0px) !important;
+}
+
+.dark nav[class*="fixed"][class*="bottom-0"],
+.dark nav[style*="position: fixed"][style*="bottom: 0"],
+.dark nav[style*="zIndex: 9999"] {
+  background-color: hsl(240, 10%, 4%) !important;
+  border-top-color: hsl(240, 4%, 16%) !important;
+}
+
+/* Forzar navegación siempre visible en todas las páginas */
+[data-module="minas"] nav,
+[data-module="compradores"] nav,
+[data-module="volqueteros"] nav,
+[data-module="transacciones"] nav,
+[data-module="principal"] nav {
+  position: fixed !important;
+  bottom: 0 !important;
+  z-index: 99999 !important;
+}
+
+/* Asegurar que el contenido tenga padding suficiente para la navegación */
+.pb-16 {
+  padding-bottom: 4rem !important;
+}
+
+.min-h-screen {
+  min-height: 100vh !important;
+}
+
+.dark {
+  --background: hsl(240, 10%, 4%);
+  --foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 4%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --popover: hsl(240, 10%, 4%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(0, 0%, 98%);
+  --secondary: hsl(240, 4%, 16%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 4%, 16%);
+  --muted-foreground: hsl(240, 5%, 64%);
+  --accent: hsl(240, 4%, 16%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62%, 30%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 4%, 16%);
+  --input: hsl(240, 4%, 16%);
+  --ring: hsl(207, 90%, 54%);
+  --success: hsl(142, 76%, 36%);
+  --warning: hsl(32, 95%, 44%);
+  --error: hsl(0, 84%, 60%);
+  --surface: hsl(240, 10%, 4%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-success {
+    color: hsl(142, 76%, 36%);
+  }
+  
+  .text-warning {
+    color: hsl(32, 95%, 44%);
+  }
+  
+  .text-error {
+    color: hsl(0, 84%, 60%);
+  }
+  
+  .bg-success {
+    background-color: hsl(142, 76%, 36%);
+  }
+  
+  .bg-warning {
+    background-color: hsl(32, 95%, 44%);
+  }
+  
+  .bg-error {
+    background-color: hsl(0, 84%, 60%);
+  }
+  
+  .bg-success\/10 {
+    background-color: hsl(142, 76%, 36%, 0.1);
+  }
+  
+  .bg-warning\/10 {
+    background-color: hsl(32, 95%, 44%, 0.1);
+  }
+  
+  .bg-error\/10 {
+    background-color: hsl(0, 84%, 60%, 0.1);
+  }
+
+  .bg-primary\/10 {
+    background-color: hsl(207, 90%, 54%, 0.1);
+  }
+}
+
+/* === ESTILOS MEJORADOS PARA PESTAÑAS RODMAR === */
+
+/* Pestañas con sombreado mejorado */
+.rodmar-tabs [data-state="active"] {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3), 0 2px 4px rgba(37, 99, 235, 0.2) !important;
+  border: 1px solid rgba(37, 99, 235, 0.4) !important;
+  transform: translateY(-1px);
+  z-index: 10;
+}
+
+.rodmar-tabs [data-state="active"]:hover {
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4), 0 4px 8px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Pestañas inactivas con mejor contraste */
+.rodmar-tabs [data-state="inactive"] {
+  background: rgba(241, 245, 249, 0.8);
+  color: rgb(71, 85, 105);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: all 0.2s ease;
+}
+
+.rodmar-tabs [data-state="inactive"]:hover {
+  background: rgba(226, 232, 240, 0.9);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive para móviles */
+@media (max-width: 640px) {
+  .rodmar-tabs [data-state="active"] {
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3), 0 1px 3px rgba(37, 99, 235, 0.2) !important;
+  }
+}
+
+/* === MEJORAS ADICIONALES PARA TECLADO VIRTUAL MÓVIL === */
+
+/* Configuración de viewport más robusta */
+html {
+  height: 100%;
+  height: 100dvh; /* Dynamic Viewport Height */
+}
+
+body {
+  min-height: 100%;
+  min-height: 100dvh;
+  position: relative;
+}
+
+/* Prevenir zoom en inputs iOS */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="email"],
+input[type="tel"],
+textarea,
+select {
+  font-size: 16px !important;
+}
+
+/* Clases para formularios móviles seguros */
+.mobile-keyboard-safe {
+  transition: transform 0.3s ease, padding 0.3s ease;
+}
+
+.modal-content {
+  position: fixed;
+  overflow-y: auto;
+}
+
+.form-container {
+  padding-bottom: env(keyboard-inset-height, 0px);
+}
+
+.keyboard-adjust {
+  transform: translateY(-10px);
+  padding-bottom: 20px;
+}
+
+/* Solución automática con dvh */
+@supports (height: 100dvh) {
+  .modal-content {
+    max-height: calc(100dvh - 60px);
+  }
+  
+  .form-container {
+    max-height: calc(100dvh - 120px);
+    overflow-y: auto;
+    padding-bottom: 40px;
+  }
+}
+
+/* Fallback para navegadores sin dvh */
+@supports not (height: 100dvh) {
+  .modal-content {
+    max-height: calc(100vh - 60px);
+  }
+  
+  .form-container {
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+  }
+}
+
+/* Ajustes para pantallas pequeñas */
+@media screen and (max-height: 600px) {
+  .modal-content {
+    max-height: calc(100dvh - 40px);
+    padding: 12px;
+  }
+  
+  .form-container {
+    padding-bottom: 30px;
+    max-height: calc(100dvh - 80px);
+  }
+}
+
+@media screen and (max-height: 500px) {
+  .modal-content {
+    max-height: calc(100dvh - 20px);
+    padding: 8px;
+  }
+  
+  .form-container {
+    padding: 8px;
+  }
+  
+  .form-container .space-y-4 > * + * {
+    margin-top: 12px;
+  }
+}
+
+
+
+/* Estilos básicos para formularios móviles */
+
+/* Modal buttons container - fix for bottom navigation overlap */
+.modal-buttons-container {
+  @apply pb-8 md:pb-0;
+}
+
+/* Estilos para pestañas activas */
+[data-state="active"] {
+  background-color: hsl(219, 95%, 95%) !important;
+  color: hsl(208, 100%, 50%) !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+  font-weight: 600 !important;
+}
+
+/* Para modo oscuro */
+.dark [data-state="active"] {
+  background-color: hsl(207, 90%, 20%) !important;
+  color: hsl(207, 90%, 80%) !important;
+}

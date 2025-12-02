@@ -1,0 +1,37 @@
+Making /api/compradores/89 request to DELETE undefined
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []
+queryClient.ts:17 Uncaught (in promise) TypeError: Failed to execute 'fetch' on 'Window': '/api/compradores/89' is not a valid HTTP method.
+    at apiRequest (queryClient.ts:17:21)
+    at Object.mutationFn (delete-comprador-modal.tsx:34:14)
+    at Object.fn (@tanstack_react-query.js?v=6842d40a:1189:29)
+    at run (@tanstack_react-query.js?v=6842d40a:494:49)
+    at Object.start (@tanstack_react-query.js?v=6842d40a:536:9)
+    at _a6.execute (@tanstack_react-query.js?v=6842d40a:1225:56)
+    at async handleDelete (delete-comprador-modal.tsx:58:7)
+apiRequest @ queryClient.ts:17
+mutationFn @ delete-comprador-modal.tsx:34
+fn @ @tanstack_react-query.js?v=6842d40a:1189
+run @ @tanstack_react-query.js?v=6842d40a:494
+start @ @tanstack_react-query.js?v=6842d40a:536
+execute @ @tanstack_react-query.js?v=6842d40a:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=6842d40a:2630
+handleDelete @ delete-comprador-modal.tsx:58
+callCallback2 @ chunk-XQLYTHWV.js?v=6842d40a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=6842d40a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=6842d40a:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-XQLYTHWV.js?v=6842d40a:3736
+executeDispatch @ chunk-XQLYTHWV.js?v=6842d40a:7014
+processDispatchQueueItemsInOrder @ chunk-XQLYTHWV.js?v=6842d40a:7034
+processDispatchQueue @ chunk-XQLYTHWV.js?v=6842d40a:7043
+dispatchEventsForPlugins @ chunk-XQLYTHWV.js?v=6842d40a:7051
+(anónimas) @ chunk-XQLYTHWV.js?v=6842d40a:7174
+batchedUpdates$1 @ chunk-XQLYTHWV.js?v=6842d40a:18913
+batchedUpdates @ chunk-XQLYTHWV.js?v=6842d40a:3579
+dispatchEventForPluginEventSystem @ chunk-XQLYTHWV.js?v=6842d40a:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-XQLYTHWV.js?v=6842d40a:5478
+dispatchEvent @ chunk-XQLYTHWV.js?v=6842d40a:5472
+dispatchDiscreteEvent @ chunk-XQLYTHWV.js?v=6842d40a:5449Comprende este error
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-192-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/:1 The resource https://45bcfd32-fc8f-4603-94a1-427534c2b2fa-00-2vrf1dwfxp925.janeway.replit.dev/rodmar-white-512-1751394032734.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []

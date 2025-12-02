@@ -1,0 +1,43 @@
+Service Worker desactivado para desarrollo
+Willian Ruiz:120 [REPLIT] Preview funcionando normalmente para desarrollo
+chunk-XQLYTHWV.js?v=ea47461d:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+6The resource <URL> was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Comprende esta advertencia
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []
+register-descargue-modal.tsx:50 RegisterDescargueModal - viajes pendientes: []
+comprador-detail.tsx:265 🧮 BALANCE NETO REAL CALCULO: {compradorId: '97', totalManualesPositivos: 0, totalManualesNegativos: 0, totalViajes: 0, totalPositivos: 0, …}
+comprador-detail.tsx:265 🧮 BALANCE NETO REAL CALCULO: {compradorId: '97', totalManualesPositivos: 0, totalManualesNegativos: 0, totalViajes: 0, totalPositivos: 0, …}
+comprador-transacciones-image-modal.tsx:84 🖼️ MODAL DEBUG - TRANSACCIONES PARA IMAGEN: {totalTransacciones: 0, tiposTransacciones: Array(0), transaccionesParaImagen: 0, primeraTransaccion: null, ultimaTransaccion: null}
+comprador-detail.tsx:265 🧮 BALANCE NETO REAL CALCULO: {compradorId: '97', totalManualesPositivos: 1109552850, totalManualesNegativos: 1000000, totalViajes: 0, totalPositivos: 1109552850, …}
+comprador-transacciones-image-modal.tsx:84 🖼️ MODAL DEBUG - TRANSACCIONES PARA IMAGEN: {totalTransacciones: 0, tiposTransacciones: Array(0), transaccionesParaImagen: 0, primeraTransaccion: null, ultimaTransaccion: null}
+comprador-detail.tsx:175 🔍 DEBUG G24 FRONTEND: {id: 'G24', valorConsignar: '3335950.00', valorConsignarParsed: 3335950, valorFinal: '-3335950', totalVenta: '6107550.00', …}
+comprador-detail.tsx:265 🧮 BALANCE NETO REAL CALCULO: {compradorId: '97', totalManualesPositivos: 1109552850, totalManualesNegativos: 1000000, totalViajes: 1108552850, totalPositivos: 1109552850, …}
+comprador-transacciones-image-modal.tsx:84 🖼️ MODAL DEBUG - TRANSACCIONES PARA IMAGEN: {totalTransacciones: 0, tiposTransacciones: Array(0), transaccionesParaImagen: 0, primeraTransaccion: null, ultimaTransaccion: null}
+comprador-transacciones-image-modal.tsx:84 🖼️ MODAL DEBUG - TRANSACCIONES PARA IMAGEN: {totalTransacciones: 0, tiposTransacciones: Array(0), transaccionesParaImagen: 0, primeraTransaccion: null, ultimaTransaccion: null}
+comprador-detail.tsx:1152 🔍 DEBUG ORDENAMIENTO STRINGS TRANSACCION 378: {aId: 'manual-378', aFecha: '2023-07-02T00:00:00.000Z', aFechaStr: '2023-07-02', bId: 'manual-426', bFecha: '2025-06-20T00:00:00.000Z', …}
+comprador-detail.tsx:1152 🔍 DEBUG ORDENAMIENTO STRINGS TRANSACCION 378: {aId: 'manual-378', aFecha: '2023-07-02T00:00:00.000Z', aFechaStr: '2023-07-02', bId: 'viaje-A37', bFecha: '2024-11-01T00:00:00.000Z', …}
+comprador-detail.tsx:1304 📊 RESUMEN DINÁMICO USANDO TRANSACCIONES FILTRADAS
+comprador-detail.tsx:1305 📊 todasTransacciones.length: 295
+comprador-detail.tsx:1306 📊 transaccionesFiltradas.length: 295
+comprador-detail.tsx:1312 📊 RESUMEN - manuales: 7 viajes: 288
+comprador-detail.tsx:1360 📊 RESUMEN TOTALES CALCULO: {compradorId: '97', totalManualesPositivos: 1109552850, totalManualesNegativos: 1000000, totalViajes: 1108552850, totalPositivos: 1109552850, …}
+comprador-detail.tsx:1582 🚨 TABLA G24: {concepto: 'Viaje G24', valorString: '-3335950', valorParsed: -3335950, valorAbs: 3335950}
+comprador-detail.tsx:1582 🚨 TABLA G24: {concepto: 'Viaje G24', valorString: '-3335950', valorParsed: -3335950, valorAbs: 3335950}
+comprador-transacciones-image-modal.tsx:84 🖼️ MODAL DEBUG - TRANSACCIONES PARA IMAGEN: {totalTransacciones: 295, tiposTransacciones: Array(2), transaccionesParaImagen: 295, primeraTransaccion: {…}, ultimaTransaccion: {…}}
+comprador-detail.tsx:1582 🚨 TABLA G24: {concepto: 'Viaje G24', valorString: '-3335950', valorParsed: -3335950, valorAbs: 3335950}
+comprador-transacciones-image-modal.tsx:84 🖼️ MODAL DEBUG - TRANSACCIONES PARA IMAGEN: {totalTransacciones: 295, tiposTransacciones: Array(2), transaccionesParaImagen: 295, primeraTransaccion: {…}, ultimaTransaccion: {…}}
+transaction-detail-modal.tsx:501 🔍 VOUCHER DEBUG: {transactionId: 'manual-440', hasVoucher: undefined, voucherLength: 0, noRelatedTrip: true, notViajeTransaction: true, …}
+chunk-U7DDPKDG.js?v=ea47461d:337 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anónimas) @ chunk-U7DDPKDG.js?v=ea47461d:337
+commitHookEffectListMount @ chunk-XQLYTHWV.js?v=ea47461d:16915
+commitPassiveMountOnFiber @ chunk-XQLYTHWV.js?v=ea47461d:18156
+commitPassiveMountEffects_complete @ chunk-XQLYTHWV.js?v=ea47461d:18129
+commitPassiveMountEffects_begin @ chunk-XQLYTHWV.js?v=ea47461d:18119
+commitPassiveMountEffects @ chunk-XQLYTHWV.js?v=ea47461d:18109
+flushPassiveEffectsImpl @ chunk-XQLYTHWV.js?v=ea47461d:19490
+flushPassiveEffects @ chunk-XQLYTHWV.js?v=ea47461d:19447
+commitRootImpl @ chunk-XQLYTHWV.js?v=ea47461d:19416
+commitRoot @ chunk-XQLYTHWV.js?v=ea47461d:19277
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=ea47461d:18895
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=ea47461d:9119
+(anónimas) @ chunk-XQLYTHWV.js?v=ea47461d:18627Comprende esta advertencia
