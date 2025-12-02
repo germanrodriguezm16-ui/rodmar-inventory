@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { useState, useMemo, useCallback, memo, lazy, Suspense, useEffect } from "react";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { usePagination } from "@/hooks/usePagination";
+import { apiUrl } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -844,7 +845,7 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
         filterType: filterType,
       });
       
-      const response = await fetch(`/api/transacciones/postobon?${params.toString()}`);
+      const response = await fetch(apiUrl(`/api/transacciones/postobon?${params.toString()}`));
       if (!response.ok) throw new Error('Error al obtener transacciones');
       return response.json();
     },
@@ -924,7 +925,7 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
               filterType
             ],
             queryFn: async () => {
-              const response = await fetch(`/api/transacciones/postobon?${params.toString()}`);
+              const response = await fetch(apiUrl(`/api/transacciones/postobon?${params.toString()}`));
               if (!response.ok) throw new Error('Error al obtener transacciones');
               return response.json();
             },
@@ -1645,7 +1646,7 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
         limit: limit.toString(),
       });
       
-      const response = await fetch(`/api/transacciones/lcdm?${params.toString()}`);
+      const response = await fetch(apiUrl(`/api/transacciones/lcdm?${params.toString()}`));
       if (!response.ok) throw new Error('Error al obtener transacciones');
       return response.json();
     },
@@ -1723,7 +1724,7 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
               typeof pageSize === "number" ? pageSize : 999999
             ],
             queryFn: async () => {
-              const response = await fetch(`/api/transacciones/lcdm?${params.toString()}`);
+              const response = await fetch(apiUrl(`/api/transacciones/lcdm?${params.toString()}`));
               if (!response.ok) throw new Error('Error al obtener transacciones');
               return response.json();
             },

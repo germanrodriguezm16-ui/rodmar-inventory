@@ -16,6 +16,7 @@ import { TransactionDetailModal } from "@/components/modals/transaction-detail-m
 import BottomNavigation from "@/components/layout/bottom-navigation";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { usePagination } from "@/hooks/usePagination";
+import { apiUrl } from "@/lib/api";
 
 import type { TransaccionWithSocio } from "@shared/schema";
 
@@ -258,7 +259,7 @@ export default function Transacciones({ onOpenTransaction }: TransaccionesProps 
       // Ordenamiento por defecto (solo fecha desc)
       params.append('sortByFecha', 'desc');
       
-      const response = await fetch(`/api/transacciones?${params.toString()}`);
+      const response = await fetch(apiUrl(`/api/transacciones?${params.toString()}`));
       if (!response.ok) throw new Error('Error al obtener transacciones');
       return response.json();
     },
@@ -367,7 +368,7 @@ export default function Transacciones({ onOpenTransaction }: TransaccionesProps 
               typeof pageSize === "number" ? pageSize : 999999
             ],
             queryFn: async () => {
-              const response = await fetch(`/api/transacciones?${params.toString()}`);
+              const response = await fetch(apiUrl(`/api/transacciones?${params.toString()}`));
               if (!response.ok) throw new Error('Error al obtener transacciones');
               return response.json();
             },
