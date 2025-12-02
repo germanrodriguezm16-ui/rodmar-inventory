@@ -17,12 +17,47 @@ const corsOptions = {
   origin: process.env.CORS_ORIGIN || (process.env.NODE_ENV === "production" ? false : "http://localhost:5000"),
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: [
+    "Content-Type", 
+    "Authorization", 
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+    "Cache-Control",
+    "Expires",
+    "Pragma",
+    "If-Modified-Since",
+    "If-None-Match"
+  ],
+  exposedHeaders: ["Content-Length", "Content-Type"],
+  maxAge: 86400, // 24 hours
 };
 
 // Enable CORS
-if (process.env.NODE_ENV === "production" && process.env.CORS_ORIGIN) {
-  app.use(cors(corsOptions));
+if (process.env.NODE_ENV === "production") {
+  // En producción, usar CORS_ORIGIN si está configurado, sino permitir todos (temporal)
+  if (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*") {
+    app.use(cors(corsOptions));
+  } else {
+    // Si CORS_ORIGIN es "*" o no está configurado, permitir todos (solo para desarrollo)
+    app.use(cors({ 
+      origin: true, 
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+      allowedHeaders: [
+        "Content-Type", 
+        "Authorization", 
+        "X-Requested-With",
+        "Accept",
+        "Origin",
+        "Cache-Control",
+        "Expires",
+        "Pragma",
+        "If-Modified-Since",
+        "If-None-Match"
+      ],
+    }));
+  }
 } else if (process.env.NODE_ENV === "development") {
   app.use(cors({ origin: true, credentials: true }));
 }
