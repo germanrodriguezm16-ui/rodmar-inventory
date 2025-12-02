@@ -15,6 +15,7 @@ import { useLocation } from "wouter";
 import type { Comprador, TransaccionWithSocio, ViajeWithDetails } from "@shared/schema";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { apiUrl } from "@/lib/api";
 // Función para obtener día de la semana abreviado
 const getDayOfWeek = (dateInput: string | Date): string => {
   const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -115,7 +116,7 @@ export default function CompradorDetail() {
         console.log('🔄 LIMPIEZA: Mostrando transacciones ocultas al salir de la página del comprador', compradorId);
         
         // Llamar a la API para mostrar todas las transacciones ocultas
-        fetch(`/api/transacciones/socio/comprador/${compradorId}/show-all`, {
+        fetch(apiUrl(`/api/transacciones/socio/comprador/${compradorId}/show-all`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         }).catch(error => {
@@ -123,7 +124,7 @@ export default function CompradorDetail() {
         });
         
         // También mostrar viajes ocultos 
-        fetch(`/api/viajes/comprador/${compradorId}/show-all`, {
+        fetch(apiUrl(`/api/viajes/comprador/${compradorId}/show-all`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         }).catch(error => {
@@ -146,14 +147,14 @@ export default function CompradorDetail() {
   // Fetch comprador data
   const { data: comprador, isLoading: isLoadingComprador, error: compradorError } = useQuery<Comprador>({
     queryKey: ["/api/compradores", compradorId],
-    queryFn: () => fetch(`/api/compradores/${compradorId}`).then(res => res.json()),
+    queryFn: () => fetch(apiUrl(`/api/compradores/${compradorId}`)).then(res => res.json()),
     enabled: !!compradorId,
   });
 
   // Fetch viajes del comprador
   const { data: viajes = [] } = useQuery<ViajeWithDetails[]>({
     queryKey: ["/api/viajes/comprador", compradorId],
-    queryFn: () => fetch(`/api/viajes/comprador/${compradorId}`).then(res => res.json()),
+    queryFn: () => fetch(apiUrl(`/api/viajes/comprador/${compradorId}`)).then(res => res.json()),
     enabled: !!compradorId,
     staleTime: 300000, // 5 minutos - datos frescos por más tiempo
     refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
@@ -169,7 +170,7 @@ export default function CompradorDetail() {
   // Fetch transacciones usando el endpoint específico para compradores
   const { data: transacciones = [] } = useQuery<TransaccionWithSocio[]>({
     queryKey: ["/api/transacciones/comprador", compradorId],
-    queryFn: () => fetch(`/api/transacciones/comprador/${compradorId}`).then(res => res.json()),
+    queryFn: () => fetch(apiUrl(`/api/transacciones/comprador/${compradorId}`)).then(res => res.json()),
     enabled: !!compradorId,
     staleTime: 300000, // 5 minutos - datos frescos por más tiempo
     refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
@@ -179,7 +180,7 @@ export default function CompradorDetail() {
   // Fetch todas las transacciones incluyendo ocultas (para el contador del botón)
   const { data: todasTransaccionesIncOcultas = [] } = useQuery<TransaccionWithSocio[]>({
     queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"],
-    queryFn: () => fetch(`/api/transacciones/comprador/${compradorId}?includeHidden=true`).then(res => res.json()),
+    queryFn: () => fetch(apiUrl(`/api/transacciones/comprador/${compradorId}?includeHidden=true`)).then(res => res.json()),
     enabled: !!compradorId,
     staleTime: 300000, // 5 minutos - datos frescos por más tiempo
     refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
@@ -473,7 +474,7 @@ export default function CompradorDetail() {
   // Mutaciones para ocultar transacciones usando endpoint específico de compradores
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
-      const response = await fetch(`/api/transacciones/${transactionId}/hide-comprador`, {
+      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide-comprador`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -501,7 +502,7 @@ export default function CompradorDetail() {
   // Mutación para ocultar viajes
   const hideViajesMutation = useMutation({
     mutationFn: async (viajeId: string) => {
-      const response = await fetch(`/api/viajes/${viajeId}`, {
+      const response = await fetch(apiUrl(`/api/viajes/${viajeId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ oculta: true })
