@@ -2288,6 +2288,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET single transaction by ID
+  app.get("/api/transacciones/:id", async (req, res) => {
+    try {
+      const userId = req.user?.id || "main_user";
+      const id = parseInt(req.params.id);
+
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inválido" });
+      }
+
+      const transaction = await storage.getTransaccionById(id, userId);
+
+      if (!transaction) {
+        return res.status(404).json({ error: "Transacción no encontrada" });
+      }
+
+      res.json(transaction);
+    } catch (error) {
+      console.error("Error getting transaction by ID:", error);
+      res.status(500).json({ error: "Error al obtener la transacción" });
+    }
+  });
+
   app.patch("/api/transacciones/:id", async (req, res) => {
     try {
       const userId = req.user?.id || "main_user";

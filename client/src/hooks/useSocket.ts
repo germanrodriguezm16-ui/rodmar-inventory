@@ -10,11 +10,19 @@ export function useSocket() {
     // Conectar al servidor Socket.io
     // En producción usa VITE_API_URL, en desarrollo usa window.location.origin
     const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    
+    // Solo conectar si tenemos una URL válida
+    if (!apiUrl) {
+      console.warn("⚠️ VITE_API_URL no configurada, Socket.io no se conectará");
+      return;
+    }
+    
     const socket = io(apiUrl, {
       transports: ["websocket", "polling"],
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+      reconnectionAttempts: 10,
+      timeout: 10000,
     });
 
     socketRef.current = socket;
@@ -125,7 +133,11 @@ export function useSocket() {
     });
 
     socket.on("connect_error", (error) => {
-      console.error("❌ Error de conexión Socket.io:", error);
+      // Solo mostrar error si no es un error de DNS (ERR_NAME_NOT_RESOLVED)
+      // Estos errores son esperados si Railway está pausado
+      if (error.message && !error.message.includes("ERR_NAME_NOT_RESOLVED")) {
+        console.error("❌ Error de conexión Socket.io:", error);
+      }
     });
 
     // Cleanup al desmontar

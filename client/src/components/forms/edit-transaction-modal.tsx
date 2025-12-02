@@ -69,14 +69,18 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
   
   // Fetch the latest transaction data when modal opens - with no cache
   const { data: latestTransaction, refetch: refetchTransaction } = useQuery({
-    queryKey: ["/api/transacciones", transaction?.id, Date.now()], // Force fresh fetch with timestamp
+    queryKey: ["/api/transacciones", transaction?.id], // Stable key without timestamp
     queryFn: async () => {
       if (!transaction?.id) return null;
-      console.log("=== Fetching fresh transaction data for ID:", transaction.id);
-      const response = await fetch(apiUrl(`/api/transacciones/${transaction.id}?t=${Date.now()}`)); // Bust cache
-      if (!response.ok) throw new Error('Failed to fetch transaction');
+      const response = await fetch(apiUrl(`/api/transacciones/${transaction.id}?t=${Date.now()}`)); // Bust cache in URL only
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.warn(`Transaction ${transaction.id} not found`);
+          return null;
+        }
+        throw new Error('Failed to fetch transaction');
+      }
       const data = await response.json();
-      console.log("=== Fresh transaction data fetched:", data);
       return data;
     },
     enabled: isOpen && !!transaction?.id,
