@@ -70,10 +70,12 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
 
+  // En producción, solo servir archivos estáticos si el directorio existe
+  // Si no existe (como en Railway donde solo está el backend), solo servir el API
   if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
+    console.log(`⚠️  Build directory not found: ${distPath}`);
+    console.log(`💡 Running in API-only mode (frontend will be served separately)`);
+    return; // No lanzar error, solo retornar
   }
 
   app.use(express.static(distPath));

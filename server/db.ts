@@ -10,7 +10,7 @@ function getDb() {
   if (!dbInstance) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
-      const error = new Error('DATABASE_URL no está configurada en .env');
+      const error = new Error('DATABASE_URL no está configurada. Verifica las variables de entorno en Railway/Vercel.');
       (error as any).code = 'NO_DATABASE_URL';
       throw error;
     }
