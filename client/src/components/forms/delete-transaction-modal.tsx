@@ -4,6 +4,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { apiUrl } from "@/lib/api";
 import { formatCurrency } from "@/lib/calculations";
 import type { TransaccionWithSocio } from "@shared/schema";
 
@@ -22,12 +23,14 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
     mutationFn: async (transactionToDelete: TransaccionWithSocio) => {
       console.log("=== Deleting transaction:", transactionToDelete.id);
       
-      const response = await fetch(`/api/transacciones/${transactionToDelete.id}`, {
+      const response = await fetch(apiUrl(`/api/transacciones/${transactionToDelete.id}`), {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
 
       return response.json();

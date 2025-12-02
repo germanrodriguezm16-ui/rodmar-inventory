@@ -18,6 +18,7 @@ import {
 import { useLocation } from "wouter";
 import type { Mina, TransaccionWithSocio, ViajeWithDetails } from "@shared/schema";
 import { formatCurrency } from "@/lib/utils";
+import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 // Components
@@ -618,11 +619,13 @@ export default function MinaDetail() {
   // Mutations para eliminar transacciones
   const deleteTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
-      const response = await fetch(`/api/transacciones/${transactionId}`, {
+      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}`), {
         method: 'DELETE',
+        credentials: 'include',
       });
       if (!response.ok) {
-        throw new Error('Error al eliminar la transacción');
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
       return response.json();
     },
