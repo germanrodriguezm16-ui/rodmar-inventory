@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/hooks/use-toast";
+import { apiUrl } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -213,7 +214,7 @@ export default function RodMarCuentaDetail() {
   // Mutación para ocultar transacciones individuales
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
-      const response = await fetch(`/api/transacciones/${transactionId}/hide`, {
+      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -298,7 +299,7 @@ export default function RodMarCuentaDetail() {
         limit: limit.toString(),
       });
       
-      const response = await fetch(`/api/transacciones/cuenta/${cuentaNombre}?${params.toString()}`);
+      const response = await fetch(apiUrl(`/api/transacciones/cuenta/${cuentaNombre}?${params.toString()}`));
       if (!response.ok) throw new Error('Error al obtener transacciones');
       return response.json();
     },
@@ -360,7 +361,7 @@ export default function RodMarCuentaDetail() {
               typeof pageSize === "number" ? pageSize : 999999
             ],
             queryFn: async () => {
-              const response = await fetch(`/api/transacciones/cuenta/${cuentaNombre}?${params.toString()}`);
+              const response = await fetch(apiUrl(`/api/transacciones/cuenta/${cuentaNombre}?${params.toString()}`));
               if (!response.ok) throw new Error('Error al obtener transacciones');
               return response.json();
             },
