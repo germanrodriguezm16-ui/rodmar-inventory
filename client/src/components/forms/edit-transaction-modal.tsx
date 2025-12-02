@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { X, Edit3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useVouchers } from "@/hooks/useVouchers";
+import { apiUrl } from "@/lib/api";
 import type { TransaccionWithSocio, Mina, Comprador, Volquetero } from "@shared/schema";
 
 // Exactamente el mismo schema que new-transaction-modal.tsx
@@ -72,7 +73,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
     queryFn: async () => {
       if (!transaction?.id) return null;
       console.log("=== Fetching fresh transaction data for ID:", transaction.id);
-      const response = await fetch(`/api/transacciones/${transaction.id}?t=${Date.now()}`); // Bust cache
+      const response = await fetch(apiUrl(`/api/transacciones/${transaction.id}?t=${Date.now()}`)); // Bust cache
       if (!response.ok) throw new Error('Failed to fetch transaction');
       const data = await response.json();
       console.log("=== Fresh transaction data fetched:", data);
@@ -299,7 +300,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
     };
 
     loadTransactionData();
-  }, [isOpen, currentTransaction?.id, JSON.stringify(currentTransaction), form, loadVoucher, getVoucherFromCache, isVoucherLoaded]);
+  }, [isOpen, currentTransaction?.id, currentTransaction?.valor, currentTransaction?.fecha, currentTransaction?.deQuienTipo, currentTransaction?.paraQuienTipo, form, loadVoucher, getVoucherFromCache, isVoucherLoaded]);
 
   const updateTransactionMutation = useMutation({
     mutationFn: async (data: EditTransactionFormData) => {
@@ -318,7 +319,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       console.log("=== Making PATCH request to:", `/api/transacciones/${currentTransaction?.id}`);
       console.log("=== Request body:", JSON.stringify(dataWithConcepto, null, 2));
       
-      const response = await fetch(`/api/transacciones/${currentTransaction?.id}`, {
+      const response = await fetch(apiUrl(`/api/transacciones/${currentTransaction?.id}`), {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

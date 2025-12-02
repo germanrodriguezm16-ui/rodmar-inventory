@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { apiUrl } from '@/lib/api';
 
 interface VoucherCache {
   [transactionId: number]: string | null;
@@ -24,7 +25,7 @@ export function useVouchers() {
     setLoadingVouchers(prev => new Set(prev).add(transactionId));
 
     try {
-      const response = await fetch(`/api/transacciones/${transactionId}/voucher`);
+      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/voucher`));
       if (!response.ok) {
         throw new Error('Failed to load voucher');
       }
