@@ -1388,7 +1388,7 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
           <PaginationControls
             page={currentPage}
             limit={pageSize}
-            total={lcdmTransactions.length} // Mostrar total de transacciones filtradas en la página actual
+            total={transaccionesFiltradas.length} // Mostrar total de transacciones filtradas en la página actual
             totalPages={pagination.totalPages}
             hasMore={pagination.hasMore}
             onPageChange={(newPage) => {
@@ -2179,7 +2179,7 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
           <PaginationControls
             page={currentPage}
             limit={pageSize}
-            total={lcdmTransactions.length} // Mostrar total de transacciones filtradas en la página actual
+            total={transaccionesFiltradas.length} // Mostrar total de transacciones filtradas en la página actual
             totalPages={pagination.totalPages}
             hasMore={pagination.hasMore}
             onPageChange={(newPage) => {
