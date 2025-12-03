@@ -2533,6 +2533,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rutas específicas de ocultar/mostrar DEBEN estar ANTES de la ruta genérica /api/transacciones/:id
+  // Ocultar transacción individual
+  app.patch("/api/transacciones/:id/hide", async (req, res) => {
+    try {
+      const userId = req.user?.id || "main_user";
+      const transactionId = parseInt(req.params.id);
+
+      if (isNaN(transactionId)) {
+        return res.status(400).json({ error: "ID de transacción inválido" });
+      }
+
+      const success = await storage.hideTransaccion(transactionId, userId);
+
+      if (success) {
+        res.json({
+          success: true,
+          message: "Transacción ocultada correctamente",
+        });
+      } else {
+        res.status(404).json({ error: "Transacción no encontrada" });
+      }
+    } catch (error) {
+      console.error("Error hiding transaction:", error);
+      res.status(500).json({ error: "Error al ocultar la transacción" });
+    }
+  });
+
+  // IMPORTANTE: Las rutas específicas DEBEN estar ANTES de la ruta genérica /api/transacciones/:id
+  // para que Express las evalúe primero. De lo contrario, /api/transacciones/:id interceptará
+  // peticiones como /api/transacciones/:id/hide
+
   app.patch("/api/transacciones/:id", async (req, res) => {
     try {
       const userId = req.user?.id || "main_user";
@@ -2819,32 +2850,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in bulk show:", error);
       res.status(500).json({ error: "Error al mostrar las transacciones" });
-    }
-  });
-
-  // Ocultar transacción individual
-  app.patch("/api/transacciones/:id/hide", async (req, res) => {
-    try {
-      const userId = req.user?.id || "main_user";
-      const transactionId = parseInt(req.params.id);
-
-      if (isNaN(transactionId)) {
-        return res.status(400).json({ error: "ID de transacción inválido" });
-      }
-
-      const success = await storage.hideTransaccion(transactionId, userId);
-
-      if (success) {
-        res.json({
-          success: true,
-          message: "Transacción ocultada correctamente",
-        });
-      } else {
-        res.status(404).json({ error: "Transacción no encontrada" });
-      }
-    } catch (error) {
-      console.error("Error hiding transaction:", error);
-      res.status(500).json({ error: "Error al ocultar la transacción" });
     }
   });
 
