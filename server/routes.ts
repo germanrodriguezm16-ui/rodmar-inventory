@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import { Router, createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth } from "./middleware/auth";
 import { emitTransactionUpdate } from "./socket";
@@ -2547,30 +2547,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // para que Express las evalúe primero. De lo contrario, /api/transacciones/:id interceptará
   // peticiones como /api/transacciones/:id/hide
   
-  // Rutas específicas de ocultar/mostrar - TODAS DEBEN ESTAR ANTES DE LA RUTA GENÉRICA
-  // Ocultar transacción individual
-  // ESTRATEGIA ALTERNATIVA: Usar ruta sin parámetro en el path para evitar conflictos
-  app.patch("/api/transacciones/hide/:id", requireAuth, async (req, res) => {
+  // ESTRATEGIA: Usar Router específico para rutas de hide para evitar conflictos
+  const hideRouter = Router();
+  
+  // Ruta principal de hide - múltiples variantes para asegurar que funcione
+  hideRouter.patch("/:id", async (req, res) => {
     try {
-      console.log("🔍 [HIDE] Ruta /api/transacciones/hide/:id llamada");
-      console.log("🔍 [HIDE] Params:", req.params);
-      console.log("🔍 [HIDE] Method:", req.method);
-      console.log("🔍 [HIDE] Path:", req.path);
-      console.log("🔍 [HIDE] Original URL:", req.originalUrl);
+      console.log("✅ [HIDE-ROUTER] ===== RUTA /api/transacciones/hide/:id ALCANZADA =====");
+      console.log("✅ [HIDE-ROUTER] Method:", req.method);
+      console.log("✅ [HIDE-ROUTER] Path:", req.path);
+      console.log("✅ [HIDE-ROUTER] Original URL:", req.originalUrl);
+      console.log("✅ [HIDE-ROUTER] Params:", req.params);
       
       const userId = req.user?.id || "main_user";
       const transactionId = parseInt(req.params.id);
 
-      console.log("🔍 [HIDE] Transaction ID:", transactionId, "User ID:", userId);
-
       if (isNaN(transactionId)) {
-        console.error("❌ [HIDE] ID inválido:", req.params.id);
+        console.error("❌ [HIDE-ROUTER] ID inválido:", req.params.id);
         return res.status(400).json({ error: "ID de transacción inválido" });
       }
 
+      console.log("✅ [HIDE-ROUTER] Ocultando transacción:", transactionId, "User:", userId);
       const success = await storage.hideTransaccion(transactionId, userId);
-
-      console.log("🔍 [HIDE] Resultado:", success);
+      console.log("✅ [HIDE-ROUTER] Resultado:", success);
 
       if (success) {
         res.json({
@@ -2581,14 +2580,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(404).json({ error: "Transacción no encontrada" });
       }
     } catch (error) {
-      console.error("❌ [HIDE] Error hiding transaction:", error);
+      console.error("❌ [HIDE-ROUTER] Error:", error);
       res.status(500).json({ error: "Error al ocultar la transacción" });
     }
   });
-
-  // Mantener ruta antigua por compatibilidad - Implementación directa
-  // IMPORTANTE: Esta ruta DEBE estar ANTES de /api/transacciones/:id
-  // Express evalúa rutas en orden, así que las específicas van primero
+  
+  // Registrar router con prefijo
+  app.use("/api/transacciones/hide", hideRouter);
+  
+  // Mantener ruta antigua por compatibilidad - DEBE estar ANTES de /api/transacciones/:id
   app.patch("/api/transacciones/:id/hide", async (req, res) => {
     try {
       console.log("✅ [HIDE-OLD] ===== RUTA /api/transacciones/:id/hide ALCANZADA =====");
@@ -2597,7 +2597,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("✅ [HIDE-OLD] Original URL:", req.originalUrl);
       console.log("✅ [HIDE-OLD] Params:", req.params);
       console.log("✅ [HIDE-OLD] Query:", req.query);
-      console.log("✅ [HIDE-OLD] User:", req.user);
       
       const userId = req.user?.id || "main_user";
       const transactionId = parseInt(req.params.id);
