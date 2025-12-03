@@ -2743,8 +2743,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RUTA GENÉRICA - DEBE IR DESPUÉS de todas las rutas específicas
   app.patch("/api/transacciones/:id", async (req, res) => {
     try {
+      // Verificar si la petición es para /hide (no debería llegar aquí si las rutas específicas están bien)
+      if (req.originalUrl.includes('/hide')) {
+        console.error("❌ [PATCH :id] ERROR: Petición /hide llegó a ruta genérica!");
+        console.error("❌ [PATCH :id] Original URL:", req.originalUrl);
+        console.error("❌ [PATCH :id] Path:", req.path);
+        console.error("❌ [PATCH :id] Params:", req.params);
+        return res.status(404).json({ error: "Ruta no encontrada. Use /api/transacciones/hide/:id" });
+      }
+
       const userId = req.user?.id || "main_user";
 
       const id = parseInt(req.params.id);
