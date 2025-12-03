@@ -32,12 +32,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Middleware de debug para rutas de transacciones
+  // Middleware de debug para rutas de transacciones - DEBE estar ANTES de todas las rutas
   app.use((req, res, next) => {
     if (req.path.includes('/transacciones') && req.method === 'PATCH') {
-      console.log(`🔍 [ROUTE DEBUG] ${req.method} ${req.path}`);
+      console.log(`🔍 [ROUTE DEBUG] ===== INICIO PATCH TRANSACCIONES =====`);
+      console.log(`🔍 [ROUTE DEBUG] Method: ${req.method}`);
+      console.log(`🔍 [ROUTE DEBUG] Path: ${req.path}`);
       console.log(`🔍 [ROUTE DEBUG] Original URL: ${req.originalUrl}`);
-      console.log(`🔍 [ROUTE DEBUG] Params:`, req.params);
+      console.log(`🔍 [ROUTE DEBUG] Base URL: ${req.baseUrl}`);
+      console.log(`🔍 [ROUTE DEBUG] Params ANTES de rutas:`, req.params);
+      console.log(`🔍 [ROUTE DEBUG] Query:`, req.query);
+      console.log(`🔍 [ROUTE DEBUG] ===== FIN DEBUG =====`);
     }
     next();
   });
