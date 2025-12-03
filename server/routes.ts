@@ -2553,6 +2553,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // para que Express las evalúe primero. De lo contrario, /api/transacciones/:id interceptará
   // peticiones como /api/transacciones/:id/hide
   
+  // Endpoint de prueba para verificar que las rutas se registran
+  app.get("/api/test-routes", (req, res) => {
+    res.json({
+      message: "Rutas registradas correctamente",
+      timestamp: new Date().toISOString(),
+      routes: [
+        "PATCH /api/transacciones/hide/:id (Router)",
+        "PATCH /api/transacciones/:id/hide (Directa)",
+        "PATCH /api/transacciones/:id (Genérica)"
+      ]
+    });
+  });
+
   // ESTRATEGIA: Usar Router específico para rutas de hide para evitar conflictos
   const hideRouter = Router();
   
