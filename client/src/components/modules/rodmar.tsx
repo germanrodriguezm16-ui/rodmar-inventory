@@ -1131,6 +1131,41 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
     },
   });
 
+  // Mutación para mostrar todas las transacciones ocultas - Postobón
+  const showAllHiddenMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(apiUrl(`/api/transacciones/show-all-hidden`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Error al mostrar transacciones ocultas');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        description: "Todas las transacciones ocultas ahora son visibles",
+        duration: 2000,
+      });
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          return Array.isArray(queryKey) &&
+                 queryKey.length > 0 &&
+                 typeof queryKey[0] === "string" &&
+                 queryKey[0].startsWith("/api/transacciones/postobon");
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+    },
+    onError: () => {
+      toast({
+        description: "Error al mostrar transacciones ocultas",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  });
+
   // Resetear a página 1 cuando cambian los filtros
   useEffect(() => {
     setCurrentPage(1);
