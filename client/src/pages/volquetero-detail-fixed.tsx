@@ -64,7 +64,12 @@ export default function VolqueteroDetail() {
 
   const { data: transaccionesData = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
-    queryFn: () => fetch(`/api/volqueteros/${volqueteroIdActual}/transacciones`).then(res => res.json()),
+    queryFn: async () => {
+      const { apiUrl } = await import('@/lib/api');
+      const response = await fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/transacciones`));
+      if (!response.ok) throw new Error('Error al obtener transacciones');
+      return response.json();
+    },
     enabled: volqueteroIdActual > 0,
   });
 

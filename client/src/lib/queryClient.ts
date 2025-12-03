@@ -12,9 +12,13 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  console.log(`Making ${method} request to ${url}`, data);
+  // Usar apiUrl para construir la URL completa
+  const { apiUrl: getApiUrl } = await import('@/lib/api');
+  const fullUrl = getApiUrl(url);
   
-  const res = await fetch(url, {
+  console.log(`Making ${method} request to ${fullUrl}`, data);
+  
+  const res = await fetch(fullUrl, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,

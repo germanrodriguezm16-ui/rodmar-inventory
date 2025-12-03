@@ -182,10 +182,7 @@ export default function TransaccionesDND() {
   // Mutación para actualizar el estado de una transacción
   const updateTransactionMutation = useMutation({
     mutationFn: async ({ id, estado }: { id: number; estado: string }) => {
-      return await apiRequest(`/api/transacciones/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ estado }),
-      });
+      return await apiRequest("PATCH", `/api/transacciones/${id}`, { estado });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
