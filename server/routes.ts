@@ -31,6 +31,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
+  // Middleware de debug para rutas de transacciones
+  app.use((req, res, next) => {
+    if (req.path.includes('/transacciones') && req.method === 'PATCH') {
+      console.log(`🔍 [ROUTE DEBUG] ${req.method} ${req.path}`);
+      console.log(`🔍 [ROUTE DEBUG] Original URL: ${req.originalUrl}`);
+      console.log(`🔍 [ROUTE DEBUG] Params:`, req.params);
+    }
+    next();
+  });
+
   // Auth routes
   app.get("/api/login", async (req, res) => {
     try {
@@ -2539,16 +2549,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Rutas específicas de ocultar/mostrar - TODAS DEBEN ESTAR ANTES DE LA RUTA GENÉRICA
   // Ocultar transacción individual
-  app.patch("/api/transacciones/:id/hide", requireAuth, async (req, res) => {
+  // ESTRATEGIA ALTERNATIVA: Usar ruta sin parámetro en el path para evitar conflictos
+  app.patch("/api/transacciones/hide/:id", requireAuth, async (req, res) => {
     try {
+      console.log("🔍 [HIDE] Ruta /api/transacciones/hide/:id llamada");
+      console.log("🔍 [HIDE] Params:", req.params);
+      console.log("🔍 [HIDE] Method:", req.method);
+      console.log("🔍 [HIDE] Path:", req.path);
+      console.log("🔍 [HIDE] Original URL:", req.originalUrl);
+      
       const userId = req.user?.id || "main_user";
       const transactionId = parseInt(req.params.id);
 
+      console.log("🔍 [HIDE] Transaction ID:", transactionId, "User ID:", userId);
+
       if (isNaN(transactionId)) {
+        console.error("❌ [HIDE] ID inválido:", req.params.id);
         return res.status(400).json({ error: "ID de transacción inválido" });
       }
 
       const success = await storage.hideTransaccion(transactionId, userId);
+
+      console.log("🔍 [HIDE] Resultado:", success);
 
       if (success) {
         res.json({
@@ -2559,7 +2581,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(404).json({ error: "Transacción no encontrada" });
       }
     } catch (error) {
-      console.error("Error hiding transaction:", error);
+      console.error("❌ [HIDE] Error hiding transaction:", error);
+      res.status(500).json({ error: "Error al ocultar la transacción" });
+    }
+  });
+
+  // Mantener ruta antigua por compatibilidad - Implementación directa
+  app.patch("/api/transacciones/:id/hide", requireAuth, async (req, res) => {
+    try {
+      console.log("✅ [HIDE-OLD] Ruta /api/transacciones/:id/hide alcanzada");
+      console.log("✅ [HIDE-OLD] Params:", req.params);
+      console.log("✅ [HIDE-OLD] Transaction ID:", req.params.id);
+      
+      const userId = req.user?.id || "main_user";
+      const transactionId = parseInt(req.params.id);
+
+      console.log("✅ [HIDE-OLD] Transaction ID parsed:", transactionId, "User ID:", userId);
+
+      if (isNaN(transactionId)) {
+        console.error("❌ [HIDE-OLD] ID inválido:", req.params.id);
+        return res.status(400).json({ error: "ID de transacción inválido" });
+      }
+
+      console.log("✅ [HIDE-OLD] Ocultando transacción:", transactionId);
+      const success = await storage.hideTransaccion(transactionId, userId);
+      console.log("✅ [HIDE-OLD] Resultado:", success);
+
+      if (success) {
+        res.json({
+          success: true,
+          message: "Transacción ocultada correctamente",
+        });
+      } else {
+        console.warn("⚠️ [HIDE-OLD] Transacción no encontrada:", transactionId);
+        res.status(404).json({ error: "Transacción no encontrada" });
+      }
+    } catch (error) {
+      console.error("❌ [HIDE-OLD] Error hiding transaction:", error);
       res.status(500).json({ error: "Error al ocultar la transacción" });
     }
   });
