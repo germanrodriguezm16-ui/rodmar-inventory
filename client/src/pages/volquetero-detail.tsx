@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,7 @@ import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
+import type { ViajeWithDetails, TransaccionWithSocio } from "@shared/schema";
 
 // Filtro de fechas (tipos válidos)
 type DateFilterType = "todos" | "exactamente" | "entre" | "despues-de" | "antes-de" | "hoy" | "ayer" | "esta-semana" | "semana-pasada" | "este-mes" | "mes-pasado" | "este-año" | "año-pasado";
@@ -38,31 +39,7 @@ const getDayOfWeek = (dateInput: string | Date): string => {
   return daysOfWeek[date.getDay()];
 };
 
-// Definir tipos básicos localmente
-interface ViajeWithDetails {
-  id: string;
-  conductor: string;
-  estado: string;
-  fechaDescargue?: Date;
-  totalFlete?: string;
-  quienPagaFlete?: string;
-}
-
-interface TransaccionWithSocio {
-  id: number;
-  concepto: string;
-  valor: string;
-  createdAt?: Date;
-  formaPago?: string;
-  voucher?: string | null;
-  comentario?: string | null;
-  deQuienTipo?: string;
-  deQuienId?: string;
-  paraQuienTipo?: string;
-  paraQuienId?: string;
-  tipoSocio?: string;
-  socioId?: number;
-}
+// Tipos importados del schema compartido
 
 interface VolqueteroConPlacas {
   id: number;
@@ -83,7 +60,7 @@ interface VolqueteroTransaccion {
   deQuienId: string;
   paraQuienTipo: string;
   paraQuienId: string;
-  tipo: "Viaje" | "Manual";
+  tipo: "Viaje" | "Manual" | "Temporal";
   esViajeCompleto: boolean;
   oculta?: boolean;
   originalTransaction?: any; // Referencia al objeto original para transacciones manuales
@@ -93,13 +70,18 @@ interface VolqueteroTransaccion {
 export default function VolqueteroDetail() {
   const { id } = useParams();
   
-  // Todos los hooks deben declararse sin condiciones
-  const [activeTab, setActiveTab] = useState("viajes");
   const [showNewTransactionModal, setShowNewTransactionModal] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<TransaccionWithSocio | null>(null);
-  const [deletingTransaction, setDeletingTransaction] = useState<TransaccionWithSocio | null>(null);
+  const [showTemporalTransaction, setShowTemporalTransaction] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<any | null>(null);
+  const [deletingTransaction, setDeletingTransaction] = useState<any | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [showTransactionDetail, setShowTransactionDetail] = useState(false);
+  
+  // Estado para transacciones temporales (solo en memoria)
+  const [transaccionesTemporales, setTransaccionesTemporales] = useState<TransaccionWithSocio[]>([]);
+  
+  // Estado para rastrear pestaña activa y ejecutar limpieza al cambiar
+  const [activeTab, setActiveTab] = useState<string>("viajes");
   
   // Estados de filtros de fecha para transacciones
   const [transaccionesFechaFilterType, setTransaccionesFechaFilterType] = useState<DateFilterType>("todos");
@@ -108,6 +90,9 @@ export default function VolqueteroDetail() {
   
   // Estado para filtrar entre todas y ocultas
   const [filterType, setFilterType] = useState<"todas" | "ocultas">("todas");
+  
+  // Estado para búsqueda
+  const [searchTerm, setSearchTerm] = useState("");
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -166,18 +151,25 @@ export default function VolqueteroDetail() {
     console.log('🔍 DEBUG volquetero-detail - transaccionesData length:', (transaccionesData as any[])?.length);
     
     // El endpoint ya filtra por volquetero, no necesitamos filtrar otra vez
+    // Lógica de signos: POSITIVO desde volquetero, NEGATIVO hacia volquetero
     const transaccionesManuales = (transaccionesData as any[])
       .map(t => {
         let valorFinal = parseFloat(t.valor);
-        if (t.paraQuienTipo === 'volquetero') {
-          valorFinal = -Math.abs(valorFinal);
+        
+        // Lógica correcta de signos para volqueteros:
+        // - Si deQuienTipo === 'volquetero' → POSITIVO (volquetero paga = suma a su balance)
+        // - Si paraQuienTipo === 'volquetero' → NEGATIVO (RodMar paga = reduce su saldo)
+        if (t.deQuienTipo === 'volquetero' && t.deQuienId === volqueteroIdActual.toString()) {
+          valorFinal = Math.abs(valorFinal); // POSITIVO
+        } else if (t.paraQuienTipo === 'volquetero' && t.paraQuienId === volqueteroIdActual.toString()) {
+          valorFinal = -Math.abs(valorFinal); // NEGATIVO
         }
         
         const formatted = {
           id: t.id.toString(),
           concepto: t.concepto,
           valor: valorFinal.toString(),
-          fecha: new Date(t.fecha || Date.now()), // Usar campo fecha directamente del backend
+          fecha: new Date(t.fecha || t.createdAt || Date.now()),
           formaPago: t.formaPago || "",
           voucher: t.voucher || null,
           comentario: t.comentario || null,
@@ -191,67 +183,79 @@ export default function VolqueteroDetail() {
           originalTransaction: t // Guardar referencia al objeto original
         };
         
-        console.log('🔍 DEBUG - Transacción formateada:', {
-          id: formatted.id,
-          tipo: formatted.tipo,
-          tieneOriginalTransaction: !!formatted.originalTransaction,
-          originalTransactionId: formatted.originalTransaction?.id
-        });
-        
         return formatted;
       });
 
+    // Transacciones dinámicas de viajes completados
+    // Solo incluir viajes donde RodMar paga el flete (quienPagaFlete !== "comprador")
+    // Valor debe ser POSITIVO porque el volquetero recibe el flete
     const viajesCompletados = (viajes as ViajeWithDetails[])
-      .filter(v => v.conductor === volquetero.nombre && v.estado === "completado" && v.fechaDescargue)
+      .filter(v => 
+        v.conductor === volquetero.nombre && 
+        v.estado === "completado" && 
+        v.fechaDescargue &&
+        !v.oculta &&
+        v.quienPagaFlete !== "comprador" &&
+        v.quienPagaFlete !== "El comprador"
+      )
       .map(v => {
         const fechaViaje = v.fechaDescargue!;
-        let valorFinal = parseFloat(v.totalFlete || "0");
-        if (v.quienPagaFlete === "comprador") {
-          valorFinal = 0;
-        }
+        const totalFlete = parseFloat(v.totalFlete || "0");
         
         return {
           id: `viaje-${v.id}`,
           concepto: `Viaje ${v.id}`,
-          valor: valorFinal.toString(),
+          valor: totalFlete.toString(), // POSITIVO (volquetero recibe)
           fecha: fechaViaje,
-          formaPago: "",
+          formaPago: "Viaje",
           voucher: null,
-          comentario: v.quienPagaFlete === "comprador" ? "Flete pagado por comprador" : null,
+          comentario: null,
           deQuienTipo: "viaje",
           deQuienId: v.id,
           paraQuienTipo: "volquetero",
           paraQuienId: volqueteroIdActual.toString(),
           tipo: "Viaje" as const,
           esViajeCompleto: true,
-          oculta: v.oculta || false,
+          oculta: false,
           viajeId: v.id // Agregar ID del viaje para poder ocultarlo
         };
       });
 
-    const resultado = [...transaccionesManuales, ...viajesCompletados]
-      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-    
-    console.log('🔍 DEBUG - TOTAL TRANSACCIONES FORMATEADAS:', resultado.length);
-    console.log('🔍 DEBUG - Transacciones manuales:', transaccionesManuales.length);
-    console.log('🔍 DEBUG - Viajes completados:', viajesCompletados.length);
-    
-    // Verificar que las transacciones manuales tengan originalTransaction
-    const manualesSinOriginal = transaccionesManuales.filter(t => !t.originalTransaction);
-    if (manualesSinOriginal.length > 0) {
-      console.warn('⚠️ WARNING - Transacciones manuales sin originalTransaction:', manualesSinOriginal.length);
-    }
-    
-    // Log de las primeras 3 transacciones manuales para debug
-    if (transaccionesManuales.length > 0) {
-      console.log('🔍 DEBUG - Primeras 3 transacciones manuales:', transaccionesManuales.slice(0, 3).map(t => ({
-        id: t.id,
+    // Transacciones temporales con tipo marcado
+    const transaccionesTemporalesConTipo: VolqueteroTransaccion[] = transaccionesTemporales.map(t => {
+      let valorFinal = parseFloat(t.valor || "0");
+      
+      // Aplicar misma lógica de signos que transacciones manuales
+      if (t.deQuienTipo === 'volquetero' && t.deQuienId === volqueteroIdActual.toString()) {
+        valorFinal = Math.abs(valorFinal); // POSITIVO
+      } else if (t.paraQuienTipo === 'volquetero' && t.paraQuienId === volqueteroIdActual.toString()) {
+        valorFinal = -Math.abs(valorFinal); // NEGATIVO
+      }
+      
+      return {
+        id: t.id.toString(),
         concepto: t.concepto,
-        tipo: t.tipo,
-        tieneOriginalTransaction: !!t.originalTransaction,
-        originalTransactionId: t.originalTransaction?.id
-      })));
-    }
+        valor: valorFinal.toString(),
+        fecha: t.fecha ? (t.fecha instanceof Date ? t.fecha : new Date(t.fecha)) : new Date(),
+        formaPago: t.formaPago || "",
+        voucher: t.voucher || null,
+        comentario: t.comentario || null,
+        deQuienTipo: t.deQuienTipo || "",
+        deQuienId: t.deQuienId || "",
+        paraQuienTipo: t.paraQuienTipo || "",
+        paraQuienId: t.paraQuienId || "",
+        tipo: "Temporal" as const,
+        esViajeCompleto: false,
+        oculta: false
+      };
+    });
+    
+    const resultado = [...transaccionesManuales, ...viajesCompletados, ...transaccionesTemporalesConTipo]
+      .sort((a, b) => {
+        const fechaA = new Date(a.fecha);
+        const fechaB = new Date(b.fecha);
+        return fechaB.getTime() - fechaA.getTime();
+      });
     
     return resultado;
   }, [transaccionesData, viajes, volquetero, volqueteroIdActual]);
@@ -529,8 +533,105 @@ export default function VolqueteroDetail() {
       transaccionesFechaFilterValueEnd
     );
     
+    // Aplicar filtro de búsqueda
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(t => 
+        t.concepto?.toLowerCase().includes(searchLower) ||
+        t.comentario?.toLowerCase().includes(searchLower) ||
+        t.valor?.toString().includes(searchLower)
+      );
+    }
+    
     return filtered;
-  }, [transaccionesFormateadas, filterType, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, filterTransaccionesByDate]);
+  }, [transaccionesFormateadas, filterType, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, searchTerm, filterTransaccionesByDate]);
+  
+  // Calcular balance resumido correctamente
+  const balanceResumido = useMemo(() => {
+    const transaccionesVisibles = transaccionesFiltradas.filter(t => !t.oculta);
+    
+    let positivos = 0;
+    let negativos = 0;
+    
+    transaccionesVisibles.forEach(t => {
+      const valor = parseFloat(t.valor || "0");
+      if (valor > 0) {
+        positivos += valor;
+      } else if (valor < 0) {
+        negativos += Math.abs(valor);
+      }
+    });
+    
+    return {
+      positivos,
+      negativos,
+      balance: positivos - negativos
+    };
+  }, [transaccionesFiltradas]);
+  
+  // Función para crear transacción temporal
+  const handleCreateTemporalTransaction = (data: any) => {
+    const temporalId = `temporal-${Date.now()}`;
+    const fechaTransaccion = new Date(data.fecha);
+    const horaInternaFija = new Date(fechaTransaccion);
+    horaInternaFija.setHours(0, 0, 1, 0);
+    
+    const nuevaTransacionTemporal: TransaccionWithSocio = {
+      id: parseInt(temporalId.replace('temporal-', '')) || 0,
+      concepto: data.concepto,
+      valor: data.valor.toString(),
+      fecha: fechaTransaccion,
+      horaInterna: horaInternaFija,
+      formaPago: data.formaPago,
+      voucher: data.voucher || null,
+      comentario: data.comentario || null,
+      deQuienTipo: data.deQuienTipo || null,
+      deQuienId: data.deQuienId || null,
+      paraQuienTipo: data.paraQuienTipo || null,
+      paraQuienId: data.paraQuienId || null,
+      postobonCuenta: data.postobonCuenta || null,
+      tipoTransaccion: "manual",
+      oculta: false,
+      ocultaEnComprador: false,
+      ocultaEnMina: false,
+      ocultaEnVolquetero: false,
+      ocultaEnGeneral: false,
+      userId: "main_user",
+      createdAt: new Date(),
+      tipoSocio: "volquetero" as const,
+      socioId: volqueteroIdActual,
+      socioNombre: volquetero?.nombre || ""
+    };
+    
+    setTransaccionesTemporales(prev => [...prev, nuevaTransacionTemporal]);
+    setShowTemporalTransaction(false);
+    
+    toast({
+      title: "Transacción temporal creada",
+      description: "La transacción temporal se ha agregado correctamente. Se eliminará al salir de la vista.",
+    });
+  };
+  
+  // Función para eliminar transacción temporal
+  const handleDeleteTemporalTransaction = (temporalId: string | number) => {
+    const idToCompare = typeof temporalId === 'string' ? parseInt(temporalId.replace('temporal-', '')) || 0 : temporalId;
+    setTransaccionesTemporales(prev => prev.filter(t => t.id !== idToCompare));
+    toast({
+      title: "Transacción temporal eliminada",
+      description: "La transacción temporal se ha eliminado correctamente.",
+    });
+  };
+  
+  // Limpiar transacciones temporales al cambiar de pestaña o salir
+  useEffect(() => {
+    if (activeTab !== "transacciones") {
+      setTransaccionesTemporales([]);
+    }
+    
+    return () => {
+      setTransaccionesTemporales([]);
+    };
+  }, [activeTab]);
 
   // Early return después de todos los hooks
   if (!volquetero) {
@@ -587,7 +688,7 @@ export default function VolqueteroDetail() {
               Viajes ({viajesVolquetero.length})
             </TabsTrigger>
             <TabsTrigger value="transacciones" className="text-xs">
-              Transacciones ({transaccionesFormateadas.length})
+              Transacciones ({transaccionesFormateadas.filter(t => !t.oculta).length})
             </TabsTrigger>
             <TabsTrigger value="balance" className="text-xs">
               Balance
@@ -607,8 +708,7 @@ export default function VolqueteroDetail() {
                 {viajesVolquetero.map((viaje) => (
                   <TripCard 
                     key={viaje.id} 
-                    viaje={viaje}
-                    showIndividualToggle={true}
+                    viaje={viaje as any}
                   />
                 ))}
               </div>
@@ -638,7 +738,26 @@ export default function VolqueteroDetail() {
                 <Card className="border-gray-200">
                   <CardContent className="p-2">
                     <div className="space-y-2">
-                      {/* Fila superior: Filtro de tipo y botón mostrar ocultas */}
+                      {/* Fila superior: Búsqueda */}
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          type="text"
+                          placeholder="Buscar..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="flex-1 h-8 text-xs"
+                        />
+                        <Button
+                          onClick={() => setShowTemporalTransaction(true)}
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2 text-xs"
+                        >
+                          + Temporal
+                        </Button>
+                      </div>
+                      
+                      {/* Fila inferior: Filtro de tipo y botón mostrar ocultas */}
                       <div className="flex gap-2 items-center">
                         {/* Filtro de tipo (todas/ocultas) */}
                         <Select value={filterType} onValueChange={(value: "todas" | "ocultas") => setFilterType(value)}>
@@ -653,8 +772,12 @@ export default function VolqueteroDetail() {
                         
                         {/* Botón mostrar ocultas */}
                         {(() => {
-                          const transaccionesOcultas = todasTransaccionesIncOcultas?.filter((t: any) => t.ocultaEnVolquetero).length || 0;
-                          const viajesOcultos = viajes?.filter((v: any) => v.oculta).length || 0;
+                          const transaccionesOcultas = Array.isArray(todasTransaccionesIncOcultas) 
+                            ? todasTransaccionesIncOcultas.filter((t: any) => t.ocultaEnVolquetero).length 
+                            : 0;
+                          const viajesOcultos = Array.isArray(viajes) 
+                            ? viajes.filter((v: any) => v.oculta).length 
+                            : 0;
                           const totalOcultos = transaccionesOcultas + viajesOcultos;
                           const hayElementosOcultos = totalOcultos > 0;
                           
@@ -721,73 +844,34 @@ export default function VolqueteroDetail() {
                 </Card>
 
                 {/* Balance dinámico basado en transacciones filtradas y visibles */}
-                {(() => {
-                  const transaccionesVisibles = transaccionesFiltradas.filter(t => !t.oculta);
-                  
-                  const positivos = transaccionesVisibles.filter(t => {
-                    // Para volqueteros: viajes (fletes) son positivos
-                    if (t.tipo === "Viaje") {
-                      return true;
-                    }
-                    // Transacciones donde el volquetero recibe dinero (paraQuienTipo === 'volquetero')
-                    if (t.paraQuienTipo === 'volquetero' && t.paraQuienId === volqueteroIdActual.toString()) {
-                      return true;
-                    }
-                    return false;
-                  });
-                  
-                  const negativos = transaccionesVisibles.filter(t => {
-                    // Transacciones donde el volquetero paga dinero (deQuienTipo === 'volquetero')
-                    if (t.tipo !== "Viaje" && t.deQuienTipo === 'volquetero' && t.deQuienId === volqueteroIdActual.toString()) {
-                      return true;
-                    }
-                    return false;
-                  });
-
-                  const sumPositivos = positivos.reduce((sum, t) => sum + Math.abs(parseFloat(t.valor || "0")), 0);
-                  const sumNegativos = negativos.reduce((sum, t) => sum + Math.abs(parseFloat(t.valor || "0")), 0);
-                  const balance = sumPositivos - sumNegativos;
-
-                  const formatMoney = (value: number) => {
-                    return new Intl.NumberFormat('es-CO', {
-                      style: 'currency',
-                      currency: 'COP',
-                      minimumFractionDigits: 0,
-                    }).format(Math.abs(value)).replace('COP', '$');
-                  };
-
-                  return (
-                    <Card className="border-gray-200 bg-gray-50">
-                      <CardContent className="p-1.5 sm:p-2">
-                        <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center">
-                          <div className="bg-green-50 rounded px-2 py-1">
-                            <div className="text-green-600 text-xs font-medium">Positivos</div>
-                            <div className="text-green-700 text-xs sm:text-sm font-semibold">
-                              +{positivos.length} {formatMoney(sumPositivos)}
-                            </div>
-                          </div>
-                          <div className="bg-red-50 rounded px-2 py-1">
-                            <div className="text-red-600 text-xs font-medium">Negativos</div>
-                            <div className="text-red-700 text-xs sm:text-sm font-semibold">
-                              -{negativos.length} {formatMoney(sumNegativos)}
-                            </div>
-                          </div>
-                          <div className={`rounded px-2 py-1 ${balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
-                            <div className={`text-xs font-medium ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>Balance</div>
-                            <div className={`text-xs sm:text-sm font-bold ${balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                              {balance >= 0 ? '+' : '-'}{formatMoney(Math.abs(balance))}
-                            </div>
-                          </div>
+                <Card className="border-gray-200 bg-gray-50">
+                  <CardContent className="p-1.5 sm:p-2">
+                    <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center">
+                      <div className="bg-green-50 rounded px-2 py-1">
+                        <div className="text-green-600 text-xs font-medium">Positivos</div>
+                        <div className="text-green-700 text-xs sm:text-sm font-semibold">
+                          +{transaccionesFiltradas.filter(t => !t.oculta && parseFloat(t.valor) > 0).length} {formatCurrency(balanceResumido.positivos)}
                         </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })()}
+                      </div>
+                      <div className="bg-red-50 rounded px-2 py-1">
+                        <div className="text-red-600 text-xs font-medium">Negativos</div>
+                        <div className="text-red-700 text-xs sm:text-sm font-semibold">
+                          -{transaccionesFiltradas.filter(t => !t.oculta && parseFloat(t.valor) < 0).length} {formatCurrency(balanceResumido.negativos)}
+                        </div>
+                      </div>
+                      <div className={`rounded px-2 py-1 ${balanceResumido.balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                        <div className={`text-xs font-medium ${balanceResumido.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>Balance</div>
+                        <div className={`text-xs sm:text-sm font-bold ${balanceResumido.balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                          {balanceResumido.balance >= 0 ? '+' : ''}{formatCurrency(Math.abs(balanceResumido.balance))}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Vista de tabla para desktop */}
                 <div className="bg-card rounded-lg border overflow-hidden hidden md:block">
-                  <div className="overflow-x-auto">
-                    {console.log('🔍 DEBUG - Renderizando tabla con', transaccionesFormateadas.length, 'transacciones')}
+                    <div className="overflow-x-auto">
                     <Table className="w-full min-w-[600px]">
                       <TableHeader>
                         <TableRow>
@@ -801,17 +885,6 @@ export default function VolqueteroDetail() {
                         {transaccionesFiltradas.map((transaccion, index) => {
                           const valor = parseFloat(transaccion.valor);
                           
-                          // Debug para todas las transacciones manuales
-                          if (transaccion.tipo === "Manual") {
-                            console.log(`🔍 DEBUG - Transacción manual #${index}:`, {
-                              id: transaccion.id,
-                              concepto: transaccion.concepto,
-                              tipo: transaccion.tipo,
-                              tieneOriginalTransaction: !!transaccion.originalTransaction,
-                              originalTransactionId: transaccion.originalTransaction?.id
-                            });
-                          }
-                          
                           return (
                             <TableRow 
                               key={transaccion.id}
@@ -820,18 +893,15 @@ export default function VolqueteroDetail() {
                                 if (transaccion.tipo === "Manual" && transaccion.originalTransaction) {
                                   setSelectedTransaction(transaccion.originalTransaction);
                                   setShowTransactionDetail(true);
+                                } else if (transaccion.tipo === "Temporal") {
+                                  // Las transacciones temporales no tienen detalle, solo se pueden eliminar
                                 }
                               }}
                             >
                               <TableCell className="p-3 text-sm">
                                 {(() => {
                                   const fecha = transaccion.fecha;
-                                  if (typeof fecha === 'string') {
-                                    const dateStr = fecha.includes('T') ? fecha.split('T')[0] : fecha;
-                                    const [year, month, day] = dateStr.split('-');
-                                    const dayOfWeek = getDayOfWeek(fecha);
-                                    return `${dayOfWeek}. ${day}/${month}/${year?.slice(-2) || ''}`;
-                                  } else if (fecha instanceof Date) {
+                                  if (fecha instanceof Date) {
                                     const day = String(fecha.getDate()).padStart(2, '0');
                                     const month = String(fecha.getMonth() + 1).padStart(2, '0');
                                     const year = String(fecha.getFullYear()).slice(-2);
@@ -848,7 +918,7 @@ export default function VolqueteroDetail() {
                                     variant="outline" 
                                     className="text-xs px-1.5 py-0.5"
                                   >
-                                    {transaccion.tipo === "Manual" ? "M" : "V"}
+                                    {transaccion.tipo === "Manual" ? "M" : transaccion.tipo === "Temporal" ? "T" : "V"}
                                   </Badge>
                                 </div>
                               </TableCell>
@@ -868,7 +938,20 @@ export default function VolqueteroDetail() {
                               </TableCell>
                               <TableCell className="p-3 text-center whitespace-nowrap">
                                 <div className="flex items-center justify-center gap-1">
-                                  {transaccion.tipo === "Manual" && transaccion.originalTransaction ? (
+                                  {transaccion.tipo === "Temporal" ? (
+                                    <Button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteTemporalTransaction(transaccion.id);
+                                      }}
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 hover:bg-red-100"
+                                      title="Eliminar transacción temporal"
+                                    >
+                                      <Trash2 className="h-3 w-3 text-red-600" />
+                                    </Button>
+                                  ) : transaccion.tipo === "Manual" && transaccion.originalTransaction ? (
                                     <>
                                       <Button
                                         onClick={(e) => {
@@ -944,7 +1027,7 @@ export default function VolqueteroDetail() {
                       <Card 
                         key={transaccion.id} 
                         className={`border border-gray-200 transition-colors ${
-                          transaccion.tipo === "Manual" 
+                          transaccion.tipo === "Manual" || transaccion.tipo === "Temporal"
                             ? "cursor-pointer hover:bg-gray-50" 
                             : "cursor-default"
                         }`}
@@ -952,6 +1035,8 @@ export default function VolqueteroDetail() {
                           if (transaccion.tipo === "Manual" && transaccion.originalTransaction) {
                             setSelectedTransaction(transaccion.originalTransaction);
                             setShowTransactionDetail(true);
+                          } else if (transaccion.tipo === "Temporal") {
+                            // Las transacciones temporales no tienen detalle, solo se pueden eliminar
                           }
                         }}
                       >
@@ -963,13 +1048,7 @@ export default function VolqueteroDetail() {
                                 <span className="text-xs font-medium text-gray-600">
                         {(() => {
                           const fecha = transaccion.fecha;
-                          if (typeof fecha === 'string') {
-                            const dateStr = fecha.includes('T') ? fecha.split('T')[0] : fecha;
-                            const [year, month, day] = dateStr.split('-');
-                                      const shortYear = year.slice(-2);
-                                      const dayOfWeek = getDayOfWeek(fecha);
-                                      return `${dayOfWeek}. ${day}/${month}/${shortYear}`;
-                          } else if (fecha instanceof Date) {
+                          if (fecha instanceof Date) {
                                       const day = String(fecha.getDate()).padStart(2, '0');
                             const month = String(fecha.getMonth() + 1).padStart(2, '0');
                                       const year = String(fecha.getFullYear()).slice(-2);
@@ -981,6 +1060,8 @@ export default function VolqueteroDetail() {
                                 </span>
                                 {transaccion.tipo === "Viaje" ? (
                                   <Badge variant="secondary" className="text-xs px-1 py-0 h-4">V</Badge>
+                                ) : transaccion.tipo === "Temporal" ? (
+                                  <Badge variant="outline" className="text-xs px-1 py-0 h-4 bg-yellow-50">T</Badge>
                                 ) : (
                                   <Badge variant="outline" className="text-xs px-1 py-0 h-4">M</Badge>
                                 )}
@@ -1016,7 +1097,20 @@ export default function VolqueteroDetail() {
                                 }
                               </span>
                               
-                              {transaccion.tipo === "Manual" && transaccion.originalTransaction ? (
+                              {transaccion.tipo === "Temporal" ? (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-red-100 shrink-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteTemporalTransaction(transaccion.id);
+                                  }}
+                                  title="Eliminar transacción temporal"
+                                >
+                                  <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-red-600" />
+                                </Button>
+                              ) : transaccion.tipo === "Manual" && transaccion.originalTransaction ? (
                                 <div className="flex items-center gap-1">
                                   <Button
                                     size="sm"
@@ -1092,31 +1186,66 @@ export default function VolqueteroDetail() {
                 <CardTitle>Balance General</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Total Ingresos</p>
+                <div className="space-y-4">
+                  {/* Desglose de ingresos por viajes */}
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Ingresos por Viajes (Fletes)</p>
                     <p className="text-lg font-bold text-green-600">
                       {formatCurrency(transaccionesFormateadas
-                        .filter(t => parseFloat(t.valor) > 0)
-                        .reduce((sum, t) => sum + parseFloat(t.valor), 0)
+                        .filter(t => t.tipo === "Viaje" && !t.oculta)
+                        .reduce((sum, t) => sum + parseFloat(t.valor || "0"), 0)
                       )}
                     </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Total Egresos</p>
-                    <p className="text-lg font-bold text-red-600">
-                      {formatCurrency(Math.abs(transaccionesFormateadas
-                        .filter(t => parseFloat(t.valor) < 0)
-                        .reduce((sum, t) => sum + parseFloat(t.valor), 0)
-                      ))}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {transaccionesFormateadas.filter(t => t.tipo === "Viaje" && !t.oculta).length} viajes donde RodMar paga el flete
                     </p>
                   </div>
-                </div>
-                <div className="mt-4 pt-4 border-t text-center">
-                  <p className="text-sm text-muted-foreground">Balance Neto</p>
-                  <p className="text-xl font-bold">
-                    {formatCurrency(transaccionesFormateadas.reduce((sum, t) => sum + parseFloat(t.valor), 0))}
-                  </p>
+                  
+                  {/* Desglose de transacciones manuales */}
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Transacciones Manuales</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Ingresos</p>
+                        <p className="text-sm font-semibold text-green-600">
+                          {formatCurrency(transaccionesFormateadas
+                            .filter(t => (t.tipo === "Manual" || t.tipo === "Temporal") && !t.oculta && parseFloat(t.valor) > 0)
+                            .reduce((sum, t) => sum + parseFloat(t.valor || "0"), 0)
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {transaccionesFormateadas.filter(t => (t.tipo === "Manual" || t.tipo === "Temporal") && !t.oculta && parseFloat(t.valor) > 0).length} transacciones
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Egresos</p>
+                        <p className="text-sm font-semibold text-red-600">
+                          {formatCurrency(Math.abs(transaccionesFormateadas
+                            .filter(t => (t.tipo === "Manual" || t.tipo === "Temporal") && !t.oculta && parseFloat(t.valor) < 0)
+                            .reduce((sum, t) => sum + parseFloat(t.valor || "0"), 0)
+                          ))}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {transaccionesFormateadas.filter(t => (t.tipo === "Manual" || t.tipo === "Temporal") && !t.oculta && parseFloat(t.valor) < 0).length} transacciones
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Balance neto */}
+                  <div className="pt-4 border-t">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Balance Neto</p>
+                    <p className={`text-2xl font-bold ${
+                      balanceResumido.balance >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {balanceResumido.balance >= 0 ? '+' : ''}{formatCurrency(Math.abs(balanceResumido.balance))}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {balanceResumido.balance >= 0 
+                        ? 'RodMar debe al volquetero' 
+                        : 'El volquetero debe a RodMar'}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1138,7 +1267,14 @@ export default function VolqueteroDetail() {
       {/* Modals */}
       <NewTransactionModal
         open={showNewTransactionModal}
-        onOpenChange={setShowNewTransactionModal}
+        onClose={() => setShowNewTransactionModal(false)}
+      />
+      
+      <NewTransactionModal
+        open={showTemporalTransaction}
+        onClose={() => setShowTemporalTransaction(false)}
+        onSuccess={handleCreateTemporalTransaction}
+        isTemporalMode={true}
       />
 
       <TransactionDetailModal
