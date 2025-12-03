@@ -2535,7 +2535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Rutas específicas de ocultar/mostrar DEBEN estar ANTES de la ruta genérica /api/transacciones/:id
   // Ocultar transacción individual
-  app.patch("/api/transacciones/:id/hide", async (req, res) => {
+  app.patch("/api/transacciones/:id/hide", requireAuth, async (req, res) => {
     try {
       const userId = req.user?.id || "main_user";
       const transactionId = parseInt(req.params.id);
