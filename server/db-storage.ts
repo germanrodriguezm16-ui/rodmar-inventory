@@ -1002,15 +1002,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async hideTransaccion(id: number, userId?: string): Promise<boolean> {
+    // Solo buscar por ID, no filtrar por userId
+    // Muchas transacciones pueden tener userId NULL o diferente
     const conditions = [eq(transacciones.id, id)];
-    if (userId) {
-      conditions.push(eq(transacciones.userId, userId));
-    }
 
     const result = await db
       .update(transacciones)
       .set({ oculta: true })
       .where(and(...conditions));
+    
+    console.log(`🔍 [hideTransaccion] ID: ${id}, rowCount: ${result.rowCount}`);
     return result.rowCount > 0;
   }
 
