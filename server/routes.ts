@@ -3270,6 +3270,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
       );
 
+      // Si includeHidden=true, devolver todas las transacciones sin paginación
+      if (includeHidden) {
+        return res.json(transaccionesCuenta);
+      }
+
       // Aplicar paginación
       const total = transaccionesCuenta.length;
       const validPage = Math.max(1, Math.floor(page));
