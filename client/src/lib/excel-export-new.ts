@@ -3,6 +3,14 @@ import { ViajeWithDetails } from '@shared/schema';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+// Helper para obtener la URL base del backend (Railway en producción)
+const getBackendUrl = (): string => {
+  if (import.meta.env.PROD && import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  return window.location.origin;
+};
+
 const formatCurrency = (value: string): string => {
   const num = parseFloat(value);
   return new Intl.NumberFormat('es-CO', {
@@ -149,7 +157,7 @@ export async function exportTripsToExcel(trips: ViajeWithDetails[]) {
         const reciboCell = row.getCell('recibo');
         reciboCell.value = {
           text: 'Ver Recibo',
-          hyperlink: `https://${window.location.host}/recibo/${trip.id}`,
+          hyperlink: `${getBackendUrl()}/recibo/${trip.id}`,
           tooltip: 'Abrir imagen del recibo'
         };
         reciboCell.font = { color: { argb: 'FF0000FF' }, underline: true };

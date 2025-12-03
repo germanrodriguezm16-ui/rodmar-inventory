@@ -2,6 +2,14 @@ import * as XLSX from 'xlsx';
 import { ViajeWithDetails } from '@/../../shared/schema';
 import { formatCurrency } from './calculations';
 
+// Helper para obtener la URL base del backend (Railway en producción)
+const getBackendUrl = (): string => {
+  if (import.meta.env.PROD && import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  return window.location.origin;
+};
+
 export function exportTripsToCSV(trips: ViajeWithDetails[]) {
   try {
     // Preparar datos para exportación con formato exacto según imagen del usuario
@@ -25,7 +33,7 @@ export function exportTripsToCSV(trips: ViajeWithDetails[]) {
       'Valor a Consignar': trip.valorConsignar ? formatCurrency(trip.valorConsignar) : '',
       'Ganancias': trip.ganancia ? formatCurrency(trip.ganancia) : '',
       '¿QPF?': trip.quienPagaFlete === 'comprador' ? 'El comprador' : 'Tú',
-      'Recibo': trip.recibo ? `=HYPERLINK("https://${window.location.host}/recibo/${trip.id}","Ver Recibo")` : '',
+      'Recibo': trip.recibo ? `=HYPERLINK("${getBackendUrl()}/recibo/${trip.id}","Ver Recibo")` : '',
       'Observaciones': trip.observaciones || ''
     }));
 
