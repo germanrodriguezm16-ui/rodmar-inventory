@@ -879,8 +879,26 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
     refetchOnWindowFocus: false,
   });
 
+  // Obtener TODAS las transacciones de Postobón (incluyendo ocultas) para contar ocultas
+  const { data: todasPostobonTransactionsIncOcultas = [] } = useQuery<any[]>({
+    queryKey: ["/api/transacciones/postobon/all", filterType],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        includeHidden: 'true',
+        filterType: filterType,
+      });
+      const response = await fetch(apiUrl(`/api/transacciones/postobon?${params.toString()}`));
+      if (!response.ok) throw new Error('Error al obtener transacciones');
+      return response.json();
+    },
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
   const allBaseFilteredTransactions = transactionsData?.data || [];
   const pagination = transactionsData?.pagination;
+  const hiddenPostobonCount = todasPostobonTransactionsIncOcultas?.filter(t => t.oculta).length || 0;
 
   // Obtener TODAS las transacciones de Postobón (incluyendo ocultas) para contar ocultas
   const { data: todasPostobonTransactionsIncOcultas = [] } = useQuery<any[]>({
@@ -1846,8 +1864,22 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
     refetchOnWindowFocus: false,
   });
 
+  // Obtener TODAS las transacciones de LCDM (incluyendo ocultas) para contar ocultas
+  const { data: todasLcdmTransactionsIncOcultas = [] } = useQuery<any[]>({
+    queryKey: ["/api/transacciones/lcdm/all"],
+    queryFn: async () => {
+      const response = await fetch(apiUrl(`/api/transacciones/lcdm?includeHidden=true`));
+      if (!response.ok) throw new Error('Error al obtener transacciones');
+      return response.json();
+    },
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
   const allLcdmTransactions = transactionsData?.data || [];
   const pagination = transactionsData?.pagination;
+  const hiddenLcdmCount = todasLcdmTransactionsIncOcultas?.filter(t => t.oculta).length || 0;
 
   // Obtener TODAS las transacciones de LCDM (incluyendo ocultas) para contar ocultas
   const { data: todasLcdmTransactionsIncOcultas = [] } = useQuery<TransaccionWithSocio[]>({
