@@ -882,6 +882,26 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
   const allBaseFilteredTransactions = transactionsData?.data || [];
   const pagination = transactionsData?.pagination;
 
+  // Obtener TODAS las transacciones de Postobón (incluyendo ocultas) para contar ocultas
+  const { data: todasPostobonTransactionsIncOcultas = [] } = useQuery<any[]>({
+    queryKey: ["/api/transacciones/postobon/all", filterType],
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        includeHidden: 'true',
+        filterType: filterType,
+      });
+      const response = await fetch(apiUrl(`/api/transacciones/postobon?${params.toString()}`));
+      if (!response.ok) throw new Error('Error al obtener transacciones');
+      const data = await response.json();
+      return Array.isArray(data) ? data : (data.data || []);
+    },
+  });
+
+  const hiddenPostobonCount = todasPostobonTransactionsIncOcultas?.filter(t => t.oculta).length || 0;
+
   // Filtrado client-side sobre la página activa
   const baseFilteredTransactions = useMemo(() => {
     let filtered = [...allBaseFilteredTransactions];

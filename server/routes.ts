@@ -3200,22 +3200,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fechaDesde = req.query.fechaDesde as string || '';
       const fechaHasta = req.query.fechaHasta as string || '';
       
-      // Obtener todas las transacciones (necesitamos filtrar primero para contar)
-      const allTransacciones = await storage.getTransacciones();
+      // Verificar si se deben incluir transacciones ocultas
+      const includeHidden = req.query.includeHidden === 'true';
       
-      // Obtener TODAS las transacciones (incluyendo ocultas) para contar las ocultas
-      const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden();
-      const hiddenCuentaCount = allTransaccionesIncludingHidden.filter((t: any) => {
-        const matchesCuenta = (
-          (t.deQuienTipo === "rodmar" &&
-            t.deQuienId &&
-            t.deQuienId.toLowerCase() === cuentaId.toLowerCase()) ||
-          (t.paraQuienTipo === "rodmar" &&
-            t.paraQuienId &&
-            t.paraQuienId.toLowerCase() === cuentaId.toLowerCase())
-        );
-        return matchesCuenta && t.oculta;
-      }).length;
+      // Obtener todas las transacciones (con o sin ocultas según el parámetro)
+      const allTransacciones = includeHidden 
+        ? await storage.getTransaccionesIncludingHidden()
+        : await storage.getTransacciones();
 
       // Filtrar transacciones que involucren esta cuenta específica
       let transaccionesCuenta = allTransacciones.filter((t: any) => {
