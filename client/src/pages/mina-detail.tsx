@@ -100,9 +100,10 @@ export default function MinaDetail() {
   // Mutación para ocultar transacciones individuales
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
-      const response = await fetch(`/api/transacciones/${transactionId}/hide`, {
+      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Error al ocultar transacción');
       return await response.json();
@@ -128,9 +129,10 @@ export default function MinaDetail() {
   // Mutación para ocultar viajes individuales
   const hideViajeMutation = useMutation({
     mutationFn: async (viajeId: string) => {
-      const response = await fetch(`/api/viajes/${viajeId}/hide`, {
+      const response = await fetch(apiUrl(`/api/viajes/${viajeId}/hide`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Error al ocultar viaje');
       return await response.json();
@@ -279,7 +281,7 @@ export default function MinaDetail() {
     refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
     queryFn: async () => {
-      const response = await fetch(`/api/transacciones/socio/mina/${minaId}?includeHidden=true`);
+      const response = await fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}?includeHidden=true`));
       if (!response.ok) throw new Error('Error al obtener transacciones');
       return response.json();
     }

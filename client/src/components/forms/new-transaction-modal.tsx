@@ -235,7 +235,7 @@ function NewTransactionModal({
         
         if (onTemporalSubmit) {
           onTemporalSubmit(nuevaTransaccion);
-        } else if (onSuccess) {
+        } else if (onSuccess && typeof onSuccess === 'function') {
           onSuccess(nuevaTransaccion);
         }
       } else {
