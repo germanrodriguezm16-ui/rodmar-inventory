@@ -251,6 +251,33 @@ export default function RodMarCuentaDetail() {
     }
   });
 
+  // Mutación para mostrar todas las transacciones ocultas
+  const showAllHiddenMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(apiUrl(`/api/transacciones/show-all-hidden`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Error al mostrar transacciones ocultas');
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        description: "Todas las transacciones ocultas ahora son visibles",
+        duration: 2000,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/cuenta/${cuentaNombre}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+    },
+    onError: () => {
+      toast({
+        description: "Error al mostrar transacciones ocultas",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  });
+
   // Calcular fechaDesde y fechaHasta para enviar al servidor
   const dateRange = useMemo(() => {
     const rango = getDateRange(
@@ -671,6 +698,23 @@ export default function RodMarCuentaDetail() {
                     Limpiar
                   </Button>
                 )}
+                {/* Botón mostrar ocultas */}
+                {(() => {
+                  const transaccionesOcultas = transaccionesReales?.filter((t: any) => t.oculta).length || 0;
+                  const hayElementosOcultos = transaccionesOcultas > 0;
+                  
+                  return hayElementosOcultos ? (
+                    <Button
+                      onClick={() => showAllHiddenMutation.mutate()}
+                      size="sm"
+                      className="h-8 px-2 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                      disabled={showAllHiddenMutation.isPending}
+                      title={`Mostrar ${transaccionesOcultas} transacciones ocultas`}
+                    >
+                      +{transaccionesOcultas}
+                    </Button>
+                  ) : null;
+                })()}
                 <Button
                   onClick={() => setShowTemporalTransaction(true)}
                   variant="outline"

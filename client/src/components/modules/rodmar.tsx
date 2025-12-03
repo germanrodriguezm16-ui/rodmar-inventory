@@ -1253,6 +1253,24 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                   {sortByValor === "asc" && <ArrowUp className="w-1.5 h-1.5 absolute -bottom-0.5 -right-0.5" />}
                   {sortByValor === "desc" && <ArrowDown className="w-1.5 h-1.5 absolute -bottom-0.5 -right-0.5" />}
                 </Button>
+
+                {/* Botón mostrar ocultas - Postobón */}
+                {(() => {
+                  const transaccionesOcultas = allBaseFilteredTransactions?.filter(t => t.oculta).length || 0;
+                  const hayElementosOcultos = transaccionesOcultas > 0;
+                  
+                  return hayElementosOcultos ? (
+                    <Button
+                      onClick={() => showAllHiddenMutation.mutate()}
+                      size="sm"
+                      className="h-8 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-xs"
+                      disabled={showAllHiddenMutation.isPending}
+                      title={`Mostrar ${transaccionesOcultas} transacciones ocultas`}
+                    >
+                      +{transaccionesOcultas}
+                    </Button>
+                  ) : null;
+                })()}
               </div>
             </div>
 
