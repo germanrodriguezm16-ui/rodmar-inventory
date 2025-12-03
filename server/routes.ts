@@ -2317,8 +2317,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search as string || '';
       const fechaDesde = req.query.fechaDesde as string || '';
       const fechaHasta = req.query.fechaHasta as string || '';
+      const includeHidden = req.query.includeHidden === 'true';
       
-      console.log(`[LCDM] Obteniendo transacciones para userId: ${userId}`);
+      console.log(`[LCDM] Obteniendo transacciones para userId: ${userId}, includeHidden: ${includeHidden}`);
+      
+      // Si includeHidden=true, devolver todas las transacciones sin paginación
+      if (includeHidden) {
+        const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(userId);
+        const lcdmTransactions = allTransaccionesIncludingHidden.filter((t: any) => 
+          t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm'
+        );
+        return res.json(lcdmTransactions);
+      }
+      
       const allTransacciones = await storage.getTransacciones(userId);
       console.log(`[LCDM] Total transacciones obtenidas: ${allTransacciones.length}`);
       
@@ -2328,11 +2339,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm') && t.oculta
       ).length;
       
+      // Verificar si se deben incluir transacciones ocultas
+      const includeHidden = req.query.includeHidden === 'true';
+      
+      // Si se solicitan todas (incluyendo ocultas), usar getTransaccionesIncludingHidden
+      const sourceTransacciones = includeHidden 
+        ? await storage.getTransaccionesIncludingHidden(userId)
+        : allTransacciones;
+      
       // Filtrar transacciones de LCDM (origen o destino)
-      let lcdmTransactions = allTransacciones.filter((t: any) => 
+      let lcdmTransactions = sourceTransacciones.filter((t: any) => 
         t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm'
       );
-      console.log(`[LCDM] Transacciones filtradas por LCDM: ${lcdmTransactions.length}`);
+      console.log(`[LCDM] Transacciones filtradas por LCDM: ${lcdmTransactions.length} (includeHidden: ${includeHidden})`);
       console.log(`[LCDM] Transacciones ocultas de LCDM: ${hiddenLcdmCount}`);
 
       // Aplicar filtro de búsqueda
@@ -2456,11 +2475,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ).length;
       }
       
+      // Verificar si se deben incluir transacciones ocultas
+      const includeHidden = req.query.includeHidden === 'true';
+      
+      // Si se solicitan todas (incluyendo ocultas), usar getTransaccionesIncludingHidden
+      const sourceTransacciones = includeHidden 
+        ? await storage.getTransaccionesIncludingHidden(userId)
+        : allTransacciones;
+      
       // Filtrar transacciones de Postobón (origen o destino)
-      let postobonTransactions = allTransacciones.filter((t: any) => 
+      let postobonTransactions = sourceTransacciones.filter((t: any) => 
         t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon'
       );
-      console.log(`[Postobón] Transacciones filtradas por Postobón: ${postobonTransactions.length}`);
+      console.log(`[Postobón] Transacciones filtradas por Postobón: ${postobonTransactions.length} (includeHidden: ${includeHidden})`);
       console.log(`[Postobón] Transacciones ocultas de Postobón: ${hiddenPostobonCount}`);
 
       // Filtrar por cuenta específica si se especifica
