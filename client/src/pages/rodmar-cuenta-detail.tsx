@@ -342,7 +342,9 @@ export default function RodMarCuentaDetail() {
     queryFn: async () => {
       const response = await fetch(apiUrl(`/api/transacciones/cuenta/${cuentaNombre}?includeHidden=true`));
       if (!response.ok) throw new Error('Error al obtener transacciones');
-      return response.json();
+      const data = await response.json();
+      // Cuando includeHidden=true, el servidor devuelve un array directo
+      return Array.isArray(data) ? data : (data.data || []);
     },
     staleTime: 300000,
     refetchOnMount: false,

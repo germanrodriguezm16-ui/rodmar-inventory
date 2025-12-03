@@ -889,7 +889,9 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
       });
       const response = await fetch(apiUrl(`/api/transacciones/postobon?${params.toString()}`));
       if (!response.ok) throw new Error('Error al obtener transacciones');
-      return response.json();
+      const data = await response.json();
+      // Cuando includeHidden=true, el servidor devuelve un array directo
+      return Array.isArray(data) ? data : (data.data || []);
     },
     staleTime: 300000,
     refetchOnMount: false,
@@ -1884,7 +1886,9 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
     queryFn: async () => {
       const response = await fetch(apiUrl(`/api/transacciones/lcdm?includeHidden=true`));
       if (!response.ok) throw new Error('Error al obtener transacciones');
-      return response.json();
+      const data = await response.json();
+      // Cuando includeHidden=true, el servidor devuelve un array directo
+      return Array.isArray(data) ? data : (data.data || []);
     },
     staleTime: 300000,
     refetchOnMount: false,

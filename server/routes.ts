@@ -2470,16 +2470,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verificar si se deben incluir transacciones ocultas
       const includeHidden = req.query.includeHidden === 'true';
       
+      // Si includeHidden=true, devolver todas las transacciones sin paginación
+      if (includeHidden) {
+        const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(userId);
+        let postobonTransactions = allTransaccionesIncludingHidden.filter((t: any) => 
+          t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon'
+        );
+        
+        // Filtrar por cuenta específica si se especifica
+        if (filterType === 'santa-rosa') {
+          postobonTransactions = postobonTransactions.filter((t: any) => 
+            t.postobonCuenta === 'santa-rosa'
+          );
+        } else if (filterType === 'cimitarra') {
+          postobonTransactions = postobonTransactions.filter((t: any) => 
+            t.postobonCuenta === 'cimitarra'
+          );
+        }
+        
+        return res.json(postobonTransactions);
+      }
+      
       // Si se solicitan todas (incluyendo ocultas), usar getTransaccionesIncludingHidden
-      const sourceTransacciones = includeHidden 
-        ? await storage.getTransaccionesIncludingHidden(userId)
-        : allTransacciones;
+      const sourceTransacciones = allTransacciones;
       
       // Filtrar transacciones de Postobón (origen o destino)
       let postobonTransactions = sourceTransacciones.filter((t: any) => 
         t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon'
       );
-      console.log(`[Postobón] Transacciones filtradas por Postobón: ${postobonTransactions.length} (includeHidden: ${includeHidden})`);
+      console.log(`[Postobón] Transacciones filtradas por Postobón: ${postobonTransactions.length}`);
       console.log(`[Postobón] Transacciones ocultas de Postobón: ${hiddenPostobonCount}`);
 
       // Filtrar por cuenta específica si se especifica
