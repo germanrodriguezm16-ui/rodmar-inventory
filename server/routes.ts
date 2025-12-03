@@ -2914,8 +2914,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoint paginado para transacciones de LCDM
-  app.get("/api/transacciones/lcdm", async (req, res) => {
+  app.get("/api/transacciones/lcdm", requireAuth, async (req, res) => {
     try {
+      const userId = req.user?.id || "main_user";
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       
@@ -2924,7 +2925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fechaDesde = req.query.fechaDesde as string || '';
       const fechaHasta = req.query.fechaHasta as string || '';
       
-      const allTransacciones = await storage.getTransacciones();
+      const allTransacciones = await storage.getTransacciones(userId);
       
       // Filtrar transacciones de LCDM (origen o destino)
       let lcdmTransactions = allTransacciones.filter((t: any) => 
@@ -2998,13 +2999,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error fetching LCDM transactions:", error);
-      res.status(500).json({ error: "Error al obtener transacciones de LCDM" });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Error details:", errorMessage);
+      res.status(500).json({ 
+        error: "Error al obtener transacciones de LCDM",
+        details: errorMessage 
+      });
     }
   });
 
   // Endpoint paginado para transacciones de Postobón
-  app.get("/api/transacciones/postobon", async (req, res) => {
+  app.get("/api/transacciones/postobon", requireAuth, async (req, res) => {
     try {
+      const userId = req.user?.id || "main_user";
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       const filterType = req.query.filterType as string || 'todas'; // todas, santa-rosa, cimitarra
@@ -3014,7 +3021,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fechaDesde = req.query.fechaDesde as string || '';
       const fechaHasta = req.query.fechaHasta as string || '';
       
-      const allTransacciones = await storage.getTransacciones();
+      const allTransacciones = await storage.getTransacciones(userId);
       
       // Filtrar transacciones de Postobón (origen o destino)
       let postobonTransactions = allTransacciones.filter((t: any) => 
@@ -3099,7 +3106,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error fetching Postobón transactions:", error);
-      res.status(500).json({ error: "Error al obtener transacciones de Postobón" });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Error details:", errorMessage);
+      res.status(500).json({ 
+        error: "Error al obtener transacciones de Postobón",
+        details: errorMessage 
+      });
     }
   });
 
