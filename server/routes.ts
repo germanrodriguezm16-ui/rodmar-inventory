@@ -2322,11 +2322,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allTransacciones = await storage.getTransacciones(userId);
       console.log(`[LCDM] Total transacciones obtenidas: ${allTransacciones.length}`);
       
+      // Obtener TODAS las transacciones (incluyendo ocultas) para contar las ocultas
+      const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(userId);
+      const hiddenLcdmCount = allTransaccionesIncludingHidden.filter((t: any) => 
+        (t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm') && t.oculta
+      ).length;
+      
       // Filtrar transacciones de LCDM (origen o destino)
       let lcdmTransactions = allTransacciones.filter((t: any) => 
         t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm'
       );
       console.log(`[LCDM] Transacciones filtradas por LCDM: ${lcdmTransactions.length}`);
+      console.log(`[LCDM] Transacciones ocultas de LCDM: ${hiddenLcdmCount}`);
 
       // Aplicar filtro de búsqueda
       if (search.trim()) {
@@ -2428,11 +2435,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allTransacciones = await storage.getTransacciones(userId);
       console.log(`[Postobón] Total transacciones obtenidas: ${allTransacciones.length}`);
       
+      // Obtener TODAS las transacciones (incluyendo ocultas) para contar las ocultas
+      const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(userId);
+      let hiddenPostobonCount = allTransaccionesIncludingHidden.filter((t: any) => 
+        (t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon') && t.oculta
+      ).length;
+      
+      // Filtrar por cuenta específica si se especifica (también para ocultas)
+      if (filterType === 'santa-rosa') {
+        hiddenPostobonCount = allTransaccionesIncludingHidden.filter((t: any) => 
+          (t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon') && 
+          t.oculta && 
+          t.postobonCuenta === 'santa-rosa'
+        ).length;
+      } else if (filterType === 'cimitarra') {
+        hiddenPostobonCount = allTransaccionesIncludingHidden.filter((t: any) => 
+          (t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon') && 
+          t.oculta && 
+          t.postobonCuenta === 'cimitarra'
+        ).length;
+      }
+      
       // Filtrar transacciones de Postobón (origen o destino)
       let postobonTransactions = allTransacciones.filter((t: any) => 
         t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon'
       );
       console.log(`[Postobón] Transacciones filtradas por Postobón: ${postobonTransactions.length}`);
+      console.log(`[Postobón] Transacciones ocultas de Postobón: ${hiddenPostobonCount}`);
 
       // Filtrar por cuenta específica si se especifica
       if (filterType === 'santa-rosa') {
@@ -2509,6 +2538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalPages,
           hasMore: validPage < totalPages,
         },
+        hiddenCount: hiddenPostobonCount,
       });
     } catch (error) {
       console.error("[Postobón] Error fetching Postobón transactions:", error);
@@ -3145,6 +3175,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Obtener todas las transacciones (necesitamos filtrar primero para contar)
       const allTransacciones = await storage.getTransacciones();
+      
+      // Obtener TODAS las transacciones (incluyendo ocultas) para contar las ocultas
+      const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden();
+      const hiddenCuentaCount = allTransaccionesIncludingHidden.filter((t: any) => {
+        const matchesCuenta = (
+          (t.deQuienTipo === "rodmar" &&
+            t.deQuienId &&
+            t.deQuienId.toLowerCase() === cuentaId.toLowerCase()) ||
+          (t.paraQuienTipo === "rodmar" &&
+            t.paraQuienId &&
+            t.paraQuienId.toLowerCase() === cuentaId.toLowerCase())
+        );
+        return matchesCuenta && t.oculta;
+      }).length;
 
       // Filtrar transacciones que involucren esta cuenta específica
       let transaccionesCuenta = allTransacciones.filter((t: any) => {

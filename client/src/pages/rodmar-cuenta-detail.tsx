@@ -312,6 +312,7 @@ export default function RodMarCuentaDetail() {
       totalPages: number;
       hasMore: boolean;
     };
+    hiddenCount?: number;
   }>({
     queryKey: [
       `/api/transacciones/cuenta/${cuentaNombre}`, 
@@ -699,22 +700,17 @@ export default function RodMarCuentaDetail() {
                   </Button>
                 )}
                 {/* Botón mostrar ocultas */}
-                {(() => {
-                  const transaccionesOcultas = transaccionesReales?.filter((t: any) => t.oculta).length || 0;
-                  const hayElementosOcultos = transaccionesOcultas > 0;
-                  
-                  return hayElementosOcultos ? (
-                    <Button
-                      onClick={() => showAllHiddenMutation.mutate()}
-                      size="sm"
-                      className="h-8 px-2 text-xs bg-blue-600 hover:bg-blue-700 text-white"
-                      disabled={showAllHiddenMutation.isPending}
-                      title={`Mostrar ${transaccionesOcultas} transacciones ocultas`}
-                    >
-                      +{transaccionesOcultas}
-                    </Button>
-                  ) : null;
-                })()}
+                {hiddenCuentaCount > 0 ? (
+                  <Button
+                    onClick={() => showAllHiddenMutation.mutate()}
+                    size="sm"
+                    className="h-8 px-2 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={showAllHiddenMutation.isPending}
+                    title={`Mostrar ${hiddenCuentaCount} transacciones ocultas`}
+                  >
+                    +{hiddenCuentaCount}
+                  </Button>
+                ) : null}
                 <Button
                   onClick={() => setShowTemporalTransaction(true)}
                   variant="outline"

@@ -841,6 +841,7 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
       totalPages: number;
       hasMore: boolean;
     };
+    hiddenCount?: number;
   }>({
     queryKey: [
       "/api/transacciones/postobon", 
@@ -1255,22 +1256,17 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                 </Button>
 
                 {/* Botón mostrar ocultas - Postobón */}
-                {(() => {
-                  const transaccionesOcultas = allBaseFilteredTransactions?.filter(t => t.oculta).length || 0;
-                  const hayElementosOcultos = transaccionesOcultas > 0;
-                  
-                  return hayElementosOcultos ? (
-                    <Button
-                      onClick={() => showAllHiddenMutation.mutate()}
-                      size="sm"
-                      className="h-8 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-xs"
-                      disabled={showAllHiddenMutation.isPending}
-                      title={`Mostrar ${transaccionesOcultas} transacciones ocultas`}
-                    >
-                      +{transaccionesOcultas}
-                    </Button>
-                  ) : null;
-                })()}
+                {hiddenPostobonCount > 0 ? (
+                  <Button
+                    onClick={() => showAllHiddenMutation.mutate()}
+                    size="sm"
+                    className="h-8 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-xs"
+                    disabled={showAllHiddenMutation.isPending}
+                    title={`Mostrar ${hiddenPostobonCount} transacciones ocultas`}
+                  >
+                    +{hiddenPostobonCount}
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -1793,6 +1789,7 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
       totalPages: number;
       hasMore: boolean;
     };
+    hiddenCount?: number;
   }>({
     queryKey: [
       "/api/transacciones/lcdm", 
@@ -1830,6 +1827,7 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
 
   const allLcdmTransactions = transactionsData?.data || [];
   const pagination = transactionsData?.pagination;
+  const hiddenLcdmCount = transactionsData?.hiddenCount || 0;
 
   // Filtrado client-side sobre la página activa
   const lcdmTransactions = useMemo(() => {
@@ -2221,22 +2219,17 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
                 </Button>
 
                 {/* Botón mostrar ocultas - LCDM */}
-                {(() => {
-                  const transaccionesOcultas = allLcdmTransactions?.filter(t => t.oculta).length || 0;
-                  const hayElementosOcultos = transaccionesOcultas > 0;
-                  
-                  return hayElementosOcultos ? (
-                    <Button
-                      onClick={() => showAllHiddenMutation.mutate()}
-                      size="sm"
-                      className="h-8 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-xs"
-                      disabled={showAllHiddenMutation.isPending}
-                      title={`Mostrar ${transaccionesOcultas} transacciones ocultas`}
-                    >
-                      +{transaccionesOcultas}
-                    </Button>
-                  ) : null;
-                })()}
+                {hiddenLcdmCount > 0 ? (
+                  <Button
+                    onClick={() => showAllHiddenMutation.mutate()}
+                    size="sm"
+                    className="h-8 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-xs"
+                    disabled={showAllHiddenMutation.isPending}
+                    title={`Mostrar ${hiddenLcdmCount} transacciones ocultas`}
+                  >
+                    +{hiddenLcdmCount}
+                  </Button>
+                ) : null}
               </div>
             </div>
 

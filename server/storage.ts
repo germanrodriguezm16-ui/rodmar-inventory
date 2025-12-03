@@ -53,6 +53,7 @@ export interface IStorage {
 
   // Transacciones
   getTransacciones(userId?: string): Promise<TransaccionWithSocio[]>;
+  getTransaccionesIncludingHidden(userId?: string): Promise<TransaccionWithSocio[]>;
   getTransaccionesPaginated(userId?: string, page?: number, limit?: number): Promise<{
     data: TransaccionWithSocio[];
     pagination: {

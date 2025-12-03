@@ -776,6 +776,53 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  // Obtener todas las transacciones incluyendo las ocultas (para contar ocultas)
+  async getTransaccionesIncludingHidden(userId?: string): Promise<TransaccionWithSocio[]> {
+    return wrapDbOperation(async () => {
+      const conditions: any[] = []; // Sin filtro de oculta
+      if (userId) {
+        conditions.push(eq(transacciones.userId, userId));
+      }
+
+      const results = await db
+        .select({
+          id: transacciones.id,
+          deQuienTipo: transacciones.deQuienTipo,
+          deQuienId: transacciones.deQuienId,
+          paraQuienTipo: transacciones.paraQuienTipo,
+          paraQuienId: transacciones.paraQuienId,
+          postobonCuenta: transacciones.postobonCuenta,
+          concepto: transacciones.concepto,
+          valor: transacciones.valor,
+          fecha: transacciones.fecha,
+          horaInterna: transacciones.horaInterna,
+          formaPago: transacciones.formaPago,
+          comentario: transacciones.comentario,
+          tipoTransaccion: transacciones.tipoTransaccion,
+          oculta: transacciones.oculta,
+          ocultaEnComprador: transacciones.ocultaEnComprador,
+          ocultaEnMina: transacciones.ocultaEnMina,
+          ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
+          ocultaEnGeneral: transacciones.ocultaEnGeneral,
+          userId: transacciones.userId,
+          tipoSocio: transacciones.deQuienTipo,
+          socioId: transacciones.deQuienId,
+          createdAt: transacciones.horaInterna,
+        })
+        .from(transacciones)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna));
+
+      // Mapear resultados (sin joins para optimizar - solo para contar)
+      return results.map((t: any) => ({
+        ...t,
+        deQuien: null,
+        paraQuien: null,
+        socioNombre: '',
+      }));
+    });
+  }
+
   // Método paginado para transacciones (optimización de rendimiento)
   async getTransaccionesPaginated(
     userId?: string,
