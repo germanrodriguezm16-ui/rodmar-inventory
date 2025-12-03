@@ -254,16 +254,61 @@ function NewTransactionModal({
         // Invalidar solo las entidades específicas afectadas
         if (data.deQuienTipo === 'mina' || data.paraQuienTipo === 'mina') {
           queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
         }
         if (data.deQuienTipo === 'comprador' || data.paraQuienTipo === 'comprador') {
           queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
         }
         if (data.deQuienTipo === 'volquetero' || data.paraQuienTipo === 'volquetero') {
           queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
         }
         
-        // Forzar refetch inmediato solo de transacciones
-        queryClient.refetchQueries({ queryKey: ["/api/transacciones"] });
+        // Invalidar queries de LCDM/Postobón si están involucradas
+        if (data.deQuienTipo === 'lcdm' || data.paraQuienTipo === 'lcdm') {
+          queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0] === "/api/transacciones/lcdm";
+            },
+          });
+        }
+        if (data.deQuienTipo === 'postobon' || data.paraQuienTipo === 'postobon') {
+          queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0] === "/api/transacciones/postobon";
+            },
+          });
+        }
+        
+        // Invalidar queries de cuentas RodMar si están involucradas
+        const rodmarAccountIds = ['bemovil', 'corresponsal', 'efectivo', 'cuentas-german', 'cuentas-jhon', 'otros'];
+        const hasRodmarAccount = 
+          (data.deQuienTipo === 'rodmar' && rodmarAccountIds.includes(data.deQuienId || '')) ||
+          (data.paraQuienTipo === 'rodmar' && rodmarAccountIds.includes(data.paraQuienId || ''));
+        
+        if (hasRodmarAccount) {
+          queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0].startsWith("/api/transacciones/cuenta/");
+            },
+          });
+        }
         
         console.log("=== CACHE INVALIDADO CORRECTAMENTE ===");
       }

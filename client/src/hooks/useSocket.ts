@@ -45,6 +45,8 @@ export function useSocket() {
       // Invalidar queries específicas según entidades afectadas
       if (affectedEntityTypes.includes("mina")) {
         queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
+        // Invalidar endpoint de balances para actualizar listados
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -58,6 +60,8 @@ export function useSocket() {
 
       if (affectedEntityTypes.includes("comprador")) {
         queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
+        // Invalidar endpoint de balances para actualizar listados
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -71,6 +75,8 @@ export function useSocket() {
 
       if (affectedEntityTypes.includes("volquetero")) {
         queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+        // Invalidar endpoint de balances para actualizar listados
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -85,12 +91,30 @@ export function useSocket() {
 
       if (affectedEntityTypes.includes("lcdm")) {
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/lcdm"] });
+        // Invalidar queries de transacciones LCDM (con paginación)
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            return Array.isArray(queryKey) &&
+              queryKey.length > 0 &&
+              typeof queryKey[0] === "string" &&
+              queryKey[0] === "/api/transacciones/lcdm";
+          },
+        });
       }
 
       if (affectedEntityTypes.includes("postobon")) {
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/postobon"] });
+        // Invalidar queries de transacciones Postobón (con paginación)
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            return Array.isArray(queryKey) &&
+              queryKey.length > 0 &&
+              typeof queryKey[0] === "string" &&
+              queryKey[0] === "/api/transacciones/postobon";
+          },
+        });
       }
 
       // Invalidar queries de cuentas RodMar específicas
@@ -120,7 +144,30 @@ export function useSocket() {
       }
 
       // Forzar refetch de queries activas para actualización inmediata
-      queryClient.refetchQueries({ type: "active" });
+      // Solo refetch queries que realmente necesitan actualizarse (no todas)
+      queryClient.refetchQueries({ 
+        type: "active",
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          if (!Array.isArray(queryKey) || queryKey.length === 0) return false;
+          const firstKey = queryKey[0] as string;
+          
+          // Refetch solo queries relevantes
+          return firstKey === "/api/transacciones" ||
+                 firstKey === "/api/minas" ||
+                 firstKey === "/api/compradores" ||
+                 firstKey === "/api/volqueteros" ||
+                 firstKey === "/api/balances/minas" ||
+                 firstKey === "/api/balances/compradores" ||
+                 firstKey === "/api/balances/volqueteros" ||
+                 firstKey === "/api/rodmar-accounts" ||
+                 firstKey === "/api/transacciones/lcdm" ||
+                 firstKey === "/api/transacciones/postobon" ||
+                 firstKey?.startsWith("/api/transacciones/cuenta/") ||
+                 firstKey?.startsWith("/api/transacciones/socio/") ||
+                 firstKey?.startsWith("/api/transacciones/comprador/");
+        }
+      });
     });
 
     // Manejar eventos de conexión

@@ -396,6 +396,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       // Invalidar solo las entidades que realmente necesitan actualización
       if (affectedEntityTypes.has('mina')) {
         queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
         // Invalidar queries específicas de minas
         queryClient.invalidateQueries({ 
           predicate: (query) => {
@@ -411,6 +412,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       }
       if (affectedEntityTypes.has('comprador')) {
         queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
         // Invalidar queries específicas de compradores
         queryClient.invalidateQueries({ 
           predicate: (query) => {
@@ -428,6 +430,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       }
       if (affectedEntityTypes.has('volquetero')) {
         queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
         // Invalidar queries específicas de volqueteros
         queryClient.invalidateQueries({ 
           predicate: (query) => {
@@ -456,24 +459,34 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         // Invalidar queries de cuentas RodMar
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
         
-        // Invalidar queries específicas de LCDM
+        // Invalidar queries específicas de LCDM (con paginación)
         if (affectedEntityTypes.has('lcdm')) {
-          queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts", "lcdm"] });
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0] === "/api/transacciones/lcdm";
+            },
+          });
         }
         
-        // Invalidar queries específicas de Postobón
+        // Invalidar queries específicas de Postobón (con paginación)
         if (affectedEntityTypes.has('postobon')) {
-          queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts", "postobon"] });
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0] === "/api/transacciones/postobon";
+            },
+          });
         }
         
         // Invalidar queries de transacciones para asegurar actualización del balance
         queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
-        
-        // Forzar refetch inmediato de cuentas RodMar para actualización inmediata
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/rodmar-accounts"],
-          type: 'active'
-        });
       }
       
       // 6. Invalidar queries específicas para cuentas RodMar (Bemovil, Corresponsal, Efectivo, etc.)
@@ -496,31 +509,35 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         
         // Invalidar queries de transacciones para asegurar actualización del balance
         queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
-        
-        // Forzar refetch inmediato de cuentas RodMar para actualización inmediata
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/rodmar-accounts"],
-          type: 'active'
-        });
       }
       
       // También invalidar si la transacción original tenía LCDM/Postobón
       if (currentTransaction) {
         if (currentTransaction.deQuienTipo === 'lcdm' || currentTransaction.paraQuienTipo === 'lcdm') {
-          queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts", "lcdm"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
-          queryClient.refetchQueries({ 
-            queryKey: ["/api/rodmar-accounts"],
-            type: 'active'
+          queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0] === "/api/transacciones/lcdm";
+            },
           });
+          queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
         }
         if (currentTransaction.deQuienTipo === 'postobon' || currentTransaction.paraQuienTipo === 'postobon') {
-          queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts", "postobon"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
-          queryClient.refetchQueries({ 
-            queryKey: ["/api/rodmar-accounts"],
-            type: 'active'
+          queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0] === "/api/transacciones/postobon";
+            },
           });
+          queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
         }
       }
       

@@ -52,6 +52,7 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       // Invalidar solo las entidades que estaban involucradas en la transacción eliminada
       if (transaction?.deQuienTipo === 'mina' || transaction?.paraQuienTipo === 'mina') {
         queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
         // Invalidar queries específicas de minas
         queryClient.invalidateQueries({ 
           predicate: (query) => {
@@ -67,6 +68,7 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       }
       if (transaction?.deQuienTipo === 'comprador' || transaction?.paraQuienTipo === 'comprador') {
         queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
         // Invalidar queries específicas de compradores
         queryClient.invalidateQueries({ 
           predicate: (query) => {
@@ -84,6 +86,7 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       }
       if (transaction?.deQuienTipo === 'volquetero' || transaction?.paraQuienTipo === 'volquetero') {
         queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
         // Invalidar queries específicas de volqueteros
         queryClient.invalidateQueries({ 
           predicate: (query) => {
@@ -113,25 +116,33 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       // Invalidar queries específicas para LCDM/Postobón
       if (transaction?.deQuienTipo === 'lcdm' || transaction?.paraQuienTipo === 'lcdm') {
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts", "lcdm"] });
+        // Invalidar queries de transacciones LCDM (con paginación)
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            return Array.isArray(queryKey) &&
+              queryKey.length > 0 &&
+              typeof queryKey[0] === "string" &&
+              queryKey[0] === "/api/transacciones/lcdm";
+          },
+        });
         // Invalidar queries de transacciones para asegurar actualización del balance
         queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
-        // Forzar refetch inmediato de cuentas RodMar para actualización inmediata
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/rodmar-accounts"],
-          type: 'active'
-        });
       }
       if (transaction?.deQuienTipo === 'postobon' || transaction?.paraQuienTipo === 'postobon') {
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts", "postobon"] });
+        // Invalidar queries de transacciones Postobón (con paginación)
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            return Array.isArray(queryKey) &&
+              queryKey.length > 0 &&
+              typeof queryKey[0] === "string" &&
+              queryKey[0] === "/api/transacciones/postobon";
+          },
+        });
         // Invalidar queries de transacciones para asegurar actualización del balance
         queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
-        // Forzar refetch inmediato de cuentas RodMar para actualización inmediata
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/rodmar-accounts"],
-          type: 'active'
-        });
       }
       
       // Invalidar queries específicas para cuentas RodMar (Bemovil, Corresponsal, Efectivo, etc.)
@@ -159,9 +170,6 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
         
         // Invalidar queries de transacciones para asegurar actualización del balance
         queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
-        
-        // Forzar refetch inmediato de cuentas RodMar para actualización inmediata
-        queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
       }
       
       // Invalidate specific socio queries - manejo seguro para ambos formatos
