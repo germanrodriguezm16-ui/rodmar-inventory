@@ -2533,7 +2533,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Rutas específicas de ocultar/mostrar DEBEN estar ANTES de la ruta genérica /api/transacciones/:id
+  // IMPORTANTE: Las rutas específicas DEBEN estar ANTES de la ruta genérica /api/transacciones/:id
+  // para que Express las evalúe primero. De lo contrario, /api/transacciones/:id interceptará
+  // peticiones como /api/transacciones/:id/hide
+  
+  // Rutas específicas de ocultar/mostrar - TODAS DEBEN ESTAR ANTES DE LA RUTA GENÉRICA
   // Ocultar transacción individual
   app.patch("/api/transacciones/:id/hide", requireAuth, async (req, res) => {
     try {
@@ -2560,9 +2564,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // IMPORTANTE: Las rutas específicas DEBEN estar ANTES de la ruta genérica /api/transacciones/:id
-  // para que Express las evalúe primero. De lo contrario, /api/transacciones/:id interceptará
-  // peticiones como /api/transacciones/:id/hide
+  // Endpoints específicos por módulo para ocultar transacciones
+  app.patch("/api/transacciones/:id/hide-comprador", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user?.id || "main_user";
+      const transactionId = parseInt(req.params.id);
+
+      if (isNaN(transactionId)) {
+        return res.status(400).json({ error: "ID de transacción inválido" });
+      }
+
+      const success = await storage.hideTransaccionEnComprador(
+        transactionId,
+        userId,
+      );
+
+      if (success) {
+        res.json({
+          success: true,
+          message: "Transacción ocultada en módulo compradores",
+        });
+      } else {
+        res.status(404).json({ error: "Transacción no encontrada" });
+      }
+    } catch (error) {
+      console.error("Error hiding transaction in comprador:", error);
+      res
+        .status(500)
+        .json({ error: "Error al ocultar la transacción en compradores" });
+    }
+  });
+
+  app.patch("/api/transacciones/:id/hide-mina", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user?.id || "main_user";
+      const transactionId = parseInt(req.params.id);
+
+      if (isNaN(transactionId)) {
+        return res.status(400).json({ error: "ID de transacción inválido" });
+      }
+
+      const success = await storage.hideTransaccionEnMina(
+        transactionId,
+        userId,
+      );
+
+      if (success) {
+        res.json({
+          success: true,
+          message: "Transacción ocultada en módulo minas",
+        });
+      } else {
+        res.status(404).json({ error: "Transacción no encontrada" });
+      }
+    } catch (error) {
+      console.error("Error hiding transaction in mina:", error);
+      res
+        .status(500)
+        .json({ error: "Error al ocultar la transacción en minas" });
+    }
+  });
+
+  app.patch("/api/transacciones/:id/hide-volquetero", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user?.id || "main_user";
+      const transactionId = parseInt(req.params.id);
+
+      if (isNaN(transactionId)) {
+        return res.status(400).json({ error: "ID de transacción inválido" });
+      }
+
+      const success = await storage.hideTransaccionEnVolquetero(
+        transactionId,
+        userId,
+      );
+
+      if (success) {
+        res.json({
+          success: true,
+          message: "Transacción ocultada en módulo volqueteros",
+        });
+      } else {
+        res.status(404).json({ error: "Transacción no encontrada" });
+      }
+    } catch (error) {
+      console.error("Error hiding transaction in volquetero:", error);
+      res
+        .status(500)
+        .json({ error: "Error al ocultar la transacción en volqueteros" });
+    }
+  });
+
+  app.patch("/api/transacciones/:id/hide-general", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user?.id || "main_user";
+      const transactionId = parseInt(req.params.id);
+
+      if (isNaN(transactionId)) {
+        return res.status(400).json({ error: "ID de transacción inválido" });
+      }
+
+      const success = await storage.hideTransaccionEnGeneral(
+        transactionId,
+        userId,
+      );
+
+      if (success) {
+        res.json({
+          success: true,
+          message: "Transacción ocultada en general",
+        });
+      } else {
+        res.status(404).json({ error: "Transacción no encontrada" });
+      }
+    } catch (error) {
+      console.error("Error hiding transaction in general:", error);
+      res
+        .status(500)
+        .json({ error: "Error al ocultar la transacción en general" });
+    }
+  });
 
   app.patch("/api/transacciones/:id", async (req, res) => {
     try {
