@@ -336,8 +336,22 @@ export default function RodMarCuentaDetail() {
     refetchOnWindowFocus: false,
   });
 
+  // Obtener TODAS las transacciones de esta cuenta (incluyendo ocultas) para contar ocultas
+  const { data: todasTransaccionesIncOcultas = [] } = useQuery<any[]>({
+    queryKey: [`/api/transacciones/cuenta/${cuentaNombre}/all`],
+    queryFn: async () => {
+      const response = await fetch(apiUrl(`/api/transacciones/cuenta/${cuentaNombre}?includeHidden=true`));
+      if (!response.ok) throw new Error('Error al obtener transacciones');
+      return response.json();
+    },
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
   const allTransaccionesReales = transactionsData?.data || [];
   const pagination = transactionsData?.pagination;
+  const hiddenCuentaCount = todasTransaccionesIncOcultas?.filter((t: any) => t.oculta).length || 0;
 
   // Obtener TODAS las transacciones de la cuenta (incluyendo ocultas) para contar ocultas
   const { data: todasTransaccionesIncOcultas = [] } = useQuery<TransaccionWithSocio[]>({
