@@ -781,9 +781,11 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
   // Estado para modal de imagen
   const [showImageModal, setShowImageModal] = useState(false);
 
-  // Estados de paginación
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  // Paginación con memoria en localStorage
+  const { currentPage, setCurrentPage, pageSize, setPageSize, getLimitForServer } = usePagination({
+    storageKey: "postobon-transactions-pageSize",
+    defaultPageSize: 50,
+  });
 
   // Estados para transacciones temporales - Como en LCDM
   const [transaccionesTemporales, setTransaccionesTemporales] = useState<any[]>([]);
