@@ -1006,13 +1006,19 @@ export class DatabaseStorage implements IStorage {
     // Muchas transacciones pueden tener userId NULL o diferente
     const conditions = [eq(transacciones.id, id)];
 
+    // Usar .returning() para obtener el resultado actualizado
+    // Si devuelve un array con elementos, la actualización fue exitosa
     const result = await db
       .update(transacciones)
       .set({ oculta: true })
-      .where(and(...conditions));
+      .where(and(...conditions))
+      .returning();
     
-    console.log(`🔍 [hideTransaccion] ID: ${id}, rowCount: ${result.rowCount}`);
-    return result.rowCount > 0;
+    console.log(`🔍 [hideTransaccion] ID: ${id}, result length: ${result.length}`);
+    console.log(`🔍 [hideTransaccion] Result:`, JSON.stringify(result, null, 2));
+    
+    // Si el array tiene elementos, la actualización fue exitosa
+    return result.length > 0;
   }
 
   // Nuevas funciones específicas por módulo
