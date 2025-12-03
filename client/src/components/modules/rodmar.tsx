@@ -896,6 +896,7 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
       const response = await fetch(apiUrl(`/api/transacciones/postobon?${params.toString()}`));
       if (!response.ok) throw new Error('Error al obtener transacciones');
       const data = await response.json();
+      // Cuando includeHidden=true, el servidor devuelve un array directo
       return Array.isArray(data) ? data : (data.data || []);
     },
   });

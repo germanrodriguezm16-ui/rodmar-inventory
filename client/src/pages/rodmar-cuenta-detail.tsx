@@ -349,7 +349,8 @@ export default function RodMarCuentaDetail() {
       const response = await fetch(apiUrl(`/api/transacciones/cuenta/${cuentaNombre}?includeHidden=true`));
       if (!response.ok) throw new Error('Error al obtener transacciones');
       const data = await response.json();
-      return data.data || data; // Manejar tanto respuesta paginada como lista directa
+      // Cuando includeHidden=true, el servidor devuelve un array directo
+      return Array.isArray(data) ? data : (data.data || []);
     }
   });
 
