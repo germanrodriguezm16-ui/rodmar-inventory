@@ -1408,7 +1408,7 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                     </span>
 
                     {/* Botones de acción para transacciones manuales */}
-                    {transaccion.tipo === "Manual" ? (
+                    {transaccion.tipo !== "Temporal" && typeof transaccion.id === 'number' ? (
                       <div className="flex items-center gap-1">
                         <Button
                           size="sm"
@@ -2318,7 +2318,7 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
                     </span>
 
                     {/* Botones de acción para transacciones manuales */}
-                    {transaccion.tipo === "Manual" ? (
+                    {transaccion.tipo !== "Temporal" && typeof transaccion.id === 'number' ? (
                       <div className="flex items-center gap-1">
                         <Button
                           size="sm"
