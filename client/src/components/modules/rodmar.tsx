@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { User, Calculator, Building2, ShoppingCart, DollarSign, Banknote, Search, CalendarDays, ArrowUp, ArrowDown, ImageIcon, Plus, X, BarChart3, TrendingUp, ChevronRight } from "lucide-react";
+import { User, Calculator, Building2, ShoppingCart, DollarSign, Banknote, Search, CalendarDays, ArrowUp, ArrowDown, ImageIcon, Plus, X, BarChart3, TrendingUp, ChevronRight, Edit, Trash2, Eye } from "lucide-react";
 
 import { formatDateWithDaySpanish } from "@/lib/date-utils";
 
@@ -35,6 +35,10 @@ import { useCompradoresBalance } from "@/hooks/useCompradoresBalance";
 import { RodmarTransaccionesImageModal } from "@/components/modals/rodmar-transacciones-image-modal";
 import { useToast } from "@/hooks/use-toast";
 import { NewTransactionModal } from "@/components/forms/new-transaction-modal";
+import EditTransactionModal from "@/components/forms/edit-transaction-modal";
+import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
+import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
+import { useMutation } from "@tanstack/react-query";
 
 ChartJS.register(
   CategoryScale,
@@ -793,6 +797,12 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Estados para modales de acciones
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+
   // Calcular fechaDesde y fechaHasta para filtrado client-side
   const dateRange = useMemo(() => {
     if (fechaFilterType === "exactamente" && fechaFilterValue) {
@@ -1043,6 +1053,44 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
     });
   };
 
+  // Mutation para ocultar transacciones
+  const hideTransactionMutation = useMutation({
+    mutationFn: async (transactionId: number) => {
+      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide`), {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          return Array.isArray(queryKey) &&
+                 queryKey.length > 0 &&
+                 typeof queryKey[0] === "string" &&
+                 queryKey[0].startsWith("/api/transacciones/postobon");
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+      toast({
+        title: "Transacción ocultada",
+        description: "La transacción ha sido ocultada correctamente",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "No se pudo ocultar la transacción",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Resetear a página 1 cuando cambian los filtros
   useEffect(() => {
     setCurrentPage(1);
@@ -1290,6 +1338,12 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
             <Card 
               key={transaccion.id} 
               className="border border-gray-200 transition-colors cursor-pointer hover:bg-gray-50"
+              onClick={() => {
+                if (transaccion.tipo !== "Temporal") {
+                  setSelectedTransaction(transaccion);
+                  setShowDetailModal(true);
+                }
+              }}
             >
               <CardContent className="p-2 sm:p-3">
                 <div className="flex items-center justify-between gap-2">
@@ -1340,7 +1394,7 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                     )}
                   </div>
 
-                  {/* Lado derecho: Valor y botón eliminar temporal */}
+                  {/* Lado derecho: Valor y botones de acción */}
                   <div className="flex items-center gap-1 sm:gap-2">
                     <span className={`font-medium text-xs sm:text-sm text-right min-w-0 ${
                       transaccion.paraQuienTipo === 'postobon' ? 'text-red-600' : 'text-green-600'
@@ -1353,8 +1407,52 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                       })()}
                     </span>
 
-                    {/* Mostrar badge temporal y botón eliminar si es transacción temporal */}
-                    {transaccion.tipo === "Temporal" && (
+                    {/* Botones de acción para transacciones manuales */}
+                    {transaccion.tipo === "Manual" ? (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-blue-100 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTransaction(transaccion);
+                            setShowEditModal(true);
+                          }}
+                          title="Editar transacción"
+                        >
+                          <Edit className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-red-100 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTransaction(transaccion);
+                            setShowDeleteModal(true);
+                          }}
+                          title="Eliminar transacción"
+                        >
+                          <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-red-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-gray-100 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (typeof transaccion.id === 'number') {
+                              hideTransactionMutation.mutate(transaccion.id);
+                            }
+                          }}
+                          disabled={hideTransactionMutation.isPending}
+                          title="Ocultar transacción"
+                        >
+                          <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-500" />
+                        </Button>
+                      </div>
+                    ) : transaccion.tipo === "Temporal" ? (
                       <div className="flex items-center gap-1">
                         <Badge 
                           variant="outline" 
@@ -1373,7 +1471,7 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                           <X className="w-2.5 h-2.5 text-red-600" />
                         </button>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </CardContent>
@@ -1434,6 +1532,31 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
         onClose={() => setShowTemporalTransaction(false)}
         onTemporalSubmit={handleTemporalSubmit}
         isTemporalMode={true}
+      />
+
+      {/* Modales de acciones */}
+      <EditTransactionModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedTransaction(null);
+        }}
+        transaction={selectedTransaction}
+      />
+
+      <DeleteTransactionModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedTransaction(null);
+        }}
+        transaction={selectedTransaction}
+      />
+
+      <TransactionDetailModal
+        open={showDetailModal}
+        onOpenChange={setShowDetailModal}
+        transaction={selectedTransaction}
       />
     </div>
   );
@@ -1593,6 +1716,12 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Estados para modales de acciones
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
 
   // Helper para convertir getDateRange a formato string ISO
   const getDateRangeString = (filterType: DateFilterType): { start: string; end: string } | null => {
@@ -1804,6 +1933,44 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
       description: "La transacción temporal se ha eliminado correctamente.",
     });
   };
+
+  // Mutation para ocultar transacciones
+  const hideTransactionMutation = useMutation({
+    mutationFn: async (transactionId: number) => {
+      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide`), {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          return Array.isArray(queryKey) &&
+                 queryKey.length > 0 &&
+                 typeof queryKey[0] === "string" &&
+                 queryKey[0].startsWith("/api/transacciones/lcdm");
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+      toast({
+        title: "Transacción ocultada",
+        description: "La transacción ha sido ocultada correctamente",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "No se pudo ocultar la transacción",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Función para aplicar filtros de fecha (idéntica a Minas)
   const getDateRange = (filterType: DateFilterType) => {
@@ -2084,6 +2251,12 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
             <Card 
               key={transaccion.id} 
               className="border border-gray-200 transition-colors cursor-pointer hover:bg-gray-50"
+              onClick={() => {
+                if (transaccion.tipo !== "Temporal") {
+                  setSelectedTransaction(transaccion);
+                  setShowDetailModal(true);
+                }
+              }}
             >
               <CardContent className="p-2 sm:p-3">
                 <div className="flex items-center justify-between gap-2">
@@ -2131,7 +2304,7 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
                     )}
                   </div>
 
-                  {/* Lado derecho: Valor y botón eliminar temporal */}
+                  {/* Lado derecho: Valor y botones de acción */}
                   <div className="flex items-center gap-1 sm:gap-2">
                     <span className={`font-medium text-xs sm:text-sm text-right min-w-0 ${
                       transaccion.paraQuienTipo === 'lcdm' ? 'text-red-600' : 'text-green-600'
@@ -2144,8 +2317,52 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
                       })()}
                     </span>
 
-                    {/* Mostrar badge temporal y botón eliminar si es transacción temporal */}
-                    {transaccion.tipo === "Temporal" && (
+                    {/* Botones de acción para transacciones manuales */}
+                    {transaccion.tipo === "Manual" ? (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-blue-100 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTransaction(transaccion);
+                            setShowEditModal(true);
+                          }}
+                          title="Editar transacción"
+                        >
+                          <Edit className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-red-100 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTransaction(transaccion);
+                            setShowDeleteModal(true);
+                          }}
+                          title="Eliminar transacción"
+                        >
+                          <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-red-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-gray-100 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (typeof transaccion.id === 'number') {
+                              hideTransactionMutation.mutate(transaccion.id);
+                            }
+                          }}
+                          disabled={hideTransactionMutation.isPending}
+                          title="Ocultar transacción"
+                        >
+                          <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-500" />
+                        </Button>
+                      </div>
+                    ) : transaccion.tipo === "Temporal" ? (
                       <div className="flex items-center gap-1">
                         <Badge 
                           variant="outline" 
@@ -2164,7 +2381,7 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
                           <X className="w-2.5 h-2.5 text-red-600" />
                         </button>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </CardContent>
@@ -2225,6 +2442,31 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
         onClose={() => setShowTemporalTransaction(false)}
         onTemporalSubmit={handleTemporalSubmit}
         isTemporalMode={true}
+      />
+
+      {/* Modales de acciones */}
+      <EditTransactionModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedTransaction(null);
+        }}
+        transaction={selectedTransaction}
+      />
+
+      <DeleteTransactionModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedTransaction(null);
+        }}
+        transaction={selectedTransaction}
+      />
+
+      <TransactionDetailModal
+        open={showDetailModal}
+        onOpenChange={setShowDetailModal}
+        transaction={selectedTransaction}
       />
     </div>
   );
