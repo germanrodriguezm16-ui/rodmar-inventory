@@ -223,12 +223,17 @@ export default function RodMarCuentaDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/transacciones/cuenta/${cuentaNombre}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/cuenta/${cuentaNombre}/all`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
       
       // Forzar refetch inmediato para actualización inmediata
       queryClient.refetchQueries({ 
         queryKey: [`/api/transacciones/cuenta/${cuentaNombre}`],
+        type: 'active'
+      });
+      queryClient.refetchQueries({ 
+        queryKey: [`/api/transacciones/cuenta/${cuentaNombre}/all`],
         type: 'active'
       });
       queryClient.refetchQueries({ 
@@ -267,6 +272,7 @@ export default function RodMarCuentaDetail() {
         duration: 2000,
       });
       queryClient.invalidateQueries({ queryKey: [`/api/transacciones/cuenta/${cuentaNombre}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/cuenta/${cuentaNombre}/all`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
     },
     onError: () => {
@@ -339,6 +345,10 @@ export default function RodMarCuentaDetail() {
   // Obtener TODAS las transacciones de esta cuenta (incluyendo ocultas) para contar ocultas
   const { data: todasTransaccionesIncOcultas = [] } = useQuery<any[]>({
     queryKey: [`/api/transacciones/cuenta/${cuentaNombre}/all`],
+    enabled: !!cuentaNombre,
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const response = await fetch(apiUrl(`/api/transacciones/cuenta/${cuentaNombre}?includeHidden=true`));
       if (!response.ok) throw new Error('Error al obtener transacciones');
@@ -346,9 +356,6 @@ export default function RodMarCuentaDetail() {
       // Cuando includeHidden=true, el servidor devuelve un array directo
       return Array.isArray(data) ? data : (data.data || []);
     },
-    staleTime: 300000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
   });
 
   const allTransaccionesReales = transactionsData?.data || [];

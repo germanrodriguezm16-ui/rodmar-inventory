@@ -3281,7 +3281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
       );
 
-      // Si includeHidden=true, devolver todas las transacciones sin paginación
+      // Si includeHidden=true, devolver todas las transacciones sin paginación (array directo)
       if (includeHidden) {
         return res.json(transaccionesCuenta);
       }
