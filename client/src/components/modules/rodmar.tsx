@@ -845,9 +845,21 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
         filterType: filterType,
       });
       
-      const response = await fetch(apiUrl(`/api/transacciones/postobon?${params.toString()}`));
-      if (!response.ok) throw new Error('Error al obtener transacciones');
-      return response.json();
+      const url = apiUrl(`/api/transacciones/postobon?${params.toString()}`);
+      console.log('[Postobón] Fetching transactions from:', url);
+      
+      const response = await fetch(url);
+      console.log('[Postobón] Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        console.error('[Postobón] Error response:', errorText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('[Postobón] Transactions received:', data?.data?.length || 0);
+      return data;
     },
     staleTime: 300000, // 5 minutos - cache persistente (WebSockets actualiza en tiempo real)
     refetchOnMount: false,
@@ -1646,9 +1658,21 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
         limit: limit.toString(),
       });
       
-      const response = await fetch(apiUrl(`/api/transacciones/lcdm?${params.toString()}`));
-      if (!response.ok) throw new Error('Error al obtener transacciones');
-      return response.json();
+      const url = apiUrl(`/api/transacciones/lcdm?${params.toString()}`);
+      console.log('[LCDM] Fetching transactions from:', url);
+      
+      const response = await fetch(url);
+      console.log('[LCDM] Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        console.error('[LCDM] Error response:', errorText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('[LCDM] Transactions received:', data?.data?.length || 0);
+      return data;
     },
     staleTime: 300000, // 5 minutos - cache persistente (WebSockets actualiza en tiempo real)
     refetchOnMount: false,
