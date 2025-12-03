@@ -1024,54 +1024,50 @@ export class DatabaseStorage implements IStorage {
   // Nuevas funciones específicas por módulo
   async hideTransaccionEnComprador(id: number, userId?: string): Promise<boolean> {
     const conditions = [eq(transacciones.id, id)];
-    if (userId) {
-      conditions.push(eq(transacciones.userId, userId));
-    }
+    // No filtrar por userId - las transacciones pueden tener userId NULL o diferente
 
     const result = await db
       .update(transacciones)
       .set({ ocultaEnComprador: true })
-      .where(and(...conditions));
-    return result.rowCount > 0;
+      .where(and(...conditions))
+      .returning();
+    return result.length > 0;
   }
 
   async hideTransaccionEnMina(id: number, userId?: string): Promise<boolean> {
     const conditions = [eq(transacciones.id, id)];
-    if (userId) {
-      conditions.push(eq(transacciones.userId, userId));
-    }
+    // No filtrar por userId - las transacciones pueden tener userId NULL o diferente
 
     const result = await db
       .update(transacciones)
       .set({ ocultaEnMina: true })
-      .where(and(...conditions));
-    return result.rowCount > 0;
+      .where(and(...conditions))
+      .returning();
+    return result.length > 0;
   }
 
   async hideTransaccionEnVolquetero(id: number, userId?: string): Promise<boolean> {
     const conditions = [eq(transacciones.id, id)];
-    if (userId) {
-      conditions.push(eq(transacciones.userId, userId));
-    }
+    // No filtrar por userId - las transacciones pueden tener userId NULL o diferente
 
     const result = await db
       .update(transacciones)
       .set({ ocultaEnVolquetero: true })
-      .where(and(...conditions));
-    return result.rowCount > 0;
+      .where(and(...conditions))
+      .returning();
+    return result.length > 0;
   }
 
   async hideTransaccionEnGeneral(id: number, userId?: string): Promise<boolean> {
     const conditions = [eq(transacciones.id, id)];
-    if (userId) {
-      conditions.push(eq(transacciones.userId, userId));
-    }
+    // No filtrar por userId - las transacciones pueden tener userId NULL o diferente
 
     const result = await db
       .update(transacciones)
       .set({ ocultaEnGeneral: true })
-      .where(and(...conditions));
-    return result.rowCount > 0;
+      .where(and(...conditions))
+      .returning();
+    return result.length > 0;
   }
 
   async showTransaccion(id: number, userId?: string): Promise<boolean> {

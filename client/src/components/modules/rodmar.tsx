@@ -1972,6 +1972,41 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
     },
   });
 
+  // Mutación para mostrar todas las transacciones ocultas
+  const showAllHiddenMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(apiUrl(`/api/transacciones/show-all-hidden`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Error al mostrar transacciones ocultas');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        description: "Todas las transacciones ocultas ahora son visibles",
+        duration: 2000,
+      });
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          return Array.isArray(queryKey) &&
+                 queryKey.length > 0 &&
+                 typeof queryKey[0] === "string" &&
+                 queryKey[0].startsWith("/api/transacciones/lcdm");
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+    },
+    onError: () => {
+      toast({
+        description: "Error al mostrar transacciones ocultas",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  });
+
   // Función para aplicar filtros de fecha (idéntica a Minas)
   const getDateRange = (filterType: DateFilterType) => {
     const now = new Date();
@@ -2166,6 +2201,24 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
                   {sortByValor === "asc" && <ArrowUp className="w-1.5 h-1.5 absolute -bottom-0.5 -right-0.5" />}
                   {sortByValor === "desc" && <ArrowDown className="w-1.5 h-1.5 absolute -bottom-0.5 -right-0.5" />}
                 </Button>
+
+                {/* Botón mostrar ocultas - LCDM */}
+                {(() => {
+                  const transaccionesOcultas = allLcdmTransactions?.filter(t => t.oculta).length || 0;
+                  const hayElementosOcultos = transaccionesOcultas > 0;
+                  
+                  return hayElementosOcultos ? (
+                    <Button
+                      onClick={() => showAllHiddenMutation.mutate()}
+                      size="sm"
+                      className="h-8 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-xs"
+                      disabled={showAllHiddenMutation.isPending}
+                      title={`Mostrar ${transaccionesOcultas} transacciones ocultas`}
+                    >
+                      +{transaccionesOcultas}
+                    </Button>
+                  ) : null;
+                })()}
               </div>
             </div>
 
