@@ -2920,17 +2920,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       
+      console.log(`[LCDM] Request recibido - userId: ${userId}, page: ${page}, limit: ${limit}`);
+      
       // Leer parámetros de filtro
       const search = req.query.search as string || '';
       const fechaDesde = req.query.fechaDesde as string || '';
       const fechaHasta = req.query.fechaHasta as string || '';
       
+      console.log(`[LCDM] Obteniendo transacciones para userId: ${userId}`);
       const allTransacciones = await storage.getTransacciones(userId);
+      console.log(`[LCDM] Total transacciones obtenidas: ${allTransacciones.length}`);
       
       // Filtrar transacciones de LCDM (origen o destino)
       let lcdmTransactions = allTransacciones.filter((t: any) => 
         t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm'
       );
+      console.log(`[LCDM] Transacciones filtradas por LCDM: ${lcdmTransactions.length}`);
 
       // Aplicar filtro de búsqueda
       if (search.trim()) {
@@ -2998,10 +3003,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
     } catch (error) {
-      console.error("Error fetching LCDM transactions:", error);
+      console.error("[LCDM] Error fetching LCDM transactions:", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error("Error details:", errorMessage);
-      res.status(500).json({ 
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error("[LCDM] Error details:", errorMessage);
+      console.error("[LCDM] Error stack:", errorStack);
+      
+      // Si es un error de validación, devolver 400, sino 500
+      const statusCode = errorMessage.includes('validation') || errorMessage.includes('invalid') ? 400 : 500;
+      res.status(statusCode).json({ 
         error: "Error al obtener transacciones de LCDM",
         details: errorMessage 
       });
@@ -3016,17 +3026,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 50;
       const filterType = req.query.filterType as string || 'todas'; // todas, santa-rosa, cimitarra
       
+      console.log(`[Postobón] Request recibido - userId: ${userId}, page: ${page}, limit: ${limit}, filterType: ${filterType}`);
+      
       // Leer parámetros de filtro
       const search = req.query.search as string || '';
       const fechaDesde = req.query.fechaDesde as string || '';
       const fechaHasta = req.query.fechaHasta as string || '';
       
+      console.log(`[Postobón] Obteniendo transacciones para userId: ${userId}`);
       const allTransacciones = await storage.getTransacciones(userId);
+      console.log(`[Postobón] Total transacciones obtenidas: ${allTransacciones.length}`);
       
       // Filtrar transacciones de Postobón (origen o destino)
       let postobonTransactions = allTransacciones.filter((t: any) => 
         t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon'
       );
+      console.log(`[Postobón] Transacciones filtradas por Postobón: ${postobonTransactions.length}`);
 
       // Filtrar por cuenta específica si se especifica
       if (filterType === 'santa-rosa') {
@@ -3105,10 +3120,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
     } catch (error) {
-      console.error("Error fetching Postobón transactions:", error);
+      console.error("[Postobón] Error fetching Postobón transactions:", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error("Error details:", errorMessage);
-      res.status(500).json({ 
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error("[Postobón] Error details:", errorMessage);
+      console.error("[Postobón] Error stack:", errorStack);
+      
+      // Si es un error de validación, devolver 400, sino 500
+      const statusCode = errorMessage.includes('validation') || errorMessage.includes('invalid') ? 400 : 500;
+      res.status(statusCode).json({ 
         error: "Error al obtener transacciones de Postobón",
         details: errorMessage 
       });
