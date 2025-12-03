@@ -338,6 +338,7 @@ export default function RodMarCuentaDetail() {
 
   const allTransaccionesReales = transactionsData?.data || [];
   const pagination = transactionsData?.pagination;
+  const hiddenCuentaCount = transactionsData?.hiddenCount || 0;
 
   // Filtrado client-side sobre la página activa
   const transaccionesReales = useMemo(() => {
