@@ -2587,11 +2587,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mantener ruta antigua por compatibilidad - Implementación directa
-  app.patch("/api/transacciones/:id/hide", requireAuth, async (req, res) => {
+  // IMPORTANTE: Esta ruta DEBE estar ANTES de /api/transacciones/:id
+  // Express evalúa rutas en orden, así que las específicas van primero
+  app.patch("/api/transacciones/:id/hide", async (req, res) => {
     try {
-      console.log("✅ [HIDE-OLD] Ruta /api/transacciones/:id/hide alcanzada");
+      console.log("✅ [HIDE-OLD] ===== RUTA /api/transacciones/:id/hide ALCANZADA =====");
+      console.log("✅ [HIDE-OLD] Method:", req.method);
+      console.log("✅ [HIDE-OLD] Path:", req.path);
+      console.log("✅ [HIDE-OLD] Original URL:", req.originalUrl);
       console.log("✅ [HIDE-OLD] Params:", req.params);
-      console.log("✅ [HIDE-OLD] Transaction ID:", req.params.id);
+      console.log("✅ [HIDE-OLD] Query:", req.query);
+      console.log("✅ [HIDE-OLD] User:", req.user);
       
       const userId = req.user?.id || "main_user";
       const transactionId = parseInt(req.params.id);
@@ -2608,6 +2614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("✅ [HIDE-OLD] Resultado:", success);
 
       if (success) {
+        console.log("✅ [HIDE-OLD] Transacción ocultada exitosamente");
         res.json({
           success: true,
           message: "Transacción ocultada correctamente",
@@ -2618,6 +2625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("❌ [HIDE-OLD] Error hiding transaction:", error);
+      console.error("❌ [HIDE-OLD] Error stack:", error instanceof Error ? error.stack : String(error));
       res.status(500).json({ error: "Error al ocultar la transacción" });
     }
   });
