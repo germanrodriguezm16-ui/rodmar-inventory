@@ -2339,16 +2339,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm') && t.oculta
       ).length;
       
-      // Verificar si se deben incluir transacciones ocultas
-      const includeHidden = req.query.includeHidden === 'true';
-      
-      // Si se solicitan todas (incluyendo ocultas), usar getTransaccionesIncludingHidden
-      const sourceTransacciones = includeHidden 
-        ? await storage.getTransaccionesIncludingHidden(userId)
-        : allTransacciones;
-      
       // Filtrar transacciones de LCDM (origen o destino)
-      let lcdmTransactions = sourceTransacciones.filter((t: any) => 
+      let lcdmTransactions = allTransacciones.filter((t: any) => 
         t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm'
       );
       console.log(`[LCDM] Transacciones filtradas por LCDM: ${lcdmTransactions.length} (includeHidden: ${includeHidden})`);
