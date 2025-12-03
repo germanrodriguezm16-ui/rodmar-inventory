@@ -2288,8 +2288,230 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET single transaction by ID
-  app.get("/api/transacciones/:id", async (req, res) => {
+  // Endpoint paginado para transacciones de LCDM (DEBE IR ANTES de /api/transacciones/:id)
+  app.get("/api/transacciones/lcdm", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user?.id || "main_user";
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      console.log(`[LCDM] Request recibido - userId: ${userId}, page: ${page}, limit: ${limit}`);
+      
+      // Leer parámetros de filtro
+      const search = req.query.search as string || '';
+      const fechaDesde = req.query.fechaDesde as string || '';
+      const fechaHasta = req.query.fechaHasta as string || '';
+      
+      console.log(`[LCDM] Obteniendo transacciones para userId: ${userId}`);
+      const allTransacciones = await storage.getTransacciones(userId);
+      console.log(`[LCDM] Total transacciones obtenidas: ${allTransacciones.length}`);
+      
+      // Filtrar transacciones de LCDM (origen o destino)
+      let lcdmTransactions = allTransacciones.filter((t: any) => 
+        t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm'
+      );
+      console.log(`[LCDM] Transacciones filtradas por LCDM: ${lcdmTransactions.length}`);
+
+      // Aplicar filtro de búsqueda
+      if (search.trim()) {
+        const searchLower = search.toLowerCase();
+        lcdmTransactions = lcdmTransactions.filter((t: any) => {
+          const fechaString = String(t.fecha);
+          const fechaDirecta = t.fecha instanceof Date 
+            ? t.fecha.toISOString().split('T')[0]
+            : fechaString.includes('T') 
+                ? fechaString.split('T')[0] 
+                : fechaString;
+          
+          return (
+            t.concepto?.toLowerCase().includes(searchLower) ||
+            t.comentario?.toLowerCase().includes(searchLower) ||
+            t.valor?.toString().includes(searchLower) ||
+            fechaDirecta.includes(searchLower)
+          );
+        });
+      }
+
+      // Aplicar filtro de fecha
+      if (fechaDesde || fechaHasta) {
+        lcdmTransactions = lcdmTransactions.filter((t: any) => {
+          const fechaString = String(t.fecha);
+          const fechaDirecta = t.fecha instanceof Date 
+            ? t.fecha.toISOString().split('T')[0]
+            : fechaString.includes('T') 
+                ? fechaString.split('T')[0] 
+                : fechaString;
+          
+          if (fechaDesde && fechaHasta) {
+            return fechaDirecta >= fechaDesde && fechaDirecta <= fechaHasta;
+          } else if (fechaDesde) {
+            return fechaDirecta >= fechaDesde;
+          } else if (fechaHasta) {
+            return fechaDirecta <= fechaHasta;
+          }
+          return true;
+        });
+      }
+
+      // Ordenar por fecha descendente
+      lcdmTransactions.sort(
+        (a: any, b: any) =>
+          new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
+      );
+
+      // Aplicar paginación
+      const total = lcdmTransactions.length;
+      const validPage = Math.max(1, Math.floor(page));
+      const validLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+      const offset = (validPage - 1) * validLimit;
+      const paginatedData = lcdmTransactions.slice(offset, offset + validLimit);
+      const totalPages = Math.ceil(total / validLimit);
+
+      res.json({
+        data: paginatedData,
+        pagination: {
+          page: validPage,
+          limit: validLimit,
+          total,
+          totalPages,
+          hasMore: validPage < totalPages,
+        },
+      });
+    } catch (error) {
+      console.error("[LCDM] Error fetching LCDM transactions:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error("[LCDM] Error details:", errorMessage);
+      console.error("[LCDM] Error stack:", errorStack);
+      
+      // Si es un error de validación, devolver 400, sino 500
+      const statusCode = errorMessage.includes('validation') || errorMessage.includes('invalid') ? 400 : 500;
+      res.status(statusCode).json({ 
+        error: "Error al obtener transacciones de LCDM",
+        details: errorMessage 
+      });
+    }
+  });
+
+  // Endpoint paginado para transacciones de Postobón (DEBE IR ANTES de /api/transacciones/:id)
+  app.get("/api/transacciones/postobon", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user?.id || "main_user";
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const filterType = req.query.filterType as string || 'todas'; // todas, santa-rosa, cimitarra
+      
+      console.log(`[Postobón] Request recibido - userId: ${userId}, page: ${page}, limit: ${limit}, filterType: ${filterType}`);
+      
+      // Leer parámetros de filtro
+      const search = req.query.search as string || '';
+      const fechaDesde = req.query.fechaDesde as string || '';
+      const fechaHasta = req.query.fechaHasta as string || '';
+      
+      console.log(`[Postobón] Obteniendo transacciones para userId: ${userId}`);
+      const allTransacciones = await storage.getTransacciones(userId);
+      console.log(`[Postobón] Total transacciones obtenidas: ${allTransacciones.length}`);
+      
+      // Filtrar transacciones de Postobón (origen o destino)
+      let postobonTransactions = allTransacciones.filter((t: any) => 
+        t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon'
+      );
+      console.log(`[Postobón] Transacciones filtradas por Postobón: ${postobonTransactions.length}`);
+
+      // Filtrar por cuenta específica si se especifica
+      if (filterType === 'santa-rosa') {
+        postobonTransactions = postobonTransactions.filter((t: any) => 
+          t.postobonCuenta === 'santa-rosa'
+        );
+      } else if (filterType === 'cimitarra') {
+        postobonTransactions = postobonTransactions.filter((t: any) => 
+          t.postobonCuenta === 'cimitarra'
+        );
+      }
+
+      // Aplicar filtro de búsqueda
+      if (search.trim()) {
+        const searchLower = search.toLowerCase();
+        postobonTransactions = postobonTransactions.filter((t: any) => {
+          const fechaString = String(t.fecha);
+          const fechaDirecta = t.fecha instanceof Date 
+            ? t.fecha.toISOString().split('T')[0]
+            : fechaString.includes('T') 
+                ? fechaString.split('T')[0] 
+                : fechaString;
+          
+          return (
+            t.concepto?.toLowerCase().includes(searchLower) ||
+            t.comentario?.toLowerCase().includes(searchLower) ||
+            t.valor?.toString().includes(searchLower) ||
+            fechaDirecta.includes(searchLower)
+          );
+        });
+      }
+
+      // Aplicar filtro de fecha
+      if (fechaDesde || fechaHasta) {
+        postobonTransactions = postobonTransactions.filter((t: any) => {
+          const fechaString = String(t.fecha);
+          const fechaDirecta = t.fecha instanceof Date 
+            ? t.fecha.toISOString().split('T')[0]
+            : fechaString.includes('T') 
+                ? fechaString.split('T')[0] 
+                : fechaString;
+          
+          if (fechaDesde && fechaHasta) {
+            return fechaDirecta >= fechaDesde && fechaDirecta <= fechaHasta;
+          } else if (fechaDesde) {
+            return fechaDirecta >= fechaDesde;
+          } else if (fechaHasta) {
+            return fechaDirecta <= fechaHasta;
+          }
+          return true;
+        });
+      }
+
+      // Ordenar por fecha descendente
+      postobonTransactions.sort(
+        (a: any, b: any) =>
+          new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
+      );
+
+      // Aplicar paginación
+      const total = postobonTransactions.length;
+      const validPage = Math.max(1, Math.floor(page));
+      const validLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+      const offset = (validPage - 1) * validLimit;
+      const paginatedData = postobonTransactions.slice(offset, offset + validLimit);
+      const totalPages = Math.ceil(total / validLimit);
+
+      res.json({
+        data: paginatedData,
+        pagination: {
+          page: validPage,
+          limit: validLimit,
+          total,
+          totalPages,
+          hasMore: validPage < totalPages,
+        },
+      });
+    } catch (error) {
+      console.error("[Postobón] Error fetching Postobón transactions:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error("[Postobón] Error details:", errorMessage);
+      console.error("[Postobón] Error stack:", errorStack);
+      
+      // Si es un error de validación, devolver 400, sino 500
+      const statusCode = errorMessage.includes('validation') || errorMessage.includes('invalid') ? 400 : 500;
+      res.status(statusCode).json({ 
+        error: "Error al obtener transacciones de Postobón",
+        details: errorMessage 
+      });
+    }
+  });
+
+  // GET single transaction by ID (DEBE IR DESPUÉS de rutas específicas como /lcdm y /postobon)
+  app.get("/api/transacciones/:id", requireAuth, async (req, res) => {
     try {
       const userId = req.user?.id || "main_user";
       const id = parseInt(req.params.id);
@@ -2913,227 +3135,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint paginado para transacciones de LCDM
-  app.get("/api/transacciones/lcdm", requireAuth, async (req, res) => {
-    try {
-      const userId = req.user?.id || "main_user";
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
-      
-      console.log(`[LCDM] Request recibido - userId: ${userId}, page: ${page}, limit: ${limit}`);
-      
-      // Leer parámetros de filtro
-      const search = req.query.search as string || '';
-      const fechaDesde = req.query.fechaDesde as string || '';
-      const fechaHasta = req.query.fechaHasta as string || '';
-      
-      console.log(`[LCDM] Obteniendo transacciones para userId: ${userId}`);
-      const allTransacciones = await storage.getTransacciones(userId);
-      console.log(`[LCDM] Total transacciones obtenidas: ${allTransacciones.length}`);
-      
-      // Filtrar transacciones de LCDM (origen o destino)
-      let lcdmTransactions = allTransacciones.filter((t: any) => 
-        t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm'
-      );
-      console.log(`[LCDM] Transacciones filtradas por LCDM: ${lcdmTransactions.length}`);
-
-      // Aplicar filtro de búsqueda
-      if (search.trim()) {
-        const searchLower = search.toLowerCase();
-        lcdmTransactions = lcdmTransactions.filter((t: any) => {
-          const fechaString = String(t.fecha);
-          const fechaDirecta = t.fecha instanceof Date 
-            ? t.fecha.toISOString().split('T')[0]
-            : fechaString.includes('T') 
-                ? fechaString.split('T')[0] 
-                : fechaString;
-          
-          return (
-            t.concepto?.toLowerCase().includes(searchLower) ||
-            t.comentario?.toLowerCase().includes(searchLower) ||
-            t.valor?.toString().includes(searchLower) ||
-            fechaDirecta.includes(searchLower)
-          );
-        });
-      }
-
-      // Aplicar filtro de fecha
-      if (fechaDesde || fechaHasta) {
-        lcdmTransactions = lcdmTransactions.filter((t: any) => {
-          const fechaString = String(t.fecha);
-          const fechaDirecta = t.fecha instanceof Date 
-            ? t.fecha.toISOString().split('T')[0]
-            : fechaString.includes('T') 
-                ? fechaString.split('T')[0] 
-                : fechaString;
-          
-          if (fechaDesde && fechaHasta) {
-            return fechaDirecta >= fechaDesde && fechaDirecta <= fechaHasta;
-          } else if (fechaDesde) {
-            return fechaDirecta >= fechaDesde;
-          } else if (fechaHasta) {
-            return fechaDirecta <= fechaHasta;
-          }
-          return true;
-        });
-      }
-
-      // Ordenar por fecha descendente
-      lcdmTransactions.sort(
-        (a: any, b: any) =>
-          new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
-      );
-
-      // Aplicar paginación
-      const total = lcdmTransactions.length;
-      const validPage = Math.max(1, Math.floor(page));
-      const validLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
-      const offset = (validPage - 1) * validLimit;
-      const paginatedData = lcdmTransactions.slice(offset, offset + validLimit);
-      const totalPages = Math.ceil(total / validLimit);
-
-      res.json({
-        data: paginatedData,
-        pagination: {
-          page: validPage,
-          limit: validLimit,
-          total,
-          totalPages,
-          hasMore: validPage < totalPages,
-        },
-      });
-    } catch (error) {
-      console.error("[LCDM] Error fetching LCDM transactions:", error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      console.error("[LCDM] Error details:", errorMessage);
-      console.error("[LCDM] Error stack:", errorStack);
-      
-      // Si es un error de validación, devolver 400, sino 500
-      const statusCode = errorMessage.includes('validation') || errorMessage.includes('invalid') ? 400 : 500;
-      res.status(statusCode).json({ 
-        error: "Error al obtener transacciones de LCDM",
-        details: errorMessage 
-      });
-    }
-  });
-
-  // Endpoint paginado para transacciones de Postobón
-  app.get("/api/transacciones/postobon", requireAuth, async (req, res) => {
-    try {
-      const userId = req.user?.id || "main_user";
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
-      const filterType = req.query.filterType as string || 'todas'; // todas, santa-rosa, cimitarra
-      
-      console.log(`[Postobón] Request recibido - userId: ${userId}, page: ${page}, limit: ${limit}, filterType: ${filterType}`);
-      
-      // Leer parámetros de filtro
-      const search = req.query.search as string || '';
-      const fechaDesde = req.query.fechaDesde as string || '';
-      const fechaHasta = req.query.fechaHasta as string || '';
-      
-      console.log(`[Postobón] Obteniendo transacciones para userId: ${userId}`);
-      const allTransacciones = await storage.getTransacciones(userId);
-      console.log(`[Postobón] Total transacciones obtenidas: ${allTransacciones.length}`);
-      
-      // Filtrar transacciones de Postobón (origen o destino)
-      let postobonTransactions = allTransacciones.filter((t: any) => 
-        t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon'
-      );
-      console.log(`[Postobón] Transacciones filtradas por Postobón: ${postobonTransactions.length}`);
-
-      // Filtrar por cuenta específica si se especifica
-      if (filterType === 'santa-rosa') {
-        postobonTransactions = postobonTransactions.filter((t: any) => 
-          t.postobonCuenta === 'santa-rosa'
-        );
-      } else if (filterType === 'cimitarra') {
-        postobonTransactions = postobonTransactions.filter((t: any) => 
-          t.postobonCuenta === 'cimitarra'
-        );
-      }
-
-      // Aplicar filtro de búsqueda
-      if (search.trim()) {
-        const searchLower = search.toLowerCase();
-        postobonTransactions = postobonTransactions.filter((t: any) => {
-          const fechaString = String(t.fecha);
-          const fechaDirecta = t.fecha instanceof Date 
-            ? t.fecha.toISOString().split('T')[0]
-            : fechaString.includes('T') 
-                ? fechaString.split('T')[0] 
-                : fechaString;
-          
-          return (
-            t.concepto?.toLowerCase().includes(searchLower) ||
-            t.comentario?.toLowerCase().includes(searchLower) ||
-            t.valor?.toString().includes(searchLower) ||
-            fechaDirecta.includes(searchLower)
-          );
-        });
-      }
-
-      // Aplicar filtro de fecha
-      if (fechaDesde || fechaHasta) {
-        postobonTransactions = postobonTransactions.filter((t: any) => {
-          const fechaString = String(t.fecha);
-          const fechaDirecta = t.fecha instanceof Date 
-            ? t.fecha.toISOString().split('T')[0]
-            : fechaString.includes('T') 
-                ? fechaString.split('T')[0] 
-                : fechaString;
-          
-          if (fechaDesde && fechaHasta) {
-            return fechaDirecta >= fechaDesde && fechaDirecta <= fechaHasta;
-          } else if (fechaDesde) {
-            return fechaDirecta >= fechaDesde;
-          } else if (fechaHasta) {
-            return fechaDirecta <= fechaHasta;
-          }
-          return true;
-        });
-      }
-
-      // Ordenar por fecha descendente
-      postobonTransactions.sort(
-        (a: any, b: any) =>
-          new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
-      );
-
-      // Aplicar paginación
-      const total = postobonTransactions.length;
-      const validPage = Math.max(1, Math.floor(page));
-      const validLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
-      const offset = (validPage - 1) * validLimit;
-      const paginatedData = postobonTransactions.slice(offset, offset + validLimit);
-      const totalPages = Math.ceil(total / validLimit);
-
-      res.json({
-        data: paginatedData,
-        pagination: {
-          page: validPage,
-          limit: validLimit,
-          total,
-          totalPages,
-          hasMore: validPage < totalPages,
-        },
-      });
-    } catch (error) {
-      console.error("[Postobón] Error fetching Postobón transactions:", error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      console.error("[Postobón] Error details:", errorMessage);
-      console.error("[Postobón] Error stack:", errorStack);
-      
-      // Si es un error de validación, devolver 400, sino 500
-      const statusCode = errorMessage.includes('validation') || errorMessage.includes('invalid') ? 400 : 500;
-      res.status(statusCode).json({ 
-        error: "Error al obtener transacciones de Postobón",
-        details: errorMessage 
-      });
-    }
-  });
 
   // Balances de cuentas RodMar
   app.get("/api/rodmar-accounts", async (req, res) => {
