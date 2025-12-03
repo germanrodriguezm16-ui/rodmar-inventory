@@ -814,12 +814,15 @@ export class DatabaseStorage implements IStorage {
         .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna));
 
       // Mapear resultados (sin joins para optimizar - solo para contar)
+      // Retornar como TransaccionWithSocio para compatibilidad
       return results.map((t: any) => ({
         ...t,
         deQuien: null,
         paraQuien: null,
         socioNombre: '',
-      }));
+        voucher: null,
+        socioId: t.socioId ? (typeof t.socioId === 'string' ? parseInt(t.socioId) || null : t.socioId) : null,
+      } as TransaccionWithSocio));
     });
   }
 
