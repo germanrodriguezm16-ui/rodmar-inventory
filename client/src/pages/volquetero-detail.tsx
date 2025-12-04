@@ -503,18 +503,22 @@ export default function VolqueteroDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       
       // Forzar refetch de todas las queries necesarias y esperar a que terminen
+      // Usar { exact: false } para forzar refetch incluso con staleTime
       await Promise.all([
         queryClient.refetchQueries({ 
           queryKey: ["/api/viajes"],
-          type: 'active'
+          type: 'active',
+          exact: false
         }),
         queryClient.refetchQueries({ 
           queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
-          type: 'active'
+          type: 'active',
+          exact: false
         }),
         queryClient.refetchQueries({ 
           queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"],
-          type: 'active'
+          type: 'active',
+          exact: false
         })
       ]);
       
