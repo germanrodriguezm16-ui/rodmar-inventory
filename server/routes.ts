@@ -3684,6 +3684,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para mostrar todas las transacciones ocultas de un volquetero específico
+  app.post(
+    "/api/transacciones/socio/volquetero/:volqueteroId/show-all",
+    async (req, res) => {
+      try {
+        const userId = req.user?.id || "main_user";
+        const volqueteroId = parseInt(req.params.volqueteroId);
+
+        if (isNaN(volqueteroId)) {
+          return res.status(400).json({ error: "ID de volquetero inválido" });
+        }
+
+        // Mostrar todas las transacciones ocultas específicamente de este volquetero
+        const updatedCount = await storage.showAllHiddenTransaccionesForVolquetero(
+          volqueteroId,
+          userId,
+        );
+
+        console.log(
+          `🔄 Mostrando ${updatedCount} transacciones ocultas de volquetero ${volqueteroId}`,
+        );
+
+        res.json({
+          success: true,
+          message: `${updatedCount} transacciones restauradas para el volquetero`,
+          updatedCount,
+        });
+      } catch (error) {
+        console.error("Error showing hidden transactions for volquetero:", error);
+        res
+          .status(500)
+          .json({ error: "Error al mostrar transacciones ocultas del volquetero" });
+      }
+    },
+  );
+
+  // Endpoint para mostrar todos los viajes ocultos de un volquetero específico
+  app.post("/api/viajes/volquetero/:volqueteroNombre/show-all", async (req, res) => {
+    try {
+      const userId = req.user?.id || "main_user";
+      const volqueteroNombre = decodeURIComponent(req.params.volqueteroNombre);
+
+      if (!volqueteroNombre) {
+        return res.status(400).json({ error: "Nombre de volquetero inválido" });
+      }
+
+      // Mostrar todos los viajes ocultos específicamente de este volquetero
+      const updatedCount = await storage.showAllHiddenViajesForVolquetero(
+        volqueteroNombre,
+        userId,
+      );
+
+      console.log(
+        `🔄 Mostrando ${updatedCount} viajes ocultos de volquetero ${volqueteroNombre}`,
+      );
+
+      res.json({
+        success: true,
+        message: `${updatedCount} viajes restaurados para el volquetero`,
+        updatedCount,
+      });
+    } catch (error) {
+      console.error("Error showing hidden viajes for volquetero:", error);
+      res
+        .status(500)
+        .json({ error: "Error al mostrar viajes ocultos del volquetero" });
+    }
+  });
+
   // ===== ENDPOINTS DE VALIDACIÓN Y MANTENIMIENTO DE BALANCES =====
 
   // Obtener minas con balance desactualizado

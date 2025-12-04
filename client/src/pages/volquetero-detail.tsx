@@ -534,18 +534,6 @@ export default function VolqueteroDetail() {
       
       console.log('🔄 [showAllHiddenMutation] Refetch completado:', refetchResults);
       
-      // Forzar actualización del estado removiendo los datos del caché y refetcheando
-      queryClient.removeQueries({ queryKey: ["/api/viajes"], exact: false });
-      queryClient.removeQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"], exact: false });
-      queryClient.removeQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"], exact: false });
-      
-      // Refetchear después de remover
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["/api/viajes"], exact: false }),
-        queryClient.refetchQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"], exact: false }),
-        queryClient.refetchQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"], exact: false })
-      ]);
-      
       const mensaje = result.total > 0 
         ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
         : "No había elementos ocultos para restaurar";

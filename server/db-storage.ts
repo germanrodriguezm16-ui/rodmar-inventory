@@ -2010,6 +2010,69 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Métodos específicos para mostrar elementos ocultos de volqueteros
+  async showAllHiddenTransaccionesForVolquetero(volqueteroId: number, userId?: string): Promise<number> {
+    try {
+      console.log(`🔍 [showAllHiddenTransaccionesForVolquetero] Volquetero ID: ${volqueteroId}`);
+      
+      // Mostrar transacciones ocultas que estén relacionadas con este volquetero específico
+      // Buscar por ocultaEnVolquetero: true y que el volquetero sea origen o destino
+      const conditions = [
+        eq(transacciones.ocultaEnVolquetero, true),
+        or(
+          // Transacciones donde el volquetero es el origen
+          and(eq(transacciones.deQuienTipo, 'volquetero'), eq(transacciones.deQuienId, volqueteroId.toString())),
+          // Transacciones donde el volquetero es el destino  
+          and(eq(transacciones.paraQuienTipo, 'volquetero'), eq(transacciones.paraQuienId, volqueteroId.toString()))
+        )
+      ];
+      
+      if (userId) {
+        conditions.push(eq(transacciones.userId, userId));
+      }
+
+      const result = await db
+        .update(transacciones)
+        .set({ ocultaEnVolquetero: false })
+        .where(and(...conditions))
+        .returning();
+      
+      console.log(`✅ [showAllHiddenTransaccionesForVolquetero] Restauradas ${result.length} transacciones`);
+      return result.length;
+    } catch (error) {
+      console.error('❌ [showAllHiddenTransaccionesForVolquetero] Error:', error);
+      throw error;
+    }
+  }
+
+  async showAllHiddenViajesForVolquetero(volqueteroNombre: string, userId?: string): Promise<number> {
+    try {
+      console.log(`🔍 [showAllHiddenViajesForVolquetero] Volquetero: ${volqueteroNombre}`);
+      
+      // Mostrar viajes ocultos que pertenezcan a este volquetero específico (por conductor)
+      const conditions = [
+        eq(viajes.oculta, true),
+        eq(viajes.conductor, volqueteroNombre)
+      ];
+      
+      if (userId) {
+        conditions.push(eq(viajes.userId, userId));
+      }
+
+      const result = await db
+        .update(viajes)
+        .set({ oculta: false })
+        .where(and(...conditions))
+        .returning();
+      
+      console.log(`✅ [showAllHiddenViajesForVolquetero] Restaurados ${result.length} viajes`);
+      return result.length;
+    } catch (error) {
+      console.error('❌ [showAllHiddenViajesForVolquetero] Error:', error);
+      throw error;
+    }
+  }
+
   // ===== MÉTODOS PARA BALANCE CALCULADO =====
 
   // Actualizar balances después de transacción

@@ -91,6 +91,10 @@ export interface IStorage {
   // Métodos específicos para mostrar elementos ocultos de minas
   showAllHiddenTransaccionesForMina(minaId: number, userId?: string): Promise<number>;
   showAllHiddenViajesForMina(minaId: number, userId?: string): Promise<number>;
+  
+  // Métodos específicos para mostrar elementos ocultos de volqueteros
+  showAllHiddenTransaccionesForVolquetero(volqueteroId: number, userId?: string): Promise<number>;
+  showAllHiddenViajesForVolquetero(volqueteroNombre: string, userId?: string): Promise<number>;
 
   // Inversiones
   getInversiones(userId?: string): Promise<Inversion[]>;
