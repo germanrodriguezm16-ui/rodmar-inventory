@@ -775,8 +775,8 @@ export default function VolqueteroDetail() {
                           const transaccionesOcultas = Array.isArray(todasTransaccionesIncOcultas) 
                             ? todasTransaccionesIncOcultas.filter((t: any) => t.ocultaEnVolquetero).length 
                             : 0;
-                          const viajesOcultos = Array.isArray(viajes) 
-                            ? viajes.filter((v: any) => v.oculta).length 
+                          const viajesOcultos = Array.isArray(viajesVolquetero) 
+                            ? viajesVolquetero.filter((v: any) => v.oculta).length 
                             : 0;
                           const totalOcultos = transaccionesOcultas + viajesOcultos;
                           const hayElementosOcultos = totalOcultos > 0;
