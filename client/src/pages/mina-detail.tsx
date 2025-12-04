@@ -1151,7 +1151,8 @@ export default function MinaDetail() {
                       {/* Botón mostrar ocultas */}
                       {(() => {
                         const transaccionesOcultas = todasTransaccionesIncOcultas?.filter(t => t.oculta).length || 0;
-                        const viajesOcultos = viajes?.filter(v => v.oculta).length || 0;
+                        // Usar todosViajesIncOcultos para contar viajes ocultos (similar a compradores y volqueteros)
+                        const viajesOcultos = todosViajesIncOcultos?.filter((v: ViajeWithDetails) => v.oculta).length || 0;
                         const totalOcultos = transaccionesOcultas + viajesOcultos;
                         const hayElementosOcultos = totalOcultos > 0;
                         
