@@ -32,6 +32,7 @@ export const useCompradoresBalance = () => {
       const hasComprador = data.affectedPartners.some(p => p.tipo === 'comprador');
       if (hasComprador) {
         queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
       }
     };
 

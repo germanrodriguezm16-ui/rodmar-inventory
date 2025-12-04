@@ -32,6 +32,7 @@ export const useVolqueterosBalance = () => {
       const hasVolquetero = data.affectedPartners.some(p => p.tipo === 'volquetero');
       if (hasVolquetero) {
         queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
       }
     };
 

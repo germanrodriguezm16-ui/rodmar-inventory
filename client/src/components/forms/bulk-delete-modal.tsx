@@ -49,6 +49,13 @@ export default function BulkDeleteModal({ isOpen, onClose, selectedViajes, onSuc
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
       queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
+      // Invalidar y refetch balances inmediatamente
+      queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+      queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+      queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+      queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] });
       
       // Invalidar específicamente todas las consultas de viajes por mina (cualquier ID)
       queryClient.invalidateQueries({ 

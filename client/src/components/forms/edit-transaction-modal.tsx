@@ -397,6 +397,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       if (affectedEntityTypes.has('mina')) {
         queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
         queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] }); // Refetch inmediato
         // Invalidar queries específicas de minas
         queryClient.invalidateQueries({ 
           predicate: (query) => {
@@ -413,6 +414,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       if (affectedEntityTypes.has('comprador')) {
         queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
         queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
         // Invalidar queries específicas de compradores
         queryClient.invalidateQueries({ 
           predicate: (query) => {
@@ -431,6 +433,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       if (affectedEntityTypes.has('volquetero')) {
         queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
         queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
         // Invalidar queries específicas de volqueteros
         queryClient.invalidateQueries({ 
           predicate: (query) => {

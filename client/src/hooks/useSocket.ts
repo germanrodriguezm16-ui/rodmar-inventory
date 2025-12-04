@@ -47,6 +47,7 @@ export function useSocket() {
         queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
         // Invalidar endpoint de balances para actualizar listados
         queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] }); // Refetch inmediato
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -62,6 +63,7 @@ export function useSocket() {
         queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
         // Invalidar endpoint de balances para actualizar listados
         queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -77,6 +79,7 @@ export function useSocket() {
         queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
         // Invalidar endpoint de balances para actualizar listados
         queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;

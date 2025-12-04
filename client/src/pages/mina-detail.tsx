@@ -627,13 +627,11 @@ export default function MinaDetail() {
       .filter(t => t.tipo !== "Viaje") // Excluir transacciones de viajes
       .reduce((sum, t) => {
         const valor = parseFloat(t.valor || '0');
-        // ORDEN CORRECTO: Evaluar primero si la mina es ORIGEN (ingreso)
+        // Lógica estandarizada: Positivos (desde mina) - Negativos (hacia mina)
         if (t.deQuienTipo === 'mina' && t.deQuienId === minaId.toString()) {
-          return sum + valor; // Ingreso positivo - mina es origen
+          return sum + valor; // Positivo: desde mina (origen)
         } else if (t.paraQuienTipo === 'mina' && t.paraQuienId === minaId.toString()) {
-          return sum - valor; // Egreso negativo - mina es destino
-        } else if (t.paraQuienTipo === 'rodmar' || t.paraQuienTipo === 'banco') {
-          return sum + valor; // Ingreso hacia RodMar/Banco
+          return sum - valor; // Negativo: hacia mina (destino)
         }
         return sum;
       }, 0);

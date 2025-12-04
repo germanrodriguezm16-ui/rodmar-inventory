@@ -255,14 +255,17 @@ function NewTransactionModal({
         if (data.deQuienTipo === 'mina' || data.paraQuienTipo === 'mina') {
           queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
           queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] }); // Refetch inmediato
         }
         if (data.deQuienTipo === 'comprador' || data.paraQuienTipo === 'comprador') {
           queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
           queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
         }
         if (data.deQuienTipo === 'volquetero' || data.paraQuienTipo === 'volquetero') {
           queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
           queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
         }
         
         // Invalidar queries de LCDM/Postobón si están involucradas

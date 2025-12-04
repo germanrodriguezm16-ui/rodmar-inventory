@@ -473,6 +473,13 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
       await queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+      // Invalidar y refetch balances inmediatamente
+      await queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] });
       
       // Invalidar específicamente todas las consultas de viajes por mina (cualquier ID)
       queryClient.invalidateQueries({ 

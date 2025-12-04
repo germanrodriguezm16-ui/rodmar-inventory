@@ -32,6 +32,7 @@ export const useMinasBalance = () => {
       const hasMina = data.affectedPartners.some(p => p.tipo === 'mina');
       if (hasMina) {
         queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] }); // Refetch inmediato
       }
     };
 
