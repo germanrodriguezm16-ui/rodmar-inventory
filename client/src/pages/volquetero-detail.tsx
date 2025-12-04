@@ -463,8 +463,15 @@ export default function VolqueteroDetail() {
         queryClient.refetchQueries({ 
           queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
           type: 'active'
+        }),
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"],
+          type: 'active'
         })
       ]);
+      
+      // Asegurar que el filterType esté en "todas" para mostrar las transacciones actualizadas
+      setFilterType("todas");
       
       toast({
         title: "Viaje ocultado",
