@@ -101,12 +101,8 @@ export default function VolqueteroDetail() {
     queryKey: ["/api/volqueteros"],
   });
 
-  const { data: viajes = [] } = useQuery({
-    queryKey: ["/api/viajes"],
-    staleTime: 300000, // 5 minutos - datos frescos por más tiempo
-    refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
-    refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
-  });
+  // Usar viajes específicos del volquetero en lugar de todos los viajes
+  // Esto se define después de obtener el volquetero
 
   // Procesar datos
   const volquetero = (volqueteros as VolqueteroConPlacas[]).find(v => 
@@ -116,16 +112,13 @@ export default function VolqueteroDetail() {
 
   const volqueteroIdActual = volquetero?.id || 0;
 
-  console.log('DEBUGGING VOLQUETERO DETAIL:');
-  console.log('- URL ID:', id);
-  console.log('- Volquetero encontrado:', volquetero);
-  console.log('- Volquetero ID actual:', volqueteroIdActual);
-  console.log('- Query enabled:', volqueteroIdActual > 0);
-
   const { data: transaccionesData = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
     queryFn: () => fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/transacciones`)).then(res => res.json()),
     enabled: volqueteroIdActual > 0,
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   // Obtener TODAS las transacciones del volquetero (incluyendo ocultas) para contar ocultas
@@ -137,18 +130,36 @@ export default function VolqueteroDetail() {
       return response.json();
     },
     enabled: volqueteroIdActual > 0,
-    staleTime: 300000, // 5 minutos - datos frescos por más tiempo
-    refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
-    refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+  
+  // Obtener solo los viajes de este volquetero específico (optimización)
+  const { data: viajesVolquetero = [] } = useQuery({
+    queryKey: ["/api/viajes/volquetero", volquetero?.nombre],
+    queryFn: async () => {
+      if (!volquetero?.nombre) return [];
+      const response = await fetch(apiUrl(`/api/viajes?conductor=${encodeURIComponent(volquetero.nombre)}`));
+      if (!response.ok) throw new Error('Error al obtener viajes');
+      const allViajes = await response.json();
+      // Filtrar solo los completados y donde RodMar paga el flete
+      return allViajes.filter((v: any) => 
+        v.estado === "completado" && 
+        v.fechaDescargue &&
+        v.quienPagaFlete !== "comprador" &&
+        v.quienPagaFlete !== "El comprador"
+      );
+    },
+    enabled: !!volquetero?.nombre,
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   // Procesar transacciones
   const transaccionesFormateadas: VolqueteroTransaccion[] = useMemo(() => {
     if (!volquetero) return [];
-    
-    console.log('🔄 [transaccionesFormateadas] Recalculando useMemo');
-    console.log('🔄 [transaccionesFormateadas] viajes.length:', (viajes as any[])?.length);
-    console.log('🔄 [transaccionesFormateadas] viajes ocultos:', (viajes as any[])?.filter((v: any) => v.oculta).length);
     
     const transaccionesManuales = (transaccionesData as any[])
       .map(t => {
@@ -185,15 +196,8 @@ export default function VolqueteroDetail() {
       });
 
     // Transacciones dinámicas de viajes completados
-    // INCLUIR TODOS los viajes (incluyendo ocultos) - el filtro de ocultas se hace después
-    const viajesCompletados = (viajes as ViajeWithDetails[])
-      .filter(v => 
-        v.conductor === volquetero.nombre && 
-        v.estado === "completado" && 
-        v.fechaDescargue &&
-        v.quienPagaFlete !== "comprador" &&
-        v.quienPagaFlete !== "El comprador"
-      )
+    // Usar viajesVolquetero que ya viene filtrado del backend
+    const viajesCompletados = (viajesVolquetero as ViajeWithDetails[])
       .map(v => {
         const fechaViaje = v.fechaDescargue!;
         const totalFlete = parseFloat(v.totalFlete || "0");
@@ -254,7 +258,7 @@ export default function VolqueteroDetail() {
       });
     
     return resultado;
-  }, [transaccionesData, viajes, volquetero, volqueteroIdActual]);
+  }, [transaccionesData, viajesVolquetero, volquetero, volqueteroIdActual, transaccionesTemporales]);
 
   // Función para obtener el rango de fechas según el filtro
   const getDateRange = useCallback((filterType: DateFilterType, filterValue: string, filterValueEnd: string) => {
@@ -444,20 +448,10 @@ export default function VolqueteroDetail() {
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
+      // Invalidar solo las queries necesarias
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes/volquetero", volquetero?.nombre] });
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
-      
-      // Forzar refetch inmediato para actualización inmediata
-      queryClient.refetchQueries({ 
-        queryKey: ["/api/viajes"],
-        type: 'active'
-      });
-      queryClient.refetchQueries({ 
-        queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
-        type: 'active'
-      });
       
       toast({
         title: "Viaje ocultado",
@@ -507,39 +501,11 @@ export default function VolqueteroDetail() {
         total: (transaccionesResult.updatedCount || 0) + (viajesResult.updatedCount || 0)
       };
     },
-    onSuccess: async (result) => {
-      console.log('🔄 [showAllHiddenMutation] Iniciando restauración:', result);
-      
-      // Invalidar queries primero (esto marca los datos como stale)
+    onSuccess: (result) => {
+      // Invalidar solo las queries necesarias (similar a minas)
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
-      
-      console.log('🔄 [showAllHiddenMutation] Queries invalidadas, iniciando refetch...');
-      
-      // Forzar refetch IGNORANDO staleTime usando cancelRefetch: false y refetchType: 'active'
-      const refetchResults = await Promise.all([
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/viajes"],
-          type: 'active',
-          exact: false,
-          cancelRefetch: false
-        }),
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
-          type: 'active',
-          exact: false,
-          cancelRefetch: false
-        }),
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"],
-          type: 'active',
-          exact: false,
-          cancelRefetch: false
-        })
-      ]);
-      
-      console.log('🔄 [showAllHiddenMutation] Refetch completado:', refetchResults);
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes/volquetero", volquetero?.nombre] });
       
       const mensaje = result.total > 0 
         ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
