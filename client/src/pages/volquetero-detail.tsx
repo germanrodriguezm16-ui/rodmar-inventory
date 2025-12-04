@@ -503,36 +503,48 @@ export default function VolqueteroDetail() {
     onSuccess: async (result) => {
       console.log('🔄 [showAllHiddenMutation] Iniciando restauración:', result);
       
-      // Invalidar queries primero
+      // Invalidar queries primero (esto marca los datos como stale)
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       
       console.log('🔄 [showAllHiddenMutation] Queries invalidadas, iniciando refetch...');
       
-      // Forzar refetch de todas las queries necesarias y esperar a que terminen
+      // Forzar refetch IGNORANDO staleTime usando cancelRefetch: false y refetchType: 'active'
       const refetchResults = await Promise.all([
         queryClient.refetchQueries({ 
           queryKey: ["/api/viajes"],
           type: 'active',
-          exact: false
+          exact: false,
+          cancelRefetch: false
         }),
         queryClient.refetchQueries({ 
           queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
           type: 'active',
-          exact: false
+          exact: false,
+          cancelRefetch: false
         }),
         queryClient.refetchQueries({ 
           queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"],
           type: 'active',
-          exact: false
+          exact: false,
+          cancelRefetch: false
         })
       ]);
       
       console.log('🔄 [showAllHiddenMutation] Refetch completado:', refetchResults);
       
-      // Pequeño delay para asegurar que React procese los cambios
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Forzar actualización del estado removiendo los datos del caché y refetcheando
+      queryClient.removeQueries({ queryKey: ["/api/viajes"], exact: false });
+      queryClient.removeQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"], exact: false });
+      queryClient.removeQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"], exact: false });
+      
+      // Refetchear después de remover
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/viajes"], exact: false }),
+        queryClient.refetchQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"], exact: false }),
+        queryClient.refetchQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"], exact: false })
+      ]);
       
       const mensaje = result.total > 0 
         ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
