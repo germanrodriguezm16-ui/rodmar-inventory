@@ -788,8 +788,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id || "main_user";
       const volqueteroId = parseInt(req.params.id);
       
+      if (isNaN(volqueteroId)) {
+        return res.status(400).json({ error: "ID de volquetero inválido" });
+      }
+      
       // Obtener el volquetero para obtener su nombre
-      const volquetero = await storage.getVolquetero(volqueteroId, userId);
+      const volquetero = await storage.getVolqueteroById(volqueteroId, userId);
       if (!volquetero) {
         return res.status(404).json({ error: "Volquetero no encontrado" });
       }

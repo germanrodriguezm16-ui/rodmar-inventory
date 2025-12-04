@@ -138,7 +138,15 @@ export default function VolqueteroDetail() {
   // Obtener solo los viajes de este volquetero específico (optimización)
   const { data: viajesVolquetero = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "viajes"],
-    queryFn: () => fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/viajes`)).then(res => res.json()),
+    queryFn: async () => {
+      const response = await fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/viajes`));
+      if (!response.ok) {
+        throw new Error('Error al obtener viajes');
+      }
+      const data = await response.json();
+      // Asegurar que siempre sea un array
+      return Array.isArray(data) ? data : [];
+    },
     enabled: volqueteroIdActual > 0,
     staleTime: 300000,
     refetchOnMount: false,
@@ -185,7 +193,7 @@ export default function VolqueteroDetail() {
 
     // Transacciones dinámicas de viajes completados
     // Usar viajesVolquetero que ya viene filtrado del backend
-    const viajesCompletados = (viajesVolquetero as ViajeWithDetails[])
+    const viajesCompletados = (Array.isArray(viajesVolquetero) ? viajesVolquetero : [])
       .map(v => {
         const fechaViaje = v.fechaDescargue!;
         const totalFlete = parseFloat(v.totalFlete || "0");
