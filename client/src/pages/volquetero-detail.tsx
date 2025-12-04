@@ -501,6 +501,12 @@ export default function VolqueteroDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       
+      // Forzar refetch de viajes para actualización inmediata (necesario porque no hay query específica)
+      queryClient.refetchQueries({ 
+        queryKey: ["/api/viajes"],
+        type: 'active'
+      });
+      
       const mensaje = result.total > 0 
         ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
         : "No había elementos ocultos para restaurar";
