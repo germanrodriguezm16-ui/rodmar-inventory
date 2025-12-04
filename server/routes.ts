@@ -782,6 +782,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para obtener viajes de un volquetero específico (optimización)
+  app.get("/api/volqueteros/:id/viajes", async (req, res) => {
+    try {
+      const userId = req.user?.id || "main_user";
+      const volqueteroId = parseInt(req.params.id);
+      
+      // Obtener el volquetero para obtener su nombre
+      const volquetero = await storage.getVolquetero(volqueteroId, userId);
+      if (!volquetero) {
+        return res.status(404).json({ error: "Volquetero no encontrado" });
+      }
+      
+      // Obtener viajes del volquetero por nombre del conductor
+      const viajes = await storage.getViajesByVolquetero(volquetero.nombre, userId);
+      
+      // Filtrar solo los completados y donde RodMar paga el flete
+      const viajesFiltrados = viajes.filter(v => 
+        v.estado === "completado" && 
+        v.fechaDescargue &&
+        v.quienPagaFlete !== "comprador" &&
+        v.quienPagaFlete !== "El comprador"
+      );
+      
+      res.json(viajesFiltrados);
+    } catch (error) {
+      console.error("Error fetching viajes for volquetero:", error);
+      res.status(500).json({ error: "Failed to fetch viajes for volquetero" });
+    }
+  });
+
   // Endpoint para editar nombre de volquetero
   app.patch(
     "/api/volqueteros/:id/nombre",

@@ -137,21 +137,9 @@ export default function VolqueteroDetail() {
   
   // Obtener solo los viajes de este volquetero específico (optimización)
   const { data: viajesVolquetero = [] } = useQuery({
-    queryKey: ["/api/viajes/volquetero", volquetero?.nombre],
-    queryFn: async () => {
-      if (!volquetero?.nombre) return [];
-      const response = await fetch(apiUrl(`/api/viajes?conductor=${encodeURIComponent(volquetero.nombre)}`));
-      if (!response.ok) throw new Error('Error al obtener viajes');
-      const allViajes = await response.json();
-      // Filtrar solo los completados y donde RodMar paga el flete
-      return allViajes.filter((v: any) => 
-        v.estado === "completado" && 
-        v.fechaDescargue &&
-        v.quienPagaFlete !== "comprador" &&
-        v.quienPagaFlete !== "El comprador"
-      );
-    },
-    enabled: !!volquetero?.nombre,
+    queryKey: ["/api/volqueteros", volqueteroIdActual, "viajes"],
+    queryFn: () => fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/viajes`)).then(res => res.json()),
+    enabled: volqueteroIdActual > 0,
     staleTime: 300000,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -449,7 +437,7 @@ export default function VolqueteroDetail() {
     },
     onSuccess: () => {
       // Invalidar solo las queries necesarias
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes/volquetero", volquetero?.nombre] });
+      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "viajes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
       
@@ -505,7 +493,7 @@ export default function VolqueteroDetail() {
       // Invalidar solo las queries necesarias (similar a minas)
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes/volquetero", volquetero?.nombre] });
+      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "viajes"] });
       
       const mensaje = result.total > 0 
         ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
