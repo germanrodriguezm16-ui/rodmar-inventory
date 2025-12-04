@@ -487,10 +487,10 @@ export default function CompradorDetail() {
   // Mutación para ocultar viajes
   const hideViajesMutation = useMutation({
     mutationFn: async (viajeId: string) => {
-      const response = await fetch(apiUrl(`/api/viajes/${viajeId}`), {
+      const response = await fetch(apiUrl(`/api/viajes/${viajeId}/hide`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ oculta: true })
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Error al ocultar viaje');
       return response.json();
@@ -500,9 +500,12 @@ export default function CompradorDetail() {
         description: "Viaje ocultado",
         duration: 2000,
       });
-      // Invalidar queries de viajes
+      // Invalidar queries de viajes (incluyendo el query con includeHidden)
       queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
       queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
     },
     onError: () => {
       toast({
@@ -538,10 +541,11 @@ export default function CompradorDetail() {
         description: "Todos los elementos ocultos ahora son visibles",
         duration: 2000,
       });
-      // Limpiar cache usando nuevos endpoints
-      queryClient.resetQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
-      queryClient.resetQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
-      queryClient.resetQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
+      // Invalidar queries para refrescar datos (similar a minas)
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
       queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
     },
     onError: () => {
@@ -675,6 +679,7 @@ export default function CompradorDetail() {
                   hideViajesMutation={hideViajesMutation}
                   showAllHiddenMutation={showAllHiddenMutation}
                   viajes={viajes}
+                  todosViajesIncOcultos={todosViajesIncOcultos}
                   setTransaccionesFiltradas={setTransaccionesFiltradas}
                   setSelectedTransaction={setSelectedTransaction}
                   setShowTransactionDetail={setShowTransactionDetail}
@@ -1498,14 +1503,15 @@ function CompradorTransaccionesTab({
           <div className="flex gap-2">
             {/* Botón para mostrar elementos ocultos */}
             {(() => {
-              // Calcular elementos ocultos usando el nuevo campo modular
+              // Calcular elementos ocultos usando todasTransaccionesIncOcultas y todosViajesIncOcultos
               const transaccionesOcultas = todasTransaccionesIncOcultas?.filter(t => 
                 t.ocultaEnComprador && 
                 ((t.deQuienTipo === "comprador" && t.deQuienId === compradorId.toString()) ||
                  (t.paraQuienTipo === "comprador" && t.paraQuienId === compradorId.toString()))
               ).length || 0;
               
-              const viajesOcultos = viajes?.filter(v => v.oculta && v.compradorId === compradorId).length || 0;
+              // Usar todosViajesIncOcultos para contar viajes ocultos (similar a minas)
+              const viajesOcultos = todosViajesIncOcultos?.filter(v => v.oculta && v.compradorId === compradorId).length || 0;
               
               const totalOcultos = transaccionesOcultas + viajesOcultos;
               
