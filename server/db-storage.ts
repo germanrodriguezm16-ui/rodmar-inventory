@@ -648,22 +648,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteViaje(id: string, userId?: string): Promise<boolean> {
-    const conditions = [eq(viajes.id, id)];
-    if (userId) {
-      conditions.push(eq(viajes.userId, userId));
+    // Obtener el viaje ANTES de eliminarlo para recalcular balances
+    // No filtrar por userId aquí porque muchos viajes pueden tener userId NULL
+    const [viajeToDelete] = await db
+      .select()
+      .from(viajes)
+      .where(eq(viajes.id, id));
+    
+    if (!viajeToDelete) {
+      console.log(`⚠️ [deleteViaje] Viaje ${id} no encontrado`);
+      return false;
     }
 
-    // Obtener el viaje antes de eliminarlo para recalcular balances
-    const [viajeToDelete] = await db.select().from(viajes).where(and(...conditions));
-    
-    const result = await db.delete(viajes).where(and(...conditions));
+    // Eliminar el viaje (NO filtrar por userId - similar a hideViaje)
+    // Muchos viajes pueden tener userId NULL o diferente
+    const result = await db
+      .delete(viajes)
+      .where(eq(viajes.id, id))
+      .returning();
     
     // Si se eliminó exitosamente, recalcular balances
-    if (result.rowCount > 0 && viajeToDelete) {
+    if (result.length > 0) {
+      console.log(`✅ [deleteViaje] Viaje ${id} eliminado, recalculando balances...`);
       await this.updateViajeRelatedBalances(viajeToDelete);
+      console.log(`✅ [deleteViaje] Balances recalculados para viaje ${id}`);
+    } else {
+      console.log(`⚠️ [deleteViaje] No se pudo eliminar viaje ${id}`);
     }
     
-    return result.rowCount > 0;
+    return result.length > 0;
   }
 
   // Transacciones operations
@@ -1037,22 +1050,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTransaccion(id: number, userId?: string): Promise<boolean> {
-    const conditions = [eq(transacciones.id, id)];
-    if (userId) {
-      conditions.push(eq(transacciones.userId, userId));
+    // Obtener la transacción ANTES de eliminarla para recalcular balances
+    // No filtrar por userId aquí porque muchas transacciones pueden tener userId NULL
+    const [transaccionToDelete] = await db
+      .select()
+      .from(transacciones)
+      .where(eq(transacciones.id, id));
+    
+    if (!transaccionToDelete) {
+      console.log(`⚠️ [deleteTransaccion] Transacción ${id} no encontrada`);
+      return false;
     }
 
-    // Obtener la transacción antes de eliminarla para recalcular balances
-    const [transaccionToDelete] = await db.select().from(transacciones).where(and(...conditions));
-    
-    const result = await db.delete(transacciones).where(and(...conditions));
+    // Eliminar la transacción (NO filtrar por userId - similar a hideTransaccion)
+    // Muchas transacciones pueden tener userId NULL o diferente
+    const result = await db
+      .delete(transacciones)
+      .where(eq(transacciones.id, id))
+      .returning();
     
     // Si se eliminó exitosamente, recalcular balances
-    if (result.rowCount > 0 && transaccionToDelete) {
+    if (result.length > 0) {
+      console.log(`✅ [deleteTransaccion] Transacción ${id} eliminada, recalculando balances...`);
       await this.updateRelatedBalances(transaccionToDelete);
+      console.log(`✅ [deleteTransaccion] Balances recalculados para transacción ${id}`);
+    } else {
+      console.log(`⚠️ [deleteTransaccion] No se pudo eliminar transacción ${id}`);
     }
     
-    return result.rowCount > 0;
+    return result.length > 0;
   }
 
   async hideTransaccion(id: number, userId?: string): Promise<boolean> {
