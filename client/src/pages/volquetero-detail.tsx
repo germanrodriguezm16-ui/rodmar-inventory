@@ -507,9 +507,20 @@ export default function VolqueteroDetail() {
       };
     },
     onSuccess: (result) => {
+      // Invalidar queries primero
       queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
+      
+      // Forzar refetch inmediato para actualización inmediata (similar a hideViajeMutation)
+      queryClient.refetchQueries({ 
+        queryKey: ["/api/viajes"],
+        type: 'active'
+      });
+      queryClient.refetchQueries({ 
+        queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
+        type: 'active'
+      });
       
       const mensaje = result.total > 0 
         ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
