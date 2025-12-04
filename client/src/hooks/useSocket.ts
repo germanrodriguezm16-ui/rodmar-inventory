@@ -179,8 +179,35 @@ export function useSocket() {
       if (eventName.startsWith('transaccionActualizada:')) {
         const { socioTipo, socioId } = data;
         
-        // Invalidar queries de transacciones del socio
+        console.log(`📡 [WebSocket] transaccionActualizada recibida para ${socioTipo}:${socioId}`);
+        
+        // Invalidar queries de transacciones del socio (usando patrones específicos)
         queryClient.invalidateQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            if (Array.isArray(queryKey) && queryKey.length > 0) {
+              const firstKey = queryKey[0] as string;
+              // Invalidar queries como ["/api/transacciones/socio/mina/${id}"] y ["/api/transacciones/socio/mina/${id}/all"]
+              if (firstKey === `/api/transacciones/socio/${socioTipo}/${socioId}` || 
+                  firstKey === `/api/transacciones/socio/${socioTipo}/${socioId}/all`) {
+                return true;
+              }
+              // Para compradores, también invalidar ["/api/transacciones/comprador", id]
+              if (socioTipo === 'comprador' && firstKey === '/api/transacciones/comprador' && queryKey[1] === socioId) {
+                return true;
+              }
+            }
+            return false;
+          },
+        });
+        
+        // También invalidar queries genéricas
+        queryClient.invalidateQueries({
+          queryKey: ['transacciones', socioTipo, socioId]
+        });
+        
+        // Forzar refetch de las queries de transacciones del socio para actualización inmediata
+        queryClient.refetchQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
             if (Array.isArray(queryKey) && queryKey.length > 0) {

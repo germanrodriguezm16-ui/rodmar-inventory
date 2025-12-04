@@ -53,60 +53,63 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       // Esto asegura que las tarjetas y balances globales se actualicen
       const sociosAfectados = new Set<string>();
       
-      if (transaction?.deQuienTipo && transaction?.deQuienId) {
-        const key = `${transaction.deQuienTipo}:${transaction.deQuienId}`;
+      // Función helper para invalidar queries de un socio
+      const invalidarQueriesSocio = (tipo: string, id: string | number) => {
+        const key = `${tipo}:${id}`;
+        if (sociosAfectados.has(key)) return;
         sociosAfectados.add(key);
         
-        // Invalidar queries de transacciones del socio origen
+        // Invalidar queries de transacciones del socio (usando patrones específicos)
         queryClient.invalidateQueries({
-          queryKey: ['transacciones', transaction.deQuienTipo, transaction.deQuienId]
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            if (Array.isArray(queryKey) && queryKey.length > 0) {
+              const firstKey = queryKey[0] as string;
+              // Invalidar queries como ["/api/transacciones/socio/mina/${id}"] y ["/api/transacciones/socio/mina/${id}/all"]
+              if (firstKey === `/api/transacciones/socio/${tipo}/${id}` || 
+                  firstKey === `/api/transacciones/socio/${tipo}/${id}/all`) {
+                return true;
+              }
+              // Para compradores, también invalidar ["/api/transacciones/comprador", id]
+              if (tipo === 'comprador' && firstKey === '/api/transacciones/comprador' && queryKey[1] === id) {
+                return true;
+              }
+            }
+            return false;
+          },
+        });
+        
+        // Invalidar queries genéricas
+        queryClient.invalidateQueries({
+          queryKey: ['transacciones', tipo, id]
         });
         queryClient.invalidateQueries({
-          queryKey: ['balance-real', transaction.deQuienTipo, transaction.deQuienId]
+          queryKey: ['balance-real', tipo, id]
         });
         
         // Invalidar queries de tarjetas (tanto individual como lista)
         queryClient.invalidateQueries({
-          queryKey: ['tarjeta', transaction.deQuienTipo, transaction.deQuienId]
+          queryKey: ['tarjeta', tipo, id]
         });
         queryClient.invalidateQueries({
-          queryKey: ['tarjetas', transaction.deQuienTipo]
+          queryKey: ['tarjetas', tipo]
         });
         
         // Invalidar balance global del módulo
-        if (['mina', 'comprador', 'volquetero'].includes(transaction.deQuienTipo)) {
+        if (['mina', 'comprador', 'volquetero'].includes(tipo)) {
           queryClient.invalidateQueries({
-            queryKey: ['balance-global', transaction.deQuienTipo]
+            queryKey: ['balance-global', tipo]
           });
         }
+      };
+      
+      // Invalidar queries de ambos socios
+      if (transaction?.deQuienTipo && transaction?.deQuienId) {
+        invalidarQueriesSocio(transaction.deQuienTipo, transaction.deQuienId);
       }
       
       if (transaction?.paraQuienTipo && transaction?.paraQuienId) {
-        const key = `${transaction.paraQuienTipo}:${transaction.paraQuienId}`;
-        if (!sociosAfectados.has(key)) {
-          // Invalidar queries de transacciones del socio destino
-          queryClient.invalidateQueries({
-            queryKey: ['transacciones', transaction.paraQuienTipo, transaction.paraQuienId]
-          });
-          queryClient.invalidateQueries({
-            queryKey: ['balance-real', transaction.paraQuienTipo, transaction.paraQuienId]
-          });
-          
-          // Invalidar queries de tarjetas (tanto individual como lista)
-          queryClient.invalidateQueries({
-            queryKey: ['tarjeta', transaction.paraQuienTipo, transaction.paraQuienId]
-          });
-          queryClient.invalidateQueries({
-            queryKey: ['tarjetas', transaction.paraQuienTipo]
-          });
-          
-          // Invalidar balance global del módulo
-          if (['mina', 'comprador', 'volquetero'].includes(transaction.paraQuienTipo)) {
-            queryClient.invalidateQueries({
-              queryKey: ['balance-global', transaction.paraQuienTipo]
-            });
-          }
-        }
+        invalidarQueriesSocio(transaction.paraQuienTipo, transaction.paraQuienId);
       }
       
       // Invalidar solo las entidades que estaban involucradas en la transacción eliminada
@@ -116,25 +119,68 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
         queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
         queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] }); // Refetch inmediato
         queryClient.refetchQueries({ queryKey: ["/api/minas"] }); // Refetch listado para actualizar tarjetas
-        // Invalidar queries específicas de minas
+        // Invalidar queries específicas de minas (para ambos socios si son minas)
         queryClient.invalidateQueries({ 
           predicate: (query) => {
             const queryKey = query.queryKey;
             if (Array.isArray(queryKey) && queryKey.length > 0) {
               const firstKey = queryKey[0] as string;
               // Invalidar queries como ["/api/transacciones/socio/mina/${minaId}"] y ["/api/transacciones/socio/mina/${minaId}/all"]
-              return firstKey?.startsWith("/api/transacciones/socio/mina/");
+              if (firstKey?.startsWith("/api/transacciones/socio/mina/")) {
+                return true;
+              }
+              // También invalidar queries específicas de los IDs de minas involucradas
+              if (transaction?.deQuienTipo === 'mina' && transaction?.deQuienId) {
+                if (firstKey === `/api/transacciones/socio/mina/${transaction.deQuienId}` ||
+                    firstKey === `/api/transacciones/socio/mina/${transaction.deQuienId}/all`) {
+                  return true;
+                }
+              }
+              if (transaction?.paraQuienTipo === 'mina' && transaction?.paraQuienId) {
+                if (firstKey === `/api/transacciones/socio/mina/${transaction.paraQuienId}` ||
+                    firstKey === `/api/transacciones/socio/mina/${transaction.paraQuienId}/all`) {
+                  return true;
+                }
+              }
             }
             return false;
           }
         });
+        
+        // Forzar refetch de queries de transacciones de ambas minas involucradas
+        if (transaction?.deQuienTipo === 'mina' && transaction?.deQuienId) {
+          queryClient.refetchQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              if (Array.isArray(queryKey) && queryKey.length > 0) {
+                const firstKey = queryKey[0] as string;
+                return firstKey === `/api/transacciones/socio/mina/${transaction.deQuienId}` ||
+                       firstKey === `/api/transacciones/socio/mina/${transaction.deQuienId}/all`;
+              }
+              return false;
+            },
+          });
+        }
+        if (transaction?.paraQuienTipo === 'mina' && transaction?.paraQuienId) {
+          queryClient.refetchQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              if (Array.isArray(queryKey) && queryKey.length > 0) {
+                const firstKey = queryKey[0] as string;
+                return firstKey === `/api/transacciones/socio/mina/${transaction.paraQuienId}` ||
+                       firstKey === `/api/transacciones/socio/mina/${transaction.paraQuienId}/all`;
+              }
+              return false;
+            },
+          });
+        }
       }
       if (transaction?.deQuienTipo === 'comprador' || transaction?.paraQuienTipo === 'comprador') {
         queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
         queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
         queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
         queryClient.refetchQueries({ queryKey: ["/api/compradores"] }); // Refetch listado para actualizar tarjetas
-        // Invalidar queries específicas de compradores
+        // Invalidar queries específicas de compradores (para ambos socios si son compradores)
         queryClient.invalidateQueries({ 
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -142,12 +188,49 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
               const firstKey = queryKey[0] as string;
               const secondKey = queryKey[1];
               // Invalidar queries como ["/api/transacciones/comprador", compradorId] y ["/api/transacciones/comprador", compradorId, "includeHidden"]
-              return firstKey === "/api/transacciones/comprador" && 
-                     (typeof secondKey === 'number' || typeof secondKey === 'string');
+              if (firstKey === "/api/transacciones/comprador" && 
+                  (typeof secondKey === 'number' || typeof secondKey === 'string')) {
+                return true;
+              }
+              // También invalidar queries específicas de los IDs de compradores involucrados
+              if (transaction?.deQuienTipo === 'comprador' && transaction?.deQuienId) {
+                if (firstKey === '/api/transacciones/comprador' && secondKey === transaction.deQuienId) {
+                  return true;
+                }
+              }
+              if (transaction?.paraQuienTipo === 'comprador' && transaction?.paraQuienId) {
+                if (firstKey === '/api/transacciones/comprador' && secondKey === transaction.paraQuienId) {
+                  return true;
+                }
+              }
             }
             return false;
           }
         });
+        
+        // Forzar refetch de queries de transacciones de ambos compradores involucrados
+        if (transaction?.deQuienTipo === 'comprador' && transaction?.deQuienId) {
+          queryClient.refetchQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) && 
+                     queryKey.length >= 2 &&
+                     queryKey[0] === '/api/transacciones/comprador' &&
+                     queryKey[1] === transaction.deQuienId;
+            },
+          });
+        }
+        if (transaction?.paraQuienTipo === 'comprador' && transaction?.paraQuienId) {
+          queryClient.refetchQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) && 
+                     queryKey.length >= 2 &&
+                     queryKey[0] === '/api/transacciones/comprador' &&
+                     queryKey[1] === transaction.paraQuienId;
+            },
+          });
+        }
       }
       if (transaction?.deQuienTipo === 'volquetero' || transaction?.paraQuienTipo === 'volquetero') {
         queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
@@ -170,11 +253,54 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
             const queryKey = query.queryKey;
             if (Array.isArray(queryKey) && queryKey.length >= 2) {
               const firstKey = queryKey[0] as string;
-              return firstKey === "/api/transacciones/socio/volquetero";
+              if (firstKey === "/api/transacciones/socio/volquetero") {
+                return true;
+              }
+              // También invalidar queries específicas de los IDs de volqueteros involucrados
+              if (transaction?.deQuienTipo === 'volquetero' && transaction?.deQuienId) {
+                if (firstKey === `/api/transacciones/socio/volquetero/${transaction.deQuienId}` ||
+                    firstKey === `/api/transacciones/socio/volquetero/${transaction.deQuienId}/all`) {
+                  return true;
+                }
+              }
+              if (transaction?.paraQuienTipo === 'volquetero' && transaction?.paraQuienId) {
+                if (firstKey === `/api/transacciones/socio/volquetero/${transaction.paraQuienId}` ||
+                    firstKey === `/api/transacciones/socio/volquetero/${transaction.paraQuienId}/all`) {
+                  return true;
+                }
+              }
             }
             return false;
           }
         });
+        
+        // Forzar refetch de queries de transacciones de ambos volqueteros involucrados
+        if (transaction?.deQuienTipo === 'volquetero' && transaction?.deQuienId) {
+          queryClient.refetchQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              if (Array.isArray(queryKey) && queryKey.length > 0) {
+                const firstKey = queryKey[0] as string;
+                return firstKey === `/api/transacciones/socio/volquetero/${transaction.deQuienId}` ||
+                       firstKey === `/api/transacciones/socio/volquetero/${transaction.deQuienId}/all`;
+              }
+              return false;
+            },
+          });
+        }
+        if (transaction?.paraQuienTipo === 'volquetero' && transaction?.paraQuienId) {
+          queryClient.refetchQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              if (Array.isArray(queryKey) && queryKey.length > 0) {
+                const firstKey = queryKey[0] as string;
+                return firstKey === `/api/transacciones/socio/volquetero/${transaction.paraQuienId}` ||
+                       firstKey === `/api/transacciones/socio/volquetero/${transaction.paraQuienId}/all`;
+              }
+              return false;
+            },
+          });
+        }
       }
       
       // Solo invalidar viajes si había relación específica (no necesario en la mayoría de casos)
