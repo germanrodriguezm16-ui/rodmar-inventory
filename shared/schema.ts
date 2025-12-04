@@ -42,6 +42,8 @@ export const compradores = pgTable("compradores", {
   nombre: text("nombre").notNull(),
   saldo: decimal("saldo", { precision: 15, scale: 2 }).default("0"),
   balanceCalculado: decimal("balance_calculado", { precision: 15, scale: 2 }).default("0"),
+  balanceDesactualizado: boolean("balance_desactualizado").default(false).notNull(),
+  ultimoRecalculo: timestamp("ultimo_recalculo").defaultNow(),
   userId: varchar("user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -52,6 +54,9 @@ export const volqueteros = pgTable("volqueteros", {
   nombre: text("nombre").notNull(),
   placa: text("placa").notNull(),
   saldo: decimal("saldo", { precision: 15, scale: 2 }).default("0"),
+  balanceCalculado: decimal("balance_calculado", { precision: 15, scale: 2 }).default("0"),
+  balanceDesactualizado: boolean("balance_desactualizado").default(false).notNull(),
+  ultimoRecalculo: timestamp("ultimo_recalculo").defaultNow(),
   userId: varchar("user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });

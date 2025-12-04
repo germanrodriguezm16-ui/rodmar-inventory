@@ -2076,146 +2076,181 @@ export class DatabaseStorage implements IStorage {
   // ===== MÉTODOS PARA BALANCE CALCULADO =====
 
   // Actualizar balances después de transacción
+  // Actualizar balances después de transacción (ESTRATEGIA HÍBRIDA OPTIMIZADA)
   async updateRelatedBalances(transaccion: Transaccion): Promise<void> {
-    console.log(`🔄 INICIANDO recálculo automático para transacción ID ${transaccion.id}`);
-    console.log(`📊 Datos transacción: ${transaccion.deQuienTipo}(${transaccion.deQuienId}) → ${transaccion.paraQuienTipo}(${transaccion.paraQuienId})`);
-    
     try {
-      // Si la transacción involucra una mina como origen
+      const affectedPartners: Array<{ tipo: 'mina' | 'comprador' | 'volquetero'; id: number }> = [];
+      
+      // Identificar socios afectados (marcar stale síncronamente)
       if (transaccion.deQuienTipo === 'mina' && transaccion.deQuienId) {
         const minaId = parseInt(transaccion.deQuienId);
-        
-        // Validaciones robustas
-        if (isNaN(minaId) || minaId <= 0) {
-          console.error(`❌ ID de mina inválido en deQuienId: "${transaccion.deQuienId}"`);
-          return;
-        }
-        
-        console.log(`🏔️ Procesando mina origen: ID ${minaId}`);
-        
-        try {
+        if (!isNaN(minaId) && minaId > 0) {
           await this.markMinaBalanceStale(minaId);
-          console.log(`✅ Mina ${minaId} marcada como desactualizada`);
-          
-          await this.calculateAndUpdateMinaBalance(minaId);
-          console.log(`✅ Balance de mina ${minaId} recalculado exitosamente`);
-        } catch (minaError) {
-          console.error(`❌ Error procesando mina origen ${minaId}:`, minaError);
-          throw minaError;
+          affectedPartners.push({ tipo: 'mina', id: minaId });
         }
       }
       
-      // Si la transacción involucra una mina como destino
       if (transaccion.paraQuienTipo === 'mina' && transaccion.paraQuienId) {
         const minaId = parseInt(transaccion.paraQuienId);
-        
-        // Validaciones robustas
-        if (isNaN(minaId) || minaId <= 0) {
-          console.error(`❌ ID de mina inválido en paraQuienId: "${transaccion.paraQuienId}"`);
-          return;
-        }
-        
-        console.log(`🏔️ Procesando mina destino: ID ${minaId}`);
-        
-        try {
+        if (!isNaN(minaId) && minaId > 0) {
           await this.markMinaBalanceStale(minaId);
-          console.log(`✅ Mina ${minaId} marcada como desactualizada`);
-          
-          await this.calculateAndUpdateMinaBalance(minaId);
-          console.log(`✅ Balance de mina ${minaId} recalculado exitosamente`);
-        } catch (minaError) {
-          console.error(`❌ Error procesando mina destino ${minaId}:`, minaError);
-          throw minaError;
+          affectedPartners.push({ tipo: 'mina', id: minaId });
         }
       }
-
-      // Si la transacción involucra un comprador como origen
+      
       if (transaccion.deQuienTipo === 'comprador' && transaccion.deQuienId) {
         const compradorId = parseInt(transaccion.deQuienId);
-        
-        if (isNaN(compradorId) || compradorId <= 0) {
-          console.error(`❌ ID de comprador inválido en deQuienId: "${transaccion.deQuienId}"`);
-          return;
+        if (!isNaN(compradorId) && compradorId > 0) {
+          await this.markCompradorBalanceStale(compradorId);
+          affectedPartners.push({ tipo: 'comprador', id: compradorId });
         }
-        
-        console.log(`🏪 Procesando comprador origen: ID ${compradorId}`);
-        await this.calculateAndUpdateCompradorBalance(compradorId);
-        console.log(`✅ Balance de comprador ${compradorId} recalculado`);
       }
       
-      // Si la transacción involucra un comprador como destino
       if (transaccion.paraQuienTipo === 'comprador' && transaccion.paraQuienId) {
         const compradorId = parseInt(transaccion.paraQuienId);
-        
-        if (isNaN(compradorId) || compradorId <= 0) {
-          console.error(`❌ ID de comprador inválido en paraQuienId: "${transaccion.paraQuienId}"`);
-          return;
+        if (!isNaN(compradorId) && compradorId > 0) {
+          await this.markCompradorBalanceStale(compradorId);
+          affectedPartners.push({ tipo: 'comprador', id: compradorId });
         }
-        
-        console.log(`🏪 Procesando comprador destino: ID ${compradorId}`);
-        await this.calculateAndUpdateCompradorBalance(compradorId);
-        console.log(`✅ Balance de comprador ${compradorId} recalculado`);
       }
       
-      console.log(`🎉 COMPLETADO recálculo automático para transacción ID ${transaccion.id}`);
+      if (transaccion.deQuienTipo === 'volquetero' && transaccion.deQuienId) {
+        const volqueteroId = parseInt(transaccion.deQuienId);
+        if (!isNaN(volqueteroId) && volqueteroId > 0) {
+          await this.markVolqueteroBalanceStale(volqueteroId);
+          affectedPartners.push({ tipo: 'volquetero', id: volqueteroId });
+        }
+      }
+      
+      if (transaccion.paraQuienTipo === 'volquetero' && transaccion.paraQuienId) {
+        const volqueteroId = parseInt(transaccion.paraQuienId);
+        if (!isNaN(volqueteroId) && volqueteroId > 0) {
+          await this.markVolqueteroBalanceStale(volqueteroId);
+          affectedPartners.push({ tipo: 'volquetero', id: volqueteroId });
+        }
+      }
+      
+      // Recalcular balances en segundo plano (asíncrono, no bloqueante)
+      if (affectedPartners.length > 0) {
+        setImmediate(async () => {
+          for (const partner of affectedPartners) {
+            try {
+              if (partner.tipo === 'mina') {
+                await this.calculateAndUpdateMinaBalance(partner.id);
+              } else if (partner.tipo === 'comprador') {
+                await this.calculateAndUpdateCompradorBalance(partner.id);
+              } else if (partner.tipo === 'volquetero') {
+                await this.calculateAndUpdateVolqueteroBalance(partner.id);
+              }
+            } catch (error) {
+              console.error(`Error recalculando balance de ${partner.tipo} ${partner.id}:`, error);
+            }
+          }
+          
+          // Emitir evento WebSocket para actualizar clientes
+          const io = await import('./socket').then(m => m.getIO());
+          if (io) {
+            io.emit('balance-updated', {
+              affectedPartners,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+      }
     } catch (error) {
-      console.error(`💥 ERROR CRÍTICO en recálculo automático para transacción ID ${transaccion.id}:`, error);
-      console.error(`📱 Stack trace completo:`, error instanceof Error ? error.stack : 'No stack available');
-      throw error; // Re-throw para que el error sea visible en logs superiores
+      console.error(`Error en updateRelatedBalances para transacción ${transaccion.id}:`, error);
+      // No re-throw para no bloquear la operación principal
     }
   }
 
-  // Actualizar balances después de viaje
+  // Actualizar balances después de viaje (ESTRATEGIA HÍBRIDA OPTIMIZADA)
   async updateViajeRelatedBalances(viaje: Viaje): Promise<void> {
     try {
-      // Si el viaje involucra una mina
+      const affectedPartners: Array<{ tipo: 'mina' | 'comprador' | 'volquetero'; id: number }> = [];
+      
+      // Identificar socios afectados (marcar stale síncronamente)
       if (viaje.minaId) {
         await this.markMinaBalanceStale(viaje.minaId);
-        await this.calculateAndUpdateMinaBalance(viaje.minaId);
+        affectedPartners.push({ tipo: 'mina', id: viaje.minaId });
       }
-
-      // Si el viaje involucra un comprador
+      
       if (viaje.compradorId) {
-        await this.calculateAndUpdateCompradorBalance(viaje.compradorId);
+        await this.markCompradorBalanceStale(viaje.compradorId);
+        affectedPartners.push({ tipo: 'comprador', id: viaje.compradorId });
+      }
+      
+      // Si el viaje involucra un volquetero (conductor) y RodMar paga el flete
+      if (viaje.conductor && viaje.estado === 'completado' && viaje.fechaDescargue && 
+          viaje.quienPagaFlete && viaje.quienPagaFlete !== 'comprador' && viaje.quienPagaFlete !== 'El comprador') {
+        // Buscar volquetero por nombre
+        const volquetero = await db.select({ id: volqueteros.id })
+          .from(volqueteros)
+          .where(eq(volqueteros.nombre, viaje.conductor))
+          .limit(1);
+        
+        if (volquetero.length > 0) {
+          await this.markVolqueteroBalanceStale(volquetero[0].id);
+          affectedPartners.push({ tipo: 'volquetero', id: volquetero[0].id });
+        }
+      }
+      
+      // Recalcular balances en segundo plano (asíncrono, no bloqueante)
+      if (affectedPartners.length > 0) {
+        setImmediate(async () => {
+          for (const partner of affectedPartners) {
+            try {
+              if (partner.tipo === 'mina') {
+                await this.calculateAndUpdateMinaBalance(partner.id);
+              } else if (partner.tipo === 'comprador') {
+                await this.calculateAndUpdateCompradorBalance(partner.id);
+              } else if (partner.tipo === 'volquetero') {
+                await this.calculateAndUpdateVolqueteroBalance(partner.id);
+              }
+            } catch (error) {
+              console.error(`Error recalculando balance de ${partner.tipo} ${partner.id}:`, error);
+            }
+          }
+          
+          // Emitir evento WebSocket para actualizar clientes
+          const io = await import('./socket').then(m => m.getIO());
+          if (io) {
+            io.emit('balance-updated', {
+              affectedPartners,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
       }
     } catch (error) {
       console.error('Error updating viaje related balances:', error);
+      // No re-throw para no bloquear la operación principal
     }
   }
 
   // Calcular y actualizar balance de mina
   async calculateAndUpdateMinaBalance(minaId: number): Promise<void> {
-    console.log(`🧮 INICIANDO cálculo de balance para mina ${minaId}`);
-    
     try {
-      // Validaciones previas robustas
+      // Validaciones
       if (!minaId || isNaN(minaId) || minaId <= 0) {
-        throw new Error(`ID de mina inválido para cálculo: ${minaId}`);
+        throw new Error(`ID de mina inválido: ${minaId}`);
       }
       
-      // Verificar que la mina existe antes de hacer cálculos
-      const minaCheck = await db.select({ id: minas.id, nombre: minas.nombre }).from(minas).where(eq(minas.id, minaId)).limit(1);
+      // Verificar que la mina existe
+      const minaCheck = await db.select({ id: minas.id }).from(minas).where(eq(minas.id, minaId)).limit(1);
       if (!minaCheck.length) {
-        throw new Error(`Mina con ID ${minaId} no encontrada para cálculo de balance`);
+        throw new Error(`Mina con ID ${minaId} no encontrada`);
       }
-      
-      console.log(`🏔️ Calculando balance para mina: ${minaCheck[0].nombre} (ID: ${minaId})`);
 
-      // Obtener viajes completados de la mina
-      console.log(`📊 Consultando viajes completados para mina ${minaId}...`);
+      // Obtener viajes completados de la mina (INCLUIR OCULTOS para balance real)
       const viajesCompletados = await db
         .select()
         .from(viajes)
         .where(and(
           eq(viajes.minaId, minaId),
-          eq(viajes.estado, 'completado'),
-          eq(viajes.oculta, false)
+          eq(viajes.estado, 'completado')
         ));
-      
-      console.log(`📈 Encontrados ${viajesCompletados.length} viajes completados para mina ${minaId}`);
 
-      // Obtener transacciones manuales (no de viajes) de la mina
-      console.log(`💰 Consultando transacciones para mina ${minaId}...`);
+      // Obtener transacciones manuales de la mina (INCLUIR OCULTOS para balance real)
       const transaccionesManuales = await db
         .select()
         .from(transacciones)
@@ -2223,60 +2258,42 @@ export class DatabaseStorage implements IStorage {
           or(
             and(eq(transacciones.deQuienTipo, 'mina'), eq(transacciones.deQuienId, minaId.toString())),
             and(eq(transacciones.paraQuienTipo, 'mina'), eq(transacciones.paraQuienId, minaId.toString()))
-          ),
-          eq(transacciones.oculta, false)
+          )
         ));
 
-      console.log(`📋 Encontradas ${transaccionesManuales.length} transacciones totales para mina ${minaId}`);
-
-      // Filtrar solo transacciones manuales (no automáticas de viajes)
+      // Filtrar solo transacciones manuales (excluir las que tienen concepto con "viaje")
       const transaccionesManualesFiltered = transaccionesManuales.filter(t => 
         !t.concepto.toLowerCase().includes('viaje')
       );
-      
-      console.log(`🎯 Transacciones manuales filtradas: ${transaccionesManualesFiltered.length} (excluidas ${transaccionesManuales.length - transaccionesManualesFiltered.length} automáticas de viajes)`);
 
-      // Calcular ingresos de viajes completados - usar totalCompra (lo que RodMar paga a la mina)
-      console.log(`💵 Calculando ingresos de viajes...`);
+      // LÓGICA ESTANDARIZADA PARA MINAS:
+      // Positivos: Viajes completados (totalCompra) + Transacciones desde mina
+      // Negativos: Transacciones hacia mina
+      
+      // Calcular ingresos de viajes (positivos)
       const ingresosViajes = viajesCompletados.reduce((sum, viaje) => {
-        const totalCompra = parseFloat(viaje.totalCompra || '0');
-        return sum + totalCompra;
+        return sum + parseFloat(viaje.totalCompra || '0');
       }, 0);
-      
-      console.log(`💰 Ingresos de viajes calculados: $${ingresosViajes.toLocaleString()}`);
 
-      // Calcular transacciones netas (replicar lógica exacta del frontend)
-      console.log(`🔄 Calculando transacciones netas...`);
+      // Calcular transacciones netas (positivos - negativos)
       const transaccionesNetas = transaccionesManualesFiltered.reduce((sum, transaccion) => {
         const valor = parseFloat(transaccion.valor || '0');
         
+        // Positivo: desde mina (origen)
         if (transaccion.deQuienTipo === 'mina' && transaccion.deQuienId === minaId.toString()) {
-          // Transacciones desde ESTA mina = ingresos positivos (mina vende/recibe)
-          console.log(`  💰 Ingreso desde mina hacia ${transaccion.paraQuienTipo}: +$${valor.toLocaleString()} (${transaccion.concepto})`);
-          return sum + valor;
-        } else if (transaccion.paraQuienTipo === 'mina' && transaccion.paraQuienId === minaId.toString()) {
-          // Transacciones hacia ESTA mina = egresos negativos
-          console.log(`  ➡️ Egreso hacia mina: -$${valor.toLocaleString()} (${transaccion.concepto})`);
-          return sum - valor;
-        } else if (transaccion.paraQuienTipo === 'rodmar' || transaccion.paraQuienTipo === 'banco') {
-          // Transacciones hacia RodMar/Banco = ingresos positivos
-          console.log(`  ⬅️ Ingreso desde mina hacia RodMar/Banco: +$${valor.toLocaleString()} (${transaccion.concepto})`);
           return sum + valor;
         }
+        // Negativo: hacia mina (destino)
+        else if (transaccion.paraQuienTipo === 'mina' && transaccion.paraQuienId === minaId.toString()) {
+          return sum - valor;
+        }
         
-        console.log(`  ⚠️ Transacción no procesada: ${transaccion.deQuienTipo}(${transaccion.deQuienId}) → ${transaccion.paraQuienTipo}(${transaccion.paraQuienId}) ($${valor.toLocaleString()})`);
         return sum;
       }, 0);
-      
-      console.log(`💸 Transacciones netas calculadas: $${transaccionesNetas.toLocaleString()}`);
 
       const balanceCalculado = ingresosViajes + transaccionesNetas;
-      console.log(`🧮 BALANCE FINAL calculado para mina ${minaId}: $${balanceCalculado.toLocaleString()}`);
-      console.log(`📊 Detalle: Ingresos viajes ($${ingresosViajes.toLocaleString()}) + Transacciones netas ($${transaccionesNetas.toLocaleString()}) = $${balanceCalculado.toLocaleString()}`);
-
-      // Actualizar el balance calculado en la base de datos con timestamp
-      console.log(`💾 Actualizando balance en base de datos...`);
-      const updateResult = await db
+      // Actualizar el balance calculado en la base de datos
+      await db
         .update(minas)
         .set({ 
           balanceCalculado: balanceCalculado.toString(),
@@ -2284,47 +2301,26 @@ export class DatabaseStorage implements IStorage {
           ultimoRecalculo: new Date()
         })
         .where(eq(minas.id, minaId));
-
-      console.log(`✅ BALANCE ACTUALIZADO EXITOSAMENTE para mina ${minaId} (${minaCheck[0].nombre}): $${balanceCalculado.toLocaleString()}`);
-      console.log(`📊 Filas afectadas en actualización final: ${updateResult.rowCount || 'N/A'}`);
     } catch (error) {
-      console.error(`💥 ERROR CRÍTICO calculando balance para mina ${minaId}:`, error);
-      console.error(`📱 Tipo de error:`, typeof error);
-      console.error(`📱 Stack trace completo:`, error instanceof Error ? error.stack : 'No stack available');
-      throw error; // Re-throw para que sea visible en nivel superior
+      console.error(`Error calculando balance para mina ${minaId}:`, error);
+      throw error;
     }
   }
 
   // Función para marcar balance como desactualizado
   async markMinaBalanceStale(minaId: number): Promise<void> {
-    console.log(`🔄 Iniciando marcado de balance stale para mina ${minaId}`);
-    
     try {
-      // Validación previa
       if (!minaId || isNaN(minaId) || minaId <= 0) {
         throw new Error(`ID de mina inválido: ${minaId}`);
       }
       
-      // Verificar que la mina existe
-      const mina = await db.select().from(minas).where(eq(minas.id, minaId)).limit(1);
-      if (!mina.length) {
-        throw new Error(`Mina con ID ${minaId} no encontrada en la base de datos`);
-      }
-      
-      console.log(`🏔️ Mina encontrada: ${mina[0].nombre}, ejecutando actualización...`);
-      
-      const result = await db
+      await db
         .update(minas)
         .set({ balanceDesactualizado: true })
         .where(eq(minas.id, minaId));
-      
-      console.log(`⚠️ Balance marcado como desactualizado para mina ${minaId} (${mina[0].nombre})`);
-      console.log(`📊 Filas afectadas en actualización stale: ${result.rowCount || 'N/A'}`);
     } catch (error) {
-      console.error(`❌ ERROR DETALLADO marcando balance como stale para mina ${minaId}:`, error);
-      console.error(`📱 Tipo de error:`, typeof error);
-      console.error(`📱 Stack trace:`, error instanceof Error ? error.stack : 'No stack available');
-      throw error; // Re-throw para que el error sea manejado por el nivel superior
+      console.error(`Error marcando balance stale para mina ${minaId}:`, error);
+      throw error;
     }
   }
 
@@ -2419,67 +2415,184 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Calcular y actualizar balance de comprador
+  // Función para marcar balance de comprador como desactualizado
+  async markCompradorBalanceStale(compradorId: number): Promise<void> {
+    try {
+      if (!compradorId || isNaN(compradorId) || compradorId <= 0) {
+        throw new Error(`ID de comprador inválido: ${compradorId}`);
+      }
+      
+      await db
+        .update(compradores)
+        .set({ balanceDesactualizado: true })
+        .where(eq(compradores.id, compradorId));
+    } catch (error) {
+      console.error(`Error marcando balance stale para comprador ${compradorId}:`, error);
+      throw error;
+    }
+  }
+
   async calculateAndUpdateCompradorBalance(compradorId: number): Promise<void> {
     try {
-      // Obtener viajes completados del comprador
+      // Validaciones
+      if (!compradorId || isNaN(compradorId) || compradorId <= 0) {
+        throw new Error(`ID de comprador inválido: ${compradorId}`);
+      }
+
+      // Obtener viajes completados del comprador (INCLUIR OCULTOS para balance real)
       const viajesCompletados = await db
         .select()
         .from(viajes)
         .where(and(
           eq(viajes.compradorId, compradorId),
-          eq(viajes.estado, 'completado'),
-          eq(viajes.oculta, false)
+          eq(viajes.estado, 'completado')
         ));
 
-      // Obtener transacciones manuales del comprador
+      // Obtener transacciones manuales del comprador (INCLUIR OCULTOS para balance real)
       const transaccionesManuales = await db
         .select()
         .from(transacciones)
-        .where(and(
-          or(
-            and(eq(transacciones.deQuienTipo, 'comprador'), eq(transacciones.deQuienId, compradorId.toString())),
-            and(eq(transacciones.paraQuienTipo, 'comprador'), eq(transacciones.paraQuienId, compradorId.toString()))
-          ),
-          eq(transacciones.oculta, false)
+        .where(or(
+          and(eq(transacciones.deQuienTipo, 'comprador'), eq(transacciones.deQuienId, compradorId.toString())),
+          and(eq(transacciones.paraQuienTipo, 'comprador'), eq(transacciones.paraQuienId, compradorId.toString()))
         ));
 
-      // Filtrar solo transacciones manuales
+      // Filtrar solo transacciones manuales (excluir las que tienen concepto con "viaje")
       const transaccionesManualesFiltered = transaccionesManuales.filter(t => 
         !t.concepto.toLowerCase().includes('viaje')
       );
 
-      // Calcular deuda de viajes (valor a consignar negativo para comprador)
-      const deudaViajes = viajesCompletados.reduce((sum, viaje) => {
-        const valorConsignar = parseFloat(viaje.valorConsignar || '0');
-        return sum - valorConsignar; // Negativo porque es deuda
+      // LÓGICA ESTANDARIZADA PARA COMPRADORES:
+      // Positivos: Transacciones desde comprador (origen)
+      // Negativos: Viajes completados (valorConsignar) + Transacciones hacia comprador (destino)
+      
+      // Calcular positivos (desde comprador)
+      const totalPositivos = transaccionesManualesFiltered
+        .filter(t => t.deQuienTipo === 'comprador' && t.deQuienId === compradorId.toString())
+        .reduce((sum, t) => sum + parseFloat(t.valor || '0'), 0);
+
+      // Calcular negativos (hacia comprador + viajes)
+      const totalNegativosViajes = viajesCompletados.reduce((sum, viaje) => {
+        return sum + parseFloat(viaje.valorConsignar || '0');
       }, 0);
 
-      // Calcular transacciones netas
+      const totalNegativosTransacciones = transaccionesManualesFiltered
+        .filter(t => t.paraQuienTipo === 'comprador' && t.paraQuienId === compradorId.toString())
+        .reduce((sum, t) => sum + parseFloat(t.valor || '0'), 0);
+
+      const balanceCalculado = totalPositivos - (totalNegativosViajes + totalNegativosTransacciones);
+
+      // Actualizar el balance calculado en la base de datos
+      await db
+        .update(compradores)
+        .set({ 
+          balanceCalculado: balanceCalculado.toString(),
+          balanceDesactualizado: false,
+          ultimoRecalculo: new Date()
+        })
+        .where(eq(compradores.id, compradorId));
+    } catch (error) {
+      console.error('Error calculating comprador balance:', error);
+      throw error;
+    }
+  }
+
+  // Función para marcar balance de volquetero como desactualizado
+  async markVolqueteroBalanceStale(volqueteroId: number): Promise<void> {
+    try {
+      if (!volqueteroId || isNaN(volqueteroId) || volqueteroId <= 0) {
+        throw new Error(`ID de volquetero inválido: ${volqueteroId}`);
+      }
+      
+      await db
+        .update(volqueteros)
+        .set({ balanceDesactualizado: true })
+        .where(eq(volqueteros.id, volqueteroId));
+    } catch (error) {
+      console.error(`Error marcando balance stale para volquetero ${volqueteroId}:`, error);
+      throw error;
+    }
+  }
+
+  async calculateAndUpdateVolqueteroBalance(volqueteroId: number): Promise<void> {
+    try {
+      // Validaciones
+      if (!volqueteroId || isNaN(volqueteroId) || volqueteroId <= 0) {
+        throw new Error(`ID de volquetero inválido: ${volqueteroId}`);
+      }
+
+      // Verificar que el volquetero existe
+      const volqueteroCheck = await db.select({ id: volqueteros.id, nombre: volqueteros.nombre }).from(volqueteros).where(eq(volqueteros.id, volqueteroId)).limit(1);
+      if (!volqueteroCheck.length) {
+        throw new Error(`Volquetero con ID ${volqueteroId} no encontrado`);
+      }
+
+      const volqueteroNombre = volqueteroCheck[0].nombre;
+
+      // Obtener viajes completados del volquetero donde RodMar paga el flete (INCLUIR OCULTOS para balance real)
+      const viajesCompletados = await db
+        .select()
+        .from(viajes)
+        .where(and(
+          eq(viajes.conductor, volqueteroNombre),
+          eq(viajes.estado, 'completado'),
+          sql`${viajes.fechaDescargue} IS NOT NULL`,
+          sql`${viajes.quienPagaFlete} NOT IN ('comprador', 'El comprador')`
+        ));
+
+      // Obtener transacciones manuales del volquetero (INCLUIR OCULTOS para balance real)
+      const transaccionesManuales = await db
+        .select()
+        .from(transacciones)
+        .where(or(
+          and(eq(transacciones.deQuienTipo, 'volquetero'), eq(transacciones.deQuienId, volqueteroId.toString())),
+          and(eq(transacciones.paraQuienTipo, 'volquetero'), eq(transacciones.paraQuienId, volqueteroId.toString()))
+        ));
+
+      // Filtrar solo transacciones manuales (excluir las que tienen concepto con "viaje")
+      const transaccionesManualesFiltered = transaccionesManuales.filter(t => 
+        !t.concepto.toLowerCase().includes('viaje')
+      );
+
+      // LÓGICA ESTANDARIZADA PARA VOLQUETEROS:
+      // Positivos: Viajes completados (totalFlete donde RodMar paga) + Transacciones desde volquetero (origen)
+      // Negativos: Transacciones hacia volquetero (destino)
+      
+      // Calcular ingresos de viajes (positivos)
+      const ingresosViajes = viajesCompletados.reduce((sum, viaje) => {
+        return sum + parseFloat(viaje.totalFlete || '0');
+      }, 0);
+
+      // Calcular transacciones netas (positivos - negativos)
       const transaccionesNetas = transaccionesManualesFiltered.reduce((sum, transaccion) => {
         const valor = parseFloat(transaccion.valor || '0');
         
-        if (transaccion.deQuienTipo === 'comprador' && transaccion.deQuienId === compradorId.toString()) {
-          // Pago desde el comprador (reduce deuda)
+        // Positivo: desde volquetero (origen)
+        if (transaccion.deQuienTipo === 'volquetero' && transaccion.deQuienId === volqueteroId.toString()) {
           return sum + valor;
-        } else if (transaccion.paraQuienTipo === 'comprador' && transaccion.paraQuienId === compradorId.toString()) {
-          // Préstamo hacia el comprador (aumenta deuda)
+        }
+        // Negativo: hacia volquetero (destino)
+        else if (transaccion.paraQuienTipo === 'volquetero' && transaccion.paraQuienId === volqueteroId.toString()) {
           return sum - valor;
         }
         
         return sum;
       }, 0);
 
-      const balanceCalculado = deudaViajes + transaccionesNetas;
+      const balanceCalculado = ingresosViajes + transaccionesNetas;
 
       // Actualizar el balance calculado en la base de datos
       await db
-        .update(compradores)
-        .set({ balanceCalculado: balanceCalculado.toString() })
-        .where(eq(compradores.id, compradorId));
-
-      console.log(`✅ Balance actualizado para comprador ${compradorId}: ${balanceCalculado}`);
+        .update(volqueteros)
+        .set({ 
+          balanceCalculado: balanceCalculado.toString(),
+          balanceDesactualizado: false,
+          ultimoRecalculo: new Date()
+        })
+        .where(eq(volqueteros.id, volqueteroId));
     } catch (error) {
-      console.error('Error calculating comprador balance:', error);
+      console.error('Error calculating volquetero balance:', error);
+      throw error;
     }
   }
 
@@ -2498,6 +2611,12 @@ export class DatabaseStorage implements IStorage {
       const allCompradores = await db.select().from(compradores);
       for (const comprador of allCompradores) {
         await this.calculateAndUpdateCompradorBalance(comprador.id);
+      }
+
+      // Recalcular balances de volqueteros
+      const allVolqueteros = await db.select().from(volqueteros);
+      for (const volquetero of allVolqueteros) {
+        await this.calculateAndUpdateVolqueteroBalance(volquetero.id);
       }
 
       console.log('✅ Recálculo de todos los balances completado');
@@ -3010,10 +3129,9 @@ export class DatabaseStorage implements IStorage {
       const inicioMesPasadoISO = inicioMesPasado.toISOString();
       const finMesPasadoISO = finMesPasado.toISOString();
 
-      // Preparar condiciones base para queries
+      // Preparar condiciones base para queries (INCLUIR OCULTOS para balance real)
       const viajesConditions = [
         eq(viajes.estado, 'completado'),
-        eq(viajes.oculta, false),
         sql`${viajes.minaId} IS NOT NULL`
       ];
       if (userId) {
@@ -3057,9 +3175,8 @@ export class DatabaseStorage implements IStorage {
         const transaccionesStart = Date.now();
         const minaIds = minasNecesitanCalculo.map(m => m.id.toString());
         
-        // Construir condiciones OR para cada mina
+        // Construir condiciones OR para cada mina (INCLUIR OCULTOS para balance real)
         const transaccionesConditions = [
-          eq(transacciones.oculta, false),
           or(
             and(eq(transacciones.deQuienTipo, 'mina'), inArray(transacciones.deQuienId, minaIds)),
             and(eq(transacciones.paraQuienTipo, 'mina'), inArray(transacciones.paraQuienId, minaIds))
@@ -3147,10 +3264,9 @@ export class DatabaseStorage implements IStorage {
       const inicioMesPasadoISO = inicioMesPasado.toISOString();
       const finMesPasadoISO = finMesPasado.toISOString();
 
-      // Preparar condiciones base para queries
+      // Preparar condiciones base para queries (INCLUIR OCULTOS para balance real)
       const viajesConditions = [
         eq(viajes.estado, 'completado'),
-        eq(viajes.oculta, false),
         sql`${viajes.compradorId} IS NOT NULL`
       ];
       if (userId) {
@@ -3194,8 +3310,8 @@ export class DatabaseStorage implements IStorage {
         const transaccionesStart = Date.now();
         const compradorIds = compradoresNecesitanCalculo.map(c => c.id.toString());
         
+        // Construir condiciones OR para cada comprador (INCLUIR OCULTOS para balance real)
         const transaccionesConditions = [
-          eq(transacciones.oculta, false),
           or(
             and(eq(transacciones.deQuienTipo, 'comprador'), inArray(transacciones.deQuienId, compradorIds)),
             and(eq(transacciones.paraQuienTipo, 'comprador'), inArray(transacciones.paraQuienId, compradorIds))
@@ -3240,12 +3356,13 @@ export class DatabaseStorage implements IStorage {
       for (const comprador of allCompradores) {
         const stats = viajesStatsMap.get(comprador.id) || { viajesCount: 0, viajesUltimoMes: 0, totalDeudaViajes: 0 };
         
-        // Usar balanceCalculado si está disponible
+        // Usar balanceCalculado si está disponible y actualizado
         let balance: number;
-        if (comprador.balanceCalculado) {
+        if (comprador.balanceCalculado && !comprador.balanceDesactualizado) {
           balance = parseFloat(comprador.balanceCalculado);
         } else {
           // Calcular balance dinámicamente usando datos agregados
+          // Lógica estandarizada: Positivos (desde comprador) - Negativos (hacia comprador + viajes)
           const transaccionesNetas = transaccionesStatsMap.get(comprador.id) || 0;
           balance = transaccionesNetas - stats.totalDeudaViajes; // Negativo porque totalDeudaViajes es deuda
         }
@@ -3282,10 +3399,9 @@ export class DatabaseStorage implements IStorage {
       const inicioMesPasadoISO = inicioMesPasado.toISOString();
       const finMesPasadoISO = finMesPasado.toISOString();
 
-      // Preparar condiciones base para queries
+      // Preparar condiciones base para queries (INCLUIR OCULTOS para balance real)
       const viajesConditions = [
         eq(viajes.estado, 'completado'),
-        eq(viajes.oculta, false),
         sql`${viajes.fechaDescargue} IS NOT NULL`,
         sql`${viajes.conductor} IS NOT NULL`
       ];
@@ -3334,8 +3450,8 @@ export class DatabaseStorage implements IStorage {
       const transaccionesStart = Date.now();
       const volqueteroIds = allVolqueteros.map(v => v.id.toString());
       
+      // Construir condiciones OR para cada volquetero (INCLUIR OCULTOS para balance real)
       const transaccionesConditions = [
-        eq(transacciones.oculta, false),
         or(
           and(eq(transacciones.deQuienTipo, 'volquetero'), inArray(transacciones.deQuienId, volqueteroIds)),
           and(eq(transacciones.paraQuienTipo, 'volquetero'), inArray(transacciones.paraQuienId, volqueteroIds))
@@ -3385,13 +3501,23 @@ export class DatabaseStorage implements IStorage {
       const transaccionesTime = Date.now() - transaccionesStart;
       console.log(`⏱️  [PERF] Query agregada de transacciones: ${transaccionesTime}ms (${allVolqueteros.length} volqueteros)`);
 
+      // Identificar volqueteros que necesitan cálculo dinámico de balance
+      const volqueterosNecesitanCalculo = allVolqueteros.filter(v => !v.balanceCalculado || v.balanceDesactualizado);
+
       // Construir resultado final combinando balances y estadísticas
       for (const volquetero of allVolqueteros) {
         const viajesStats = viajesStatsMap.get(volquetero.nombre) || { viajesCount: 0, viajesUltimoMes: 0, ingresosFletes: 0 };
         const transaccionesStats = transaccionesStatsMap.get(volquetero.id) || { ingresos: 0, egresos: 0 };
         
-        // Calcular balance: ingresos (fletes + transacciones) - egresos (transacciones)
-        const balance = viajesStats.ingresosFletes + transaccionesStats.ingresos - transaccionesStats.egresos;
+        // Usar balanceCalculado si está disponible y actualizado
+        let balance: number;
+        if (volquetero.balanceCalculado && !volquetero.balanceDesactualizado) {
+          balance = parseFloat(volquetero.balanceCalculado);
+        } else {
+          // Calcular balance dinámicamente usando datos agregados
+          // Lógica estandarizada: Positivos (viajes + desde volquetero) - Negativos (hacia volquetero)
+          balance = viajesStats.ingresosFletes + transaccionesStats.ingresos - transaccionesStats.egresos;
+        }
 
         balances[volquetero.id] = {
           balance,
