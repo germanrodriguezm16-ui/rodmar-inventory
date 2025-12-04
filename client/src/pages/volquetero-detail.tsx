@@ -522,10 +522,9 @@ export default function VolqueteroDetail() {
 
   // Aplicar filtros a transacciones
   const transaccionesFiltradas = useMemo(() => {
-    // Primero filtrar por ocultas/todas
-    let filtered = filterType === "ocultas" 
-      ? transaccionesFormateadas.filter(t => t.oculta) 
-      : transaccionesFormateadas.filter(t => !t.oculta);
+    let filtered = filterType === "todas" ? 
+      transaccionesFormateadas.filter(t => !t.oculta) : 
+      transaccionesFormateadas.filter(t => t.oculta);
     
     // Luego filtrar por fecha
     filtered = filterTransaccionesByDate(
