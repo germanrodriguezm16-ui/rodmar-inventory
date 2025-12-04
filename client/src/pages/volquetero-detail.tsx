@@ -497,14 +497,17 @@ export default function VolqueteroDetail() {
       };
     },
     onSuccess: async (result) => {
+      console.log('🔄 [showAllHiddenMutation] Iniciando restauración:', result);
+      
       // Invalidar queries primero
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       
+      console.log('🔄 [showAllHiddenMutation] Queries invalidadas, iniciando refetch...');
+      
       // Forzar refetch de todas las queries necesarias y esperar a que terminen
-      // Usar { exact: false } para forzar refetch incluso con staleTime
-      await Promise.all([
+      const refetchResults = await Promise.all([
         queryClient.refetchQueries({ 
           queryKey: ["/api/viajes"],
           type: 'active',
@@ -521,6 +524,11 @@ export default function VolqueteroDetail() {
           exact: false
         })
       ]);
+      
+      console.log('🔄 [showAllHiddenMutation] Refetch completado:', refetchResults);
+      
+      // Pequeño delay para asegurar que React procese los cambios
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const mensaje = result.total > 0 
         ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
