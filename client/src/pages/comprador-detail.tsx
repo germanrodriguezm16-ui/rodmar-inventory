@@ -502,25 +502,48 @@ export default function CompradorDetail() {
       if (!response.ok) throw new Error('Error al ocultar viaje');
       return response.json();
     },
+    onMutate: async (viajeId: string) => {
+      // Actualización optimista: actualizar el cache inmediatamente
+      await queryClient.cancelQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
+      await queryClient.cancelQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
+      
+      // Snapshot del valor anterior
+      const previousViajes = queryClient.getQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId]);
+      const previousViajesIncOcultos = queryClient.getQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId, "includeHidden"]);
+      
+      // Actualizar optimistamente
+      if (previousViajes) {
+        queryClient.setQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId], (old) => 
+          (old || []).map(v => v.id === viajeId ? { ...v, oculta: true } : v)
+        );
+      }
+      if (previousViajesIncOcultos) {
+        queryClient.setQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId, "includeHidden"], (old) => 
+          (old || []).map(v => v.id === viajeId ? { ...v, oculta: true } : v)
+        );
+      }
+      
+      return { previousViajes, previousViajesIncOcultos };
+    },
     onSuccess: async () => {
       toast({
         description: "Viaje ocultado",
         duration: 2000,
       });
-      // Invalidar queries específicas
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] }),
-      ]);
-      // Forzar refetch inmediato solo de la query de viajes (la más crítica para actualización visual)
-      await queryClient.refetchQueries({ 
-        queryKey: ["/api/viajes/comprador", compradorId], 
-        type: 'active' 
-      });
+      // Invalidar queries para sincronizar con el backend
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
     },
-    onError: () => {
+    onError: (error, viajeId, context) => {
+      // Revertir actualización optimista en caso de error
+      if (context?.previousViajes) {
+        queryClient.setQueryData(["/api/viajes/comprador", compradorId], context.previousViajes);
+      }
+      if (context?.previousViajesIncOcultos) {
+        queryClient.setQueryData(["/api/viajes/comprador", compradorId, "includeHidden"], context.previousViajesIncOcultos);
+      }
       toast({
         description: "Error al ocultar viaje",
         variant: "destructive",
