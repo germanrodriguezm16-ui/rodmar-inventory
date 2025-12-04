@@ -103,8 +103,8 @@ export default function VolqueteroDetail() {
 
   const { data: viajes = [] } = useQuery({
     queryKey: ["/api/viajes"],
-    staleTime: 0, // Siempre considerar stale para que se refetch cuando se invalide
-    refetchOnMount: true, // Recargar al montar para obtener datos frescos
+    staleTime: 300000, // 5 minutos - datos frescos por más tiempo
+    refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
   });
 
@@ -137,9 +137,9 @@ export default function VolqueteroDetail() {
       return response.json();
     },
     enabled: volqueteroIdActual > 0,
-    staleTime: 0, // Siempre considerar stale para que se refetch cuando se invalide
-    refetchOnMount: true, // Recargar al montar para obtener datos frescos
-    refetchOnWindowFocus: false,
+    staleTime: 300000, // 5 minutos - datos frescos por más tiempo
+    refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
+    refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
   });
 
   // Procesar transacciones
@@ -189,12 +189,12 @@ export default function VolqueteroDetail() {
     // Transacciones dinámicas de viajes completados
     // Solo incluir viajes donde RodMar paga el flete (quienPagaFlete !== "comprador")
     // Valor debe ser POSITIVO porque el volquetero recibe el flete
+    // INCLUIR TODOS los viajes (incluyendo ocultos) - el filtro de ocultas se hace después
     const viajesCompletados = (viajes as ViajeWithDetails[])
       .filter(v => 
         v.conductor === volquetero.nombre && 
         v.estado === "completado" && 
         v.fechaDescargue &&
-        !v.oculta &&
         v.quienPagaFlete !== "comprador" &&
         v.quienPagaFlete !== "El comprador"
       )
@@ -216,7 +216,7 @@ export default function VolqueteroDetail() {
           paraQuienId: volqueteroIdActual.toString(),
           tipo: "Viaje" as const,
           esViajeCompleto: true,
-          oculta: false,
+          oculta: v.oculta || false, // Marcar como oculta si el viaje está oculto
           viajeId: v.id // Agregar ID del viaje para poder ocultarlo
         };
       });
@@ -447,31 +447,21 @@ export default function VolqueteroDetail() {
       if (!response.ok) throw new Error('Error al ocultar viaje');
       return await response.json();
     },
-    onSuccess: async () => {
-      // Invalidar queries primero
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
       
       // Forzar refetch inmediato para actualización inmediata
-      await Promise.all([
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/viajes"],
-          type: 'active'
-        }),
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
-          type: 'active'
-        }),
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"],
-          type: 'active'
-        })
-      ]);
-      
-      // Asegurar que el filterType esté en "todas" para mostrar las transacciones actualizadas
-      setFilterType("todas");
+      queryClient.refetchQueries({ 
+        queryKey: ["/api/viajes"],
+        type: 'active'
+      });
+      queryClient.refetchQueries({ 
+        queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
+        type: 'active'
+      });
       
       toast({
         title: "Viaje ocultado",
@@ -516,31 +506,10 @@ export default function VolqueteroDetail() {
         total: (transaccionesResult.updatedCount || 0) + (viajesResult.updatedCount || 0)
       };
     },
-    onSuccess: async (result) => {
-      // Invalidar queries primero
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
-      
-      // Forzar refetch inmediato para actualización inmediata
-      await Promise.all([
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/viajes"],
-          type: 'active'
-        }),
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
-          type: 'active'
-        }),
-        queryClient.refetchQueries({ 
-          queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"],
-          type: 'active'
-        })
-      ]);
-      
-      // Asegurar que el filterType esté en "todas" para mostrar las transacciones restauradas
-      setFilterType("todas");
       
       const mensaje = result.total > 0 
         ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
