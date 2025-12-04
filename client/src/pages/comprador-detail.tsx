@@ -500,10 +500,9 @@ export default function CompradorDetail() {
         description: "Viaje ocultado",
         duration: 2000,
       });
-      // Invalidar queries de viajes (incluyendo el query con includeHidden)
+      // Invalidar solo las queries específicas del socio (similar a volqueteros)
       queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
       queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
     },
@@ -541,12 +540,11 @@ export default function CompradorDetail() {
         description: "Todos los elementos ocultos ahora son visibles",
         duration: 2000,
       });
-      // Invalidar queries para refrescar datos (similar a minas)
+      // Invalidar solo las queries específicas del socio (similar a volqueteros)
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
       queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
       queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
     },
     onError: () => {
       toast({
