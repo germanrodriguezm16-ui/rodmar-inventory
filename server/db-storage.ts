@@ -3193,7 +3193,6 @@ export class DatabaseStorage implements IStorage {
               CASE 
                 WHEN ${transacciones.deQuienTipo} = 'mina' AND LOWER(${transacciones.concepto}) NOT LIKE '%viaje%' THEN CAST(${transacciones.valor} AS NUMERIC)
                 WHEN ${transacciones.paraQuienTipo} = 'mina' AND LOWER(${transacciones.concepto}) NOT LIKE '%viaje%' THEN -CAST(${transacciones.valor} AS NUMERIC)
-                WHEN ${transacciones.paraQuienTipo} IN ('rodmar', 'banco') AND LOWER(${transacciones.concepto}) NOT LIKE '%viaje%' THEN CAST(${transacciones.valor} AS NUMERIC)
                 ELSE 0
               END
             ), 0)`
@@ -3302,7 +3301,7 @@ export class DatabaseStorage implements IStorage {
       });
 
       // Identificar compradores que necesitan cálculo dinámico de balance
-      const compradoresNecesitanCalculo = allCompradores.filter(c => !c.balanceCalculado);
+      const compradoresNecesitanCalculo = allCompradores.filter(c => !c.balanceCalculado || c.balanceDesactualizado);
       
       // QUERY 2: Transacciones agregadas solo para compradores que necesitan cálculo (1 query para todos)
       let transaccionesStatsMap = new Map<number, number>();
@@ -3466,13 +3465,13 @@ export class DatabaseStorage implements IStorage {
           END`,
           ingresos: sql<number>`COALESCE(SUM(
             CASE 
-              WHEN ${transacciones.deQuienTipo} = 'volquetero' THEN ABS(CAST(${transacciones.valor} AS NUMERIC))
+              WHEN ${transacciones.deQuienTipo} = 'volquetero' THEN CAST(${transacciones.valor} AS NUMERIC)
               ELSE 0
             END
           ), 0)`,
           egresos: sql<number>`COALESCE(SUM(
             CASE 
-              WHEN ${transacciones.paraQuienTipo} = 'volquetero' THEN ABS(CAST(${transacciones.valor} AS NUMERIC))
+              WHEN ${transacciones.paraQuienTipo} = 'volquetero' THEN CAST(${transacciones.valor} AS NUMERIC)
               ELSE 0
             END
           ), 0)`

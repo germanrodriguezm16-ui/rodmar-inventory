@@ -1,8 +1,12 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSocket } from "./useSocket";
 
 // Hook compartido para calcular balance de minas
 export const useMinasBalance = () => {
+  const queryClient = useQueryClient();
+  const socket = useSocket();
+
   const { data: minas = [] } = useQuery({
     queryKey: ["/api/minas"],
     staleTime: 30000,
@@ -19,6 +23,24 @@ export const useMinasBalance = () => {
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
     refetchOnReconnect: false, // No recargar al reconectar
   });
+
+  // Escuchar eventos WebSocket para invalidar queries cuando se actualicen balances
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleBalanceUpdate = (data: { affectedPartners: Array<{ tipo: string; id: number }> }) => {
+      const hasMina = data.affectedPartners.some(p => p.tipo === 'mina');
+      if (hasMina) {
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+      }
+    };
+
+    socket.on("balance-updated", handleBalanceUpdate);
+
+    return () => {
+      socket.off("balance-updated", handleBalanceUpdate);
+    };
+  }, [socket, queryClient]);
 
   // Usar balances del API directamente (ya calculados en el backend)
   const balancesMinas = useMemo(() => {

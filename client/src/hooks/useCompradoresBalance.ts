@@ -1,8 +1,12 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSocket } from "./useSocket";
 
 // Hook compartido para calcular balance de compradores
 export const useCompradoresBalance = () => {
+  const queryClient = useQueryClient();
+  const socket = useSocket();
+
   const { data: compradores = [] } = useQuery({
     queryKey: ["/api/compradores"],
     staleTime: 30000,
@@ -19,6 +23,24 @@ export const useCompradoresBalance = () => {
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
     refetchOnReconnect: false, // No recargar al reconectar
   });
+
+  // Escuchar eventos WebSocket para invalidar queries cuando se actualicen balances
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleBalanceUpdate = (data: { affectedPartners: Array<{ tipo: string; id: number }> }) => {
+      const hasComprador = data.affectedPartners.some(p => p.tipo === 'comprador');
+      if (hasComprador) {
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+      }
+    };
+
+    socket.on("balance-updated", handleBalanceUpdate);
+
+    return () => {
+      socket.off("balance-updated", handleBalanceUpdate);
+    };
+  }, [socket, queryClient]);
 
   // Usar balances del API directamente (ya calculados en el backend)
   const balancesCompradores = useMemo(() => {

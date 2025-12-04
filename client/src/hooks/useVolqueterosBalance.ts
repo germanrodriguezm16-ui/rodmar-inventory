@@ -1,8 +1,12 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSocket } from "./useSocket";
 
 // Hook compartido para calcular balance de volqueteros
 export const useVolqueterosBalance = () => {
+  const queryClient = useQueryClient();
+  const socket = useSocket();
+
   const { data: volqueteros = [] } = useQuery({
     queryKey: ["/api/volqueteros"],
     staleTime: 30000,
@@ -19,6 +23,24 @@ export const useVolqueterosBalance = () => {
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
     refetchOnReconnect: false, // No recargar al reconectar
   });
+
+  // Escuchar eventos WebSocket para invalidar queries cuando se actualicen balances
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleBalanceUpdate = (data: { affectedPartners: Array<{ tipo: string; id: number }> }) => {
+      const hasVolquetero = data.affectedPartners.some(p => p.tipo === 'volquetero');
+      if (hasVolquetero) {
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+      }
+    };
+
+    socket.on("balance-updated", handleBalanceUpdate);
+
+    return () => {
+      socket.off("balance-updated", handleBalanceUpdate);
+    };
+  }, [socket, queryClient]);
 
   // Usar balances del API directamente (ya calculados en el backend)
   const balancesVolqueteros = useMemo(() => {
