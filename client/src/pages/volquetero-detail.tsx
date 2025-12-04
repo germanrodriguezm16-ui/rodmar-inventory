@@ -103,8 +103,8 @@ export default function VolqueteroDetail() {
 
   const { data: viajes = [] } = useQuery({
     queryKey: ["/api/viajes"],
-    staleTime: 300000, // 5 minutos - datos frescos por más tiempo
-    refetchOnMount: false, // No recargar al montar
+    staleTime: 0, // Siempre considerar stale para que se refetch cuando se invalide
+    refetchOnMount: true, // Recargar al montar para obtener datos frescos
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
   });
 
@@ -447,21 +447,24 @@ export default function VolqueteroDetail() {
       if (!response.ok) throw new Error('Error al ocultar viaje');
       return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Invalidar queries primero
       queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
       
       // Forzar refetch inmediato para actualización inmediata
-      queryClient.refetchQueries({ 
-        queryKey: ["/api/viajes"],
-        type: 'active'
-      });
-      queryClient.refetchQueries({ 
-        queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
-        type: 'active'
-      });
+      await Promise.all([
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/viajes"],
+          type: 'active'
+        }),
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
+          type: 'active'
+        })
+      ]);
       
       toast({
         title: "Viaje ocultado",
@@ -506,10 +509,28 @@ export default function VolqueteroDetail() {
         total: (transaccionesResult.updatedCount || 0) + (viajesResult.updatedCount || 0)
       };
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
+      // Invalidar queries primero
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+      
+      // Forzar refetch inmediato para actualización inmediata
+      await Promise.all([
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/viajes"],
+          type: 'active'
+        }),
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
+          type: 'active'
+        }),
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"],
+          type: 'active'
+        })
+      ]);
       
       const mensaje = result.total > 0 
         ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
