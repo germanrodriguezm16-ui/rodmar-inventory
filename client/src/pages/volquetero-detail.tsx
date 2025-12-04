@@ -146,6 +146,10 @@ export default function VolqueteroDetail() {
   const transaccionesFormateadas: VolqueteroTransaccion[] = useMemo(() => {
     if (!volquetero) return [];
     
+    console.log('🔄 [transaccionesFormateadas] Recalculando useMemo');
+    console.log('🔄 [transaccionesFormateadas] viajes.length:', (viajes as any[])?.length);
+    console.log('🔄 [transaccionesFormateadas] viajes ocultos:', (viajes as any[])?.filter((v: any) => v.oculta).length);
+    
     const transaccionesManuales = (transaccionesData as any[])
       .map(t => {
         let valorFinal = parseFloat(t.valor);
