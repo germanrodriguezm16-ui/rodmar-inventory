@@ -572,27 +572,48 @@ export default function CompradorDetail() {
         throw new Error('Error al mostrar elementos ocultos');
       }
     },
-    onSuccess: async () => {
+    onMutate: async () => {
+      // Actualización optimista: mostrar todos los viajes ocultos inmediatamente
+      await queryClient.cancelQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
+      await queryClient.cancelQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
+      
+      // Snapshot del valor anterior
+      const previousViajes = queryClient.getQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId]);
+      const previousViajesIncOcultos = queryClient.getQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId, "includeHidden"]);
+      
+      // Actualizar optimistamente: marcar todos los viajes ocultos como visibles
+      if (previousViajes) {
+        queryClient.setQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId], (old) => 
+          (old || []).map(v => ({ ...v, oculta: false }))
+        );
+      }
+      if (previousViajesIncOcultos) {
+        queryClient.setQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId, "includeHidden"], (old) => 
+          (old || []).map(v => ({ ...v, oculta: false }))
+        );
+      }
+      
+      return { previousViajes, previousViajesIncOcultos };
+    },
+    onSuccess: () => {
       toast({
         description: "Todos los elementos ocultos ahora son visibles",
         duration: 2000,
       });
-      // Invalidar y forzar refetch inmediato de queries específicas (similar a volqueteros)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] }),
-      ]);
-      // Forzar refetch inmediato para actualización visual instantánea
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId], type: 'active' }),
-        queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"], type: 'active' }),
-        queryClient.refetchQueries({ queryKey: ["/api/viajes/comprador", compradorId], type: 'active' }),
-        queryClient.refetchQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"], type: 'active' }),
-      ]);
+      // Invalidar queries para sincronizar con el backend
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
     },
-    onError: () => {
+    onError: (error, variables, context) => {
+      // Revertir actualización optimista en caso de error
+      if (context?.previousViajes) {
+        queryClient.setQueryData(["/api/viajes/comprador", compradorId], context.previousViajes);
+      }
+      if (context?.previousViajesIncOcultos) {
+        queryClient.setQueryData(["/api/viajes/comprador", compradorId, "includeHidden"], context.previousViajesIncOcultos);
+      }
       toast({
         description: "Error al mostrar elementos ocultos",
         variant: "destructive",
