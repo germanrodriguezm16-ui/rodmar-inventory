@@ -117,8 +117,15 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       if (transaction?.deQuienTipo === 'mina' || transaction?.paraQuienTipo === 'mina') {
         queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
         queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
-        queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] }); // Refetch inmediato
-        queryClient.refetchQueries({ queryKey: ["/api/minas"] }); // Refetch listado para actualizar tarjetas
+        // Forzar refetch incluso si la query no está activa
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/balances/minas"],
+          type: 'all' // Refetch todas las queries, no solo las activas
+        });
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/minas"],
+          type: 'all' // Refetch todas las queries, no solo las activas
+        });
         // Invalidar queries específicas de minas (para ambos socios si son minas)
         queryClient.invalidateQueries({ 
           predicate: (query) => {
@@ -178,8 +185,15 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       if (transaction?.deQuienTipo === 'comprador' || transaction?.paraQuienTipo === 'comprador') {
         queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
         queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
-        queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
-        queryClient.refetchQueries({ queryKey: ["/api/compradores"] }); // Refetch listado para actualizar tarjetas
+        // Forzar refetch incluso si la query no está activa
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/balances/compradores"],
+          type: 'all' // Refetch todas las queries, no solo las activas
+        });
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/compradores"],
+          type: 'all' // Refetch todas las queries, no solo las activas
+        });
         // Invalidar queries específicas de compradores (para ambos socios si son compradores)
         queryClient.invalidateQueries({ 
           predicate: (query) => {
@@ -235,8 +249,15 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       if (transaction?.deQuienTipo === 'volquetero' || transaction?.paraQuienTipo === 'volquetero') {
         queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
         queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
-        queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
-        queryClient.refetchQueries({ queryKey: ["/api/volqueteros"] }); // Refetch listado para actualizar tarjetas
+        // Forzar refetch incluso si la query no está activa
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/balances/volqueteros"],
+          type: 'all' // Refetch todas las queries, no solo las activas
+        });
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/volqueteros"],
+          type: 'all' // Refetch todas las queries, no solo las activas
+        });
         // Invalidar queries específicas de volqueteros
         queryClient.invalidateQueries({ 
           predicate: (query) => {
