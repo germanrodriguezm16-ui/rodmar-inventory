@@ -308,8 +308,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/minas/:id/viajes", async (req, res) => {
     try {
       const minaId = parseInt(req.params.id);
+      const includeHidden = req.query.includeHidden === 'true';
       const viajes = await storage.getViajesByMina(minaId);
-      res.json(viajes);
+      
+      // Si includeHidden es false, filtrar viajes ocultos (comportamiento por defecto)
+      const viajesFiltrados = includeHidden 
+        ? viajes 
+        : viajes.filter(v => !v.oculta);
+      
+      res.json(viajesFiltrados);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch viajes for mina" });
     }
@@ -508,7 +515,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid comprador ID" });
       }
 
+      const includeHidden = req.query.includeHidden === 'true';
       const viajes = await storage.getViajesByComprador(compradorId);
+
+      // Si includeHidden es false, filtrar viajes ocultos (comportamiento por defecto)
+      const viajesFiltrados = includeHidden 
+        ? viajes 
+        : viajes.filter(v => !v.oculta);
 
       // Debug específico para comprador 97
       if (compradorId === 97) {
@@ -527,7 +540,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json(viajes);
+      res.json(viajesFiltrados);
     } catch (error: any) {
       console.error("Error fetching viajes by comprador:", error);
       res.status(500).json({ error: "Failed to fetch viajes for comprador" });
@@ -798,6 +811,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Volquetero no encontrado" });
       }
       
+      const includeHidden = req.query.includeHidden === 'true';
+      
       // Obtener viajes del volquetero por nombre del conductor
       const viajes = await storage.getViajesByVolquetero(volquetero.nombre, userId);
       
@@ -809,7 +824,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         v.quienPagaFlete !== "El comprador"
       );
       
-      res.json(viajesFiltrados);
+      // Si includeHidden es false, filtrar viajes ocultos (comportamiento por defecto)
+      const viajesFinales = includeHidden 
+        ? viajesFiltrados 
+        : viajesFiltrados.filter(v => !v.oculta);
+      
+      res.json(viajesFinales);
     } catch (error) {
       console.error("Error fetching viajes for volquetero:", error);
       res.status(500).json({ error: "Failed to fetch viajes for volquetero" });

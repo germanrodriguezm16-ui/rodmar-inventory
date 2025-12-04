@@ -177,7 +177,7 @@ export default function CompradorDetail() {
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
   });
 
-  // Fetch todas las transacciones incluyendo ocultas (para el contador del botón)
+  // Fetch todas las transacciones incluyendo ocultas (para el contador del botón y balance del encabezado)
   const { data: todasTransaccionesIncOcultas = [] } = useQuery<TransaccionWithSocio[]>({
     queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"],
     queryFn: () => fetch(apiUrl(`/api/transacciones/comprador/${compradorId}?includeHidden=true`)).then(res => res.json()),
@@ -185,6 +185,16 @@ export default function CompradorDetail() {
     staleTime: 300000, // 5 minutos - datos frescos por más tiempo
     refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
+  });
+
+  // Fetch todos los viajes incluyendo ocultos (solo para el balance del encabezado)
+  const { data: todosViajesIncOcultos = [] } = useQuery<ViajeWithDetails[]>({
+    queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"],
+    queryFn: () => fetch(apiUrl(`/api/viajes/comprador/${compradorId}?includeHidden=true`)).then(res => res.json()),
+    enabled: !!compradorId,
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   // Combinar transacciones reales con transacciones dinámicas de viajes
@@ -247,38 +257,23 @@ export default function CompradorDetail() {
 
 
 
-  // Calcular balance neto total del comprador usando la misma lógica que el resumen
+  // Calcular balance neto total del comprador (INCLUYE todas las transacciones y viajes, incluso ocultos)
+  // Este balance NO debe cambiar al ocultar/mostrar transacciones
   const balanceNetoReal = useMemo(() => {
-    // Usar exactamente la misma lógica que en el resumen de transacciones
-    const viajesCompletados = viajes?.filter(v => v.fechaDescargue && v.compradorId === parseInt(compradorId) && !v.oculta) || [];
+    // Usar TODOS los viajes completados (incluyendo ocultos) para el balance real
+    const viajesCompletados = todosViajesIncOcultos?.filter(v => v.fechaDescargue && v.compradorId === parseInt(compradorId)) || [];
     
     // Para transacciones manuales, separar ingresos y egresos
+    // Usar TODAS las transacciones (incluyendo ocultas) para el balance real
     let totalManualesPositivos = 0;
     let totalManualesNegativos = 0;
 
-    transacciones.forEach(transaccion => {
+    todasTransaccionesIncOcultas.forEach(transaccion => {
       const valor = parseFloat(transaccion.valor);
-      
-      // Debug logging para transacción 323
-      if (transaccion.id === 323) {
-        console.log('🔍 TRANSACCION 323 DEBUG:', {
-          id: transaccion.id,
-          paraQuienTipo: transaccion.paraQuienTipo,
-          paraQuienId: transaccion.paraQuienId,
-          compradorId: compradorId.toString(),
-          valor: valor,
-          condicion1: transaccion.paraQuienTipo === 'comprador',
-          condicion2: transaccion.paraQuienId === compradorId.toString(),
-          esEgreso: transaccion.paraQuienTipo === 'comprador' && transaccion.paraQuienId === compradorId.toString()
-        });
-      }
       
       if (transaccion.paraQuienTipo === 'comprador' && transaccion.paraQuienId === compradorId.toString()) {
         // Transacciones hacia el comprador son egresos (negativos)
         totalManualesNegativos += Math.abs(valor);
-        if (transaccion.id === 323) {
-          console.log('✅ Transacción 323 agregada como egreso:', Math.abs(valor));
-        }
       } else if (transaccion.deQuienTipo === 'comprador' && transaccion.deQuienId === compradorId.toString()) {
         // Transacciones desde el comprador son ingresos (positivos)
         totalManualesPositivos += Math.abs(valor);
@@ -295,18 +290,8 @@ export default function CompradorDetail() {
     const totalNegativos = Math.abs(totalViajes) + totalManualesNegativos;
     const balanceTotal = totalPositivos - totalNegativos;
 
-    console.log('🧮 BALANCE NETO REAL CALCULO:', {
-      compradorId: compradorId.toString(),
-      totalManualesPositivos,
-      totalManualesNegativos,
-      totalViajes: Math.abs(totalViajes),
-      totalPositivos,
-      totalNegativos,
-      balanceTotal
-    });
-
     return balanceTotal;
-  }, [viajes, transacciones, compradorId]);
+  }, [todosViajesIncOcultos, todasTransaccionesIncOcultas, compradorId]);
 
   // Función para obtener rangos de fecha
   const getDateRange = (filterType: string, startDate?: string, endDate?: string) => {

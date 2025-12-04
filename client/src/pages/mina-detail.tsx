@@ -268,13 +268,23 @@ export default function MinaDetail() {
     enabled: !!minaId,
   });
 
-  // Obtener viajes de la mina
+  // Obtener viajes de la mina (solo visibles, para la pestaña de viajes)
   const { data: viajes = [], isLoading: viajesLoading } = useQuery<ViajeWithDetails[]>({
     queryKey: [`/api/minas/${minaId}/viajes`],
     enabled: !!minaId,
     staleTime: 300000, // 5 minutos - datos frescos por más tiempo
     refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
+  });
+
+  // Obtener TODOS los viajes de la mina (incluyendo ocultos) solo para el balance del encabezado
+  const { data: todosViajesIncOcultos = [] } = useQuery<ViajeWithDetails[]>({
+    queryKey: [`/api/minas/${minaId}/viajes`, "includeHidden"],
+    queryFn: () => fetch(apiUrl(`/api/minas/${minaId}/viajes?includeHidden=true`)).then(res => res.json()),
+    enabled: !!minaId,
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   // Obtener transacciones de la mina (solo visibles)
@@ -602,14 +612,18 @@ export default function MinaDetail() {
   }, [viajes, viajesFechaFilterType, viajesFechaFilterValue, viajesFechaFilterValueEnd, filterViajesByDate]);
 
   // Calcular balance de la mina (ESTÁTICO - usa todas las transacciones, no filtradas)
+  // Balance de la mina (INCLUYE todas las transacciones y viajes, incluso ocultos)
+  // Este balance NO debe cambiar al ocultar/mostrar transacciones
   const balanceMina = useMemo(() => {
     // Ingresos por viajes completados (lo que RodMar paga a la mina)
-    const ingresosViajes = (viajes || [])
+    // Usar TODOS los viajes (incluyendo ocultos) para el balance real
+    const ingresosViajes = (todosViajesIncOcultos || [])
       .filter(v => v.fechaDescargue && v.estado === "completado")
       .reduce((sum, v) => sum + parseFloat(v.totalCompra || '0'), 0);
 
     // Transacciones netas (solo transacciones manuales, excluyendo viajes)
-    const transaccionesNetas = (transacciones || [])
+    // Usar TODAS las transacciones (incluyendo ocultas) para el balance real
+    const transaccionesNetas = (todasTransaccionesIncOcultas || [])
       .filter(t => t.tipo !== "Viaje") // Excluir transacciones de viajes
       .reduce((sum, t) => {
         const valor = parseFloat(t.valor || '0');
@@ -629,7 +643,7 @@ export default function MinaDetail() {
       transacciones: transaccionesNetas,
       total: ingresosViajes + transaccionesNetas
     };
-  }, [viajes, transacciones]); // Cambié las dependencias a datos no filtrados
+  }, [todosViajesIncOcultos, todasTransaccionesIncOcultas, minaId]);
 
   // Mutations para eliminar transacciones
   const deleteTransactionMutation = useMutation({

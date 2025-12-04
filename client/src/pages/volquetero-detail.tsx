@@ -135,7 +135,7 @@ export default function VolqueteroDetail() {
     refetchOnWindowFocus: false,
   });
   
-  // Obtener solo los viajes de este volquetero específico (optimización)
+  // Obtener solo los viajes de este volquetero específico (optimización) - solo visibles
   const { data: viajesVolquetero = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "viajes"],
     queryFn: async () => {
@@ -145,6 +145,23 @@ export default function VolqueteroDetail() {
       }
       const data = await response.json();
       // Asegurar que siempre sea un array
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: volqueteroIdActual > 0,
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
+  // Obtener TODOS los viajes del volquetero (incluyendo ocultos) solo para el balance del encabezado
+  const { data: todosViajesIncOcultos = [] } = useQuery({
+    queryKey: ["/api/volqueteros", volqueteroIdActual, "viajes", "includeHidden"],
+    queryFn: async () => {
+      const response = await fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/viajes?includeHidden=true`));
+      if (!response.ok) {
+        throw new Error('Error al obtener viajes');
+      }
+      const data = await response.json();
       return Array.isArray(data) ? data : [];
     },
     enabled: volqueteroIdActual > 0,
@@ -549,7 +566,40 @@ export default function VolqueteroDetail() {
     return filtered;
   }, [transaccionesFormateadas, filterType, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, searchTerm, filterTransaccionesByDate]);
   
-  // Calcular balance resumido correctamente
+  // Balance del encabezado (INCLUYE todas las transacciones y viajes, incluso ocultos)
+  // Este balance NO debe cambiar al ocultar/mostrar transacciones
+  const balanceEncabezado = useMemo(() => {
+    if (!volquetero) return { total: 0 };
+    
+    // Calcular ingresos de viajes (todos los viajes, incluyendo ocultos)
+    const ingresosViajes = todosViajesIncOcultos.reduce((sum, v) => {
+      const totalFlete = parseFloat(v.totalFlete || "0");
+      return sum + totalFlete; // Positivo porque es ingreso para volquetero
+    }, 0);
+    
+    // Calcular transacciones manuales (todas, incluyendo ocultas)
+    let totalManuales = 0;
+    todasTransaccionesIncOcultas.forEach((t: TransaccionWithSocio) => {
+      const valor = parseFloat(t.valor || "0");
+      
+      // Lógica correcta de signos para volqueteros:
+      // - Si deQuienTipo === 'volquetero' → POSITIVO (volquetero paga = suma a su balance)
+      // - Si paraQuienTipo === 'volquetero' → NEGATIVO (RodMar paga = reduce su saldo)
+      if (t.deQuienTipo === 'volquetero' && t.deQuienId === volqueteroIdActual.toString()) {
+        totalManuales += Math.abs(valor); // POSITIVO
+      } else if (t.paraQuienTipo === 'volquetero' && t.paraQuienId === volqueteroIdActual.toString()) {
+        totalManuales -= Math.abs(valor); // NEGATIVO
+      }
+    });
+    
+    return {
+      ingresosViajes,
+      transacciones: totalManuales,
+      total: ingresosViajes + totalManuales
+    };
+  }, [todosViajesIncOcultos, todasTransaccionesIncOcultas, volquetero, volqueteroIdActual]);
+
+  // Calcular balance resumido correctamente (para la pestaña de transacciones - usa transacciones filtradas)
   const balanceResumido = useMemo(() => {
     const transaccionesVisibles = transaccionesFiltradas.filter(t => !t.oculta);
     
@@ -670,10 +720,16 @@ export default function VolqueteroDetail() {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <div>
+            <div className="flex-1">
               <h1 className="text-xl font-bold text-foreground">{volquetero.nombre}</h1>
               <p className="text-sm text-muted-foreground">
                 {volquetero.placas.length} vehículo{volquetero.placas.length !== 1 ? 's' : ''} • {volquetero.viajesCount || 0} viajes
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Balance</p>
+              <p className={`text-lg font-bold ${balanceEncabezado.total >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {balanceEncabezado.total >= 0 ? '+' : ''}{formatCurrency(balanceEncabezado.total)}
               </p>
             </div>
           </div>
