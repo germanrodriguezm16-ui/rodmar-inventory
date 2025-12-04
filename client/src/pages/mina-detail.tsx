@@ -139,8 +139,21 @@ export default function MinaDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}/all`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
+      
+      // Forzar refetch inmediato para actualización inmediata
+      queryClient.refetchQueries({ 
+        queryKey: ["/api/viajes"],
+        type: 'active'
+      });
+      queryClient.refetchQueries({ 
+        queryKey: [`/api/minas/${minaId}/viajes`],
+        type: 'active'
+      });
+      
       toast({
         title: "Viaje ocultado",
         description: "El viaje se ha ocultado de las transacciones"

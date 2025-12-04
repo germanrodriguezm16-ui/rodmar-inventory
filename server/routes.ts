@@ -3136,25 +3136,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Ocultar viaje individual (solo afecta transacciones de minas)
+  // Ocultar viaje individual (afecta transacciones de minas y volqueteros)
   app.patch("/api/viajes/:id/hide", async (req, res) => {
     try {
+      console.log("✅ [HIDE-VIAJE] ===== RUTA /api/viajes/:id/hide ALCANZADA =====");
+      console.log("✅ [HIDE-VIAJE] Method:", req.method);
+      console.log("✅ [HIDE-VIAJE] Path:", req.path);
+      console.log("✅ [HIDE-VIAJE] Original URL:", req.originalUrl);
+      console.log("✅ [HIDE-VIAJE] Params:", req.params);
+      
       const userId = req.user?.id || "main_user";
       const viajeId = req.params.id;
 
       if (!viajeId) {
+        console.error("❌ [HIDE-VIAJE] ID de viaje inválido:", req.params.id);
         return res.status(400).json({ error: "ID de viaje inválido" });
       }
 
+      console.log("✅ [HIDE-VIAJE] Ocultando viaje:", viajeId, "User:", userId);
       const success = await storage.hideViaje(viajeId, userId);
+      console.log("✅ [HIDE-VIAJE] Resultado:", success);
 
       if (success) {
+        console.log("✅ [HIDE-VIAJE] Viaje ocultado exitosamente");
         res.json({ success: true, message: "Viaje ocultado correctamente" });
       } else {
+        console.warn("⚠️ [HIDE-VIAJE] Viaje no encontrado:", viajeId);
         res.status(404).json({ error: "Viaje no encontrado" });
       }
     } catch (error) {
-      console.error("Error hiding viaje:", error);
+      console.error("❌ [HIDE-VIAJE] Error hiding viaje:", error);
+      console.error("❌ [HIDE-VIAJE] Error stack:", error instanceof Error ? error.stack : String(error));
       res.status(500).json({ error: "Error al ocultar el viaje" });
     }
   });

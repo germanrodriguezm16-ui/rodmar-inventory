@@ -451,6 +451,18 @@ export default function VolqueteroDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+      
+      // Forzar refetch inmediato para actualización inmediata
+      queryClient.refetchQueries({ 
+        queryKey: ["/api/viajes"],
+        type: 'active'
+      });
+      queryClient.refetchQueries({ 
+        queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
+        type: 'active'
+      });
+      
       toast({
         title: "Viaje ocultado",
         description: "El viaje se ha ocultado de las transacciones"

@@ -1655,29 +1655,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async hideViaje(id: string, userId?: string): Promise<boolean> {
+    console.log(`🔍 [hideViaje] Attempting to hide viaje ID: ${id}`);
+    // Solo buscar por ID, no filtrar por userId
+    // Muchos viajes pueden tener userId NULL o diferente
     const conditions = [eq(viajes.id, id)];
-    if (userId) {
-      conditions.push(eq(viajes.userId, userId));
-    }
 
     const result = await db
       .update(viajes)
       .set({ oculta: true })
-      .where(and(...conditions));
-    return result.rowCount > 0;
+      .where(and(...conditions))
+      .returning(); // Añadir .returning() para obtener las filas actualizadas
+    
+    console.log(`🔍 [hideViaje] ID: ${id}, result length: ${result.length}, Result:`, result);
+    return result.length > 0; // Verificar si se actualizó al menos una fila
   }
 
   async showViaje(id: string, userId?: string): Promise<boolean> {
+    console.log(`🔍 [showViaje] Attempting to show viaje ID: ${id}`);
+    // Solo buscar por ID, no filtrar por userId
     const conditions = [eq(viajes.id, id)];
-    if (userId) {
-      conditions.push(eq(viajes.userId, userId));
-    }
 
     const result = await db
       .update(viajes)
       .set({ oculta: false })
-      .where(and(...conditions));
-    return result.rowCount > 0;
+      .where(and(...conditions))
+      .returning(); // Añadir .returning() para obtener las filas actualizadas
+    
+    console.log(`🔍 [showViaje] ID: ${id}, result length: ${result.length}`);
+    return result.length > 0; // Verificar si se actualizó al menos una fila
   }
 
   async showAllHiddenViajes(userId?: string): Promise<number> {
