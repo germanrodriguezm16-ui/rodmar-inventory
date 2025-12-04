@@ -649,10 +649,7 @@ export default function VolqueteroDetail() {
     );
   }
 
-  // Filtrar viajes del volquetero específico
-  const viajesVolquetero = (viajes as ViajeWithDetails[]).filter((viaje) => {
-    return viaje.conductor === volquetero.nombre;
-  });
+  // viajesVolquetero ya está definido arriba usando useQuery con el endpoint específico
 
   return (
     <div className="min-h-screen bg-background pb-16">
