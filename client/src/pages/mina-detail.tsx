@@ -138,21 +138,11 @@ export default function MinaDetail() {
       return await response.json();
     },
     onSuccess: () => {
+      // Invalidar solo las queries específicas del socio (similar a volqueteros)
       queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`, "includeHidden"] });
       queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}/all`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
-      
-      // Forzar refetch inmediato para actualización inmediata
-      queryClient.refetchQueries({ 
-        queryKey: ["/api/viajes"],
-        type: 'active'
-      });
-      queryClient.refetchQueries({ 
-        queryKey: [`/api/minas/${minaId}/viajes`],
-        type: 'active'
-      });
       
       toast({
         title: "Viaje ocultado",
@@ -199,9 +189,11 @@ export default function MinaDetail() {
       };
     },
     onSuccess: (result) => {
+      // Invalidar solo las queries específicas del socio (similar a volqueteros)
       queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}/all`] });
       queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`, "includeHidden"] });
       
       const mensaje = result.total > 0 
         ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
