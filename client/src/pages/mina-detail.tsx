@@ -163,15 +163,20 @@ export default function MinaDetail() {
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
       const { apiUrl } = await import('@/lib/api');
-      // Restaurar transacciones manuales ocultas
-      const transaccionesResponse = await fetch(apiUrl('/api/transacciones/show-all-hidden'), {
-        method: 'PATCH',
+      
+      if (!minaId) {
+        throw new Error('Mina no encontrada');
+      }
+      
+      // Mostrar transacciones ocultas específicas de esta mina (similar a volqueteros)
+      const transaccionesResponse = await fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}/show-all`), {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       
-      // Restaurar viajes ocultos
-      const viajesResponse = await fetch(apiUrl('/api/viajes/show-all-hidden'), {
-        method: 'PATCH',
+      // Mostrar viajes ocultos específicos de esta mina
+      const viajesResponse = await fetch(apiUrl(`/api/viajes/mina/${minaId}/show-all`), {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       
