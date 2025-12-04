@@ -146,12 +146,6 @@ export default function VolqueteroDetail() {
   const transaccionesFormateadas: VolqueteroTransaccion[] = useMemo(() => {
     if (!volquetero) return [];
     
-    console.log('🔍 DEBUG volquetero-detail - INICIANDO PROCESAMIENTO');
-    console.log('🔍 DEBUG volquetero-detail - transaccionesData:', transaccionesData);
-    console.log('🔍 DEBUG volquetero-detail - transaccionesData length:', (transaccionesData as any[])?.length);
-    
-    // El endpoint ya filtra por volquetero, no necesitamos filtrar otra vez
-    // Lógica de signos: POSITIVO desde volquetero, NEGATIVO hacia volquetero
     const transaccionesManuales = (transaccionesData as any[])
       .map(t => {
         let valorFinal = parseFloat(t.valor);
