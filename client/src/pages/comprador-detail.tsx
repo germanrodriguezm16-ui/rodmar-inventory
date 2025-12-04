@@ -681,6 +681,8 @@ export default function CompradorDetail() {
                   transaccionesTemporales={transaccionesTemporales}
                   setTransaccionesTemporales={setTransaccionesTemporales}
                   setShowTemporalTransaction={setShowTemporalTransaction}
+                  setShowEditTransaction={setShowEditTransaction}
+                  setShowDeleteTransaction={setShowDeleteTransaction}
                 />
               </TabsContent>
 
@@ -1137,7 +1139,9 @@ function CompradorTransaccionesTab({
   setShowTransactionDetail,
   transaccionesTemporales,
   setTransaccionesTemporales,
-  setShowTemporalTransaction
+  setShowTemporalTransaction,
+  setShowEditTransaction,
+  setShowDeleteTransaction
 }: { 
   transacciones: TransaccionWithSocio[];
   viajesCompletados: ViajeWithDetails[];
@@ -1164,6 +1168,8 @@ function CompradorTransaccionesTab({
   transaccionesTemporales: any[];
   setTransaccionesTemporales: (transacciones: any[]) => void;
   setShowTemporalTransaction: (show: boolean) => void;
+  setShowEditTransaction: (show: boolean) => void;
+  setShowDeleteTransaction: (show: boolean) => void;
 }) {
   // Combinar transacciones reales con transacciones dinámicas de viajes
   const todasTransacciones = useMemo(() => {
