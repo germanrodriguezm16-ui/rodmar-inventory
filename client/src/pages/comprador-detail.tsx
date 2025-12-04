@@ -466,14 +466,21 @@ export default function CompradorDetail() {
       if (!response.ok) throw new Error('Error al ocultar transacción en módulo compradores');
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         description: "Transacción ocultada en módulo compradores",
         duration: 2000,
       });
-      // Invalidar queries usando nuevos endpoints
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
+      // Invalidar y forzar refetch inmediato de queries específicas (similar a volqueteros)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] }),
+      ]);
+      // Forzar refetch inmediato para actualización visual instantánea
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"], type: 'active' }),
+      ]);
     },
     onError: () => {
       toast({
@@ -495,16 +502,25 @@ export default function CompradorDetail() {
       if (!response.ok) throw new Error('Error al ocultar viaje');
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         description: "Viaje ocultado",
         duration: 2000,
       });
-      // Invalidar solo las queries específicas del socio (similar a volqueteros)
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
+      // Invalidar y forzar refetch inmediato de queries específicas (similar a volqueteros)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] }),
+      ]);
+      // Forzar refetch inmediato para actualización visual instantánea
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/viajes/comprador", compradorId], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"], type: 'active' }),
+      ]);
     },
     onError: () => {
       toast({
@@ -535,16 +551,25 @@ export default function CompradorDetail() {
         throw new Error('Error al mostrar elementos ocultos');
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         description: "Todos los elementos ocultos ahora son visibles",
         duration: 2000,
       });
-      // Invalidar solo las queries específicas del socio (similar a volqueteros)
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
+      // Invalidar y forzar refetch inmediato de queries específicas (similar a volqueteros)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] }),
+      ]);
+      // Forzar refetch inmediato para actualización visual instantánea
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ["/api/viajes/comprador", compradorId], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"], type: 'active' }),
+      ]);
     },
     onError: () => {
       toast({
