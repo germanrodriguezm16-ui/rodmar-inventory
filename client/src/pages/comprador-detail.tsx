@@ -1139,6 +1139,7 @@ function CompradorTransaccionesTab({
   hideViajesMutation,
   showAllHiddenMutation,
   viajes,
+  todosViajesIncOcultos,
   setTransaccionesFiltradas,
   setSelectedTransaction,
   setShowTransactionDetail,
@@ -1167,6 +1168,7 @@ function CompradorTransaccionesTab({
   hideViajesMutation: any;
   showAllHiddenMutation: any;
   viajes: ViajeWithDetails[];
+  todosViajesIncOcultos: ViajeWithDetails[];
   setTransaccionesFiltradas: (transacciones: any[]) => void;
   setSelectedTransaction: (transaction: any) => void;
   setShowTransactionDetail: (show: boolean) => void;
@@ -1511,7 +1513,7 @@ function CompradorTransaccionesTab({
               ).length || 0;
               
               // Usar todosViajesIncOcultos para contar viajes ocultos (similar a minas)
-              const viajesOcultos = todosViajesIncOcultos?.filter(v => v.oculta && v.compradorId === compradorId).length || 0;
+              const viajesOcultos = todosViajesIncOcultos?.filter((v: ViajeWithDetails) => v.oculta && v.compradorId === compradorId).length || 0;
               
               const totalOcultos = transaccionesOcultas + viajesOcultos;
               
