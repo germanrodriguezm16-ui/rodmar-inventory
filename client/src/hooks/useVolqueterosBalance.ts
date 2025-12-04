@@ -36,10 +36,25 @@ export const useVolqueterosBalance = () => {
       }
     };
 
+    // Listener para eventos específicos de balance global y tarjeta actualizada
+    const handleSpecificEvent = (eventName: string, data: any) => {
+      if (eventName.startsWith('balanceGlobalActualizado:') && data.tipo === 'volquetero') {
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
+      } else if (eventName.startsWith('tarjetaActualizada:') && data.socioTipo === 'volquetero') {
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
+      }
+    };
+
     socket.on("balance-updated", handleBalanceUpdate);
+    
+    // Escuchar eventos específicos usando onAny
+    socket.onAny(handleSpecificEvent);
 
     return () => {
       socket.off("balance-updated", handleBalanceUpdate);
+      socket.offAny(handleSpecificEvent);
     };
   }, [socket, queryClient]);
 

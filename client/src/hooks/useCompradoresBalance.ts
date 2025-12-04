@@ -36,10 +36,25 @@ export const useCompradoresBalance = () => {
       }
     };
 
+    // Listener para eventos específicos de balance global y tarjeta actualizada
+    const handleSpecificEvent = (eventName: string, data: any) => {
+      if (eventName.startsWith('balanceGlobalActualizado:') && data.tipo === 'comprador') {
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
+      } else if (eventName.startsWith('tarjetaActualizada:') && data.socioTipo === 'comprador') {
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
+      }
+    };
+
     socket.on("balance-updated", handleBalanceUpdate);
+    
+    // Escuchar eventos específicos usando onAny
+    socket.onAny(handleSpecificEvent);
 
     return () => {
       socket.off("balance-updated", handleBalanceUpdate);
+      socket.offAny(handleSpecificEvent);
     };
   }, [socket, queryClient]);
 
