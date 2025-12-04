@@ -477,13 +477,20 @@ export default function VolqueteroDetail() {
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
       const { apiUrl } = await import('@/lib/api');
-      const transaccionesResponse = await fetch(apiUrl('/api/transacciones/show-all-hidden'), {
-        method: 'PATCH',
+      
+      if (!volquetero || !volqueteroIdActual) {
+        throw new Error('Volquetero no encontrado');
+      }
+      
+      // Mostrar transacciones ocultas específicas de este volquetero
+      const transaccionesResponse = await fetch(apiUrl(`/api/transacciones/socio/volquetero/${volqueteroIdActual}/show-all`), {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       
-      const viajesResponse = await fetch(apiUrl('/api/viajes/show-all-hidden'), {
-        method: 'PATCH',
+      // Mostrar viajes ocultos específicos de este volquetero (por nombre del conductor)
+      const viajesResponse = await fetch(apiUrl(`/api/viajes/volquetero/${encodeURIComponent(volquetero.nombre)}/show-all`), {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       
