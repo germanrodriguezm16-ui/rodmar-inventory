@@ -137,8 +137,8 @@ export default function VolqueteroDetail() {
       return response.json();
     },
     enabled: volqueteroIdActual > 0,
-    staleTime: 300000,
-    refetchOnMount: false,
+    staleTime: 0, // Siempre considerar stale para que se refetch cuando se invalide
+    refetchOnMount: true, // Recargar al montar para obtener datos frescos
     refetchOnWindowFocus: false,
   });
 
@@ -531,6 +531,9 @@ export default function VolqueteroDetail() {
           type: 'active'
         })
       ]);
+      
+      // Asegurar que el filterType esté en "todas" para mostrar las transacciones restauradas
+      setFilterType("todas");
       
       const mensaje = result.total > 0 
         ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
