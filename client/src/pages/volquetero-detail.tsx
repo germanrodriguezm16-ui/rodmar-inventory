@@ -180,13 +180,13 @@ export default function VolqueteroDetail() {
         return formatted;
       });
 
-    // Transacciones dinámicas de viajes completados (excluir viajes ocultos)
+    // Transacciones dinámicas de viajes completados
+    // INCLUIR TODOS los viajes (incluyendo ocultos) - el filtro de ocultas se hace después
     const viajesCompletados = (viajes as ViajeWithDetails[])
       .filter(v => 
         v.conductor === volquetero.nombre && 
         v.estado === "completado" && 
         v.fechaDescargue &&
-        !v.oculta &&
         v.quienPagaFlete !== "comprador" &&
         v.quienPagaFlete !== "El comprador"
       )
@@ -208,7 +208,7 @@ export default function VolqueteroDetail() {
           paraQuienId: volqueteroIdActual.toString(),
           tipo: "Viaje" as const,
           esViajeCompleto: true,
-          oculta: false,
+          oculta: v.oculta || false,
           viajeId: v.id
         };
       });
