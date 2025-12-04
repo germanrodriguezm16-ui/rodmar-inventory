@@ -1072,7 +1072,20 @@ export class DatabaseStorage implements IStorage {
     // Si se eliminó exitosamente, recalcular balances
     if (result.length > 0) {
       console.log(`✅ [deleteTransaccion] Transacción ${id} eliminada, recalculando balances...`);
-      await this.updateRelatedBalances(transaccionToDelete);
+      console.log(`🔍 [deleteTransaccion] Transacción a procesar:`, {
+        id: transaccionToDelete.id,
+        deQuienTipo: transaccionToDelete.deQuienTipo,
+        deQuienId: transaccionToDelete.deQuienId,
+        paraQuienTipo: transaccionToDelete.paraQuienTipo,
+        paraQuienId: transaccionToDelete.paraQuienId,
+      });
+      try {
+        await this.updateRelatedBalances(transaccionToDelete);
+        console.log(`✅ [deleteTransaccion] updateRelatedBalances completado para transacción ${id}`);
+      } catch (error) {
+        console.error(`❌ [deleteTransaccion] Error en updateRelatedBalances:`, error);
+        throw error; // Re-lanzar para que el endpoint sepa que hubo un error
+      }
       console.log(`✅ [deleteTransaccion] Balances recalculados para transacción ${id}`);
     } else {
       console.log(`⚠️ [deleteTransaccion] No se pudo eliminar transacción ${id}`);
