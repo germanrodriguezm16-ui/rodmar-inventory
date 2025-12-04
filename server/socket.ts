@@ -72,4 +72,86 @@ export function emitTransactionUpdate(data: {
   });
 }
 
+// Nueva función para emitir eventos específicos de actualización de transacciones
+export function emitTransactionSpecificUpdates(data: {
+  transactionId: number;
+  origenTipo: string;
+  origenId: string | number;
+  destinoTipo: string;
+  destinoId: string | number;
+  nuevoBalanceOrigen?: string;
+  nuevoBalanceDestino?: string;
+}) {
+  if (!io) {
+    console.warn("⚠️ Socket.io no está inicializado");
+    return;
+  }
+
+  const { transactionId, origenTipo, origenId, destinoTipo, destinoId, nuevoBalanceOrigen, nuevoBalanceDestino } = data;
+
+  // Emitir eventos para ambos socios
+  // Transacciones actualizadas
+  io.emit(`transaccionActualizada:${origenTipo}:${origenId}`, {
+    transactionId,
+    socioTipo: origenTipo,
+    socioId: origenId,
+    timestamp: new Date().toISOString(),
+  });
+
+  io.emit(`transaccionActualizada:${destinoTipo}:${destinoId}`, {
+    transactionId,
+    socioTipo: destinoTipo,
+    socioId: destinoId,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Balances actualizados (solo para minas, compradores, volqueteros)
+  if (['mina', 'comprador', 'volquetero'].includes(origenTipo) && nuevoBalanceOrigen) {
+    io.emit(`balanceActualizado:${origenTipo}:${origenId}`, {
+      socioTipo: origenTipo,
+      socioId: origenId,
+      nuevoBalanceReal: nuevoBalanceOrigen,
+      timestamp: new Date().toISOString(),
+    });
+
+    io.emit(`balanceGlobalActualizado:${origenTipo}`, {
+      tipo: origenTipo,
+      timestamp: new Date().toISOString(),
+    });
+
+    io.emit(`tarjetaActualizada:${origenTipo}:${origenId}`, {
+      socioId: origenId,
+      socioTipo: origenTipo,
+      nuevoBalanceReal: nuevoBalanceOrigen,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  if (['mina', 'comprador', 'volquetero'].includes(destinoTipo) && nuevoBalanceDestino) {
+    io.emit(`balanceActualizado:${destinoTipo}:${destinoId}`, {
+      socioTipo: destinoTipo,
+      socioId: destinoId,
+      nuevoBalanceReal: nuevoBalanceDestino,
+      timestamp: new Date().toISOString(),
+    });
+
+    io.emit(`balanceGlobalActualizado:${destinoTipo}`, {
+      tipo: destinoTipo,
+      timestamp: new Date().toISOString(),
+    });
+
+    io.emit(`tarjetaActualizada:${destinoTipo}:${destinoId}`, {
+      socioId: destinoId,
+      socioTipo: destinoTipo,
+      nuevoBalanceReal: nuevoBalanceDestino,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  console.log(`📡 Eventos emitidos para transacción ${transactionId}:`, {
+    origen: `${origenTipo}:${origenId}`,
+    destino: `${destinoTipo}:${destinoId}`,
+  });
+}
+
 

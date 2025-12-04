@@ -1018,6 +1018,9 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(transacciones.userId, userId));
     }
 
+    // Obtener transacción original antes de actualizar (para identificar ambos socios)
+    // Nota: updateRelatedBalances ya maneja ambos socios (origen y destino) de la transacción actualizada
+
     const [updatedTransaccion] = await db
       .update(transacciones)
       .set(updates as any)
@@ -1025,6 +1028,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     // Actualizar balances calculados después de actualizar la transacción
+    // updateRelatedBalances maneja ambos socios (origen y destino)
     if (updatedTransaccion) {
       await this.updateRelatedBalances(updatedTransaccion);
     }
@@ -2133,27 +2137,71 @@ export class DatabaseStorage implements IStorage {
       // Recalcular balances en segundo plano (asíncrono, no bloqueante)
       if (affectedPartners.length > 0) {
         setImmediate(async () => {
+          const balanceMap: Map<string, string> = new Map(); // tipo:id -> balance
+          
           for (const partner of affectedPartners) {
             try {
               if (partner.tipo === 'mina') {
                 await this.calculateAndUpdateMinaBalance(partner.id);
+                // Obtener el balance actualizado
+                const [mina] = await db.select({ balanceCalculado: minas.balanceCalculado })
+                  .from(minas)
+                  .where(eq(minas.id, partner.id));
+                if (mina?.balanceCalculado) {
+                  balanceMap.set(`${partner.tipo}:${partner.id}`, mina.balanceCalculado);
+                }
               } else if (partner.tipo === 'comprador') {
                 await this.calculateAndUpdateCompradorBalance(partner.id);
+                // Obtener el balance actualizado
+                const [comprador] = await db.select({ balanceCalculado: compradores.balanceCalculado })
+                  .from(compradores)
+                  .where(eq(compradores.id, partner.id));
+                if (comprador?.balanceCalculado) {
+                  balanceMap.set(`${partner.tipo}:${partner.id}`, comprador.balanceCalculado);
+                }
               } else if (partner.tipo === 'volquetero') {
                 await this.calculateAndUpdateVolqueteroBalance(partner.id);
+                // Obtener el balance actualizado
+                const [volquetero] = await db.select({ balanceCalculado: volqueteros.balanceCalculado })
+                  .from(volqueteros)
+                  .where(eq(volqueteros.id, partner.id));
+                if (volquetero?.balanceCalculado) {
+                  balanceMap.set(`${partner.tipo}:${partner.id}`, volquetero.balanceCalculado);
+                }
               }
             } catch (error) {
               console.error(`Error recalculando balance de ${partner.tipo} ${partner.id}:`, error);
             }
           }
           
-          // Emitir evento WebSocket para actualizar clientes
+          // Emitir eventos WebSocket
           const io = await import('./socket').then(m => m.getIO());
+          const { emitTransactionSpecificUpdates } = await import('./socket');
+          
           if (io) {
+            // Emitir evento genérico balance-updated (para compatibilidad)
             io.emit('balance-updated', {
               affectedPartners,
               timestamp: new Date().toISOString()
             });
+
+            // Emitir eventos específicos para ambos socios
+            if (transaccion.deQuienTipo && transaccion.deQuienId && 
+                transaccion.paraQuienTipo && transaccion.paraQuienId) {
+              
+              const origenBalance = balanceMap.get(`${transaccion.deQuienTipo}:${transaccion.deQuienId}`);
+              const destinoBalance = balanceMap.get(`${transaccion.paraQuienTipo}:${transaccion.paraQuienId}`);
+              
+              emitTransactionSpecificUpdates({
+                transactionId: transaccion.id,
+                origenTipo: transaccion.deQuienTipo,
+                origenId: transaccion.deQuienId,
+                destinoTipo: transaccion.paraQuienTipo,
+                destinoId: transaccion.paraQuienId,
+                nuevoBalanceOrigen: origenBalance,
+                nuevoBalanceDestino: destinoBalance,
+              });
+            }
           }
         });
       }

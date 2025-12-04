@@ -393,6 +393,88 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         affectedEntityTypes.add('rodmar-cuenta');
       }
       
+      // Invalidar queries específicas de AMBOS socios (origen y destino)
+      // Invalidar transacciones del socio origen (original y nuevo)
+      const sociosAfectados = new Set<string>();
+      if (originalTransaction?.deQuienTipo && originalTransaction?.deQuienId) {
+        const key = `${originalTransaction.deQuienTipo}:${originalTransaction.deQuienId}`;
+        sociosAfectados.add(key);
+        queryClient.invalidateQueries({
+          queryKey: ['transacciones', originalTransaction.deQuienTipo, originalTransaction.deQuienId]
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['balance-real', originalTransaction.deQuienTipo, originalTransaction.deQuienId]
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['tarjeta', originalTransaction.deQuienTipo, originalTransaction.deQuienId]
+        });
+      }
+      if (updatedTransaction.deQuienTipo && updatedTransaction.deQuienId) {
+        const key = `${updatedTransaction.deQuienTipo}:${updatedTransaction.deQuienId}`;
+        if (!sociosAfectados.has(key)) {
+          queryClient.invalidateQueries({
+            queryKey: ['transacciones', updatedTransaction.deQuienTipo, updatedTransaction.deQuienId]
+          });
+          queryClient.invalidateQueries({
+            queryKey: ['balance-real', updatedTransaction.deQuienTipo, updatedTransaction.deQuienId]
+          });
+          queryClient.invalidateQueries({
+            queryKey: ['tarjeta', updatedTransaction.deQuienTipo, updatedTransaction.deQuienId]
+          });
+        }
+      }
+      
+      // Invalidar transacciones del socio destino (original y nuevo)
+      if (originalTransaction?.paraQuienTipo && originalTransaction?.paraQuienId) {
+        const key = `${originalTransaction.paraQuienTipo}:${originalTransaction.paraQuienId}`;
+        sociosAfectados.add(key);
+        queryClient.invalidateQueries({
+          queryKey: ['transacciones', originalTransaction.paraQuienTipo, originalTransaction.paraQuienId]
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['balance-real', originalTransaction.paraQuienTipo, originalTransaction.paraQuienId]
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['tarjeta', originalTransaction.paraQuienTipo, originalTransaction.paraQuienId]
+        });
+      }
+      if (updatedTransaction.paraQuienTipo && updatedTransaction.paraQuienId) {
+        const key = `${updatedTransaction.paraQuienTipo}:${updatedTransaction.paraQuienId}`;
+        if (!sociosAfectados.has(key)) {
+          queryClient.invalidateQueries({
+            queryKey: ['transacciones', updatedTransaction.paraQuienTipo, updatedTransaction.paraQuienId]
+          });
+          queryClient.invalidateQueries({
+            queryKey: ['balance-real', updatedTransaction.paraQuienTipo, updatedTransaction.paraQuienId]
+          });
+          queryClient.invalidateQueries({
+            queryKey: ['tarjeta', updatedTransaction.paraQuienTipo, updatedTransaction.paraQuienId]
+          });
+        }
+      }
+      
+      // Invalidar balances globales de los módulos afectados
+      if (originalTransaction?.deQuienTipo && ['mina', 'comprador', 'volquetero'].includes(originalTransaction.deQuienTipo)) {
+        queryClient.invalidateQueries({
+          queryKey: ['balance-global', originalTransaction.deQuienTipo]
+        });
+      }
+      if (originalTransaction?.paraQuienTipo && ['mina', 'comprador', 'volquetero'].includes(originalTransaction.paraQuienTipo)) {
+        queryClient.invalidateQueries({
+          queryKey: ['balance-global', originalTransaction.paraQuienTipo]
+        });
+      }
+      if (updatedTransaction.deQuienTipo && ['mina', 'comprador', 'volquetero'].includes(updatedTransaction.deQuienTipo)) {
+        queryClient.invalidateQueries({
+          queryKey: ['balance-global', updatedTransaction.deQuienTipo]
+        });
+      }
+      if (updatedTransaction.paraQuienTipo && ['mina', 'comprador', 'volquetero'].includes(updatedTransaction.paraQuienTipo)) {
+        queryClient.invalidateQueries({
+          queryKey: ['balance-global', updatedTransaction.paraQuienTipo]
+        });
+      }
+
       // Invalidar solo las entidades que realmente necesitan actualización
       if (affectedEntityTypes.has('mina')) {
         queryClient.invalidateQueries({ queryKey: ["/api/minas"] });

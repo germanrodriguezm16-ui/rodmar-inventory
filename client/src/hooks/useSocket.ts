@@ -173,6 +173,81 @@ export function useSocket() {
       });
     });
 
+    // Listener para eventos específicos de transacciones actualizadas (patrón dinámico)
+    // Socket.io no soporta wildcards directamente, así que usamos onAny y filtramos
+    socket.onAny((eventName: string, data: any) => {
+      if (eventName.startsWith('transaccionActualizada:')) {
+        const { socioTipo, socioId } = data;
+        
+        // Invalidar queries de transacciones del socio
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            if (Array.isArray(queryKey) && queryKey.length > 0) {
+              const firstKey = queryKey[0] as string;
+              return (
+                firstKey === `/api/transacciones/socio/${socioTipo}/${socioId}` ||
+                firstKey === `/api/transacciones/socio/${socioTipo}/${socioId}/all` ||
+                (socioTipo === 'comprador' && firstKey === '/api/transacciones/comprador' && queryKey[1] === socioId)
+              );
+            }
+            return false;
+          },
+        });
+      } else if (eventName.startsWith('balanceActualizado:')) {
+        const { socioTipo, socioId } = data;
+        
+        // Invalidar query de balance real del socio
+        queryClient.invalidateQueries({ 
+          queryKey: ['balance-real', socioTipo, socioId] 
+        });
+      } else if (eventName.startsWith('balanceGlobalActualizado:')) {
+        const { tipo } = data;
+        
+        // Invalidar query de balance global del módulo
+        queryClient.invalidateQueries({ 
+          queryKey: ['balance-global', tipo] 
+        });
+        
+        // También invalidar el endpoint de balances agregados
+        if (tipo === 'mina') {
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] });
+        } else if (tipo === 'comprador') {
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] });
+        } else if (tipo === 'volquetero') {
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] });
+        }
+      } else if (eventName.startsWith('tarjetaActualizada:')) {
+        const { socioTipo, socioId } = data;
+        
+        // Invalidar queries de tarjetas
+        queryClient.invalidateQueries({ 
+          queryKey: ['tarjetas', socioTipo] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ['tarjeta', socioTipo, socioId] 
+        });
+        
+        // También invalidar el listado completo del módulo para actualizar la tarjeta
+        if (socioTipo === 'mina') {
+          queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] });
+        } else if (socioTipo === 'comprador') {
+          queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] });
+        } else if (socioTipo === 'volquetero') {
+          queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] });
+        }
+      }
+    });
+
     // Manejar eventos de conexión
     socket.on("connect", () => {
       console.log("✅ Conectado a Socket.io");

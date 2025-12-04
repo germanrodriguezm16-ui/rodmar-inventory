@@ -49,6 +49,42 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       // Siempre invalidar transacciones
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
       
+      // Invalidar queries específicas de AMBOS socios (origen y destino)
+      if (transaction?.deQuienTipo && transaction?.deQuienId) {
+        queryClient.invalidateQueries({
+          queryKey: ['transacciones', transaction.deQuienTipo, transaction.deQuienId]
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['balance-real', transaction.deQuienTipo, transaction.deQuienId]
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['tarjeta', transaction.deQuienTipo, transaction.deQuienId]
+        });
+        // Invalidar balance global del módulo
+        if (['mina', 'comprador', 'volquetero'].includes(transaction.deQuienTipo)) {
+          queryClient.invalidateQueries({
+            queryKey: ['balance-global', transaction.deQuienTipo]
+          });
+        }
+      }
+      if (transaction?.paraQuienTipo && transaction?.paraQuienId) {
+        queryClient.invalidateQueries({
+          queryKey: ['transacciones', transaction.paraQuienTipo, transaction.paraQuienId]
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['balance-real', transaction.paraQuienTipo, transaction.paraQuienId]
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['tarjeta', transaction.paraQuienTipo, transaction.paraQuienId]
+        });
+        // Invalidar balance global del módulo
+        if (['mina', 'comprador', 'volquetero'].includes(transaction.paraQuienTipo)) {
+          queryClient.invalidateQueries({
+            queryKey: ['balance-global', transaction.paraQuienTipo]
+          });
+        }
+      }
+      
       // Invalidar solo las entidades que estaban involucradas en la transacción eliminada
       if (transaction?.deQuienTipo === 'mina' || transaction?.paraQuienTipo === 'mina') {
         queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
