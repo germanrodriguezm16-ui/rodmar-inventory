@@ -186,15 +186,13 @@ export default function VolqueteroDetail() {
         return formatted;
       });
 
-    // Transacciones dinámicas de viajes completados
-    // Solo incluir viajes donde RodMar paga el flete (quienPagaFlete !== "comprador")
-    // Valor debe ser POSITIVO porque el volquetero recibe el flete
-    // INCLUIR TODOS los viajes (incluyendo ocultos) - el filtro de ocultas se hace después
+    // Transacciones dinámicas de viajes completados (excluir viajes ocultos)
     const viajesCompletados = (viajes as ViajeWithDetails[])
       .filter(v => 
         v.conductor === volquetero.nombre && 
         v.estado === "completado" && 
         v.fechaDescargue &&
+        !v.oculta &&
         v.quienPagaFlete !== "comprador" &&
         v.quienPagaFlete !== "El comprador"
       )
@@ -205,7 +203,7 @@ export default function VolqueteroDetail() {
         return {
           id: `viaje-${v.id}`,
           concepto: `Viaje ${v.id}`,
-          valor: totalFlete.toString(), // POSITIVO (volquetero recibe)
+          valor: totalFlete.toString(),
           fecha: fechaViaje,
           formaPago: "Viaje",
           voucher: null,
@@ -216,8 +214,8 @@ export default function VolqueteroDetail() {
           paraQuienId: volqueteroIdActual.toString(),
           tipo: "Viaje" as const,
           esViajeCompleto: true,
-          oculta: v.oculta || false, // Marcar como oculta si el viaje está oculto
-          viajeId: v.id // Agregar ID del viaje para poder ocultarlo
+          oculta: false,
+          viajeId: v.id
         };
       });
 
@@ -478,16 +476,14 @@ export default function VolqueteroDetail() {
     }
   });
 
-  // Mutación para mostrar todas las transacciones ocultas (manuales y viajes)
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
-      // Restaurar transacciones manuales ocultas
+      const { apiUrl } = await import('@/lib/api');
       const transaccionesResponse = await fetch(apiUrl('/api/transacciones/show-all-hidden'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' }
       });
       
-      // Restaurar viajes ocultos
       const viajesResponse = await fetch(apiUrl('/api/viajes/show-all-hidden'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' }
@@ -507,20 +503,9 @@ export default function VolqueteroDetail() {
       };
     },
     onSuccess: (result) => {
-      // Invalidar queries primero
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
-      
-      // Forzar refetch inmediato para actualización inmediata (similar a hideViajeMutation)
-      queryClient.refetchQueries({ 
-        queryKey: ["/api/viajes"],
-        type: 'active'
-      });
-      queryClient.refetchQueries({ 
-        queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
-        type: 'active'
-      });
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       
       const mensaje = result.total > 0 
         ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
