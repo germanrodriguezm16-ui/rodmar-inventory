@@ -854,8 +854,8 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
                 onClick={() => handleTransactionDetailClick(transaction)}
               >
                 <CardContent className="p-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3 flex-1">
+                  <div className="flex items-start justify-between min-w-0">
+                    <div className="flex items-start gap-3 flex-1 min-w-0 overflow-hidden">
                       {/* Checkbox de selección múltiple */}
                       {isMultiSelectMode && (
                         <Button
@@ -865,7 +865,7 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
                             e.stopPropagation();
                             toggleTransactionSelection(transaction.id);
                           }}
-                          className="h-6 w-6 p-0 mt-1"
+                          className="h-6 w-6 p-0 mt-1 shrink-0"
                         >
                           {selectedTransactions.has(transaction.id) ? 
                             <CheckSquare className="h-4 w-4" /> : 
@@ -883,7 +883,7 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
                              transaction.deQuienTipo === 'volquetero' ? 'Volquetero' : 
                              transaction.deQuienTipo === 'rodmar' ? 'RodMar' : 'Banco'}
                           </Badge>
-                          <span className="text-sm font-medium text-foreground truncate block min-w-0 flex-1">
+                          <span className="text-sm font-medium text-foreground truncate min-w-0 flex-1">
                             {cleanSocioNombre(transaction.socioNombre || transaction.concepto)}
                           </span>
                         </div>
