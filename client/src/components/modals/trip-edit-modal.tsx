@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Edit, Calculator } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateTripRelatedQueries } from "@/lib/invalidate-trip-queries";
 import { useToast } from "@/hooks/use-toast";
 import { calculateTripFinancials, formatCurrency } from "@/lib/calculations";
 import type { ViajeWithDetails, Comprador } from "@shared/schema";
@@ -112,11 +113,12 @@ export default function TripEditModal({ open, onOpenChange, trip }: TripEditModa
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes/mina"] });
+      // Usar función optimizada para invalidar todas las queries relacionadas
+      invalidateTripRelatedQueries(queryClient);
+      
       toast({
         title: "Viaje actualizado",
-        description: "Los datos del viaje han sido actualizados exitosamente.",
+        description: "Los datos del viaje han sido actualizados exitosamente en todos los módulos.",
       });
       onOpenChange(false);
     },

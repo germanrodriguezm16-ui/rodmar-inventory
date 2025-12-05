@@ -283,31 +283,8 @@ export function EditTripModal({ viaje, isOpen, onClose }: EditTripModalProps) {
       return response.json();
     },
     onSuccess: () => {
-      // Invalidar TODAS las queries de viajes (incluyendo paginadas y endpoints específicos)
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0] as string;
-          return key?.startsWith("/api/viajes");
-        }
-      });
-      
-      // Invalidar queries relacionadas
-      queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
-      // Invalidar y refetch balances inmediatamente
-      queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
-      queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
-      queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
-      queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] });
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0] as string;
-          return key?.startsWith("/api/transacciones");
-        }
-      });
+      // Usar función optimizada para invalidar todas las queries relacionadas
+      invalidateTripRelatedQueries(queryClient);
       
       onClose();
       toast({
