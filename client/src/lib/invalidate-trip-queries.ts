@@ -29,7 +29,10 @@ export function invalidateTripRelatedQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({ 
     predicate: (query) => {
       const key = query.queryKey[0] as string;
-      // Invalidar queries de viajes por mina
+      // Invalidar queries de viajes por mina (múltiples formatos)
+      // Formato string directo: ["/api/minas/${minaId}/viajes"] o ["/api/minas/${minaId}/viajes", "includeHidden"]
+      if (typeof key === 'string' && key.match(/^\/api\/minas\/\d+\/viajes$/)) return true;
+      // Formato array: ["/api/minas", minaId, "viajes"]
       if (key?.startsWith("/api/minas") && query.queryKey[1] && query.queryKey[2] === "viajes") return true;
       // Invalidar queries de viajes por comprador
       if (key === "/api/viajes/comprador" && query.queryKey[1]) return true;
