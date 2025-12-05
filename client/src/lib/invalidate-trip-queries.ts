@@ -91,14 +91,52 @@ export function invalidateTripRelatedQueries(queryClient: QueryClient) {
         return true;
       }
       
-      // Refetch queries específicas de viajes por socio activas
-      if (key?.startsWith("/api/minas") && query.queryKey[1] && query.queryKey[2] === "viajes") {
+      // Refetch queries específicas de viajes por mina activas
+      // Formato: ["/api/minas", minaId, "viajes"] o ["/api/minas/${minaId}/viajes", "includeHidden"]
+      if (key?.startsWith("/api/minas")) {
+        // Query de viajes de mina específica
+        if (query.queryKey[1] && query.queryKey[2] === "viajes") {
+          return true;
+        }
+        // Query de viajes de mina con includeHidden
+        if (query.queryKey[0]?.toString().includes("/viajes") || query.queryKey[1] === "includeHidden") {
+          return true;
+        }
+        // Query directa de viajes de mina: ["/api/minas/${minaId}/viajes"]
+        if (query.queryKey[0]?.toString().match(/^\/api\/minas\/\d+\/viajes$/)) {
+          return true;
+        }
+      }
+      
+      // Refetch queries específicas de transacciones por mina activas
+      // Formato: ["/api/transacciones/socio/mina", minaId] o ["/api/transacciones/socio/mina/${minaId}/all"]
+      if (key === "/api/transacciones/socio/mina" && query.queryKey[1]) {
         return true;
       }
+      if (key?.startsWith("/api/transacciones/socio/mina/") && query.queryKey[1]) {
+        return true;
+      }
+      
+      // Refetch queries específicas de viajes por comprador activas
       if (key === "/api/viajes/comprador" && query.queryKey[1]) {
         return true;
       }
+      
+      // Refetch queries específicas de transacciones por comprador activas
+      if (key === "/api/transacciones/comprador" && query.queryKey[1]) {
+        return true;
+      }
+      
+      // Refetch queries específicas de viajes por volquetero activas
       if (key?.startsWith("/api/volqueteros") && query.queryKey[1] && query.queryKey[2] === "viajes") {
+        return true;
+      }
+      
+      // Refetch queries específicas de transacciones por volquetero activas
+      if (key?.startsWith("/api/volqueteros") && query.queryKey[1] && query.queryKey[2] === "transacciones") {
+        return true;
+      }
+      if (key === "/api/transacciones/socio/volquetero" && query.queryKey[1]) {
         return true;
       }
       
