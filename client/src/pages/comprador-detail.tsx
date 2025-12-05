@@ -625,7 +625,7 @@ export default function CompradorDetail() {
   if (isLoadingComprador || !comprador) {
     return (
       <div className="min-h-screen bg-background pb-16">
-        <div className="p-4">
+        <div className="p-2 sm:p-4">
           <div className="animate-pulse">
             <div className="h-8 bg-muted rounded mb-4"></div>
             <div className="h-32 bg-muted rounded"></div>
@@ -637,19 +637,12 @@ export default function CompradorDetail() {
 
   return (
     <div className="min-h-screen bg-background pb-16">
-      <div className="p-4">
+      <div className="p-2 sm:p-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center mb-3">
           <Button variant="ghost" size="sm" onClick={() => setLocation("/compradores")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Compradores
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowNewTransaction(true)}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            Registrar
           </Button>
         </div>
 
