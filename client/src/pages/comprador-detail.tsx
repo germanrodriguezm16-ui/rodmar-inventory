@@ -2212,7 +2212,7 @@ function CompradorTransaccionesTab({
                     })()}
                   </span>
                   
-                  {/* Botón de acción compacto */}
+                  {/* Botones de acción compactos */}
                   {transaccion.isTemporal ? (
                     <Button
                       onClick={(e) => {
@@ -2227,6 +2227,59 @@ function CompradorTransaccionesTab({
                     >
                       <X className="h-2.5 w-2.5 text-red-500" />
                     </Button>
+                  ) : transaccion.tipo === "Manual" ? (
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const transactionIdStr = transaccion.id.toString();
+                          const realTransactionId = transactionIdStr.replace('manual-', '');
+                          const realTransaction = transacciones.find(t => t.id.toString() === realTransactionId);
+                          if (realTransaction) {
+                            setSelectedTransaction(realTransaction);
+                            setShowEditTransaction(true);
+                          }
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 hover:bg-blue-100 shrink-0"
+                        title="Editar transacción"
+                      >
+                        <Edit className="h-3 w-3 text-blue-600" />
+                      </Button>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const transactionIdStr = transaccion.id.toString();
+                          const realTransactionId = transactionIdStr.replace('manual-', '');
+                          const realTransaction = transacciones.find(t => t.id.toString() === realTransactionId);
+                          if (realTransaction) {
+                            setSelectedTransaction(realTransaction);
+                            setShowDeleteTransaction(true);
+                          }
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 hover:bg-red-100 shrink-0"
+                        title="Eliminar transacción"
+                      >
+                        <Trash2 className="h-3 w-3 text-red-600" />
+                      </Button>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const transactionIdStr = transaccion.id.toString();
+                          const realTransactionId = transactionIdStr.replace('manual-', '');
+                          hideTransactionMutation.mutate(parseInt(realTransactionId));
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 hover:bg-gray-100 shrink-0"
+                        title="Ocultar transacción"
+                      >
+                        <EyeOff className="h-3 w-3 text-gray-500" />
+                      </Button>
+                    </div>
                   ) : (
                     <Button
                       onClick={(e) => {
@@ -2234,18 +2287,14 @@ function CompradorTransaccionesTab({
                         if (transaccion.tipo === "Viaje") {
                           const viajeId = transaccion.concepto.replace("Viaje ", "");
                           hideViajesMutation.mutate(viajeId);
-                        } else if (transaccion.tipo === "Manual") {
-                          const transactionIdStr = transaccion.id.toString();
-                          const realTransactionId = transactionIdStr.replace('manual-', '');
-                          hideTransactionMutation.mutate(parseInt(realTransactionId));
                         }
                       }}
                       variant="ghost"
                       size="sm"
-                      className="h-4 w-4 p-0 hover:bg-gray-100 shrink-0"
+                      className="h-5 w-5 p-0 hover:bg-gray-100 shrink-0"
                       title="Ocultar elemento"
                     >
-                      <EyeOff className="h-2.5 w-2.5 text-gray-500" />
+                      <EyeOff className="h-3 w-3 text-gray-500" />
                     </Button>
                   )}
                 </div>
