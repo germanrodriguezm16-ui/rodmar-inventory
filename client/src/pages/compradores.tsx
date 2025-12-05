@@ -194,29 +194,6 @@ export default function Compradores() {
   return (
     <div className="min-h-screen bg-background pb-16">
       <div className="p-4">
-        {/* Botones de acción */}
-        <div className="flex justify-end items-center space-x-2 mb-1">
-          <Button 
-            onClick={recalcular}
-            disabled={isRecalculando}
-            size="sm"
-            variant="outline"
-            className="h-7 px-2 text-xs bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-600 font-medium"
-            title="Recalcular balances precalculados"
-          >
-            <RefreshCw className={`h-3 w-3 mr-1 ${isRecalculando ? "animate-spin" : ""}`} />
-            Recálculo
-          </Button>
-          <Button 
-            onClick={() => setShowAddComprador(true)} 
-            size="sm"
-            className="h-7 px-2 text-xs"
-          >
-            <Plus className="h-3 w-3 mr-1" />
-            Crear
-          </Button>
-        </div>
-
         {/* Indicador sutil de actualización en segundo plano */}
         {isFetchingBalances && Object.keys(balancesCompradores).length > 0 && (
           <div className="px-4 py-1 bg-blue-50 dark:bg-blue-950/20 border-b border-blue-200 dark:border-blue-800 mb-2">
@@ -227,100 +204,129 @@ export default function Compradores() {
           </div>
         )}
 
-        <div className="mb-3 space-y-2">
-          {/* Primera línea horizontal: Título + contador + botones ordenamiento (izquierda) | Balance vertical (derecha) */}
-          <div className="flex items-start justify-between">
+        {/* Header reorganizado para móviles */}
+        <div className="mb-4 space-y-3">
+          {/* Primera fila: Título y contador */}
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <h2 className="text-base sm:text-lg font-semibold text-foreground">Compradores</h2>
-              <span className="text-xs sm:text-sm bg-muted px-2 py-0.5 rounded-full">
+              <h2 className="text-lg font-semibold text-foreground">Compradores</h2>
+              <span className="text-sm bg-muted px-2 py-1 rounded-full">
                 {searchTerm ? filteredAndSortedCompradores.length : compradores.length}
               </span>
-              <div className="flex space-x-1">
-                <button
-                  onClick={() => {
-                    if (sortBy === "alfabetico") {
-                      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                    } else {
-                      setSortBy("alfabetico");
-                      setSortOrder("asc");
-                    }
-                  }}
-                  className={`px-1.5 py-0.5 text-xs rounded transition-colors flex items-center space-x-1 ${
-                    sortBy === "alfabetico" 
-                      ? "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200" 
-                      : "bg-muted hover:bg-muted/80"
-                  }`}
-                  title={sortBy === "alfabetico" 
-                    ? `Orden alfabético ${sortOrder === "asc" ? "A-Z" : "Z-A"}, click para cambiar`
-                    : "Ordenar alfabéticamente A-Z"
-                  }
-                >
-                  {sortBy === "alfabetico" && sortOrder === "desc" ? <SortDesc className="h-3 w-3" /> : <SortAsc className="h-3 w-3" />}
-                  <span className="text-xs">A-Z</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (sortBy === "viajes") {
-                      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                    } else {
-                      setSortBy("viajes");
-                      setSortOrder("desc"); // Por defecto mayor a menor para viajes
-                    }
-                  }}
-                  className={`px-1.5 py-0.5 text-xs rounded transition-colors flex items-center space-x-1 ${
-                    sortBy === "viajes" 
-                      ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200" 
-                      : "bg-muted hover:bg-muted/80"
-                  }`}
-                  title={sortBy === "viajes" 
-                    ? `Orden por viajes ${sortOrder === "desc" ? "mayor a menor" : "menor a mayor"}, click para cambiar`
-                    : "Ordenar por cantidad de viajes"
-                  }
-                >
-                  {sortBy === "viajes" && sortOrder === "asc" ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />}
-                  <span className="text-xs">#</span>
-                </button>
+            </div>
+            <Button onClick={() => setShowAddComprador(true)} size="icon" className="h-8 w-8">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Segunda fila: Balance en formato compacto */}
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-2 border border-green-200 dark:border-green-800">
+              <div className="text-muted-foreground mb-0.5">Positivos</div>
+              <div className="text-green-600 dark:text-green-400 font-semibold truncate">
+                ${formatCurrency(saldoAFavor).replace('$', '')}
               </div>
             </div>
-            
-            {/* Balance financiero vertical a la derecha */}
-            <div className="flex flex-col items-end text-right">
-              <div className="text-xs text-green-600 font-medium">
-                Positivos: {formatCurrency(saldoAFavor)}
+            <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-2 border border-red-200 dark:border-red-800">
+              <div className="text-muted-foreground mb-0.5">Negativos</div>
+              <div className="text-red-600 dark:text-red-400 font-semibold truncate">
+                ${formatCurrency(saldoEnContra).replace('$', '')}
               </div>
-              <div className="text-xs text-red-600 font-medium">
-                Negativos: {formatCurrency(saldoEnContra)}
-              </div>
-              <div className={`text-xs font-semibold ${
-                balanceTotalCompradores >= 0 ? "text-green-600" : "text-red-600"
+            </div>
+            <div className={`rounded-lg p-2 border ${
+              balanceTotalCompradores >= 0 
+                ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800" 
+                : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+            }`}>
+              <div className="text-muted-foreground mb-0.5">Balance</div>
+              <div className={`font-semibold truncate ${
+                balanceTotalCompradores >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
               }`}>
-                Balance: {formatCurrency(balanceTotalCompradores)}
+                {balanceTotalCompradores >= 0 ? "" : "-"}${formatCurrency(Math.abs(balanceTotalCompradores)).replace('$', '')}
               </div>
             </div>
+          </div>
+          
+          {/* Tercera fila: Botones de ordenamiento y recálculo */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  if (sortBy === "alfabetico") {
+                    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                  } else {
+                    setSortBy("alfabetico");
+                    setSortOrder("asc");
+                  }
+                }}
+                className={`px-2 py-1.5 text-xs rounded-lg transition-colors flex items-center space-x-1 ${
+                  sortBy === "alfabetico" 
+                    ? "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200" 
+                    : "bg-muted hover:bg-muted/80"
+                }`}
+                title={sortBy === "alfabetico" 
+                  ? `Orden alfabético ${sortOrder === "asc" ? "A-Z" : "Z-A"}, click para cambiar`
+                  : "Ordenar alfabéticamente A-Z"
+                }
+              >
+                {sortBy === "alfabetico" && sortOrder === "desc" ? <SortDesc className="h-3 w-3" /> : <SortAsc className="h-3 w-3" />}
+                <span className="text-xs">A-Z</span>
+              </button>
+              <button
+                onClick={() => {
+                  if (sortBy === "viajes") {
+                    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                  } else {
+                    setSortBy("viajes");
+                    setSortOrder("desc");
+                  }
+                }}
+                className={`px-2 py-1.5 text-xs rounded-lg transition-colors flex items-center space-x-1 ${
+                  sortBy === "viajes" 
+                    ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200" 
+                    : "bg-muted hover:bg-muted/80"
+                }`}
+                title={sortBy === "viajes" 
+                  ? `Orden por viajes ${sortOrder === "desc" ? "mayor a menor" : "menor a mayor"}, click para cambiar`
+                  : "Ordenar por cantidad de viajes"
+                }
+              >
+                {sortBy === "viajes" && sortOrder === "asc" ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />}
+                <span className="text-xs">#</span>
+              </button>
+            </div>
+            <Button 
+              onClick={recalcular}
+              disabled={isRecalculando}
+              size="icon"
+              variant="outline"
+              title="Recalcular balances precalculados"
+              className="h-8 w-8 bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-600"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRecalculando ? "animate-spin" : ""}`} />
+            </Button>
           </div>
 
-          {/* Segunda línea: Contadores de viajes debajo del título */}
-          <div className="ml-0">
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <span>Listado:</span>
-                <span className="font-semibold text-blue-600">{totalViajesEnListado}</span>
-                <span>|</span>
-                <span>Total:</span>
-                <span className="font-semibold text-blue-600">{totalViajesGenerales}</span>
-              </div>
+          {/* Contadores de viajes */}
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <span>Listado:</span>
+              <span className="font-semibold text-blue-600">{totalViajesEnListado}</span>
+              <span>|</span>
+              <span>Total:</span>
+              <span className="font-semibold text-blue-600">{totalViajesGenerales}</span>
             </div>
-            {totalViajesGenerales > totalViajesEnListado && (
-              <div className="text-xs text-orange-600 mt-1">
-                ⚠️ Diferencia: {totalViajesGenerales - totalViajesEnListado} viaje(s) inconsistentes
-              </div>
-            )}
-            {searchTerm.trim() && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Mostrando {filteredAndSortedCompradores.length} de {compradores.length}
-              </p>
-            )}
           </div>
+          {totalViajesGenerales > totalViajesEnListado && (
+            <div className="text-xs text-orange-600">
+              ⚠️ Diferencia: {totalViajesGenerales - totalViajesEnListado} viaje(s) inconsistentes
+            </div>
+          )}
+          {searchTerm.trim() && (
+            <p className="text-xs text-muted-foreground">
+              Mostrando {filteredAndSortedCompradores.length} de {compradores.length}
+            </p>
+          )}
         </div>
 
         {/* Casilla de búsqueda compacta */}
