@@ -223,14 +223,24 @@ export default function Compradores() {
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-2 border border-green-200 dark:border-green-800">
               <div className="text-muted-foreground mb-0.5">Positivos</div>
-              <div className="text-green-600 dark:text-green-400 font-semibold truncate">
-                ${formatCurrency(saldoAFavor).replace('$', '')}
+              <div className="text-green-600 dark:text-green-400 font-semibold break-words leading-tight min-h-[2.5rem]">
+                ${new Intl.NumberFormat('es-CO', {
+                  style: 'currency',
+                  currency: 'COP',
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                }).format(saldoAFavor).replace('$', '')}
               </div>
             </div>
             <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-2 border border-red-200 dark:border-red-800">
               <div className="text-muted-foreground mb-0.5">Negativos</div>
-              <div className="text-red-600 dark:text-red-400 font-semibold truncate">
-                ${formatCurrency(saldoEnContra).replace('$', '')}
+              <div className="text-red-600 dark:text-red-400 font-semibold break-words leading-tight min-h-[2.5rem]">
+                ${new Intl.NumberFormat('es-CO', {
+                  style: 'currency',
+                  currency: 'COP',
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                }).format(saldoEnContra).replace('$', '')}
               </div>
             </div>
             <div className={`rounded-lg p-2 border ${
@@ -239,10 +249,15 @@ export default function Compradores() {
                 : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
             }`}>
               <div className="text-muted-foreground mb-0.5">Balance</div>
-              <div className={`font-semibold truncate ${
+              <div className={`font-semibold break-words leading-tight min-h-[2.5rem] ${
                 balanceTotalCompradores >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
               }`}>
-                {balanceTotalCompradores >= 0 ? "" : "-"}${formatCurrency(Math.abs(balanceTotalCompradores)).replace('$', '')}
+                {balanceTotalCompradores >= 0 ? "" : "-"}${new Intl.NumberFormat('es-CO', {
+                  style: 'currency',
+                  currency: 'COP',
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                }).format(Math.abs(balanceTotalCompradores)).replace('$', '')}
               </div>
             </div>
           </div>
