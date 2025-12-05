@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { invalidateTripRelatedQueries } from "@/lib/invalidate-trip-queries";
 import { useCompradores } from "@/hooks/use-entities";
 import { useToast } from "@/hooks/use-toast";
 import { X } from "lucide-react";
@@ -88,11 +89,12 @@ export function RegisterDescargueModal({ open, onOpenChange }: RegisterDescargue
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/trips/pending"] });
+      // Usar función optimizada para invalidar todas las queries relacionadas
+      invalidateTripRelatedQueries(queryClient);
+      
       toast({
         title: "Descargue registrado",
-        description: "El viaje se ha completado exitosamente",
+        description: "El viaje se ha completado exitosamente y todas las transacciones relacionadas se han actualizado.",
       });
       onOpenChange(false);
       form.reset();
