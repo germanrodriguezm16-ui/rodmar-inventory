@@ -4,23 +4,15 @@ import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Edit, Trash2, Search, X, ArrowUpDown, SortAsc, SortDesc, Hash, Merge, History, RefreshCw } from "lucide-react";
-import type { VolqueteroConPlacas, TransaccionWithSocio } from "@shared/schema";
-import EditTransactionModal from "@/components/forms/edit-transaction-modal";
-import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
+import { Users, Search, X, SortAsc, SortDesc, Merge, History, RefreshCw } from "lucide-react";
+import type { VolqueteroConPlacas } from "@shared/schema";
 import { EditableTitle } from "@/components/EditableTitle";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { formatDateWithDaySpanish } from "@/lib/date-utils";
-import { parseISO } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 import { useVolqueterosBalance } from "@/hooks/useVolqueterosBalance";
 import MergeEntitiesModal from "@/components/fusion/MergeEntitiesModal";
 import FusionHistoryModal from "@/components/fusion/FusionHistoryModal";
 
 export default function Volqueteros() {
-  const [editingTransaction, setEditingTransaction] = useState<TransaccionWithSocio | null>(null);
-  const [deletingTransaction, setDeletingTransaction] = useState<TransaccionWithSocio | null>(null);
-  const [expandedVolquetero, setExpandedVolquetero] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"transacciones" | "balance">("transacciones");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [sortBy, setSortBy] = useState<"alfabetico" | "viajes">("alfabetico");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -352,51 +344,6 @@ export default function Volqueteros() {
                   </div>
                 </Link>
                 
-                <div className="flex space-x-2 mt-3">
-                  <Button 
-                    variant={expandedVolquetero === volquetero.id && activeTab === "transacciones" ? "default" : "outline"} 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (expandedVolquetero === volquetero.id && activeTab === "transacciones") {
-                        setExpandedVolquetero(null);
-                      } else {
-                        setExpandedVolquetero(volquetero.id);
-                        setActiveTab("transacciones");
-                      }
-                    }}
-                  >
-                    Transacciones
-                  </Button>
-                  <Button 
-                    variant={expandedVolquetero === volquetero.id && activeTab === "balance" ? "default" : "outline"} 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (expandedVolquetero === volquetero.id && activeTab === "balance") {
-                        setExpandedVolquetero(null);
-                      } else {
-                        setExpandedVolquetero(volquetero.id);
-                        setActiveTab("balance");
-                      }
-                    }}
-                  >
-                    Balance
-                  </Button>
-                </div>
-
-                {expandedVolquetero === volquetero.id && (
-                  <div className="mt-4 pt-4 border-t">
-                    <VolqueteroTabContent 
-                      volquetero={volquetero} 
-                      activeTab={activeTab}
-                      onEditTransaction={setEditingTransaction}
-                      onDeleteTransaction={setDeletingTransaction}
-                    />
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))}
@@ -436,23 +383,6 @@ export default function Volqueteros() {
         </Card>
       )}
 
-      {/* Modales de transacciones */}
-      {editingTransaction && (
-        <EditTransactionModal
-          isOpen={!!editingTransaction}
-          transaction={editingTransaction}
-          onClose={() => setEditingTransaction(null)}
-        />
-      )}
-
-      {deletingTransaction && (
-        <DeleteTransactionModal
-          isOpen={!!deletingTransaction}
-          transaction={deletingTransaction}
-          onClose={() => setDeletingTransaction(null)}
-        />
-      )}
-
       {/* Modales de fusión */}
       <MergeEntitiesModal
         open={showMergeModal}
@@ -473,126 +403,3 @@ export default function Volqueteros() {
   );
 }
 
-interface VolqueteroTabContentProps {
-  volquetero: VolqueteroConPlacas;
-  activeTab: "transacciones" | "balance";
-  onEditTransaction: (transaction: TransaccionWithSocio) => void;
-  onDeleteTransaction: (transaction: TransaccionWithSocio) => void;
-}
-
-function VolqueteroTabContent({ volquetero, activeTab, onEditTransaction, onDeleteTransaction }: VolqueteroTabContentProps) {
-  // Always fetch data - hooks must be called unconditionally
-  const { data: transacciones = [] } = useQuery<TransaccionWithSocio[]>({
-    queryKey: ["/api/transacciones/socio", "volquetero", volquetero.id],
-    queryFn: async () => {
-      const { apiUrl } = await import('@/lib/api');
-      const response = await fetch(apiUrl(`/api/transacciones/socio/volquetero/${volquetero.id}`));
-      return response.json();
-    },
-  });
-
-  if (activeTab === "transacciones") {
-    return (
-      <div className="space-y-3">
-        <h4 className="font-medium text-sm text-muted-foreground">Transacciones</h4>
-        {transacciones.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No hay transacciones registradas</p>
-        ) : (
-          transacciones.map((transaccion: TransaccionWithSocio) => (
-            <div key={transaccion.id} className="bg-muted/50 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-sm">{transaccion.concepto}</span>
-                    <div className="flex space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => onEditTransaction(transaccion)}
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                        onClick={() => onDeleteTransaction(transaccion)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{formatDateWithDaySpanish(transaccion.fecha instanceof Date ? transaccion.fecha : parseISO(transaccion.fecha))}</span>
-                    <p className={`font-semibold text-sm ${
-                      (() => {
-                        // Nueva lógica unificada: basada en el destino de la transacción
-                        // ROJO/NEGATIVO: destino mina, comprador, volquetero
-                        // VERDE/POSITIVO: destino RodMar, Banco
-                        
-                        const isToPartner = transaccion.paraQuienTipo === 'mina' || 
-                                          transaccion.paraQuienTipo === 'comprador' || 
-                                          transaccion.paraQuienTipo === 'volquetero';
-                        const isToRodMarOrBank = transaccion.paraQuienTipo === 'rodmar' || 
-                                               transaccion.paraQuienTipo === 'banco';
-                        
-                        if (isToPartner) {
-                          return "text-red-600 dark:text-red-400"; // ROJO para destino socios
-                        } else if (isToRodMarOrBank) {
-                          return "text-green-600 dark:text-green-400"; // VERDE para destino RodMar/Banco
-                        }
-                        
-                        // Fallback para otros casos
-                        return "text-gray-600 dark:text-gray-400";
-                      })()
-                    }`}>
-                      {formatCurrency(transaccion.valor)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    );
-  }
-
-  if (activeTab === "balance") {
-    const totalCredito = transacciones
-      .filter(t => parseFloat(t.valor) > 0 && t.paraQuienTipo !== 'volquetero')
-      .reduce((sum, t) => sum + parseFloat(t.valor), 0);
-    
-    // Débito incluye transacciones negativas Y transacciones manuales hacia volquetero
-    const totalDebito = transacciones
-      .filter(t => parseFloat(t.valor) < 0 || t.paraQuienTipo === 'volquetero')
-      .reduce((sum, t) => sum + Math.abs(parseFloat(t.valor)), 0);
-
-    return (
-      <div className="space-y-3">
-        <h4 className="font-medium text-sm text-muted-foreground">Balance</h4>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-green-50 rounded-lg p-3">
-            <p className="text-xs text-green-600 font-medium">A favor del volquetero</p>
-            <p className="text-green-700 font-semibold">{formatCurrency(totalCredito)}</p>
-          </div>
-          <div className="bg-red-50 rounded-lg p-3">
-            <p className="text-xs text-red-600 font-medium">Pagos realizados</p>
-            <p className="text-red-700 font-semibold">{formatCurrency(totalDebito)}</p>
-          </div>
-        </div>
-        <div className="bg-muted rounded-lg p-3">
-          <p className="text-xs text-muted-foreground font-medium">Saldo Total</p>
-          <p className={`font-semibold ${
-            parseFloat(volquetero.saldo || '0') >= 0 ? 'text-green-600' : 'text-red-600'
-          }`}>
-            {formatCurrency(volquetero.saldo || '0')}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-}
