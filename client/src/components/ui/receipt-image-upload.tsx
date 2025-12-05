@@ -136,9 +136,9 @@ export function ReceiptImageUpload({ value, onChange, placeholder = "Número de 
           size="sm"
           onClick={() => cameraInputRef.current?.click()}
           className="flex-1"
+          title="Tomar foto"
         >
-          <Camera className="h-4 w-4 mr-2" />
-          <span>Tomar foto</span>
+          <Camera className="h-4 w-4" />
         </Button>
         
         {/* Botón para subir desde galería */}
@@ -148,9 +148,9 @@ export function ReceiptImageUpload({ value, onChange, placeholder = "Número de 
           size="sm"
           onClick={() => fileInputRef.current?.click()}
           className="flex-1"
+          title="Subir archivo"
         >
-          <Upload className="h-4 w-4 mr-2" />
-          <span>Subir archivo</span>
+          <Upload className="h-4 w-4" />
         </Button>
         
         {imageUrl && (
@@ -161,6 +161,7 @@ export function ReceiptImageUpload({ value, onChange, placeholder = "Número de 
               size="sm"
               onClick={() => setShowImageViewer(true)}
               className="px-3"
+              title="Ver imagen"
             >
               <Eye className="h-4 w-4" />
             </Button>
@@ -170,6 +171,7 @@ export function ReceiptImageUpload({ value, onChange, placeholder = "Número de 
               size="sm"
               onClick={clearImage}
               className="px-3 text-red-600 hover:text-red-700"
+              title="Eliminar imagen"
             >
               <X className="h-4 w-4" />
             </Button>
