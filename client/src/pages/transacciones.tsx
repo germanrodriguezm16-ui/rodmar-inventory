@@ -22,9 +22,10 @@ import type { TransaccionWithSocio } from "@shared/schema";
 
 interface TransaccionesProps {
   onOpenTransaction?: () => void;
+  hideBottomNav?: boolean; // Para ocultar navegación cuando se renderiza desde dashboard
 }
 
-export default function Transacciones({ onOpenTransaction }: TransaccionesProps = {}) {
+export default function Transacciones({ onOpenTransaction, hideBottomNav = false }: TransaccionesProps = {}) {
   console.log('🎯 COMPONENTE TRANSACCIONES (PAGES) - Iniciando render');
   
   const queryClient = useQueryClient();
@@ -1099,8 +1100,8 @@ export default function Transacciones({ onOpenTransaction }: TransaccionesProps 
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Navegación inferior fija */}
-      <BottomNavigation />
+      {/* Navegación inferior fija - solo si no se renderiza desde dashboard */}
+      {!hideBottomNav && <BottomNavigation />}
     </div>
   );
 }

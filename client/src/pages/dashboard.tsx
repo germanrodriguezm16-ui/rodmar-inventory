@@ -58,7 +58,10 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       case "transacciones":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <Transacciones onOpenTransaction={() => setShowTransactionModal(true)} />
+            <Transacciones 
+              onOpenTransaction={() => setShowTransactionModal(true)} 
+              hideBottomNav={true}
+            />
           </Suspense>
         );
       case "rodmar":
@@ -93,7 +96,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       {/* Floating Action Button - visible en todos los módulos */}
       <Button
         size="icon"
-        className="fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-40"
+        className="fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-[100]"
         onClick={handleQuickAction}
         aria-label="Crear transacción"
       >
