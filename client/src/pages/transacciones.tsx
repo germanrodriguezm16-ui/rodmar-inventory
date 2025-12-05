@@ -718,12 +718,12 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
 
       {/* Resumen Financiero */}
       <div className="px-4 py-3 bg-card border-b border-border">
-        <div className="flex items-center justify-between mb-2 gap-2">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="text-base font-medium text-foreground">Transacciones</h2>
-          <span className="text-xs sm:text-sm bg-muted px-2 py-1 rounded-full whitespace-nowrap">
+          <span className="text-sm bg-muted px-2 py-1 rounded-full">
             {pagination ? `${filteredAndSortedTransactions.length} de ${pagination.total}` : filteredAndSortedTransactions.length}
             {pagination && (searchTerm || fechaFilterType !== "todos" || valorFilterType !== "todos") && (
-              <span className="text-xs text-muted-foreground ml-1 sm:ml-2">(filtradas)</span>
+              <span className="text-xs text-muted-foreground ml-2">(filtradas)</span>
             )}
           </span>
         </div>
