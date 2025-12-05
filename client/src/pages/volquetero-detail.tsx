@@ -212,7 +212,21 @@ export default function VolqueteroDetail() {
     // Usar viajesVolquetero que ya viene filtrado del backend
     const viajesCompletados = (Array.isArray(viajesVolquetero) ? viajesVolquetero : [])
       .map(v => {
-        const fechaViaje = v.fechaDescargue!;
+        const fechaViajeRaw = v.fechaDescargue!;
+        // Convertir fecha a Date si es string
+        let fechaViaje: Date;
+        if (fechaViajeRaw instanceof Date) {
+          fechaViaje = fechaViajeRaw;
+        } else if (typeof fechaViajeRaw === 'string') {
+          // Si es string, convertir a Date
+          const dateStr = fechaViajeRaw.includes('T') ? fechaViajeRaw.split('T')[0] : fechaViajeRaw;
+          const [year, month, day] = dateStr.split('-').map(Number);
+          fechaViaje = new Date(year, month - 1, day);
+        } else {
+          // Fallback a fecha actual si no hay fecha válida
+          fechaViaje = new Date();
+        }
+        
         const totalFlete = parseFloat(v.totalFlete || "0");
         
         return {
@@ -958,14 +972,29 @@ export default function VolqueteroDetail() {
                               <TableCell className="p-3 text-sm">
                                 {(() => {
                                   const fecha = transaccion.fecha;
+                                  let fechaDate: Date;
+                                  
                                   if (fecha instanceof Date) {
-                                    const day = String(fecha.getDate()).padStart(2, '0');
-                                    const month = String(fecha.getMonth() + 1).padStart(2, '0');
-                                    const year = String(fecha.getFullYear()).slice(-2);
-                                    const dayOfWeek = getDayOfWeek(fecha);
-                                    return `${dayOfWeek}. ${day}/${month}/${year}`;
+                                    fechaDate = fecha;
+                                  } else if (typeof fecha === 'string') {
+                                    // Convertir string a Date
+                                    const dateStr = fecha.includes('T') ? fecha.split('T')[0] : fecha;
+                                    const [year, month, day] = dateStr.split('-').map(Number);
+                                    fechaDate = new Date(year, month - 1, day);
+                                  } else {
+                                    return "Sin fecha";
                                   }
-                                  return 'Fecha inválida';
+                                  
+                                  // Validar que la fecha sea válida
+                                  if (isNaN(fechaDate.getTime())) {
+                                    return "Sin fecha";
+                                  }
+                                  
+                                  const day = String(fechaDate.getDate()).padStart(2, '0');
+                                  const month = String(fechaDate.getMonth() + 1).padStart(2, '0');
+                                  const year = String(fechaDate.getFullYear()).slice(-2);
+                                  const dayOfWeek = getDayOfWeek(fechaDate);
+                                  return `${dayOfWeek}. ${day}/${month}/${year}`;
                                 })()}
                               </TableCell>
                               <TableCell className="p-3 text-sm">
@@ -1105,14 +1134,29 @@ export default function VolqueteroDetail() {
                                 <span className="text-xs font-medium text-gray-600">
                         {(() => {
                           const fecha = transaccion.fecha;
+                          let fechaDate: Date;
+                          
                           if (fecha instanceof Date) {
-                                      const day = String(fecha.getDate()).padStart(2, '0');
-                            const month = String(fecha.getMonth() + 1).padStart(2, '0');
-                                      const year = String(fecha.getFullYear()).slice(-2);
-                                      const dayOfWeek = getDayOfWeek(fecha);
-                                      return `${dayOfWeek}. ${day}/${month}/${year}`;
+                            fechaDate = fecha;
+                          } else if (typeof fecha === 'string') {
+                            // Convertir string a Date
+                            const dateStr = fecha.includes('T') ? fecha.split('T')[0] : fecha;
+                            const [year, month, day] = dateStr.split('-').map(Number);
+                            fechaDate = new Date(year, month - 1, day);
+                          } else {
+                            return "Sin fecha";
                           }
-                          return "Sin fecha";
+                          
+                          // Validar que la fecha sea válida
+                          if (isNaN(fechaDate.getTime())) {
+                            return "Sin fecha";
+                          }
+                          
+                          const day = String(fechaDate.getDate()).padStart(2, '0');
+                          const month = String(fechaDate.getMonth() + 1).padStart(2, '0');
+                          const year = String(fechaDate.getFullYear()).slice(-2);
+                          const dayOfWeek = getDayOfWeek(fechaDate);
+                          return `${dayOfWeek}. ${day}/${month}/${year}`;
                         })()}
                                 </span>
                                 {transaccion.tipo === "Viaje" ? (
