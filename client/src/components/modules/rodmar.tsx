@@ -357,10 +357,6 @@ export default function RodMar() {
                               }`}>
                                 {formatCurrency(cuenta.balance)}
                               </p>
-                              <div className="flex gap-2 text-xs text-muted-foreground">
-                                <span className="text-green-600">+{formatCurrency(cuenta.ingresos)}</span>
-                                <span className="text-red-600">-{formatCurrency(cuenta.egresos)}</span>
-                              </div>
                             </div>
                             <ChevronRight className="w-4 h-4 text-muted-foreground" />
                           </div>
