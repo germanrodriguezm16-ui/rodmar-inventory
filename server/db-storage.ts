@@ -1039,8 +1039,12 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(transacciones.userId, userId));
     }
 
-    // Obtener transacción original antes de actualizar (para identificar ambos socios)
-    // Nota: updateRelatedBalances ya maneja ambos socios (origen y destino) de la transacción actualizada
+    // Obtener transacción original ANTES de actualizar para poder actualizar balances de socios anteriores
+    const [oldTransaccion] = await db
+      .select()
+      .from(transacciones)
+      .where(and(...conditions))
+      .limit(1);
 
     const [updatedTransaccion] = await db
       .update(transacciones)
@@ -1049,9 +1053,9 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     // Actualizar balances calculados después de actualizar la transacción
-    // updateRelatedBalances maneja ambos socios (origen y destino)
+    // Pasar tanto la transacción anterior como la actualizada para actualizar balances de ambos
     if (updatedTransaccion) {
-      await this.updateRelatedBalances(updatedTransaccion);
+      await this.updateRelatedBalances(updatedTransaccion, oldTransaccion);
     }
 
     return updatedTransaccion;
@@ -2128,56 +2132,171 @@ export class DatabaseStorage implements IStorage {
 
   // Actualizar balances después de transacción
   // Actualizar balances después de transacción (ESTRATEGIA HÍBRIDA OPTIMIZADA)
-  async updateRelatedBalances(transaccion: Transaccion): Promise<void> {
+  // oldTransaccion es opcional y se usa cuando se actualiza una transacción para también actualizar balances de socios anteriores
+  async updateRelatedBalances(transaccion: Transaccion, oldTransaccion?: Transaccion): Promise<void> {
     try {
       const affectedPartners: Array<{ tipo: 'mina' | 'comprador' | 'volquetero'; id: number }> = [];
+      const processedPartnerIds = new Set<string>(); // Para evitar procesar el mismo socio dos veces
       
-      // Identificar socios afectados (marcar stale síncronamente)
+      // Identificar socios afectados del origen NUEVO (marcar stale síncronamente)
       if (transaccion.deQuienTipo === 'mina' && transaccion.deQuienId) {
         const minaId = parseInt(transaccion.deQuienId);
         if (!isNaN(minaId) && minaId > 0) {
-          await this.markMinaBalanceStale(minaId);
-          affectedPartners.push({ tipo: 'mina', id: minaId });
+          const key = `mina-${minaId}`;
+          if (!processedPartnerIds.has(key)) {
+            await this.markMinaBalanceStale(minaId);
+            affectedPartners.push({ tipo: 'mina', id: minaId });
+            processedPartnerIds.add(key);
+          }
         }
       }
       
       if (transaccion.paraQuienTipo === 'mina' && transaccion.paraQuienId) {
         const minaId = parseInt(transaccion.paraQuienId);
         if (!isNaN(minaId) && minaId > 0) {
-          await this.markMinaBalanceStale(minaId);
-          affectedPartners.push({ tipo: 'mina', id: minaId });
+          const key = `mina-${minaId}`;
+          if (!processedPartnerIds.has(key)) {
+            await this.markMinaBalanceStale(minaId);
+            affectedPartners.push({ tipo: 'mina', id: minaId });
+            processedPartnerIds.add(key);
+          }
         }
       }
       
       if (transaccion.deQuienTipo === 'comprador' && transaccion.deQuienId) {
         const compradorId = parseInt(transaccion.deQuienId);
         if (!isNaN(compradorId) && compradorId > 0) {
-          await this.markCompradorBalanceStale(compradorId);
-          affectedPartners.push({ tipo: 'comprador', id: compradorId });
+          const key = `comprador-${compradorId}`;
+          if (!processedPartnerIds.has(key)) {
+            await this.markCompradorBalanceStale(compradorId);
+            affectedPartners.push({ tipo: 'comprador', id: compradorId });
+            processedPartnerIds.add(key);
+          }
         }
       }
       
       if (transaccion.paraQuienTipo === 'comprador' && transaccion.paraQuienId) {
         const compradorId = parseInt(transaccion.paraQuienId);
         if (!isNaN(compradorId) && compradorId > 0) {
-          await this.markCompradorBalanceStale(compradorId);
-          affectedPartners.push({ tipo: 'comprador', id: compradorId });
+          const key = `comprador-${compradorId}`;
+          if (!processedPartnerIds.has(key)) {
+            await this.markCompradorBalanceStale(compradorId);
+            affectedPartners.push({ tipo: 'comprador', id: compradorId });
+            processedPartnerIds.add(key);
+          }
         }
       }
       
       if (transaccion.deQuienTipo === 'volquetero' && transaccion.deQuienId) {
         const volqueteroId = parseInt(transaccion.deQuienId);
         if (!isNaN(volqueteroId) && volqueteroId > 0) {
-          await this.markVolqueteroBalanceStale(volqueteroId);
-          affectedPartners.push({ tipo: 'volquetero', id: volqueteroId });
+          const key = `volquetero-${volqueteroId}`;
+          if (!processedPartnerIds.has(key)) {
+            await this.markVolqueteroBalanceStale(volqueteroId);
+            affectedPartners.push({ tipo: 'volquetero', id: volqueteroId });
+            processedPartnerIds.add(key);
+          }
         }
       }
       
       if (transaccion.paraQuienTipo === 'volquetero' && transaccion.paraQuienId) {
         const volqueteroId = parseInt(transaccion.paraQuienId);
         if (!isNaN(volqueteroId) && volqueteroId > 0) {
-          await this.markVolqueteroBalanceStale(volqueteroId);
-          affectedPartners.push({ tipo: 'volquetero', id: volqueteroId });
+          const key = `volquetero-${volqueteroId}`;
+          if (!processedPartnerIds.has(key)) {
+            await this.markVolqueteroBalanceStale(volqueteroId);
+            affectedPartners.push({ tipo: 'volquetero', id: volqueteroId });
+            processedPartnerIds.add(key);
+          }
+        }
+      }
+      
+      // Si hay una transacción anterior, también actualizar balances de sus socios (si son diferentes)
+      if (oldTransaccion) {
+        // Si el origen cambió, actualizar balance del origen anterior
+        const oldOrigenKey = oldTransaccion.deQuienTipo && oldTransaccion.deQuienId 
+          ? `${oldTransaccion.deQuienTipo}-${oldTransaccion.deQuienId}` 
+          : null;
+        const newOrigenKey = transaccion.deQuienTipo && transaccion.deQuienId 
+          ? `${transaccion.deQuienTipo}-${transaccion.deQuienId}` 
+          : null;
+        
+        if (oldOrigenKey && oldOrigenKey !== newOrigenKey) {
+          // El origen cambió o se eliminó
+          if (oldTransaccion.deQuienTipo === 'mina' && oldTransaccion.deQuienId) {
+            const minaId = parseInt(oldTransaccion.deQuienId);
+            if (!isNaN(minaId) && minaId > 0) {
+              const key = `mina-${minaId}`;
+              if (!processedPartnerIds.has(key)) {
+                await this.markMinaBalanceStale(minaId);
+                affectedPartners.push({ tipo: 'mina', id: minaId });
+                processedPartnerIds.add(key);
+              }
+            }
+          } else if (oldTransaccion.deQuienTipo === 'comprador' && oldTransaccion.deQuienId) {
+            const compradorId = parseInt(oldTransaccion.deQuienId);
+            if (!isNaN(compradorId) && compradorId > 0) {
+              const key = `comprador-${compradorId}`;
+              if (!processedPartnerIds.has(key)) {
+                await this.markCompradorBalanceStale(compradorId);
+                affectedPartners.push({ tipo: 'comprador', id: compradorId });
+                processedPartnerIds.add(key);
+              }
+            }
+          } else if (oldTransaccion.deQuienTipo === 'volquetero' && oldTransaccion.deQuienId) {
+            const volqueteroId = parseInt(oldTransaccion.deQuienId);
+            if (!isNaN(volqueteroId) && volqueteroId > 0) {
+              const key = `volquetero-${volqueteroId}`;
+              if (!processedPartnerIds.has(key)) {
+                await this.markVolqueteroBalanceStale(volqueteroId);
+                affectedPartners.push({ tipo: 'volquetero', id: volqueteroId });
+                processedPartnerIds.add(key);
+              }
+            }
+          }
+        }
+        
+        // Si el destino cambió, actualizar balance del destino anterior
+        const oldDestinoKey = oldTransaccion.paraQuienTipo && oldTransaccion.paraQuienId 
+          ? `${oldTransaccion.paraQuienTipo}-${oldTransaccion.paraQuienId}` 
+          : null;
+        const newDestinoKey = transaccion.paraQuienTipo && transaccion.paraQuienId 
+          ? `${transaccion.paraQuienTipo}-${transaccion.paraQuienId}` 
+          : null;
+        
+        if (oldDestinoKey && oldDestinoKey !== newDestinoKey) {
+          // El destino cambió o se eliminó
+          if (oldTransaccion.paraQuienTipo === 'mina' && oldTransaccion.paraQuienId) {
+            const minaId = parseInt(oldTransaccion.paraQuienId);
+            if (!isNaN(minaId) && minaId > 0) {
+              const key = `mina-${minaId}`;
+              if (!processedPartnerIds.has(key)) {
+                await this.markMinaBalanceStale(minaId);
+                affectedPartners.push({ tipo: 'mina', id: minaId });
+                processedPartnerIds.add(key);
+              }
+            }
+          } else if (oldTransaccion.paraQuienTipo === 'comprador' && oldTransaccion.paraQuienId) {
+            const compradorId = parseInt(oldTransaccion.paraQuienId);
+            if (!isNaN(compradorId) && compradorId > 0) {
+              const key = `comprador-${compradorId}`;
+              if (!processedPartnerIds.has(key)) {
+                await this.markCompradorBalanceStale(compradorId);
+                affectedPartners.push({ tipo: 'comprador', id: compradorId });
+                processedPartnerIds.add(key);
+              }
+            }
+          } else if (oldTransaccion.paraQuienTipo === 'volquetero' && oldTransaccion.paraQuienId) {
+            const volqueteroId = parseInt(oldTransaccion.paraQuienId);
+            if (!isNaN(volqueteroId) && volqueteroId > 0) {
+              const key = `volquetero-${volqueteroId}`;
+              if (!processedPartnerIds.has(key)) {
+                await this.markVolqueteroBalanceStale(volqueteroId);
+                affectedPartners.push({ tipo: 'volquetero', id: volqueteroId });
+                processedPartnerIds.add(key);
+              }
+            }
+          }
         }
       }
       
