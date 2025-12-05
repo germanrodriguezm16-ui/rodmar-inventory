@@ -1,6 +1,85 @@
-# Changelog - RodMar Inventory v2.0.0
+# Changelog - RodMar Inventory v2.1.0
 
-## 📅 Cambios Recientes (2025-01-XX)
+## 📅 Cambios Recientes (Enero 2025)
+
+> **📋 Documentación Completa**: Ver [MEJORAS_RECIENTES.md](./MEJORAS_RECIENTES.md) para documentación detallada de todas las mejoras.
+
+### 🚀 v2.1.0 - Actualizaciones en Tiempo Real y Optimizaciones (Enero 2025)
+
+#### ✨ Nuevas Funcionalidades
+
+**1. Sistema de Actualizaciones en Tiempo Real (WebSockets)**
+- ✅ Implementado Socket.io para actualizaciones en tiempo real
+- ✅ Balances se actualizan automáticamente en todos los usuarios conectados
+- ✅ Eventos específicos por tipo de cambio (transacciones, balances, tarjetas)
+- ✅ Invalidación inteligente de queries React Query
+- ✅ Refetch automático de datos relevantes
+
+**2. Refactorización del Componente de Upload de Imágenes**
+- ✅ Eliminado campo de texto para número de voucher
+- ✅ Botón de cámara para tomar foto directamente (`capture="environment"`)
+- ✅ Botón de upload para seleccionar desde galería
+- ✅ Solo íconos (sin texto) para ahorrar espacio
+- ✅ Mejora de calidad de imagen (1200x900px, 85% calidad, 500KB objetivo)
+
+#### ⚡ Optimizaciones de Performance
+
+**1. Operaciones de Ocultar/Mostrar Transacciones**
+- ✅ Optimizadas mutations para solo invalidar queries específicas
+- ✅ Eliminado refetch global innecesario
+- ✅ Implementado optimistic updates en Compradores
+- ✅ Endpoints específicos para operaciones de "mostrar todas las ocultas"
+
+**2. Cálculo de Balances**
+- ✅ Recalculo sincrónico inmediato después de cambios
+- ✅ Marcado de `balanceDesactualizado` optimizado
+- ✅ Separación clara entre balance real (encabezado) y balance visible (pestaña)
+
+#### 📱 Mejoras de UI/UX para Móviles
+
+**1. Componentes Responsive**
+- ✅ Floating Action Button (FAB) ajustado para móviles
+- ✅ Bottom Navigation Bar estática y responsive
+- ✅ Paginación responsive (solo íconos en móviles)
+- ✅ Encabezados de módulos más compactos
+
+**2. Listas y Tarjetas**
+- ✅ Encabezado de Minas reorganizado en 3 filas
+- ✅ Encabezado de Compradores similar a Minas
+- ✅ Tarjetas de Compradores: eliminado ID, balance en fila completa
+- ✅ Tarjetas de Volqueteros: eliminados botones redundantes
+- ✅ Tarjetas de RodMar: solo balance neto (sin desglose)
+
+**3. Módulo de Transacciones**
+- ✅ Encabezado más compacto (menos padding, márgenes, texto)
+- ✅ Truncamiento de nombres largos de socios
+- ✅ Filtros responsive con `grid-cols-1 sm:grid-cols-2`
+
+#### 🐛 Correcciones de Bugs
+
+- ✅ Eliminación de transacciones ahora actualiza ambos socios correctamente
+- ✅ Endpoints de ocultar/mostrar corregidos (404/405 resueltos)
+- ✅ Balance de Volqueteros corregido (eliminado ABS incorrecto)
+- ✅ Discrepancias de balance entre encabezado y lista resueltas
+- ✅ Modales de editar/eliminar ahora se abren correctamente en Compradores
+
+#### 🔧 Mejoras Técnicas
+
+**Backend:**
+- ✅ Nuevos endpoints específicos para operaciones de mostrar ocultas
+- ✅ Funciones de DB optimizadas con `.returning()`
+- ✅ Eliminado filtro `userId` de operaciones de eliminación
+- ✅ Emisión de eventos WebSocket después de operaciones CRUD
+
+**Frontend:**
+- ✅ Hook `useSocket` para manejar conexión y eventos WebSocket
+- ✅ Integración de WebSockets en hooks de balances
+- ✅ Optimización de invalidación de queries
+- ✅ Mejora de manejo de errores y validaciones
+
+---
+
+## 📅 Cambios Anteriores (2025-01-XX)
 
 ### ✨ Mejoras en Balances del Encabezado
 
