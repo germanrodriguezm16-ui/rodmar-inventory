@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Truck, Eye, EyeOff, Plus, Edit, Trash2, Search, CalendarDays, DollarSign, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowLeft, Truck, Eye, EyeOff, Plus, Edit, Trash2, Search, CalendarDays, DollarSign, ArrowUp, ArrowDown, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
