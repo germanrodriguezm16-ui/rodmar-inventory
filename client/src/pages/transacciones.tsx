@@ -1034,12 +1034,15 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
           <PaginationControls
             page={currentPage}
             limit={pageSize}
-            total={transactions.length} // Mostrar total de transacciones filtradas en la página actual
-            totalPages={pagination.totalPages}
-            hasMore={pagination.hasMore}
+            total={pageSize === "todo" ? transactions.length : pagination.total} // Si es "todo", usar total de transacciones filtradas
+            totalPages={pageSize === "todo" ? 1 : pagination.totalPages} // Si es "todo", solo hay 1 página
+            hasMore={pageSize === "todo" ? false : pagination.hasMore} // Si es "todo", no hay más páginas
             onPageChange={setCurrentPage}
             onLimitChange={(newLimit) => {
               setPageSize(newLimit);
+              if (newLimit === "todo") {
+                setCurrentPage(1); // Resetear a página 1 cuando se selecciona "todo"
+              }
             }}
             limitOptions={[10, 20, 50, 100, 200, 500, 1000]}
           />
