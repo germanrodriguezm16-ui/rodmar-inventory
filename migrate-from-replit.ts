@@ -60,23 +60,57 @@ function cleanDate(date: any): Date | null {
 
 // Función para limpiar datos antes de insertar
 function cleanData(record: any, tableName: string): any {
-  const cleaned = { ...record };
+  const cleaned: any = {};
   
-  // Limpiar todas las propiedades que sean fechas
-  for (const key in cleaned) {
-    const value = cleaned[key];
+  // Mapeo de campos antiguos a nuevos (para compatibilidad con schemas antiguos)
+  const fieldMappings: Record<string, Record<string, string>> = {
+    compradores: {
+      'balance_desactualizado': 'balanceDesactualizado',
+    },
+    minas: {
+      'balance_desactualizado': 'balanceDesactualizado',
+    },
+    volqueteros: {
+      'balance_desactualizado': 'balanceDesactualizado',
+    },
+  };
+  
+  // Copiar todos los campos del registro original
+  for (const key in record) {
+    const value = record[key];
+    
+    // Mapear nombres de campos antiguos a nuevos si es necesario
+    const mapping = fieldMappings[tableName];
+    const newKey = mapping && mapping[key] ? mapping[key] : key;
+    
+    // Limpiar fechas
     if (value instanceof Date || (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value))) {
       const date = cleanDate(value);
       if (date) {
-        cleaned[key] = date;
+        cleaned[newKey] = date;
       } else {
         // Si la fecha es inválida y es un campo requerido, usar fecha actual
         if (key.includes('fecha') || key.includes('created_at') || key.includes('updated_at')) {
-          cleaned[key] = new Date();
+          cleaned[newKey] = new Date();
         } else {
-          cleaned[key] = null;
+          cleaned[newKey] = null;
         }
       }
+    } else {
+      cleaned[newKey] = value;
+    }
+  }
+  
+  // Agregar valores por defecto para campos nuevos que no existen en el schema antiguo
+  if (tableName === 'compradores' || tableName === 'minas' || tableName === 'volqueteros') {
+    if (!cleaned.balanceDesactualizado && cleaned.balanceDesactualizado !== false) {
+      cleaned.balanceDesactualizado = false;
+    }
+    if (!cleaned.balanceCalculado) {
+      cleaned.balanceCalculado = '0';
+    }
+    if (!cleaned.ultimoRecalculo) {
+      cleaned.ultimoRecalculo = new Date();
     }
   }
   
@@ -88,12 +122,22 @@ async function migrateTable(tableName: string, table: any, orderBy: any = null) 
   console.log(`\n📦 Migrando tabla: ${tableName}...`);
   
   try {
-    // Leer datos de Replit
-    let query = replitDb.select().from(table);
-    if (orderBy) {
-      query = query.orderBy(orderBy);
+    // Leer datos de Replit usando SQL directo para evitar problemas con columnas faltantes
+    let data: any[];
+    try {
+      // Intentar con Drizzle primero
+      let query = replitDb.select().from(table);
+      if (orderBy) {
+        query = query.orderBy(orderBy);
+      }
+      data = await query;
+    } catch (drizzleError: any) {
+      // Si falla por columnas faltantes, usar SQL directo
+      console.log(`   ⚠️  Usando SQL directo debido a diferencias de schema...`);
+      const tableNameSql = tableName === 'fusionBackups' ? 'fusion_backups' : tableName;
+      const result = await replitSql`SELECT * FROM ${replitSql(tableNameSql)}`;
+      data = result as any[];
     }
-    const data = await query;
     
     if (data.length === 0) {
       console.log(`   ⚠️  No hay datos en ${tableName}`);
@@ -248,4 +292,5 @@ migrate()
     console.error('\n💥 Error fatal:', error);
     process.exit(1);
   });
+
 
