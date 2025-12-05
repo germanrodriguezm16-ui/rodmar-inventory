@@ -533,7 +533,7 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
   }
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-screen bg-background pb-[64px]">
       {/* Filters */}
       <div className="px-4 py-3 bg-card border-b border-border">
         <div className="flex items-center justify-between mb-2">
