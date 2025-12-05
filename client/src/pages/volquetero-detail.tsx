@@ -786,26 +786,8 @@ export default function VolqueteroDetail() {
           </TabsContent>
 
           <TabsContent value="transacciones" className="space-y-4">
-            {transaccionesFormateadas.length === 0 ? (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <p className="text-muted-foreground">No hay transacciones registradas</p>
-                </CardContent>
-              </Card>
-            ) : transaccionesFiltradas.length === 0 ? (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <p className="text-muted-foreground">
-                    {filterType === "ocultas" 
-                      ? "No hay transacciones ocultas" 
-                      : "No hay transacciones que coincidan con los filtros"}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                {/* Card de filtros */}
-                <Card className="border-gray-200">
+            {/* Card de filtros - SIEMPRE visible */}
+            <Card className="border-gray-200">
                   <CardContent className="p-2">
                     <div className="space-y-2">
                       {/* Fila superior: Búsqueda */}
@@ -914,32 +896,72 @@ export default function VolqueteroDetail() {
                   </CardContent>
                 </Card>
 
-                {/* Balance dinámico basado en transacciones filtradas y visibles */}
-                <Card className="border-gray-200 bg-gray-50">
-                  <CardContent className="p-1.5 sm:p-2">
-                    <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center">
-                      <div className="bg-green-50 rounded px-2 py-1">
-                        <div className="text-green-600 text-xs font-medium">Positivos</div>
-                        <div className="text-green-700 text-xs sm:text-sm font-semibold">
-                          +{transaccionesFiltradas.filter(t => !t.oculta && parseFloat(t.valor) > 0).length} {formatCurrency(balanceResumido.positivos)}
-                        </div>
-                      </div>
-                      <div className="bg-red-50 rounded px-2 py-1">
-                        <div className="text-red-600 text-xs font-medium">Negativos</div>
-                        <div className="text-red-700 text-xs sm:text-sm font-semibold">
-                          -{transaccionesFiltradas.filter(t => !t.oculta && parseFloat(t.valor) < 0).length} {formatCurrency(balanceResumido.negativos)}
-                        </div>
-                      </div>
-                      <div className={`rounded px-2 py-1 ${balanceResumido.balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
-                        <div className={`text-xs font-medium ${balanceResumido.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>Balance</div>
-                        <div className={`text-xs sm:text-sm font-bold ${balanceResumido.balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                          {balanceResumido.balance >= 0 ? '+' : ''}{formatCurrency(Math.abs(balanceResumido.balance))}
-                        </div>
-                      </div>
+            {/* Balance dinámico basado en transacciones filtradas y visibles - SIEMPRE visible */}
+            <Card className="border-gray-200 bg-gray-50">
+              <CardContent className="p-1.5 sm:p-2">
+                <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center">
+                  <div className="bg-green-50 rounded px-2 py-1">
+                    <div className="text-green-600 text-xs font-medium">Positivos</div>
+                    <div className="text-green-700 text-xs sm:text-sm font-semibold">
+                      +{transaccionesFiltradas.filter(t => !t.oculta && parseFloat(t.valor) > 0).length} {formatCurrency(balanceResumido.positivos)}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  <div className="bg-red-50 rounded px-2 py-1">
+                    <div className="text-red-600 text-xs font-medium">Negativos</div>
+                    <div className="text-red-700 text-xs sm:text-sm font-semibold">
+                      -{transaccionesFiltradas.filter(t => !t.oculta && parseFloat(t.valor) < 0).length} {formatCurrency(balanceResumido.negativos)}
+                    </div>
+                  </div>
+                  <div className={`rounded px-2 py-1 ${balanceResumido.balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                    <div className={`text-xs font-medium ${balanceResumido.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>Balance</div>
+                    <div className={`text-xs sm:text-sm font-bold ${balanceResumido.balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                      {balanceResumido.balance >= 0 ? '+' : ''}{formatCurrency(Math.abs(balanceResumido.balance))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
+            {/* Contenido de transacciones - condicionado */}
+            {transaccionesFormateadas.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <p className="text-muted-foreground">No hay transacciones registradas</p>
+                </CardContent>
+              </Card>
+            ) : transaccionesFiltradas.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center space-y-3">
+                  <p className="text-muted-foreground">
+                    {filterType === "ocultas" 
+                      ? "No hay transacciones ocultas" 
+                      : "No hay transacciones que coincidan con los filtros"}
+                  </p>
+                  {(transaccionesFechaFilterType !== "todos" || 
+                    transaccionesFechaFilterValue || 
+                    transaccionesFechaFilterValueEnd ||
+                    searchTerm.trim() ||
+                    filterType === "ocultas") && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setTransaccionesFechaFilterType("todos");
+                        setTransaccionesFechaFilterValue("");
+                        setTransaccionesFechaFilterValueEnd("");
+                        setSearchTerm("");
+                        setFilterType("todas");
+                      }}
+                      className="mt-2"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Limpiar filtros
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <>
                 {/* Vista de tabla para desktop */}
                 <div className="bg-card rounded-lg border overflow-hidden hidden md:block">
                     <div className="overflow-x-auto">
