@@ -13,7 +13,6 @@ import AddMinaModal from "@/components/modals/add-mina-modal";
 import DeleteMinaModal from "@/components/modals/delete-mina-modal";
 import { EditableTitle } from "@/components/EditableTitle";
 
-import { Eye } from "lucide-react";
 import { useMinasBalance } from "@/hooks/useMinasBalance";
 import { useRecalculatePrecalculos } from "@/hooks/useRecalculatePrecalculos";
 import { formatCurrency } from "@/lib/utils";
