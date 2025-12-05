@@ -618,6 +618,13 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(viajes.userId, userId));
     }
 
+    // Obtener el viaje ANTES de actualizarlo para poder actualizar balances de socios anteriores
+    const [oldViaje] = await db
+      .select()
+      .from(viajes)
+      .where(and(...conditions))
+      .limit(1);
+
     // Convert string dates to Date objects for Drizzle ORM
     const processedUpdates: any = { ...updates };
     
@@ -640,8 +647,9 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     // Actualizar balances calculados después de actualizar el viaje
+    // Pasar tanto el viaje anterior como el actualizado para actualizar balances de ambos
     if (updatedViaje) {
-      await this.updateViajeRelatedBalances(updatedViaje);
+      await this.updateViajeRelatedBalances(updatedViaje, oldViaje);
     }
 
     return updatedViaje;
@@ -2249,19 +2257,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Actualizar balances después de viaje (ESTRATEGIA HÍBRIDA OPTIMIZADA)
-  async updateViajeRelatedBalances(viaje: Viaje): Promise<void> {
+  // oldViaje es opcional y se usa cuando se actualiza un viaje para también actualizar balances de socios anteriores
+  async updateViajeRelatedBalances(viaje: Viaje, oldViaje?: Viaje): Promise<void> {
     try {
       const affectedPartners: Array<{ tipo: 'mina' | 'comprador' | 'volquetero'; id: number }> = [];
+      const processedPartnerIds = new Set<string>(); // Para evitar procesar el mismo socio dos veces
       
-      // Identificar socios afectados (marcar stale síncronamente)
+      // Identificar socios afectados del viaje NUEVO (marcar stale síncronamente)
       if (viaje.minaId) {
-        await this.markMinaBalanceStale(viaje.minaId);
-        affectedPartners.push({ tipo: 'mina', id: viaje.minaId });
+        const key = `mina-${viaje.minaId}`;
+        if (!processedPartnerIds.has(key)) {
+          await this.markMinaBalanceStale(viaje.minaId);
+          affectedPartners.push({ tipo: 'mina', id: viaje.minaId });
+          processedPartnerIds.add(key);
+        }
       }
       
       if (viaje.compradorId) {
-        await this.markCompradorBalanceStale(viaje.compradorId);
-        affectedPartners.push({ tipo: 'comprador', id: viaje.compradorId });
+        const key = `comprador-${viaje.compradorId}`;
+        if (!processedPartnerIds.has(key)) {
+          await this.markCompradorBalanceStale(viaje.compradorId);
+          affectedPartners.push({ tipo: 'comprador', id: viaje.compradorId });
+          processedPartnerIds.add(key);
+        }
       }
       
       // Si el viaje involucra un volquetero (conductor) y RodMar paga el flete
@@ -2274,8 +2292,54 @@ export class DatabaseStorage implements IStorage {
           .limit(1);
         
         if (volquetero.length > 0) {
-          await this.markVolqueteroBalanceStale(volquetero[0].id);
-          affectedPartners.push({ tipo: 'volquetero', id: volquetero[0].id });
+          const key = `volquetero-${volquetero[0].id}`;
+          if (!processedPartnerIds.has(key)) {
+            await this.markVolqueteroBalanceStale(volquetero[0].id);
+            affectedPartners.push({ tipo: 'volquetero', id: volquetero[0].id });
+            processedPartnerIds.add(key);
+          }
+        }
+      }
+      
+      // Si hay un viaje anterior, también actualizar balances de sus socios (si son diferentes)
+      if (oldViaje) {
+        // Si la mina cambió, actualizar balance de la mina anterior
+        if (oldViaje.minaId && oldViaje.minaId !== viaje.minaId) {
+          const key = `mina-${oldViaje.minaId}`;
+          if (!processedPartnerIds.has(key)) {
+            await this.markMinaBalanceStale(oldViaje.minaId);
+            affectedPartners.push({ tipo: 'mina', id: oldViaje.minaId });
+            processedPartnerIds.add(key);
+          }
+        }
+        
+        // Si el comprador cambió, actualizar balance del comprador anterior
+        if (oldViaje.compradorId && oldViaje.compradorId !== viaje.compradorId) {
+          const key = `comprador-${oldViaje.compradorId}`;
+          if (!processedPartnerIds.has(key)) {
+            await this.markCompradorBalanceStale(oldViaje.compradorId);
+            affectedPartners.push({ tipo: 'comprador', id: oldViaje.compradorId });
+            processedPartnerIds.add(key);
+          }
+        }
+        
+        // Si el conductor cambió y el viaje anterior estaba completado, actualizar balance del volquetero anterior
+        if (oldViaje.conductor && oldViaje.conductor !== viaje.conductor && 
+            oldViaje.estado === 'completado' && oldViaje.fechaDescargue &&
+            oldViaje.quienPagaFlete && oldViaje.quienPagaFlete !== 'comprador' && oldViaje.quienPagaFlete !== 'El comprador') {
+          const oldVolquetero = await db.select({ id: volqueteros.id })
+            .from(volqueteros)
+            .where(eq(volqueteros.nombre, oldViaje.conductor))
+            .limit(1);
+          
+          if (oldVolquetero.length > 0) {
+            const key = `volquetero-${oldVolquetero[0].id}`;
+            if (!processedPartnerIds.has(key)) {
+              await this.markVolqueteroBalanceStale(oldVolquetero[0].id);
+              affectedPartners.push({ tipo: 'volquetero', id: oldVolquetero[0].id });
+              processedPartnerIds.add(key);
+            }
+          }
         }
       }
       
