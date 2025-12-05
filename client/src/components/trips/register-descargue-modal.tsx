@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { invalidateTripRelatedQueries, type TripChangeInfo } from "@/lib/invalidate-trip-queries";
 import { invalidateTripRelatedQueries } from "@/lib/invalidate-trip-queries";
 import { useCompradores } from "@/hooks/use-entities";
 import { useToast } from "@/hooks/use-toast";
@@ -88,9 +89,22 @@ export function RegisterDescargueModal({ open, onOpenChange }: RegisterDescargue
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (updatedTrip) => {
+      // Obtener información del viaje antes del cambio
+      const trip = pendingTrips.find(t => t.id === form.getValues("tripId"));
+      
+      // Preparar información del cambio para invalidar queries específicas
+      const tripChangeInfo: TripChangeInfo = {
+        oldMinaId: trip?.minaId || null,
+        oldCompradorId: trip?.compradorId || null,
+        oldConductor: trip?.conductor || null,
+        newMinaId: updatedTrip?.minaId || null,
+        newCompradorId: updatedTrip?.compradorId || null,
+        newConductor: updatedTrip?.conductor || null,
+      };
+      
       // Usar función optimizada para invalidar todas las queries relacionadas
-      invalidateTripRelatedQueries(queryClient);
+      invalidateTripRelatedQueries(queryClient, tripChangeInfo);
       
       toast({
         title: "Descargue registrado",

@@ -12,7 +12,7 @@ import { ReceiptImageUpload } from "@/components/ui/receipt-image-upload";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { invalidateTripRelatedQueries } from "@/lib/invalidate-trip-queries";
+import { invalidateTripRelatedQueries, type TripChangeInfo } from "@/lib/invalidate-trip-queries";
 import { useToast } from "@/hooks/use-toast";
 import { calculateTripFinancials } from "@/lib/calculations";
 import { formatDateWithDaySpanish } from "@/lib/date-utils";

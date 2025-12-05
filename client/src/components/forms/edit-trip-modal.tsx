@@ -283,9 +283,19 @@ export function EditTripModal({ viaje, isOpen, onClose }: EditTripModalProps) {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (updatedViaje) => {
+      // Preparar información del cambio para invalidar queries específicas
+      const tripChangeInfo: TripChangeInfo = {
+        oldMinaId: viaje?.minaId || null,
+        oldCompradorId: viaje?.compradorId || null,
+        oldConductor: viaje?.conductor || null,
+        newMinaId: updatedViaje?.minaId || null,
+        newCompradorId: updatedViaje?.compradorId || null,
+        newConductor: updatedViaje?.conductor || null,
+      };
+      
       // Usar función optimizada para invalidar todas las queries relacionadas
-      invalidateTripRelatedQueries(queryClient);
+      invalidateTripRelatedQueries(queryClient, tripChangeInfo);
       
       onClose();
       toast({

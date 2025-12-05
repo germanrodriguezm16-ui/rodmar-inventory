@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Edit, Calculator } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { invalidateTripRelatedQueries } from "@/lib/invalidate-trip-queries";
+import { invalidateTripRelatedQueries, type TripChangeInfo } from "@/lib/invalidate-trip-queries";
 import { useToast } from "@/hooks/use-toast";
 import { calculateTripFinancials, formatCurrency } from "@/lib/calculations";
 import type { ViajeWithDetails, Comprador } from "@shared/schema";
@@ -112,9 +112,19 @@ export default function TripEditModal({ open, onOpenChange, trip }: TripEditModa
       const response = await apiRequest("PATCH", `/api/viajes/${trip.id}`, updateData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (updatedViaje) => {
+      // Preparar información del cambio para invalidar queries específicas
+      const tripChangeInfo: TripChangeInfo = {
+        oldMinaId: trip?.minaId || null,
+        oldCompradorId: trip?.compradorId || null,
+        oldConductor: trip?.conductor || null,
+        newMinaId: updatedViaje?.minaId || null,
+        newCompradorId: updatedViaje?.compradorId || null,
+        newConductor: updatedViaje?.conductor || null,
+      };
+      
       // Usar función optimizada para invalidar todas las queries relacionadas
-      invalidateTripRelatedQueries(queryClient);
+      invalidateTripRelatedQueries(queryClient, tripChangeInfo);
       
       toast({
         title: "Viaje actualizado",

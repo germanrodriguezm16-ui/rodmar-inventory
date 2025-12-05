@@ -1,6 +1,21 @@
 import { QueryClient } from "@tanstack/react-query";
 
 /**
+ * Información del viaje antes y después de la edición para invalidar queries específicas
+ */
+export interface TripChangeInfo {
+  // IDs de socios ANTES de la edición
+  oldMinaId?: number | null;
+  oldCompradorId?: number | null;
+  oldConductor?: string | null;
+  
+  // IDs de socios DESPUÉS de la edición
+  newMinaId?: number | null;
+  newCompradorId?: number | null;
+  newConductor?: string | null;
+}
+
+/**
  * Función optimizada para invalidar todas las queries relacionadas con viajes
  * cuando se completa o edita un viaje. Esto actualiza:
  * - Transacciones dinámicas de viajes en minas, volqueteros y compradores
@@ -11,16 +26,17 @@ import { QueryClient } from "@tanstack/react-query";
  * Optimizaciones:
  * - Usa predicados para invalidar solo queries relevantes
  * - Agrupa invalidaciones para evitar múltiples re-renders
- * - Solo refetch queries activas (visible en pantalla)
- * - Refetch inmediato de balances para actualización en tiempo real
+ * - Refetch explícito de balances y queries específicas de socios involucrados
+ * - Refetch siempre de balances críticos (no solo si están activas)
  */
-export function invalidateTripRelatedQueries(queryClient: QueryClient) {
+export function invalidateTripRelatedQueries(
+  queryClient: QueryClient,
+  tripChangeInfo?: TripChangeInfo
+) {
   // Invalidar todas las queries de viajes (incluyendo endpoints específicos por socio)
   queryClient.invalidateQueries({ 
     predicate: (query) => {
       const key = query.queryKey[0] as string;
-      // Invalidar todas las queries que empiezan con /api/viajes
-      // Esto incluye: /api/viajes, /api/viajes/comprador/:id, /api/minas/:id/viajes, /api/volqueteros/:id/viajes
       return key?.startsWith("/api/viajes");
     }
   });
@@ -30,9 +46,7 @@ export function invalidateTripRelatedQueries(queryClient: QueryClient) {
     predicate: (query) => {
       const key = query.queryKey[0] as string;
       // Invalidar queries de viajes por mina (múltiples formatos)
-      // Formato string directo: ["/api/minas/${minaId}/viajes"] o ["/api/minas/${minaId}/viajes", "includeHidden"]
       if (typeof key === 'string' && key.match(/^\/api\/minas\/\d+\/viajes$/)) return true;
-      // Formato array: ["/api/minas", minaId, "viajes"]
       if (key?.startsWith("/api/minas") && query.queryKey[1] && query.queryKey[2] === "viajes") return true;
       // Invalidar queries de viajes por comprador
       if (key === "/api/viajes/comprador" && query.queryKey[1]) return true;
@@ -53,14 +67,16 @@ export function invalidateTripRelatedQueries(queryClient: QueryClient) {
       if (key?.startsWith("/api/minas") && query.queryKey[1] && query.queryKey[2] === "transacciones") return true;
       // Invalidar queries específicas de transacciones por socio
       if (key === "/api/transacciones/comprador" && query.queryKey[1]) return true;
+      // Formato string directo: ["/api/transacciones/socio/mina/${minaId}"] o ["/api/transacciones/socio/mina/${minaId}/all"]
+      if (typeof key === 'string' && key.match(/^\/api\/transacciones\/socio\/mina\/\d+(\/all)?$/)) return true;
+      // Formato array: ["/api/transacciones/socio/mina", minaId]
       if (key === "/api/transacciones/socio/mina" && query.queryKey[1]) return true;
       if (key === "/api/transacciones/socio/volquetero" && query.queryKey[1]) return true;
       return false;
     }
   });
   
-  // Invalidar balances y hacer refetch inmediato solo de queries activas
-  // Esto actualiza las tarjetas y encabezados de los listados
+  // Invalidar balances (siempre, no solo si están activas)
   queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
   queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
   queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
@@ -70,19 +86,68 @@ export function invalidateTripRelatedQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
   queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
   
-  // Refetch inmediato solo de queries activas (visible en pantalla) para actualización en tiempo real
-  // Esto es más eficiente que refetch todas las queries y mantiene la responsividad
+  // Si tenemos información del viaje, invalidar y refetchear queries específicas de socios involucrados
+  if (tripChangeInfo) {
+    const minasAfectadas = new Set<number>();
+    const compradoresAfectados = new Set<number>();
+    const conductoresAfectados = new Set<string>();
+    
+    // Agregar socios anteriores (si el viaje cambió de socio)
+    if (tripChangeInfo.oldMinaId) minasAfectadas.add(tripChangeInfo.oldMinaId);
+    if (tripChangeInfo.oldCompradorId) compradoresAfectados.add(tripChangeInfo.oldCompradorId);
+    if (tripChangeInfo.oldConductor) conductoresAfectados.add(tripChangeInfo.oldConductor);
+    
+    // Agregar socios nuevos
+    if (tripChangeInfo.newMinaId) minasAfectadas.add(tripChangeInfo.newMinaId);
+    if (tripChangeInfo.newCompradorId) compradoresAfectados.add(tripChangeInfo.newCompradorId);
+    if (tripChangeInfo.newConductor) conductoresAfectados.add(tripChangeInfo.newConductor);
+    
+    // Invalidar y refetchear queries específicas de minas afectadas
+    minasAfectadas.forEach(minaId => {
+      queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`, "includeHidden"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}/all`] });
+      
+      // Refetchear explícitamente (sin importar si están activas)
+      queryClient.refetchQueries({ queryKey: [`/api/minas/${minaId}/viajes`] });
+      queryClient.refetchQueries({ queryKey: [`/api/minas/${minaId}/viajes`, "includeHidden"] });
+      queryClient.refetchQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
+      queryClient.refetchQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}/all`] });
+    });
+    
+    // Invalidar y refetchear queries específicas de compradores afectados
+    compradoresAfectados.forEach(compradorId => {
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
+      
+      // Refetchear explícitamente
+      queryClient.refetchQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
+      queryClient.refetchQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
+      queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
+      queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
+    });
+    
+    // Para volqueteros, necesitamos obtener el ID del volquetero basado en el conductor
+    // Por ahora, invalidamos todas las queries de volqueteros que coincidan con el conductor
+    // (esto se manejará mejor cuando tengamos el ID del volquetero)
+  }
+  
+  // Refetch SIEMPRE de balances (críticos para tarjetas y encabezados)
+  // No usar predicado de isActive - siempre refetchear balances
+  queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] });
+  queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] });
+  queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] });
+  
+  // Refetch de queries activas de viajes y transacciones (para actualización en tiempo real)
   queryClient.refetchQueries({ 
     predicate: (query) => {
       const key = query.queryKey[0] as string;
       const isActive = query.state.status === 'success' && query.observers.length > 0;
       
       if (!isActive) return false;
-      
-      // Refetch balances activos (para actualizar tarjetas y encabezados inmediatamente)
-      if (key === "/api/balances/minas" || key === "/api/balances/compradores" || key === "/api/balances/volqueteros") {
-        return true;
-      }
       
       // Refetch queries de viajes activas (para actualizar listados y pestañas)
       if (key?.startsWith("/api/viajes")) {
@@ -95,35 +160,27 @@ export function invalidateTripRelatedQueries(queryClient: QueryClient) {
       }
       
       // Refetch queries específicas de viajes por mina activas
-      // Formato: ["/api/minas/${minaId}/viajes"] o ["/api/minas/${minaId}/viajes", "includeHidden"]
       if (key?.startsWith("/api/minas")) {
-        // Query directa de viajes de mina: ["/api/minas/${minaId}/viajes"]
         if (typeof key === 'string' && key.match(/^\/api\/minas\/\d+\/viajes$/)) {
           return true;
         }
-        // Query de viajes de mina con includeHidden: ["/api/minas/${minaId}/viajes", "includeHidden"]
         if (typeof key === 'string' && key.match(/^\/api\/minas\/\d+\/viajes$/) && query.queryKey[1] === "includeHidden") {
           return true;
         }
-        // Query de viajes de mina con formato array: ["/api/minas", minaId, "viajes"]
         if (query.queryKey[1] && query.queryKey[2] === "viajes") {
           return true;
         }
       }
       
       // Refetch queries específicas de transacciones por mina activas
-      // Formato: ["/api/transacciones/socio/mina/${minaId}"] o ["/api/transacciones/socio/mina/${minaId}/all"]
       if (typeof key === 'string') {
-        // Query directa de transacciones de mina: ["/api/transacciones/socio/mina/${minaId}"]
         if (key.match(/^\/api\/transacciones\/socio\/mina\/\d+$/)) {
           return true;
         }
-        // Query de transacciones de mina con all: ["/api/transacciones/socio/mina/${minaId}/all"]
         if (key.match(/^\/api\/transacciones\/socio\/mina\/\d+\/all$/)) {
           return true;
         }
       }
-      // Query de transacciones de mina con formato array: ["/api/transacciones/socio/mina", minaId]
       if (key === "/api/transacciones/socio/mina" && query.queryKey[1]) {
         return true;
       }
