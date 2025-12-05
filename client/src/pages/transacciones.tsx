@@ -554,14 +554,14 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
         </div>
 
         <div className="space-y-2">
-          {/* Primera fila: Filtros principales */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Primera fila: Filtros principales - Responsive */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {/* Filtro de valor */}
             <div>
               <label className="text-xs text-gray-600 mb-1 block">Filtrar por Valor</label>
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap">
                 <Select value={valorFilterType} onValueChange={setValorFilterType}>
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger className="h-8 text-xs min-w-[100px] flex-shrink-0">
                     <SelectValue placeholder="Tipo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -576,7 +576,7 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
                 <Input
                   type="text"
                   placeholder="Valor"
-                  className="h-8 text-xs"
+                  className="h-8 text-xs flex-1 min-w-[80px]"
                   value={valorFilterValue ? formatCurrency(parseFloat(valorFilterValue)) : ''}
                   onChange={(e) => setValorFilterValue(parseFormattedValue(e.target.value))}
                   disabled={!valorFilterType || valorFilterType === "todos"}
@@ -586,7 +586,7 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
                   <Input
                     type="text"
                     placeholder="Final"
-                    className="h-8 text-xs"
+                    className="h-8 text-xs flex-1 min-w-[80px]"
                     value={valorFilterValueEnd ? formatCurrency(parseFloat(valorFilterValueEnd)) : ''}
                     onChange={(e) => setValorFilterValueEnd(parseFormattedValue(e.target.value))}
                   />
@@ -606,14 +606,14 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
             </div>
           </div>
 
-          {/* Segunda fila: Filtro de fecha y botones de ordenamiento */}
-          <div className="flex items-end gap-2">
+          {/* Segunda fila: Filtro de fecha y botones de ordenamiento - Responsive */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
             {/* Filtro de fecha */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <label className="text-xs text-gray-600 mb-1 block">Filtrar por Fecha</label>
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap">
                 <Select value={fechaFilterType} onValueChange={setFechaFilterType}>
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger className="h-8 text-xs min-w-[120px] flex-shrink-0">
                     <SelectValue placeholder="Período" />
                   </SelectTrigger>
                   <SelectContent>
@@ -636,7 +636,7 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
                 {(fechaFilterType === "exactamente" || fechaFilterType === "despues-de" || fechaFilterType === "antes-de") && (
                   <Input
                     type="date"
-                    className="h-8 text-xs"
+                    className="h-8 text-xs flex-1 min-w-[120px]"
                     value={fechaFilterValue}
                     onChange={(e) => setFechaFilterValue(e.target.value)}
                   />
@@ -647,14 +647,14 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
                     <Input
                       type="date"
                       placeholder="Desde"
-                      className="h-8 text-xs"
+                      className="h-8 text-xs flex-1 min-w-[120px]"
                       value={fechaFilterValue}
                       onChange={(e) => setFechaFilterValue(e.target.value)}
                     />
                     <Input
                       type="date"
                       placeholder="Hasta"
-                      className="h-8 text-xs"
+                      className="h-8 text-xs flex-1 min-w-[120px]"
                       value={fechaFilterValueEnd}
                       onChange={(e) => setFechaFilterValueEnd(e.target.value)}
                     />
@@ -663,9 +663,9 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
               </div>
             </div>
 
-            {/* Botones de ordenamiento compactos */}
-            <div className="flex items-center space-x-1">
-              <span className="text-xs text-gray-600">Orden:</span>
+            {/* Botones de ordenamiento compactos - Apilados en móviles */}
+            <div className="flex items-center space-x-1 flex-shrink-0">
+              <span className="text-xs text-gray-600 hidden sm:inline">Orden:</span>
               
               {/* Botón ordenamiento por fecha */}
               <Button
@@ -718,12 +718,12 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
 
       {/* Resumen Financiero */}
       <div className="px-4 py-3 bg-card border-b border-border">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 gap-2">
           <h2 className="text-base font-medium text-foreground">Transacciones</h2>
-          <span className="text-sm bg-muted px-2 py-1 rounded-full">
+          <span className="text-xs sm:text-sm bg-muted px-2 py-1 rounded-full whitespace-nowrap">
             {pagination ? `${filteredAndSortedTransactions.length} de ${pagination.total}` : filteredAndSortedTransactions.length}
             {pagination && (searchTerm || fechaFilterType !== "todos" || valorFilterType !== "todos") && (
-              <span className="text-xs text-muted-foreground ml-2">(filtradas)</span>
+              <span className="text-xs text-muted-foreground ml-1 sm:ml-2">(filtradas)</span>
             )}
           </span>
         </div>
