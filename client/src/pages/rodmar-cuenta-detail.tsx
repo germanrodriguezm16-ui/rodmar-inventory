@@ -1069,10 +1069,11 @@ export default function RodMarCuentaDetail() {
       {/* Botón flotante para nueva transacción */}
       <Button
         size="icon"
-        className="fixed bottom-20 right-4 w-14 h-14 rounded-full shadow-lg z-40"
+        className="fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-40"
         onClick={() => setShowNewTransaction(true)}
+        aria-label="Crear transacción"
       >
-        <Plus className="h-6 w-6" />
+        <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
       </Button>
 
       {/* Modal para nueva transacción */}
