@@ -128,24 +128,14 @@ export default function RegisterDescargueModal({ open, onClose }: RegisterDescar
       return response.json();
     },
     onSuccess: () => {
-      // Invalidar TODAS las queries de viajes (incluyendo paginadas)
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const key = query.queryKey[0] as string;
-          return key?.startsWith("/api/viajes");
-        }
-      });
-      // Invalidar queries relacionadas
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes/pendientes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
+      // Usar función optimizada para invalidar todas las queries relacionadas
+      invalidateTripRelatedQueries(queryClient);
+      
       form.reset();
       onClose();
       toast({
         title: "Descargue registrado",
-        description: "El viaje ha sido completado exitosamente.",
+        description: "El viaje se ha completado exitosamente y todas las transacciones relacionadas se han actualizado.",
       });
     },
     onError: (error) => {
