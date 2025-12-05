@@ -92,28 +92,36 @@ export function invalidateTripRelatedQueries(queryClient: QueryClient) {
       }
       
       // Refetch queries específicas de viajes por mina activas
-      // Formato: ["/api/minas", minaId, "viajes"] o ["/api/minas/${minaId}/viajes", "includeHidden"]
+      // Formato: ["/api/minas/${minaId}/viajes"] o ["/api/minas/${minaId}/viajes", "includeHidden"]
       if (key?.startsWith("/api/minas")) {
-        // Query de viajes de mina específica
-        if (query.queryKey[1] && query.queryKey[2] === "viajes") {
-          return true;
-        }
-        // Query de viajes de mina con includeHidden
-        if (query.queryKey[0]?.toString().includes("/viajes") || query.queryKey[1] === "includeHidden") {
-          return true;
-        }
         // Query directa de viajes de mina: ["/api/minas/${minaId}/viajes"]
-        if (query.queryKey[0]?.toString().match(/^\/api\/minas\/\d+\/viajes$/)) {
+        if (typeof key === 'string' && key.match(/^\/api\/minas\/\d+\/viajes$/)) {
+          return true;
+        }
+        // Query de viajes de mina con includeHidden: ["/api/minas/${minaId}/viajes", "includeHidden"]
+        if (typeof key === 'string' && key.match(/^\/api\/minas\/\d+\/viajes$/) && query.queryKey[1] === "includeHidden") {
+          return true;
+        }
+        // Query de viajes de mina con formato array: ["/api/minas", minaId, "viajes"]
+        if (query.queryKey[1] && query.queryKey[2] === "viajes") {
           return true;
         }
       }
       
       // Refetch queries específicas de transacciones por mina activas
-      // Formato: ["/api/transacciones/socio/mina", minaId] o ["/api/transacciones/socio/mina/${minaId}/all"]
-      if (key === "/api/transacciones/socio/mina" && query.queryKey[1]) {
-        return true;
+      // Formato: ["/api/transacciones/socio/mina/${minaId}"] o ["/api/transacciones/socio/mina/${minaId}/all"]
+      if (typeof key === 'string') {
+        // Query directa de transacciones de mina: ["/api/transacciones/socio/mina/${minaId}"]
+        if (key.match(/^\/api\/transacciones\/socio\/mina\/\d+$/)) {
+          return true;
+        }
+        // Query de transacciones de mina con all: ["/api/transacciones/socio/mina/${minaId}/all"]
+        if (key.match(/^\/api\/transacciones\/socio\/mina\/\d+\/all$/)) {
+          return true;
+        }
       }
-      if (key?.startsWith("/api/transacciones/socio/mina/") && query.queryKey[1]) {
+      // Query de transacciones de mina con formato array: ["/api/transacciones/socio/mina", minaId]
+      if (key === "/api/transacciones/socio/mina" && query.queryKey[1]) {
         return true;
       }
       
