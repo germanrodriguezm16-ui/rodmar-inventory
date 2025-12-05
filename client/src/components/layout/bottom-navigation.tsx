@@ -30,10 +30,10 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
 
   return (
     <nav 
-      className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-border shadow-lg" 
+      className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-border shadow-lg safe-area-inset-bottom"
       style={{ zIndex: 9999, position: 'fixed' }}
     >
-      <div className="flex">
+      <div className="flex items-stretch min-h-[56px] max-h-[64px]">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentModule === item.id;
@@ -42,7 +42,7 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
             <Button
               key={item.id}
               variant="ghost"
-              className={`flex-1 flex-col h-auto py-2 px-1 rounded-none ${
+              className={`flex-1 flex-col items-center justify-center min-w-0 py-1.5 px-0.5 sm:py-2 sm:px-1 rounded-none h-full ${
                 isActive ? "text-primary" : "text-muted-foreground"
               }`}
               onClick={() => {
@@ -55,8 +55,8 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
                 }
               }}
             >
-              <Icon className={`w-5 h-5 mb-1 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-              <span className={`text-xs font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+              <Icon className={`w-4 h-4 sm:w-5 sm:h-5 mb-0.5 sm:mb-1 flex-shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+              <span className={`text-[10px] sm:text-xs font-medium truncate w-full text-center leading-tight ${isActive ? "text-primary" : "text-muted-foreground"}`}>
                 {item.label}
               </span>
             </Button>

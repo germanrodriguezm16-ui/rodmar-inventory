@@ -81,7 +81,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   };
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-screen bg-background pb-[64px]">
       <AppHeader currentModule={activeModule} />
       
       <main className="flex-1">
