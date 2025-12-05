@@ -365,34 +365,26 @@ export default function Compradores() {
                 onClick={() => handleViewComprador(comprador.id)}
               >
                 <CardContent className="p-4">
+                  {/* Fila 1: Ícono + Nombre | Viajes | Botón eliminar */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                         <Users className="h-4 w-4 text-primary" />
                       </div>
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <EditableTitle 
                           id={comprador.id} 
                           currentName={comprador.nombre} 
                           type="comprador" 
-                          className="text-base"
+                          className="text-base truncate"
                         />
-                        <p className="text-sm text-muted-foreground">ID: {comprador.id}</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="text-center">
-                        <p className="text-sm text-muted-foreground">Viajes</p>
-                        <p className="font-semibold text-blue-600">
+                    <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 ml-2">
+                      <div className="text-right min-w-[50px]">
+                        <p className="text-xs sm:text-sm text-muted-foreground">Viajes</p>
+                        <p className="font-semibold text-blue-600 text-sm sm:text-base">
                           {getViajesCountForComprador(comprador.id)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Saldo</p>
-                        <p className={`font-semibold ${
-                          calcularBalanceNeto(comprador.id) >= 0 ? "text-green-600" : "text-red-600"
-                        }`}>
-                          {formatCurrency(calcularBalanceNeto(comprador.id))}
                         </p>
                       </div>
                       {canDeleteComprador(comprador.id) && (
@@ -403,12 +395,22 @@ export default function Compradores() {
                             e.stopPropagation();
                             handleDeleteComprador(comprador);
                           }}
-                          className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                          className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 flex-shrink-0"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
+                  </div>
+
+                  {/* Fila 2: Balance ocupando toda la fila */}
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                    <span className="text-xs sm:text-sm text-muted-foreground">Balance</span>
+                    <span className={`font-semibold text-xs sm:text-sm truncate ${
+                      calcularBalanceNeto(comprador.id) >= 0 ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {formatCurrency(calcularBalanceNeto(comprador.id))}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
