@@ -121,7 +121,15 @@ export default function Principal({ onOpenCargue, onOpenDescargue }: PrincipalPr
   
   // Estado de paginación
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50); // Por defecto 50 viajes por página
+  const [pageSize, setPageSize] = useState<number | "todo">(50); // Por defecto 50 viajes por página
+  
+  // Función para obtener el límite numérico para el servidor
+  const getLimitForServer = (total?: number): number => {
+    if (pageSize === "todo") {
+      return total ? total : 999999;
+    }
+    return pageSize;
+  };
   
   // Resetear página cuando cambien los filtros
   useEffect(() => {
@@ -147,7 +155,8 @@ export default function Principal({ onOpenCargue, onOpenDescargue }: PrincipalPr
     queryKey: ["/api/viajes", currentPage, pageSize],
     queryFn: async () => {
       const { apiUrl } = await import('@/lib/api');
-      const response = await fetch(apiUrl(`/api/viajes?page=${currentPage}&limit=${pageSize}`));
+      const limit = getLimitForServer();
+      const response = await fetch(apiUrl(`/api/viajes?page=${currentPage}&limit=${limit}`));
       if (!response.ok) throw new Error('Error al obtener viajes');
       return response.json();
     },
@@ -165,7 +174,7 @@ export default function Principal({ onOpenCargue, onOpenDescargue }: PrincipalPr
   const viajes = viajesData?.data || [];
   const pagination = viajesData?.pagination || {
     page: 1,
-    limit: pageSize,
+    limit: typeof pageSize === "number" ? pageSize : 50,
     total: 0,
     totalPages: 0,
     hasMore: false,
