@@ -2314,6 +2314,7 @@ export class DatabaseStorage implements IStorage {
         }
         
         // Si el comprador cambió, actualizar balance del comprador anterior
+        // Nota: Los compradores afectan el balance siempre que el viaje esté completado
         if (oldViaje.compradorId && oldViaje.compradorId !== viaje.compradorId) {
           const key = `comprador-${oldViaje.compradorId}`;
           if (!processedPartnerIds.has(key)) {
@@ -2323,21 +2324,64 @@ export class DatabaseStorage implements IStorage {
           }
         }
         
-        // Si el conductor cambió y el viaje anterior estaba completado, actualizar balance del volquetero anterior
-        if (oldViaje.conductor && oldViaje.conductor !== viaje.conductor && 
-            oldViaje.estado === 'completado' && oldViaje.fechaDescargue &&
-            oldViaje.quienPagaFlete && oldViaje.quienPagaFlete !== 'comprador' && oldViaje.quienPagaFlete !== 'El comprador') {
-          const oldVolquetero = await db.select({ id: volqueteros.id })
-            .from(volqueteros)
-            .where(eq(volqueteros.nombre, oldViaje.conductor))
-            .limit(1);
+        // Si el comprador se eliminó (tenía comprador antes pero ahora no), también actualizar
+        if (oldViaje.compradorId && !viaje.compradorId) {
+          const key = `comprador-${oldViaje.compradorId}`;
+          if (!processedPartnerIds.has(key)) {
+            await this.markCompradorBalanceStale(oldViaje.compradorId);
+            affectedPartners.push({ tipo: 'comprador', id: oldViaje.compradorId });
+            processedPartnerIds.add(key);
+          }
+        }
+        
+        // Si el conductor cambió, actualizar balance del volquetero anterior
+        // Los volqueteros solo afectan el balance cuando el viaje está completado y RodMar paga el flete
+        if (oldViaje.conductor && oldViaje.conductor !== viaje.conductor) {
+          // Si el viaje anterior estaba completado y afectaba el balance del volquetero
+          const oldViajeAfectaVolquetero = oldViaje.estado === 'completado' && 
+            oldViaje.fechaDescargue &&
+            oldViaje.quienPagaFlete && 
+            oldViaje.quienPagaFlete !== 'comprador' && 
+            oldViaje.quienPagaFlete !== 'El comprador';
           
-          if (oldVolquetero.length > 0) {
-            const key = `volquetero-${oldVolquetero[0].id}`;
-            if (!processedPartnerIds.has(key)) {
-              await this.markVolqueteroBalanceStale(oldVolquetero[0].id);
-              affectedPartners.push({ tipo: 'volquetero', id: oldVolquetero[0].id });
-              processedPartnerIds.add(key);
+          if (oldViajeAfectaVolquetero) {
+            const oldVolquetero = await db.select({ id: volqueteros.id })
+              .from(volqueteros)
+              .where(eq(volqueteros.nombre, oldViaje.conductor))
+              .limit(1);
+            
+            if (oldVolquetero.length > 0) {
+              const key = `volquetero-${oldVolquetero[0].id}`;
+              if (!processedPartnerIds.has(key)) {
+                await this.markVolqueteroBalanceStale(oldVolquetero[0].id);
+                affectedPartners.push({ tipo: 'volquetero', id: oldVolquetero[0].id });
+                processedPartnerIds.add(key);
+              }
+            }
+          }
+        }
+        
+        // Si el conductor se eliminó (tenía conductor antes pero ahora no) y el viaje anterior afectaba el balance
+        if (oldViaje.conductor && !viaje.conductor) {
+          const oldViajeAfectaVolquetero = oldViaje.estado === 'completado' && 
+            oldViaje.fechaDescargue &&
+            oldViaje.quienPagaFlete && 
+            oldViaje.quienPagaFlete !== 'comprador' && 
+            oldViaje.quienPagaFlete !== 'El comprador';
+          
+          if (oldViajeAfectaVolquetero) {
+            const oldVolquetero = await db.select({ id: volqueteros.id })
+              .from(volqueteros)
+              .where(eq(volqueteros.nombre, oldViaje.conductor))
+              .limit(1);
+            
+            if (oldVolquetero.length > 0) {
+              const key = `volquetero-${oldVolquetero[0].id}`;
+              if (!processedPartnerIds.has(key)) {
+                await this.markVolqueteroBalanceStale(oldVolquetero[0].id);
+                affectedPartners.push({ tipo: 'volquetero', id: oldVolquetero[0].id });
+                processedPartnerIds.add(key);
+              }
             }
           }
         }
