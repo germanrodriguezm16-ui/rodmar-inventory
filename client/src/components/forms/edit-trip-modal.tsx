@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { invalidateTripRelatedQueries } from "@/lib/invalidate-trip-queries";
 import { formatCurrency } from "@/lib/utils";
 import { formatDateWithDaySpanish } from "@/lib/date-utils";
 import type { ViajeWithDetails, Mina, Comprador, updateViajeSchema } from "@shared/schema";
