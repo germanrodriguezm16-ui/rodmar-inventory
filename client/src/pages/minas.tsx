@@ -198,43 +198,52 @@ export default function Minas() {
 
   return (
     <div className="p-4">
-      {/* Header con todo en una línea */}
-      <div className="flex items-start justify-between mb-4">
-        {/* Columna izquierda: Título y contador */}
-        <div className="flex items-center space-x-2">
-          <h2 className="text-lg font-semibold text-foreground">Minas</h2>
-          <span className="text-sm bg-muted px-2 py-1 rounded-full">
-            {searchTerm ? filteredAndSortedMinas.length : minas.length}
-          </span>
+      {/* Header reorganizado para móviles */}
+      <div className="mb-4 space-y-3">
+        {/* Primera fila: Título y contador */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <h2 className="text-lg font-semibold text-foreground">Minas</h2>
+            <span className="text-sm bg-muted px-2 py-1 rounded-full">
+              {searchTerm ? filteredAndSortedMinas.length : minas.length}
+            </span>
+          </div>
+          <Button onClick={() => setShowAddMina(true)} size="icon" className="h-8 w-8">
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
         
-        {/* Columna central: Balance */}
-        <div className="text-xs space-y-0.5 flex-1 px-4">
-          <div>
-            <span className="text-muted-foreground">Positivos: </span>
-            <span className="text-green-600 font-semibold">
+        {/* Segunda fila: Balance en formato compacto */}
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-2 border border-green-200 dark:border-green-800">
+            <div className="text-muted-foreground mb-0.5">Positivos</div>
+            <div className="text-green-600 dark:text-green-400 font-semibold truncate">
               ${formatCurrency(saldoAFavor).replace('$', '')}
-            </span>
+            </div>
           </div>
-          <div>
-            <span className="text-muted-foreground">Negativos: </span>
-            <span className="text-red-600 font-semibold">
+          <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-2 border border-red-200 dark:border-red-800">
+            <div className="text-muted-foreground mb-0.5">Negativos</div>
+            <div className="text-red-600 dark:text-red-400 font-semibold truncate">
               ${formatCurrency(saldoEnContra).replace('$', '')}
-            </span>
+            </div>
           </div>
-          <div>
-            <span className="text-muted-foreground">Balance: </span>
-            <span className={`font-semibold ${
-              balanceTotalMinas >= 0 ? "text-green-600" : "text-red-600"
+          <div className={`rounded-lg p-2 border ${
+            balanceTotalMinas >= 0 
+              ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800" 
+              : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+          }`}>
+            <div className="text-muted-foreground mb-0.5">Balance</div>
+            <div className={`font-semibold truncate ${
+              balanceTotalMinas >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
             }`}>
               {balanceTotalMinas >= 0 ? "" : "-"}${formatCurrency(Math.abs(balanceTotalMinas)).replace('$', '')}
-            </span>
+            </div>
           </div>
         </div>
         
-        {/* Columna derecha: Botones de ordenamiento, recálculo y agregar */}
-        <div className="flex items-center space-x-2">
-          <div className="flex flex-col space-y-1">
+        {/* Tercera fila: Botones de ordenamiento y recálculo */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => {
                 if (sortBy === "alfabetico") {
@@ -244,7 +253,7 @@ export default function Minas() {
                   setSortOrder("asc");
                 }
               }}
-              className={`px-2 py-1 text-xs rounded-lg transition-colors flex items-center space-x-1 ${
+              className={`px-2 py-1.5 text-xs rounded-lg transition-colors flex items-center space-x-1 ${
                 sortBy === "alfabetico" 
                   ? "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200" 
                   : "bg-muted hover:bg-muted/80"
@@ -263,10 +272,10 @@ export default function Minas() {
                   setSortOrder(sortOrder === "asc" ? "desc" : "asc");
                 } else {
                   setSortBy("viajes");
-                  setSortOrder("desc"); // Por defecto mayor a menor para viajes
+                  setSortOrder("desc");
                 }
               }}
-              className={`px-2 py-1 text-xs rounded-lg transition-colors flex items-center space-x-1 ${
+              className={`px-2 py-1.5 text-xs rounded-lg transition-colors flex items-center space-x-1 ${
                 sortBy === "viajes" 
                   ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200" 
                   : "bg-muted hover:bg-muted/80"
@@ -283,16 +292,12 @@ export default function Minas() {
           <Button 
             onClick={recalcular}
             disabled={isRecalculando}
-            size="sm"
+            size="icon"
             variant="outline"
             title="Recalcular balances precalculados"
-            className="h-7 px-2 text-xs bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-600 font-medium"
+            className="h-8 w-8 bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-600"
           >
-            <RefreshCw className={`h-3 w-3 mr-1 ${isRecalculando ? "animate-spin" : ""}`} />
-            Recálculo
-          </Button>
-          <Button onClick={() => setShowAddMina(true)} size="icon">
-            <Plus className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${isRecalculando ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>
@@ -386,29 +391,29 @@ export default function Minas() {
                   className="flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2"
                   onClick={() => handleViewMina(mina.id)}
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                       <Mountain className="h-4 w-4 text-primary" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <EditableTitle 
                         id={mina.id} 
                         currentName={mina.nombre} 
                         type="mina" 
-                        className="text-base"
+                        className="text-base truncate"
                       />
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Viajes</p>
-                      <p className="font-semibold text-blue-600">
+                  <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 ml-2">
+                    <div className="text-right min-w-[50px]">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Viajes</p>
+                      <p className="font-semibold text-blue-600 text-sm sm:text-base">
                         {getViajesCountForMina(mina.id)}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Balance</p>
-                      <p className={`font-semibold ${
+                    <div className="text-right min-w-[80px] sm:min-w-[100px]">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Balance</p>
+                      <p className={`font-semibold text-xs sm:text-sm truncate ${
                         getBalanceForMina(mina.id) >= 0 ? "text-green-600" : "text-red-600"
                       }`}>
                         {formatCurrency(getBalanceForMina(mina.id))}
@@ -422,7 +427,7 @@ export default function Minas() {
                           e.stopPropagation();
                           handleDeleteMina(mina);
                         }}
-                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 flex-shrink-0"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
