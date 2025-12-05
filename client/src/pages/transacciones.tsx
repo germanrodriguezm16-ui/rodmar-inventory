@@ -716,39 +716,39 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
         </div>
       </div>
 
-      {/* Resumen Financiero */}
-      <div className="px-4 py-3 bg-card border-b border-border">
-        <div className="flex items-center justify-between mb-2">
+      {/* Resumen Financiero - Compacto */}
+      <div className="px-4 py-2 bg-card border-b border-border">
+        <div className="flex items-center justify-between mb-1.5">
           <h2 className="text-base font-medium text-foreground">Transacciones</h2>
-          <span className="text-sm bg-muted px-2 py-1 rounded-full">
+          <span className="text-xs sm:text-sm bg-muted px-2 py-0.5 rounded-full whitespace-nowrap">
             {pagination ? `${filteredAndSortedTransactions.length} de ${pagination.total}` : filteredAndSortedTransactions.length}
             {pagination && (searchTerm || fechaFilterType !== "todos" || valorFilterType !== "todos") && (
-              <span className="text-xs text-muted-foreground ml-2">(filtradas)</span>
+              <span className="text-xs text-muted-foreground ml-1.5">(filtradas)</span>
             )}
           </span>
         </div>
         
-        {/* Balance General - Formato responsive similar a Minas/Compradores */}
-        <div className="grid grid-cols-3 gap-2 text-xs">
-          <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-2 border border-green-200 dark:border-green-800">
-            <div className="text-muted-foreground mb-0.5">Positivos</div>
-            <div className="text-green-600 dark:text-green-400 font-semibold break-words leading-tight min-h-[2.5rem] flex items-center">
+        {/* Balance General - Formato compacto */}
+        <div className="grid grid-cols-3 gap-1.5 text-xs">
+          <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-1.5 border border-green-200 dark:border-green-800">
+            <div className="text-muted-foreground text-[10px] mb-0.5 leading-tight">Positivos</div>
+            <div className="text-green-600 dark:text-green-400 font-semibold break-words leading-tight text-xs sm:text-sm">
               ${formatCurrency(balanceCalculations.positivos.toString()).replace('$', '')}
             </div>
           </div>
-          <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-2 border border-red-200 dark:border-red-800">
-            <div className="text-muted-foreground mb-0.5">Negativos</div>
-            <div className="text-red-600 dark:text-red-400 font-semibold break-words leading-tight min-h-[2.5rem] flex items-center">
+          <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-1.5 border border-red-200 dark:border-red-800">
+            <div className="text-muted-foreground text-[10px] mb-0.5 leading-tight">Negativos</div>
+            <div className="text-red-600 dark:text-red-400 font-semibold break-words leading-tight text-xs sm:text-sm">
               ${formatCurrency(balanceCalculations.negativos.toString()).replace('$', '')}
             </div>
           </div>
-          <div className={`rounded-lg p-2 border ${
+          <div className={`rounded-lg p-1.5 border ${
             balanceCalculations.balance >= 0
               ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
               : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
           }`}>
-            <div className="text-muted-foreground mb-0.5">Balance</div>
-            <div className={`font-semibold break-words leading-tight min-h-[2.5rem] flex items-center ${
+            <div className="text-muted-foreground text-[10px] mb-0.5 leading-tight">Balance</div>
+            <div className={`font-semibold break-words leading-tight text-xs sm:text-sm ${
               balanceCalculations.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
             }`}>
               {balanceCalculations.balance >= 0 ? "" : "-"}${formatCurrency(Math.abs(balanceCalculations.balance).toString()).replace('$', '')}
