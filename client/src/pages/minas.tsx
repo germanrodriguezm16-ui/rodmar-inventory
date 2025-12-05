@@ -386,7 +386,7 @@ export default function Minas() {
           {filteredAndSortedMinas.map((mina: Mina) => (
             <Card key={mina.id}>
               <CardContent className="p-4">
-                {/* Mina Header - Always visible */}
+                {/* Fila 1: Ícono + Nombre | Viajes | Botón eliminar */}
                 <div 
                   className="flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2"
                   onClick={() => handleViewMina(mina.id)}
@@ -411,14 +411,6 @@ export default function Minas() {
                         {getViajesCountForMina(mina.id)}
                       </p>
                     </div>
-                    <div className="text-right min-w-[80px] sm:min-w-[100px]">
-                      <p className="text-xs sm:text-sm text-muted-foreground">Balance</p>
-                      <p className={`font-semibold text-xs sm:text-sm truncate ${
-                        getBalanceForMina(mina.id) >= 0 ? "text-green-600" : "text-red-600"
-                      }`}>
-                        {formatCurrency(getBalanceForMina(mina.id))}
-                      </p>
-                    </div>
                     {canDeleteMina(mina.id) && (
                       <Button
                         variant="ghost"
@@ -435,10 +427,14 @@ export default function Minas() {
                   </div>
                 </div>
 
-                {/* Click to view details hint */}
-                <div className="mt-2 text-xs text-blue-600 flex items-center">
-                  <Eye className="h-3 w-3 mr-1" />
-                  Toque para ver detalles completos
+                {/* Fila 2: Balance ocupando toda la fila */}
+                <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                  <span className="text-xs sm:text-sm text-muted-foreground">Balance</span>
+                  <span className={`font-semibold text-xs sm:text-sm truncate ${
+                    getBalanceForMina(mina.id) >= 0 ? "text-green-600" : "text-red-600"
+                  }`}>
+                    {formatCurrency(getBalanceForMina(mina.id))}
+                  </span>
                 </div>
               </CardContent>
             </Card>
