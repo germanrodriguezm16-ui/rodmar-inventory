@@ -874,16 +874,16 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
                         </Button>
                       )}
 
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 overflow-hidden">
                         {/* Header compacto */}
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 min-w-0">
                           <Badge variant="outline" className="text-xs px-1 py-0 h-5 shrink-0">
                             {transaction.deQuienTipo === 'mina' ? 'Mina' : 
                              transaction.deQuienTipo === 'comprador' ? 'Comprador' : 
                              transaction.deQuienTipo === 'volquetero' ? 'Volquetero' : 
                              transaction.deQuienTipo === 'rodmar' ? 'RodMar' : 'Banco'}
                           </Badge>
-                          <span className="text-sm font-medium text-foreground truncate">
+                          <span className="text-sm font-medium text-foreground truncate block min-w-0 flex-1">
                             {cleanSocioNombre(transaction.socioNombre || transaction.concepto)}
                           </span>
                         </div>
