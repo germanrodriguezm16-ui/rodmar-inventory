@@ -127,9 +127,19 @@ export default function RegisterDescargueModal({ open, onClose }: RegisterDescar
       const response = await apiRequest("PATCH", `/api/viajes/${data.viajeId}`, updateData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (updatedViaje) => {
+      // Obtener información del viaje antes del cambio (si está disponible)
+      const tripChangeInfo: TripChangeInfo = {
+        oldMinaId: selectedViaje?.minaId || null,
+        oldCompradorId: selectedViaje?.compradorId || null,
+        oldConductor: selectedViaje?.conductor || null,
+        newMinaId: updatedViaje?.minaId || null,
+        newCompradorId: updatedViaje?.compradorId || null,
+        newConductor: updatedViaje?.conductor || null,
+      };
+      
       // Usar función optimizada para invalidar todas las queries relacionadas
-      invalidateTripRelatedQueries(queryClient);
+      invalidateTripRelatedQueries(queryClient, tripChangeInfo);
       
       form.reset();
       onClose();
