@@ -577,16 +577,26 @@ export default function MinaDetail() {
       );
     }
 
-    // Aplicar filtro de balance
+    // Aplicar filtro de balance usando la misma lógica que las tarjetas
     if (balanceFilter === 'positivos') {
       filtered = filtered.filter(t => {
-        const valor = parseFloat(t.valor || "0");
-        return valor > 0;
+        // Verde/Positivo para minas - misma lógica que las tarjetas
+        if (t.deQuienTipo === 'viaje') {
+          return true; // Viajes siempre positivos (verdes)
+        } else if (t.deQuienTipo === 'mina' && t.deQuienId === minaId.toString()) {
+          return true; // Desde esta mina = ingreso positivo (verde)
+        } else if (t.paraQuienTipo === 'rodmar' || t.paraQuienTipo === 'banco') {
+          return true; // Hacia RodMar/Banco = positivo (verde)
+        }
+        return false;
       });
     } else if (balanceFilter === 'negativos') {
       filtered = filtered.filter(t => {
-        const valor = parseFloat(t.valor || "0");
-        return valor < 0;
+        // Rojo/Negativo para minas - misma lógica que las tarjetas
+        return t.deQuienTipo !== 'viaje' && 
+               t.paraQuienTipo === 'mina' && 
+               t.paraQuienId === minaId.toString() &&
+               !(t.deQuienTipo === 'mina' && t.deQuienId === minaId.toString());
       });
     }
     // Si balanceFilter === 'all', no filtrar por balance

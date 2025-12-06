@@ -1753,7 +1753,12 @@ function CompradorTransaccionesTab({
           {/* Cuarta fila: Tarjetas de balance compactas */}
           <div className="grid grid-cols-3 gap-2 pt-1 border-t">
             {/* Tarjeta Positivos */}
-            <Card className="p-2 bg-green-50 border-green-200">
+            <Card 
+              className={`p-2 bg-green-50 border-green-200 cursor-pointer transition-all hover:shadow-md ${
+                balanceFilter === 'positivos' ? 'ring-2 ring-green-400 shadow-md border-green-400' : ''
+              }`}
+              onClick={() => setBalanceFilter('positivos')}
+            >
               <div className="flex flex-col">
                 <span className="text-xs text-green-700 font-medium mb-1">Positivos</span>
                 <span className="text-sm sm:text-base text-green-600 font-bold">
@@ -1763,7 +1768,12 @@ function CompradorTransaccionesTab({
             </Card>
 
             {/* Tarjeta Negativos */}
-            <Card className="p-2 bg-red-50 border-red-200">
+            <Card 
+              className={`p-2 bg-red-50 border-red-200 cursor-pointer transition-all hover:shadow-md ${
+                balanceFilter === 'negativos' ? 'ring-2 ring-red-400 shadow-md border-red-400' : ''
+              }`}
+              onClick={() => setBalanceFilter('negativos')}
+            >
               <div className="flex flex-col">
                 <span className="text-xs text-red-700 font-medium mb-1">Negativos</span>
                 <span className="text-sm sm:text-base text-red-600 font-bold">
@@ -1773,7 +1783,20 @@ function CompradorTransaccionesTab({
             </Card>
 
             {/* Tarjeta Balance */}
-            <Card className={`p-2 border-2 ${totales.totalGeneral >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
+            <Card 
+              className={`p-2 border-2 cursor-pointer transition-all hover:shadow-md ${
+                totales.totalGeneral >= 0 
+                  ? 'bg-green-50 border-green-300' 
+                  : 'bg-red-50 border-red-300'
+              } ${
+                balanceFilter === 'all' 
+                  ? totales.totalGeneral >= 0
+                    ? 'ring-2 ring-green-400 shadow-md border-green-400'
+                    : 'ring-2 ring-red-400 shadow-md border-red-400'
+                  : ''
+              }`}
+              onClick={() => setBalanceFilter('all')}
+            >
               <div className="flex flex-col">
                 <span className={`text-xs font-medium mb-1 ${totales.totalGeneral >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                   Balance
