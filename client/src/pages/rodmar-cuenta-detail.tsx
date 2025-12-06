@@ -285,17 +285,26 @@ export default function RodMarCuentaDetail() {
   });
 
   // Calcular fechaDesde y fechaHasta para enviar al servidor
+  // IMPORTANTE: Crear fechas en hora local para evitar problemas de zona horaria (Colombia UTC-5)
   const dateRange = useMemo(() => {
+    // Función helper para crear Date en hora local desde string YYYY-MM-DD
+    const createLocalDate = (dateString: string): Date => {
+      const [year, month, day] = dateString.split('-').map(Number);
+      // Crear fecha en hora local (no UTC) usando new Date(year, month - 1, day)
+      return new Date(year, month - 1, day);
+    };
+    
     const rango = getDateRange(
       filtros.fechaTipo,
-      filtros.fechaEspecifica ? new Date(filtros.fechaEspecifica) : undefined,
-      filtros.fechaInicio ? new Date(filtros.fechaInicio) : undefined,
-      filtros.fechaFin ? new Date(filtros.fechaFin) : undefined
+      filtros.fechaEspecifica ? createLocalDate(filtros.fechaEspecifica) : undefined,
+      filtros.fechaInicio ? createLocalDate(filtros.fechaInicio) : undefined,
+      filtros.fechaFin ? createLocalDate(filtros.fechaFin) : undefined
     );
     if (!rango) return null;
     
-    // Convertir Date objects a strings ISO (YYYY-MM-DD)
+    // Convertir Date objects a strings ISO (YYYY-MM-DD) usando métodos locales
     const formatDate = (date: Date): string => {
+      // Usar getFullYear(), getMonth(), getDate() que devuelven valores en hora local
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     };
     
