@@ -1,0 +1,106 @@
+{
+  "id": "rodmar-mining-management-app",
+  "name": "RodMar - Gestión Minera",
+  "short_name": "RodMar",
+  "description": "Aplicación profesional para gestión de operaciones mineras, transporte y finanzas empresariales",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "theme_color": "#1d4ed8",
+  "background_color": "#ffffff",
+  "lang": "es",
+  "dir": "ltr",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "prefer_related_applications": false,
+  "iarc_rating_id": "e84b072d-71de-3dae-a41a-e7e11c2deaa7",
+  "scope_extensions": [
+    {
+      "origin": "https://*.replit.dev"
+    },
+    {
+      "origin": "https://*.replit.app"
+    }
+  ],
+  "icons": [
+    {
+      "src": "rodmar-icon-72-1751394032734.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "rodmar-icon-96-1751394032734.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "rodmar-icon-128-1751394032734.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "rodmar-android-chrome-144-1751394032734.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "rodmar-apple-touch-152-1751394032734.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "rodmar-apple-touch-180-1751394032734.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "rodmar-circular-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "rodmar-circular-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "rodmar-icon-384-1751394032734.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "rodmar-circular-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "rodmar-circular-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "rodmar-circular-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "finance"],
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
