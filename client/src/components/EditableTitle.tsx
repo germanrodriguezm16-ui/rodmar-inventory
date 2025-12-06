@@ -17,6 +17,7 @@ export function EditableTitle({ id, currentName, type, className = "" }: Editabl
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(currentName);
   const [displayName, setDisplayName] = useState(currentName); // Estado local para mostrar nombre actualizado inmediatamente
+  const [clickTimer, setClickTimer] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -242,10 +243,20 @@ export function EditableTitle({ id, currentName, type, className = "" }: Editabl
     );
   }
 
+  // Manejar click simple en el nombre (permite que el click de la tarjeta funcione)
+  const handleNameClick = (e: React.MouseEvent) => {
+    // No hacer nada, dejar que el click se propague a la tarjeta
+  };
+
   // Manejar doble click para activar edición
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevenir que active el click de la tarjeta
     e.preventDefault();
+    // Limpiar timer si existe (por si acaso)
+    if (clickTimer) {
+      clearTimeout(clickTimer);
+      setClickTimer(null);
+    }
     handleStartEdit();
   };
 
@@ -253,6 +264,7 @@ export function EditableTitle({ id, currentName, type, className = "" }: Editabl
     <div className={`flex items-center gap-2 group ${className}`}>
       <h1 
         className="cursor-text select-none font-bold" 
+        onClick={handleNameClick}
         onDoubleClick={handleDoubleClick}
         title="Doble click para editar"
       >
