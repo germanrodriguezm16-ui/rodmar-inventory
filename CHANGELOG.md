@@ -2,7 +2,67 @@
 
 ## 📅 Cambios Recientes (Enero 2025)
 
-> **📋 Documentación Completa**: Ver [MEJORAS_RECIENTES.md](./MEJORAS_RECIENTES.md) para documentación detallada de todas las mejoras.
+> **📋 Documentación Completa**: 
+> - Ver [MEJORAS_RECIENTES.md](./MEJORAS_RECIENTES.md) para documentación detallada de todas las mejoras.
+> - Ver [MEJORAS_INTERACCION_TARJETAS.md](./MEJORAS_INTERACCION_TARJETAS.md) para mejoras de interacción en tarjetas.
+
+### 🖱️ v2.1.1 - Mejoras de Interacción en Tarjetas (Enero 2025)
+
+#### ✨ Nuevas Funcionalidades
+
+**1. Interacción Mejorada con Tarjetas de Listado**
+- ✅ Click simple en cualquier parte de la tarjeta: Abre la página de detalles
+- ✅ Doble click en el nombre: Activa modo de edición inline sin abrir detalles
+- ✅ Prevención de conflictos: El doble click no activa el click simple
+- ✅ Áreas específicas protegidas: Contadores y botones no navegan accidentalmente
+
+**2. Componente EditableTitle Mejorado**
+- ✅ `handleNameClick`: Permite que clicks simples se propaguen al padre
+- ✅ `handleDoubleClick`: Activa edición con `stopPropagation` para prevenir navegación
+- ✅ Tooltip informativo: "Doble click para editar"
+- ✅ Cursor visual: `cursor-text` para indicar que el nombre es editable
+
+#### 🔧 Correcciones de Interacción
+
+**1. Página de Minas (`minas.tsx`)**
+- ✅ Removido `stopPropagation` del div principal
+- ✅ Movido `stopPropagation` solo al área de "Viajes" y botón eliminar
+- ✅ Click ahora funciona en nombre, ícono y balance
+
+**2. Página de Compradores (`compradores.tsx`)**
+- ✅ Removido `stopPropagation` del div principal
+- ✅ Movido `stopPropagation` solo al área de "Viajes" y botón eliminar
+- ✅ Mismo comportamiento mejorado que Minas
+
+**3. Página de Volqueteros (`volqueteros.tsx`)**
+- ✅ Reemplazado `Link` component por `onClick` directo en el `Card`
+- ✅ Removido `stopPropagation` del div principal
+- ✅ Movido `stopPropagation` solo al área de balance
+- ✅ Agregado `handleViewVolquetero` para navegación programática
+- ✅ Click ahora funciona en toda la tarjeta (nombre, ícono, placas, contador)
+
+#### 📝 Archivos Modificados
+
+**Componentes:**
+- ✅ `client/src/components/EditableTitle.tsx`
+  - Agregado `handleNameClick` para permitir propagación de clicks simples
+  - Agregado `handleDoubleClick` con `stopPropagation`
+  - Removido `stopPropagation` del div principal
+
+**Páginas:**
+- ✅ `client/src/pages/minas.tsx`
+- ✅ `client/src/pages/compradores.tsx`
+- ✅ `client/src/pages/volqueteros.tsx`
+
+#### 🎯 Beneficios
+
+- **UX Mejorada**: Interacción más intuitiva y natural
+- **Menos Clicks**: No es necesario hacer click en áreas específicas
+- **Edición Rápida**: Doble click permite editar sin abrir la página
+- **Código Limpio**: Separación clara de responsabilidades
+- **Consistencia**: Mismo comportamiento en todas las páginas de listado
+
+---
 
 ### 🚀 v2.1.0 - Actualizaciones en Tiempo Real y Optimizaciones (Enero 2025)
 
