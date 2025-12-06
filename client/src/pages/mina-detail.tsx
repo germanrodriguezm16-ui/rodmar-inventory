@@ -607,7 +607,7 @@ export default function MinaDetail() {
     }
 
     return filtered;
-  }, [todasTransacciones, filterType, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, sortByFecha, sortByValor, filterTransaccionesByDate]);
+  }, [todasTransacciones, filterType, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, sortByFecha, sortByValor, filterTransaccionesByDate, balanceFilter]);
 
   // Aplicar filtros a viajes
   const viajesFiltrados = useMemo(() => {
