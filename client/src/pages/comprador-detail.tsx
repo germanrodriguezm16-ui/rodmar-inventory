@@ -1236,6 +1236,9 @@ function CompradorTransaccionesTab({
 }) {
   // Estado para búsqueda
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Estado para filtro de balance (positivos, negativos, todos)
+  const [balanceFilter, setBalanceFilter] = useState<'all' | 'positivos' | 'negativos'>('all');
 
   // Combinar transacciones reales con transacciones dinámicas de viajes
   const todasTransacciones = useMemo(() => {
@@ -1331,11 +1334,8 @@ function CompradorTransaccionesTab({
     }
 
     // Filtro de fecha
-    if (transaccionesFechaFilterType === "todos") {
-      return filtered;
-    }
-
-    return filtered.filter(transaccion => {
+    if (transaccionesFechaFilterType !== "todos") {
+      filtered = filtered.filter(transaccion => {
       // Extraer fecha directamente del string para evitar conversiones UTC
       const fechaDirecta = typeof transaccion.fecha === 'string' && transaccion.fecha.includes('T') 
         ? transaccion.fecha.split('T')[0] 
@@ -1455,8 +1455,19 @@ function CompradorTransaccionesTab({
         default:
           return true;
       }
-    });
-  }, [todasTransacciones, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd]);
+      });
+    }
+    
+    // Aplicar filtro de balance después de los filtros de fecha
+    if (balanceFilter === 'positivos') {
+      filtered = filtered.filter(t => parseFloat(t.valor) > 0);
+    } else if (balanceFilter === 'negativos') {
+      filtered = filtered.filter(t => parseFloat(t.valor) < 0);
+    }
+    // Si balanceFilter === 'all', no filtrar por balance
+    
+    return filtered;
+  }, [todasTransacciones, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, balanceFilter]);
 
   // Actualizar las transacciones filtradas en el componente padre
   useEffect(() => {

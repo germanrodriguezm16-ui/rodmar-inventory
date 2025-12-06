@@ -230,6 +230,7 @@ export default function MinaDetail() {
   const [showTransactionDetail, setShowTransactionDetail] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("todos");
+  const [balanceFilter, setBalanceFilter] = useState<'all' | 'positivos' | 'negativos'>('all');
 
   // Estados de filtros de fecha para viajes
   const [viajesFechaFilterType, setViajesFechaFilterType] = useState<DateFilterType>("todos");
@@ -575,6 +576,20 @@ export default function MinaDetail() {
         t.comentario?.toLowerCase().includes(term)
       );
     }
+
+    // Aplicar filtro de balance
+    if (balanceFilter === 'positivos') {
+      filtered = filtered.filter(t => {
+        const valor = parseFloat(t.valor || "0");
+        return valor > 0;
+      });
+    } else if (balanceFilter === 'negativos') {
+      filtered = filtered.filter(t => {
+        const valor = parseFloat(t.valor || "0");
+        return valor < 0;
+      });
+    }
+    // Si balanceFilter === 'all', no filtrar por balance
 
     // Aplicar ordenamiento
     if (sortByFecha !== "ninguno") {
@@ -1240,19 +1255,40 @@ export default function MinaDetail() {
                 <Card className="border-gray-200 bg-gray-50">
                   <CardContent className="p-1.5 sm:p-2">
                     <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center">
-                      <div className="bg-green-50 rounded px-2 py-1">
+                      <div 
+                        className={`bg-green-50 rounded px-2 py-1 cursor-pointer transition-all hover:shadow-md ${
+                          balanceFilter === 'positivos' ? 'ring-2 ring-green-400 shadow-md' : ''
+                        }`}
+                        onClick={() => setBalanceFilter('positivos')}
+                      >
                         <div className="text-green-600 text-xs font-medium">Positivos</div>
                         <div className="text-green-700 text-xs sm:text-sm font-semibold">
                           +{positivos.length} {formatMoney(sumPositivos)}
                         </div>
                       </div>
-                      <div className="bg-red-50 rounded px-2 py-1">
+                      <div 
+                        className={`bg-red-50 rounded px-2 py-1 cursor-pointer transition-all hover:shadow-md ${
+                          balanceFilter === 'negativos' ? 'ring-2 ring-red-400 shadow-md' : ''
+                        }`}
+                        onClick={() => setBalanceFilter('negativos')}
+                      >
                         <div className="text-red-600 text-xs font-medium">Negativos</div>
                         <div className="text-red-700 text-xs sm:text-sm font-semibold">
                           -{negativos.length} {formatMoney(sumNegativos)}
                         </div>
                       </div>
-                      <div className={`rounded px-2 py-1 ${balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                      <div 
+                        className={`rounded px-2 py-1 cursor-pointer transition-all hover:shadow-md ${
+                          balance >= 0 ? 'bg-green-100' : 'bg-red-100'
+                        } ${
+                          balanceFilter === 'all' 
+                            ? balance >= 0
+                              ? 'ring-2 ring-green-400 shadow-md'
+                              : 'ring-2 ring-red-400 shadow-md'
+                            : ''
+                        }`}
+                        onClick={() => setBalanceFilter('all')}
+                      >
                         <div className={`text-xs font-medium ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>Balance</div>
                         <div className={`text-xs sm:text-sm font-bold ${balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                           {balance >= 0 ? '+' : '-'}{formatMoney(Math.abs(balance))}
