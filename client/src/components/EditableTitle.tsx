@@ -249,7 +249,7 @@ export function EditableTitle({ id, currentName, type, className = "" }: Editabl
   return (
     <div className={`flex items-center gap-2 group ${className}`} onClick={stopAllPropagation}>
       <h1 
-        className="text-xl font-bold cursor-text select-none" 
+        className="cursor-text select-none font-bold" 
         onDoubleClick={handleDoubleClick}
         title="Doble click para editar"
       >
