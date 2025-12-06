@@ -398,12 +398,16 @@ export default function Minas() {
       ) : (
         <div className="space-y-3">
           {filteredAndSortedMinas.map((mina: Mina) => (
-            <Card key={mina.id}>
+            <Card 
+              key={mina.id}
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleViewMina(mina.id)}
+            >
               <CardContent className="p-4">
                 {/* Fila 1: Ícono + Nombre | Viajes | Botón eliminar */}
                 <div 
-                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2"
-                  onClick={() => handleViewMina(mina.id)}
+                  className="flex items-center justify-between"
+                  onClick={(e) => e.stopPropagation()} // Prevenir navegación cuando se hace click en esta área
                 >
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
                     <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ export default function Volqueteros() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [, setLocation] = useLocation();
 
   // Usar hook compartido para balances de volqueteros
   const { balancesVolqueteros, resumenFinanciero, volqueteros: volqueterosFromHook, viajesStats, isFetchingBalances } = useVolqueterosBalance();
@@ -36,6 +37,11 @@ export default function Volqueteros() {
   // Función optimizada para obtener balance (ahora usa hook compartido)
   const calcularBalanceDinamico = (volquetero: VolqueteroConPlacas) => {
     return balancesVolqueteros[volquetero.id] || 0;
+  };
+
+  // Función para navegar a la página de detalles del volquetero
+  const handleViewVolquetero = (volqueteroNombre: string) => {
+    setLocation(`/volqueteros/${encodeURIComponent(volqueteroNombre)}`);
   };
 
   // Calcular suma de viajes individuales de volqueteros
@@ -294,56 +300,60 @@ export default function Volqueteros() {
       ) : (
         <div className="space-y-2">
           {filteredAndSortedVolqueteros.map((volquetero: VolqueteroConPlacas) => (
-            <Card key={volquetero.id}>
+            <Card 
+              key={volquetero.id}
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleViewVolquetero(volquetero.nombre)}
+            >
               <CardContent className="p-3">
-                <Link href={`/volqueteros/${encodeURIComponent(volquetero.nombre)}`}>
-                  <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors p-2 -m-2 rounded-md">
-                    <div className="flex items-center space-x-3 flex-1">
-                      <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Users className="h-3 w-3 text-primary" />
+                <div 
+                  className="flex items-center justify-between"
+                  onClick={(e) => e.stopPropagation()} // Prevenir navegación cuando se hace click en esta área
+                >
+                  <div className="flex items-center space-x-3 flex-1">
+                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <Users className="h-3 w-3 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <EditableTitle 
+                          id={volquetero.id} 
+                          currentName={volquetero.nombre} 
+                          type="volquetero" 
+                          className="text-base font-medium"
+                        />
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Balance</p>
+                          <p className={`text-sm font-semibold ${
+                            calcularBalanceDinamico(volquetero) > 0 
+                              ? 'text-green-600' 
+                              : calcularBalanceDinamico(volquetero) < 0 
+                              ? 'text-red-600' 
+                              : 'text-gray-600'
+                          }`}>
+                            {formatCurrency(calcularBalanceDinamico(volquetero).toString())}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <EditableTitle 
-                            id={volquetero.id} 
-                            currentName={volquetero.nombre} 
-                            type="volquetero" 
-                            className="text-base font-medium"
-                          />
-                          <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Balance</p>
-                            <p className={`text-sm font-semibold ${
-                              calcularBalanceDinamico(volquetero) > 0 
-                                ? 'text-green-600' 
-                                : calcularBalanceDinamico(volquetero) < 0 
-                                ? 'text-red-600' 
-                                : 'text-gray-600'
-                            }`}>
-                              {formatCurrency(calcularBalanceDinamico(volquetero).toString())}
-                            </p>
-                          </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <div className="flex flex-wrap gap-2">
+                          {volquetero.placas.map((placaInfo) => (
+                            <span 
+                              key={placaInfo.placa} 
+                              className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-xs"
+                            >
+                              <span className="font-medium">{placaInfo.placa}</span>
+                              <span className="text-muted-foreground ml-1">({placaInfo.viajesCount})</span>
+                            </span>
+                          ))}
                         </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <div className="flex flex-wrap gap-2">
-                            {volquetero.placas.map((placaInfo) => (
-                              <span 
-                                key={placaInfo.placa} 
-                                className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-xs"
-                              >
-                                <span className="font-medium">{placaInfo.placa}</span>
-                                <span className="text-muted-foreground ml-1">({placaInfo.viajesCount})</span>
-                              </span>
-                            ))}
-                          </div>
-                          <span className="text-xs text-muted-foreground font-medium ml-2">
-                            {volquetero.viajesCount} total
-                          </span>
-                        </div>
+                        <span className="text-xs text-muted-foreground font-medium ml-2">
+                          {volquetero.viajesCount} total
+                        </span>
                       </div>
                     </div>
                   </div>
-                </Link>
-                
+                </div>
               </CardContent>
             </Card>
           ))}

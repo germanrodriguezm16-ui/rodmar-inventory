@@ -387,7 +387,10 @@ export default function Compradores() {
               >
                 <CardContent className="p-4">
                   {/* Fila 1: Ícono + Nombre | Viajes | Botón eliminar */}
-                  <div className="flex items-center justify-between">
+                  <div 
+                    className="flex items-center justify-between"
+                    onClick={(e) => e.stopPropagation()} // Prevenir navegación cuando se hace click en esta área
+                  >
                     <div className="flex items-center space-x-3 min-w-0 flex-1">
                       <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                         <Users className="h-4 w-4 text-primary" />

@@ -240,9 +240,21 @@ export function EditableTitle({ id, currentName, type, className = "" }: Editabl
     );
   }
 
+  // Manejar doble click para activar edición
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevenir que active el click de la tarjeta
+    handleStartEdit();
+  };
+
   return (
     <div className={`flex items-center gap-2 group ${className}`} onClick={stopAllPropagation}>
-      <h1 className="text-xl font-bold">{displayName}</h1>
+      <h1 
+        className="text-xl font-bold cursor-text select-none" 
+        onDoubleClick={handleDoubleClick}
+        title="Doble click para editar"
+      >
+        {displayName}
+      </h1>
       <Button
         size="sm"
         variant="ghost"
