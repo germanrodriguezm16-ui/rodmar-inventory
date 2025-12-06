@@ -1237,6 +1237,9 @@ function CompradorTransaccionesTab({
   setShowEditTransaction: (show: boolean) => void;
   setShowDeleteTransaction: (show: boolean) => void;
 }) {
+  // Estado para búsqueda
+  const [searchTerm, setSearchTerm] = useState("");
+
   // Combinar transacciones reales con transacciones dinámicas de viajes
   const todasTransacciones = useMemo(() => {
     const transaccionesDinamicas = viajesCompletados
@@ -1316,13 +1319,26 @@ function CompradorTransaccionesTab({
       });
   }, [transacciones, viajesCompletados, compradorId, transaccionesTemporales]);
 
-  // Aplicar filtros de fecha usando comparación de strings
+  // Aplicar filtros de fecha y búsqueda usando comparación de strings
   const transaccionesFiltradas = useMemo(() => {
-    if (transaccionesFechaFilterType === "todos") {
-      return todasTransacciones;
+    let filtered = todasTransacciones;
+
+    // Filtro de búsqueda (concepto, valor)
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(transaccion => {
+        const concepto = (transaccion.concepto || '').toLowerCase();
+        const valor = transaccion.valor?.toString() || '';
+        return concepto.includes(searchLower) || valor.includes(searchLower);
+      });
     }
 
-    return todasTransacciones.filter(transaccion => {
+    // Filtro de fecha
+    if (transaccionesFechaFilterType === "todos") {
+      return filtered;
+    }
+
+    return filtered.filter(transaccion => {
       // Extraer fecha directamente del string para evitar conversiones UTC
       const fechaDirecta = typeof transaccion.fecha === 'string' && transaccion.fecha.includes('T') 
         ? transaccion.fecha.split('T')[0] 
@@ -1443,7 +1459,7 @@ function CompradorTransaccionesTab({
           return true;
       }
     });
-  }, [todasTransacciones, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd]);
+  }, [todasTransacciones, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd]);
 
   // Actualizar las transacciones filtradas en el componente padre
   useEffect(() => {
@@ -1550,143 +1566,109 @@ function CompradorTransaccionesTab({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Encabezado optimizado para móvil */}
-      <div className="space-y-2">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <h3 className="text-base sm:text-lg font-semibold">Transacciones</h3>
-            <div className="flex gap-2">
-              <Badge variant="outline" className="text-xs">{totales.manuales} abonos</Badge>
-              <Badge variant="outline" className="text-xs">{totales.viajes} viajes</Badge>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {/* Botón para mostrar elementos ocultos */}
-            {(() => {
-              // Calcular elementos ocultos usando todasTransaccionesIncOcultas y todosViajesIncOcultos
-              const transaccionesOcultas = todasTransaccionesIncOcultas?.filter(t => 
-                t.ocultaEnComprador && 
-                ((t.deQuienTipo === "comprador" && t.deQuienId === compradorId.toString()) ||
-                 (t.paraQuienTipo === "comprador" && t.paraQuienId === compradorId.toString()))
-              ).length || 0;
-              
-              // Usar todosViajesIncOcultos para contar viajes ocultos (similar a minas)
-              const viajesOcultos = todosViajesIncOcultos?.filter((v: ViajeWithDetails) => v.oculta && v.compradorId === compradorId).length || 0;
-              
-              const totalOcultos = transaccionesOcultas + viajesOcultos;
-              
-              return totalOcultos > 0 ? (
-                <Button
-                  onClick={() => showAllHiddenMutation.mutate()}
-                  variant="outline"
-                  disabled={showAllHiddenMutation.isPending}
-                  size="sm"
-                  className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200 h-8 px-3"
-                  title={`Mostrar ${totalOcultos} elementos ocultos`}
-                >
-                  <EyeOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                  <span className="hidden sm:inline">Mostrar {totalOcultos}</span>
-                  <span className="sm:hidden">{totalOcultos}</span>
-                </Button>
-              ) : null;
-            })()}
-            
-            <Button
-              onClick={() => {
-                if (transaccionesFiltradas && comprador && !isLoadingComprador) {
-                  const preview = previewCompradorTransactionHistory(
-                    transaccionesFiltradas,
-                    comprador.nombre
-                  );
-                  setExcelPreviewData(preview.preview);
-                  setShowExcelPreview(true);
-                }
-              }}
-              variant="outline"
-              disabled={!comprador || isLoadingComprador}
-              size="sm"
-              className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 h-8 px-3"
-              title={`Exportar a Excel (${transaccionesFiltradas.length} transacciones)`}
-            >
-              <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Excel</span>
-            </Button>
-            <Button
-              onClick={() => {
-                console.log('🚨 BOTÓN IMAGEN CLICKEADO - Total transacciones:', transaccionesFiltradas.length);
-                console.log('🚨 ID PRIMERA TRANSACCION EN PESTAÑA:', transaccionesFiltradas[0]?.id);
-                console.log('🚨 ID ÚLTIMA TRANSACCION EN PESTAÑA:', transaccionesFiltradas[transaccionesFiltradas.length - 1]?.id);
-                setShowTransaccionesImagePreview(true);
-              }}
-              variant="outline"
-              size="sm"
-              className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 h-8 px-3"
-              title={`Descargar imagen (máx. 50 de ${transaccionesFiltradas.length} transacciones)`}
-            >
-              <Eye className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Imagen</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Filtros de fecha para transacciones */}
-      <Card className="p-3">
+    <div className="space-y-3">
+      {/* Encabezado compacto */}
+      <Card className="p-2">
         <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <label className="text-xs text-gray-600 mb-1 block">Filtrar Transacciones por Fecha</label>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-              {/* Balance de transacciones filtradas - Layout móvil optimizado */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs">
-                <div className="flex items-center justify-between sm:justify-start sm:gap-1">
-                  <span className="text-muted-foreground">Positivos:</span>
-                  <span className="text-green-600 font-semibold">+{formatCurrency(totales.totalPositivos.toString())}</span>
-                </div>
-                <div className="flex items-center justify-between sm:justify-start sm:gap-1">
-                  <span className="text-muted-foreground">Negativos:</span>
-                  <span className="text-red-600 font-semibold">-{formatCurrency(totales.totalNegativos.toString())}</span>
-                </div>
-                <div className="flex items-center justify-between sm:justify-start sm:gap-1 pt-1 sm:pt-0 border-t sm:border-t-0 sm:border-l sm:pl-2">
-                  <span className="text-muted-foreground font-medium">Balance:</span>
-                  <span className={`font-bold ${totales.totalGeneral >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    {formatCurrency(totales.totalGeneral.toString())}
-                  </span>
-                </div>
-              </div>
-              {transaccionesFechaFilterType !== "todos" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 px-2 text-xs self-start sm:self-auto"
-                  onClick={() => {
-                    setTransaccionesFechaFilterType("todos");
-                    setTransaccionesFechaFilterValue("");
-                    setTransaccionesFechaFilterValueEnd("");
-                  }}
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Limpiar
-                </Button>
-              )}
+          {/* Primera fila: Título, badges y botones de acción */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm sm:text-base font-semibold">Transacciones</h3>
+              <Badge variant="outline" className="text-xs h-5">{totales.manuales} abonos</Badge>
+              <Badge variant="outline" className="text-xs h-5">{totales.viajes} viajes</Badge>
+            </div>
+            <div className="flex gap-1.5 flex-wrap">
+              {/* Botón para mostrar elementos ocultos */}
+              {(() => {
+                const transaccionesOcultas = todasTransaccionesIncOcultas?.filter(t => 
+                  t.ocultaEnComprador && 
+                  ((t.deQuienTipo === "comprador" && t.deQuienId === compradorId.toString()) ||
+                   (t.paraQuienTipo === "comprador" && t.paraQuienId === compradorId.toString()))
+                ).length || 0;
+                const viajesOcultos = todosViajesIncOcultos?.filter((v: ViajeWithDetails) => v.oculta && v.compradorId === compradorId).length || 0;
+                const totalOcultos = transaccionesOcultas + viajesOcultos;
+                
+                return totalOcultos > 0 ? (
+                  <Button
+                    onClick={() => showAllHiddenMutation.mutate()}
+                    variant="outline"
+                    disabled={showAllHiddenMutation.isPending}
+                    size="sm"
+                    className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200 h-7 px-2 text-xs"
+                    title={`Mostrar ${totalOcultos} elementos ocultos`}
+                  >
+                    <EyeOff className="w-3 h-3 mr-1" />
+                    <span className="hidden sm:inline">{totalOcultos}</span>
+                  </Button>
+                ) : null;
+              })()}
+              
+              <Button
+                onClick={() => {
+                  if (transaccionesFiltradas && comprador && !isLoadingComprador) {
+                    const preview = previewCompradorTransactionHistory(
+                      transaccionesFiltradas,
+                      comprador.nombre
+                    );
+                    setExcelPreviewData(preview.preview);
+                    setShowExcelPreview(true);
+                  }
+                }}
+                variant="outline"
+                disabled={!comprador || isLoadingComprador}
+                size="sm"
+                className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 h-7 px-2 text-xs"
+                title={`Exportar a Excel (${transaccionesFiltradas.length} transacciones)`}
+              >
+                <Download className="w-3 h-3 mr-1" />
+                <span className="hidden sm:inline">Excel</span>
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowTransaccionesImagePreview(true);
+                }}
+                variant="outline"
+                size="sm"
+                className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 h-7 px-2 text-xs"
+                title={`Descargar imagen (máx. 50 de ${transaccionesFiltradas.length} transacciones)`}
+              >
+                <Eye className="w-3 h-3 mr-1" />
+                <span className="hidden sm:inline">Imagen</span>
+              </Button>
             </div>
           </div>
-          <div className="flex gap-2">
+
+          {/* Segunda fila: Búsqueda y filtros */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            {/* Campo de búsqueda */}
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por concepto o valor..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-7 pl-7 text-xs"
+              />
+            </div>
+            
+            {/* Botón nueva temporal */}
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
-                console.log('🧪 Abriendo modal de transacción temporal para comprador', compradorId);
                 setShowTemporalTransaction(true);
               }}
-              className="h-8 px-3 text-xs bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-700"
+              className="h-7 px-2 text-xs bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-700"
             >
               <Calculator className="w-3 h-3 mr-1" />
-              <span className="hidden sm:inline">Nueva Temporal</span>
+              <span className="hidden sm:inline">Temporal</span>
               <span className="sm:hidden">Temp</span>
             </Button>
+
+            {/* Filtro de fecha */}
             <Select value={transaccionesFechaFilterType} onValueChange={setTransaccionesFechaFilterType}>
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className="h-7 text-xs w-[140px]">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
@@ -1706,12 +1688,13 @@ function CompradorTransaccionesTab({
               </SelectContent>
             </Select>
 
+            {/* Inputs de fecha según el tipo de filtro */}
             {(transaccionesFechaFilterType === "exactamente" || 
               transaccionesFechaFilterType === "despues-de" || 
               transaccionesFechaFilterType === "antes-de") && (
               <Input
                 type="date"
-                className="h-8 text-xs"
+                className="h-7 text-xs w-[140px]"
                 value={transaccionesFechaFilterValue}
                 onChange={(e) => setTransaccionesFechaFilterValue(e.target.value)}
               />
@@ -1722,19 +1705,57 @@ function CompradorTransaccionesTab({
                 <Input
                   type="date"
                   placeholder="Desde"
-                  className="h-8 text-xs"
+                  className="h-7 text-xs w-[140px]"
                   value={transaccionesFechaFilterValue}
                   onChange={(e) => setTransaccionesFechaFilterValue(e.target.value)}
                 />
                 <Input
                   type="date"
                   placeholder="Hasta"
-                  className="h-8 text-xs"
+                  className="h-7 text-xs w-[140px]"
                   value={transaccionesFechaFilterValueEnd}
                   onChange={(e) => setTransaccionesFechaFilterValueEnd(e.target.value)}
                 />
               </>
             )}
+
+            {/* Botón limpiar filtros */}
+            {(transaccionesFechaFilterType !== "todos" || searchTerm.trim()) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => {
+                  setTransaccionesFechaFilterType("todos");
+                  setTransaccionesFechaFilterValue("");
+                  setTransaccionesFechaFilterValueEnd("");
+                  setSearchTerm("");
+                }}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Limpiar
+              </Button>
+            )}
+          </div>
+
+          {/* Tercera fila: Resumen de balance compacto */}
+          <div className="flex items-center justify-between pt-1 border-t text-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground">Positivos:</span>
+                <span className="text-green-600 font-semibold">+{formatCurrency(totales.totalPositivos.toString())}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground">Negativos:</span>
+                <span className="text-red-600 font-semibold">-{formatCurrency(totales.totalNegativos.toString())}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground font-medium">Balance:</span>
+              <span className={`font-bold ${totales.totalGeneral >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {formatCurrency(totales.totalGeneral.toString())}
+              </span>
+            </div>
           </div>
         </div>
       </Card>
