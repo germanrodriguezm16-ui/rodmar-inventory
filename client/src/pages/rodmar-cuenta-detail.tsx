@@ -379,13 +379,20 @@ export default function RodMarCuentaDetail() {
       });
     }
 
-    // Filtro de fecha
+    // Filtro de fecha - Comparar solo la parte de fecha (sin hora) para evitar problemas de zona horaria
     if (dateRange) {
       filtered = filtered.filter(t => {
-        const fechaTrans = new Date(t.fecha);
-        const fechaInicio = new Date(dateRange.start);
-        const fechaFin = new Date(dateRange.end);
-        return fechaTrans >= fechaInicio && fechaTrans <= fechaFin;
+        // Extraer solo la parte de fecha como string (YYYY-MM-DD) de la transacción
+        const fechaTransStr = typeof t.fecha === 'string' 
+          ? t.fecha.split('T')[0]  // Si es string ISO, tomar solo la parte de fecha
+          : new Date(t.fecha).toISOString().split('T')[0]; // Si es Date, convertir a ISO y tomar solo fecha
+        
+        // dateRange.start y dateRange.end ya son strings en formato YYYY-MM-DD
+        const fechaInicio = dateRange.start;
+        const fechaFin = dateRange.end;
+        
+        // Comparar strings directamente (YYYY-MM-DD) para evitar problemas de zona horaria
+        return fechaTransStr >= fechaInicio && fechaTransStr <= fechaFin;
       });
     }
 
