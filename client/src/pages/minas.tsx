@@ -405,10 +405,7 @@ export default function Minas() {
             >
               <CardContent className="p-4">
                 {/* Fila 1: Ícono + Nombre | Viajes | Botón eliminar */}
-                <div 
-                  className="flex items-center justify-between"
-                  onClick={(e) => e.stopPropagation()} // Prevenir navegación cuando se hace click en esta área
-                >
+                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
                     <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                       <Mountain className="h-4 w-4 text-primary" />
@@ -422,7 +419,10 @@ export default function Minas() {
                       />
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 ml-2">
+                  <div 
+                    className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 ml-2"
+                    onClick={(e) => e.stopPropagation()} // Solo prevenir navegación en el área de viajes/botón
+                  >
                     <div className="text-right min-w-[50px]">
                       <p className="text-xs sm:text-sm text-muted-foreground">Viajes</p>
                       <p className="font-semibold text-blue-600 text-sm sm:text-base">

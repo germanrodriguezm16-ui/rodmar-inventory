@@ -306,51 +306,49 @@ export default function Volqueteros() {
               onClick={() => handleViewVolquetero(volquetero.nombre)}
             >
               <CardContent className="p-3">
-                <div 
-                  className="flex items-center justify-between"
-                  onClick={(e) => e.stopPropagation()} // Prevenir navegación cuando se hace click en esta área
-                >
-                  <div className="flex items-center space-x-3 flex-1">
-                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Users className="h-3 w-3 text-primary" />
+                <div className="flex items-center space-x-3 flex-1">
+                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Users className="h-3 w-3 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <EditableTitle 
+                        id={volquetero.id} 
+                        currentName={volquetero.nombre} 
+                        type="volquetero" 
+                        className="text-base font-medium"
+                      />
+                      <div 
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()} // Solo prevenir navegación en el área de balance
+                      >
+                        <p className="text-xs text-muted-foreground">Balance</p>
+                        <p className={`text-sm font-semibold ${
+                          calcularBalanceDinamico(volquetero) > 0 
+                            ? 'text-green-600' 
+                            : calcularBalanceDinamico(volquetero) < 0 
+                            ? 'text-red-600' 
+                            : 'text-gray-600'
+                        }`}>
+                          {formatCurrency(calcularBalanceDinamico(volquetero).toString())}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <EditableTitle 
-                          id={volquetero.id} 
-                          currentName={volquetero.nombre} 
-                          type="volquetero" 
-                          className="text-base font-medium"
-                        />
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Balance</p>
-                          <p className={`text-sm font-semibold ${
-                            calcularBalanceDinamico(volquetero) > 0 
-                              ? 'text-green-600' 
-                              : calcularBalanceDinamico(volquetero) < 0 
-                              ? 'text-red-600' 
-                              : 'text-gray-600'
-                          }`}>
-                            {formatCurrency(calcularBalanceDinamico(volquetero).toString())}
-                          </p>
-                        </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="flex flex-wrap gap-2">
+                        {volquetero.placas.map((placaInfo) => (
+                          <span 
+                            key={placaInfo.placa} 
+                            className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-xs"
+                          >
+                            <span className="font-medium">{placaInfo.placa}</span>
+                            <span className="text-muted-foreground ml-1">({placaInfo.viajesCount})</span>
+                          </span>
+                        ))}
                       </div>
-                      <div className="flex items-center justify-between mt-1">
-                        <div className="flex flex-wrap gap-2">
-                          {volquetero.placas.map((placaInfo) => (
-                            <span 
-                              key={placaInfo.placa} 
-                              className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-xs"
-                            >
-                              <span className="font-medium">{placaInfo.placa}</span>
-                              <span className="text-muted-foreground ml-1">({placaInfo.viajesCount})</span>
-                            </span>
-                          ))}
-                        </div>
-                        <span className="text-xs text-muted-foreground font-medium ml-2">
-                          {volquetero.viajesCount} total
-                        </span>
-                      </div>
+                      <span className="text-xs text-muted-foreground font-medium ml-2">
+                        {volquetero.viajesCount} total
+                      </span>
                     </div>
                   </div>
                 </div>
