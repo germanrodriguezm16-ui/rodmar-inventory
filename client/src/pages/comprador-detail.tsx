@@ -1638,7 +1638,7 @@ function CompradorTransaccionesTab({
             </div>
           </div>
 
-          {/* Segunda fila: Búsqueda, botón Temporal y filtro de fecha */}
+          {/* Segunda fila: Búsqueda, botón Temporal, filtro de fecha y botón Limpiar */}
           <div className="flex flex-col sm:flex-row gap-2">
             {/* Campo de búsqueda */}
             <div className="relative flex-1">
@@ -1652,91 +1652,95 @@ function CompradorTransaccionesTab({
               />
             </div>
             
-            {/* Botón nueva temporal - en la misma fila que filtros */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setShowTemporalTransaction(true);
-              }}
-              className="h-7 px-2 text-xs bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-700"
-            >
-              <Calculator className="w-3 h-3 mr-1" />
-              <span className="hidden sm:inline">Temporal</span>
-              <span className="sm:hidden">Temp</span>
-            </Button>
-
-            {/* Filtro de fecha */}
-            <Select value={transaccionesFechaFilterType} onValueChange={setTransaccionesFechaFilterType}>
-              <SelectTrigger className="h-7 text-xs w-[140px]">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="exactamente">Exactamente</SelectItem>
-                <SelectItem value="entre">Entre</SelectItem>
-                <SelectItem value="despues-de">Después de</SelectItem>
-                <SelectItem value="antes-de">Antes de</SelectItem>
-                <SelectItem value="hoy">Hoy</SelectItem>
-                <SelectItem value="ayer">Ayer</SelectItem>
-                <SelectItem value="esta-semana">Esta semana</SelectItem>
-                <SelectItem value="semana-pasada">Semana pasada</SelectItem>
-                <SelectItem value="este-mes">Este mes</SelectItem>
-                <SelectItem value="mes-pasado">Mes pasado</SelectItem>
-                <SelectItem value="este-año">Este año</SelectItem>
-                <SelectItem value="año-pasado">Año pasado</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Botón limpiar filtros */}
-            {(transaccionesFechaFilterType !== "todos" || searchTerm.trim()) && (
+            {/* Botón Temporal y Filtro de fecha en la misma fila */}
+            <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 px-2 text-xs"
                 onClick={() => {
-                  setTransaccionesFechaFilterType("todos");
-                  setTransaccionesFechaFilterValue("");
-                  setTransaccionesFechaFilterValueEnd("");
-                  setSearchTerm("");
+                  setShowTemporalTransaction(true);
                 }}
+                className="h-7 px-2 text-xs bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-700"
               >
-                <X className="h-3 w-3 mr-1" />
-                Limpiar
+                <Calculator className="w-3 h-3 mr-1" />
+                <span className="hidden sm:inline">Temporal</span>
+                <span className="sm:hidden">Temp</span>
               </Button>
-            )}
+
+              <Select value={transaccionesFechaFilterType} onValueChange={setTransaccionesFechaFilterType}>
+                <SelectTrigger className="h-7 text-xs w-[140px]">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="exactamente">Exactamente</SelectItem>
+                  <SelectItem value="entre">Entre</SelectItem>
+                  <SelectItem value="despues-de">Después de</SelectItem>
+                  <SelectItem value="antes-de">Antes de</SelectItem>
+                  <SelectItem value="hoy">Hoy</SelectItem>
+                  <SelectItem value="ayer">Ayer</SelectItem>
+                  <SelectItem value="esta-semana">Esta semana</SelectItem>
+                  <SelectItem value="semana-pasada">Semana pasada</SelectItem>
+                  <SelectItem value="este-mes">Este mes</SelectItem>
+                  <SelectItem value="mes-pasado">Mes pasado</SelectItem>
+                  <SelectItem value="este-año">Este año</SelectItem>
+                  <SelectItem value="año-pasado">Año pasado</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Botón limpiar filtros - en la misma fila */}
+              {(transaccionesFechaFilterType !== "todos" || searchTerm.trim()) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => {
+                    setTransaccionesFechaFilterType("todos");
+                    setTransaccionesFechaFilterValue("");
+                    setTransaccionesFechaFilterValueEnd("");
+                    setSearchTerm("");
+                  }}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Limpiar
+                </Button>
+              )}
+            </div>
           </div>
 
-          {/* Tercera fila: Inputs de fecha (debajo cuando se necesita seleccionar fecha) */}
-          {((transaccionesFechaFilterType === "exactamente" || 
-              transaccionesFechaFilterType === "despues-de" || 
-              transaccionesFechaFilterType === "antes-de") && (
-              <div className="flex gap-2">
-                <Input
-                  type="date"
-                  className="h-7 text-xs w-full sm:w-[200px]"
-                  value={transaccionesFechaFilterValue}
-                  onChange={(e) => setTransaccionesFechaFilterValue(e.target.value)}
-                />
-              </div>
-            )) || (transaccionesFechaFilterType === "entre" && (
-              <div className="flex gap-2">
-                <Input
-                  type="date"
-                  placeholder="Desde"
-                  className="h-7 text-xs flex-1"
-                  value={transaccionesFechaFilterValue}
-                  onChange={(e) => setTransaccionesFechaFilterValue(e.target.value)}
-                />
-                <Input
-                  type="date"
-                  placeholder="Hasta"
-                  className="h-7 text-xs flex-1"
-                  value={transaccionesFechaFilterValueEnd}
-                  onChange={(e) => setTransaccionesFechaFilterValueEnd(e.target.value)}
-                />
-              </div>
-            ))}
+          {/* Tercera fila: Inputs de fecha (solo cuando se necesita seleccionar fecha) */}
+          {(transaccionesFechaFilterType === "exactamente" || 
+            transaccionesFechaFilterType === "despues-de" || 
+            transaccionesFechaFilterType === "antes-de") && (
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                className="h-7 text-xs w-full sm:w-[200px]"
+                value={transaccionesFechaFilterValue}
+                onChange={(e) => setTransaccionesFechaFilterValue(e.target.value)}
+              />
+            </div>
+          )}
+
+          {/* Fila para filtro "entre" - fechas lado a lado */}
+          {transaccionesFechaFilterType === "entre" && (
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                placeholder="Desde"
+                className="h-7 text-xs flex-1"
+                value={transaccionesFechaFilterValue}
+                onChange={(e) => setTransaccionesFechaFilterValue(e.target.value)}
+              />
+              <Input
+                type="date"
+                placeholder="Hasta"
+                className="h-7 text-xs flex-1"
+                value={transaccionesFechaFilterValueEnd}
+                onChange={(e) => setTransaccionesFechaFilterValueEnd(e.target.value)}
+              />
+            </div>
+          )}
 
           {/* Cuarta fila: Tarjetas de balance compactas */}
           <div className="grid grid-cols-3 gap-2 pt-1 border-t">
