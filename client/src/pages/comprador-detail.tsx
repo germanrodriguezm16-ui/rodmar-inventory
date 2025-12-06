@@ -636,43 +636,39 @@ export default function CompradorDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-16">
-      <div className="p-2 sm:p-4">
-        {/* Header */}
-        <div className="flex items-center mb-3">
-          <Button variant="ghost" size="sm" onClick={() => setLocation("/compradores")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Compradores
-          </Button>
-        </div>
-
-        {/* Comprador Info Card */}
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl">{comprador.nombre}</CardTitle>
-                  <p className="text-sm text-muted-foreground">ID: {comprador.id}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Saldo</p>
-                <p className={`text-2xl font-bold ${
-                  balanceNetoReal >= 0 
-                    ? "text-green-600 dark:text-green-400" 
-                    : "text-red-600 dark:text-red-400"
-                }`}>
-                  {formatCurrency(balanceNetoReal)}
-                </p>
+    <div className="min-h-screen bg-gray-50 pb-16">
+      {/* Header compacto */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/compradores")}
+                className="h-7 px-2"
+              >
+                <ArrowLeft className="w-3 h-3 mr-1" />
+                <span className="hidden sm:inline">Volver al listado</span>
+              </Button>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">{comprador.nombre}</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">ID: {comprador.id}</p>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="viajes" className="w-full">
+            <div className="text-right">
+              <p className="text-xs text-gray-500">Balance</p>
+              <p className={`text-sm sm:text-lg font-bold ${balanceNetoReal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {balanceNetoReal >= 0 ? '+' : ''}{formatCurrency(balanceNetoReal)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenido principal compacto */}
+      <div className="max-w-7xl mx-auto px-4 py-3">
+        <Tabs defaultValue="viajes" className="w-full">
               <TabsList className="rodmar-tabs grid w-full grid-cols-3 gap-1 p-1">
                 <TabsTrigger 
                   value="viajes" 
