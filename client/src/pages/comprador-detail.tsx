@@ -1638,7 +1638,7 @@ function CompradorTransaccionesTab({
             </div>
           </div>
 
-          {/* Segunda fila: Búsqueda y filtros */}
+          {/* Segunda fila: Búsqueda, botón Temporal y filtro de fecha */}
           <div className="flex flex-col sm:flex-row gap-2">
             {/* Campo de búsqueda */}
             <div className="relative flex-1">
@@ -1652,7 +1652,7 @@ function CompradorTransaccionesTab({
               />
             </div>
             
-            {/* Botón nueva temporal */}
+            {/* Botón nueva temporal - en la misma fila que filtros */}
             <Button
               variant="outline"
               size="sm"
@@ -1688,37 +1688,6 @@ function CompradorTransaccionesTab({
               </SelectContent>
             </Select>
 
-            {/* Inputs de fecha según el tipo de filtro */}
-            {(transaccionesFechaFilterType === "exactamente" || 
-              transaccionesFechaFilterType === "despues-de" || 
-              transaccionesFechaFilterType === "antes-de") && (
-              <Input
-                type="date"
-                className="h-7 text-xs w-[140px]"
-                value={transaccionesFechaFilterValue}
-                onChange={(e) => setTransaccionesFechaFilterValue(e.target.value)}
-              />
-            )}
-
-            {transaccionesFechaFilterType === "entre" && (
-              <>
-                <Input
-                  type="date"
-                  placeholder="Desde"
-                  className="h-7 text-xs w-[140px]"
-                  value={transaccionesFechaFilterValue}
-                  onChange={(e) => setTransaccionesFechaFilterValue(e.target.value)}
-                />
-                <Input
-                  type="date"
-                  placeholder="Hasta"
-                  className="h-7 text-xs w-[140px]"
-                  value={transaccionesFechaFilterValueEnd}
-                  onChange={(e) => setTransaccionesFechaFilterValueEnd(e.target.value)}
-                />
-              </>
-            )}
-
             {/* Botón limpiar filtros */}
             {(transaccionesFechaFilterType !== "todos" || searchTerm.trim()) && (
               <Button
@@ -1738,24 +1707,70 @@ function CompradorTransaccionesTab({
             )}
           </div>
 
-          {/* Tercera fila: Resumen de balance compacto */}
-          <div className="flex items-center justify-between pt-1 border-t text-xs">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground">Positivos:</span>
-                <span className="text-green-600 font-semibold">+{formatCurrency(totales.totalPositivos.toString())}</span>
+          {/* Tercera fila: Inputs de fecha (debajo cuando se necesita seleccionar fecha) */}
+          {((transaccionesFechaFilterType === "exactamente" || 
+              transaccionesFechaFilterType === "despues-de" || 
+              transaccionesFechaFilterType === "antes-de") && (
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  className="h-7 text-xs w-full sm:w-[200px]"
+                  value={transaccionesFechaFilterValue}
+                  onChange={(e) => setTransaccionesFechaFilterValue(e.target.value)}
+                />
               </div>
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground">Negativos:</span>
-                <span className="text-red-600 font-semibold">-{formatCurrency(totales.totalNegativos.toString())}</span>
+            )) || (transaccionesFechaFilterType === "entre" && (
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  placeholder="Desde"
+                  className="h-7 text-xs flex-1"
+                  value={transaccionesFechaFilterValue}
+                  onChange={(e) => setTransaccionesFechaFilterValue(e.target.value)}
+                />
+                <Input
+                  type="date"
+                  placeholder="Hasta"
+                  className="h-7 text-xs flex-1"
+                  value={transaccionesFechaFilterValueEnd}
+                  onChange={(e) => setTransaccionesFechaFilterValueEnd(e.target.value)}
+                />
               </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-muted-foreground font-medium">Balance:</span>
-              <span className={`font-bold ${totales.totalGeneral >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {formatCurrency(totales.totalGeneral.toString())}
-              </span>
-            </div>
+            ))}
+
+          {/* Cuarta fila: Tarjetas de balance compactas */}
+          <div className="grid grid-cols-3 gap-2 pt-1 border-t">
+            {/* Tarjeta Positivos */}
+            <Card className="p-2 bg-green-50 border-green-200">
+              <div className="flex flex-col">
+                <span className="text-xs text-green-700 font-medium mb-1">Positivos</span>
+                <span className="text-sm sm:text-base text-green-600 font-bold">
+                  +{formatCurrency(totales.totalPositivos.toString())}
+                </span>
+              </div>
+            </Card>
+
+            {/* Tarjeta Negativos */}
+            <Card className="p-2 bg-red-50 border-red-200">
+              <div className="flex flex-col">
+                <span className="text-xs text-red-700 font-medium mb-1">Negativos</span>
+                <span className="text-sm sm:text-base text-red-600 font-bold">
+                  -{formatCurrency(totales.totalNegativos.toString())}
+                </span>
+              </div>
+            </Card>
+
+            {/* Tarjeta Balance */}
+            <Card className={`p-2 border-2 ${totales.totalGeneral >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
+              <div className="flex flex-col">
+                <span className={`text-xs font-medium mb-1 ${totales.totalGeneral >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                  Balance
+                </span>
+                <span className={`text-sm sm:text-base font-bold ${totales.totalGeneral >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(totales.totalGeneral.toString())}
+                </span>
+              </div>
+            </Card>
           </div>
         </div>
       </Card>
