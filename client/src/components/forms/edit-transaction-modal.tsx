@@ -389,18 +389,22 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         (updatedTransaction.deQuienTipo === 'rodmar' && rodmarAccountIds.includes(updatedTransaction.deQuienId || '')) ||
         (updatedTransaction.paraQuienTipo === 'rodmar' && rodmarAccountIds.includes(updatedTransaction.paraQuienId || ''));
       
-      // Detectar si cambió de una cuenta RodMar a otra (para actualizar ambas)
+      // Detectar si cambió de una cuenta RodMar a otra o se le quitó a una cuenta RodMar (para actualizar ambas)
       const originalDeQuienRodmar = originalTransaction?.deQuienTipo === 'rodmar' && rodmarAccountIds.includes(originalTransaction?.deQuienId || '');
       const originalParaQuienRodmar = originalTransaction?.paraQuienTipo === 'rodmar' && rodmarAccountIds.includes(originalTransaction?.paraQuienId || '');
       const updatedDeQuienRodmar = updatedTransaction.deQuienTipo === 'rodmar' && rodmarAccountIds.includes(updatedTransaction.deQuienId || '');
       const updatedParaQuienRodmar = updatedTransaction.paraQuienTipo === 'rodmar' && rodmarAccountIds.includes(updatedTransaction.paraQuienId || '');
       
-      const changedFromRodmarAccount = (originalDeQuienRodmar && !updatedDeQuienRodmar) || 
-                                       (originalParaQuienRodmar && !updatedParaQuienRodmar) ||
-                                       (originalDeQuienRodmar && updatedDeQuienRodmar && originalTransaction?.deQuienId !== updatedTransaction.deQuienId) ||
-                                       (originalParaQuienRodmar && updatedParaQuienRodmar && originalTransaction?.paraQuienId !== updatedTransaction.paraQuienId);
+      // Detectar si se le quitó la transacción a una cuenta RodMar (origen o destino)
+      const removedFromRodmarAccount = (originalDeQuienRodmar && !updatedDeQuienRodmar) || 
+                                       (originalParaQuienRodmar && !updatedParaQuienRodmar);
       
-      if (hasRodmarAccount || changedFromRodmarAccount) {
+      // Detectar si cambió de una cuenta RodMar a otra cuenta RodMar
+      const changedBetweenRodmarAccounts = (originalDeQuienRodmar && updatedDeQuienRodmar && originalTransaction?.deQuienId !== updatedTransaction.deQuienId) ||
+                                           (originalParaQuienRodmar && updatedParaQuienRodmar && originalTransaction?.paraQuienId !== updatedTransaction.paraQuienId);
+      
+      // Si se quitó de una cuenta RodMar o cambió entre cuentas RodMar, debemos actualizar
+      if (hasRodmarAccount || removedFromRodmarAccount || changedBetweenRodmarAccounts) {
         affectedEntityTypes.add('rodmar-cuenta');
       }
       
