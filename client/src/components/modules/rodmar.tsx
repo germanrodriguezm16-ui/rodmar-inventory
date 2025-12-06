@@ -799,6 +799,59 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
 
+  // Función para obtener rangos de fecha (debe estar antes de su uso en useMemo)
+  const getDateRange = useCallback((type: DateFilterType, value?: string, valueEnd?: string) => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    switch (type) {
+      case "hoy":
+        return { start: todayStr, end: todayStr };
+      case "ayer":
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        return { start: yesterdayStr, end: yesterdayStr };
+      case "esta-semana":
+        const startOfWeek = new Date(today);
+        const day = startOfWeek.getDay();
+        const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+        startOfWeek.setDate(diff);
+        return { start: startOfWeek.toISOString().split('T')[0], end: todayStr };
+      case "semana-pasada":
+        const lastWeekEnd = new Date(today);
+        lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay());
+        lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
+        const lastWeekStart = new Date(lastWeekEnd);
+        lastWeekStart.setDate(lastWeekStart.getDate() - 6);
+        return { start: lastWeekStart.toISOString().split('T')[0], end: lastWeekEnd.toISOString().split('T')[0] };
+      case "este-mes":
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        return { start: startOfMonth.toISOString().split('T')[0], end: todayStr };
+      case "mes-pasado":
+        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+        return { start: lastMonthStart.toISOString().split('T')[0], end: lastMonthEnd.toISOString().split('T')[0] };
+      case "este-año":
+        const startOfYear = new Date(today.getFullYear(), 0, 1);
+        return { start: startOfYear.toISOString().split('T')[0], end: todayStr };
+      case "año-pasado":
+        const lastYearStart = new Date(today.getFullYear() - 1, 0, 1);
+        const lastYearEnd = new Date(today.getFullYear() - 1, 11, 31);
+        return { start: lastYearStart.toISOString().split('T')[0], end: lastYearEnd.toISOString().split('T')[0] };
+      case "exactamente":
+        return value ? { start: value, end: value } : null;
+      case "entre":
+        return value && valueEnd ? { start: value, end: valueEnd } : null;
+      case "despues-de":
+        return value ? { start: value, end: "9999-12-31" } : null;
+      case "antes-de":
+        return value ? { start: "1900-01-01", end: value } : null;
+      default:
+        return null;
+    }
+  }, []);
+
   // Calcular fechaDesde y fechaHasta para filtrado client-side
   const dateRange = useMemo(() => {
     if (fechaFilterType === "exactamente" && fechaFilterValue) {
@@ -812,6 +865,11 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
     } else if (fechaFilterType !== "todos") {
       const range = getDateRange(fechaFilterType);
       if (range) {
+        // Si range ya devuelve strings, usarlos directamente
+        if (typeof range.start === 'string' && typeof range.end === 'string') {
+          return range;
+        }
+        // Si devuelve Date objects, formatearlos
         const formatDate = (date: Date): string => {
           return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         };
@@ -822,7 +880,7 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
       }
     }
     return null;
-  }, [fechaFilterType, fechaFilterValue, fechaFilterValueEnd]);
+  }, [fechaFilterType, fechaFilterValue, fechaFilterValueEnd, getDateRange]);
 
   // Obtener transacciones de Postobón con paginación del servidor (sin filtros)
   const { 
@@ -976,59 +1034,6 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
       }, 100);
     }
   }, [pagination, currentPage, pageSize, filterType, queryClient, searchTerm, fechaFilterType]);
-
-  // Función para obtener rangos de fecha (idéntica a Minas)
-  const getDateRange = (type: DateFilterType, value?: string, valueEnd?: string) => {
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    
-    switch (type) {
-      case "hoy":
-        return { start: todayStr, end: todayStr };
-      case "ayer":
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-        return { start: yesterdayStr, end: yesterdayStr };
-      case "esta-semana":
-        const startOfWeek = new Date(today);
-        const day = startOfWeek.getDay();
-        const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
-        startOfWeek.setDate(diff);
-        return { start: startOfWeek.toISOString().split('T')[0], end: todayStr };
-      case "semana-pasada":
-        const lastWeekEnd = new Date(today);
-        lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay());
-        lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
-        const lastWeekStart = new Date(lastWeekEnd);
-        lastWeekStart.setDate(lastWeekStart.getDate() - 6);
-        return { start: lastWeekStart.toISOString().split('T')[0], end: lastWeekEnd.toISOString().split('T')[0] };
-      case "este-mes":
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        return { start: startOfMonth.toISOString().split('T')[0], end: todayStr };
-      case "mes-pasado":
-        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-        return { start: lastMonthStart.toISOString().split('T')[0], end: lastMonthEnd.toISOString().split('T')[0] };
-      case "este-año":
-        const startOfYear = new Date(today.getFullYear(), 0, 1);
-        return { start: startOfYear.toISOString().split('T')[0], end: todayStr };
-      case "año-pasado":
-        const lastYearStart = new Date(today.getFullYear() - 1, 0, 1);
-        const lastYearEnd = new Date(today.getFullYear() - 1, 11, 31);
-        return { start: lastYearStart.toISOString().split('T')[0], end: lastYearEnd.toISOString().split('T')[0] };
-      case "exactamente":
-        return value ? { start: value, end: value } : null;
-      case "entre":
-        return value && valueEnd ? { start: value, end: valueEnd } : null;
-      case "despues-de":
-        return value ? { start: value, end: "9999-12-31" } : null;
-      case "antes-de":
-        return value ? { start: "1900-01-01", end: value } : null;
-      default:
-        return null;
-    }
-  };
 
   // Función para manejar envío de transacción temporal (idéntica a LCDM)
   const handleTemporalSubmit = (formData: any) => {
@@ -1788,20 +1793,55 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
 
-  // Helper para convertir getDateRange a formato string ISO
-  const getDateRangeString = (filterType: DateFilterType): { start: string; end: string } | null => {
-    const dateRange = getDateRange(filterType);
-    if (!dateRange) return null;
+  // Función para obtener rangos de fecha (debe estar antes de su uso en useMemo)
+  const getDateRange = useCallback((filterType: DateFilterType) => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
     
-    const formatDate = (date: Date): string => {
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    };
-    
-    return {
-      start: formatDate(dateRange.start),
-      end: formatDate(dateRange.end)
-    };
-  };
+    switch (filterType) {
+      case "hoy":
+        return { start: today, end: today };
+      case "ayer":
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        return { start: yesterdayStr, end: yesterdayStr };
+      case "esta-semana":
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        return { start: startOfWeek.toISOString().split('T')[0], end: today };
+      case "semana-pasada":
+        const lastWeekStart = new Date(now);
+        lastWeekStart.setDate(now.getDate() - now.getDay() - 7);
+        const lastWeekEnd = new Date(lastWeekStart);
+        lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+        return { start: lastWeekStart.toISOString().split('T')[0], end: lastWeekEnd.toISOString().split('T')[0] };
+      case "este-mes":
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { start: startOfMonth.toISOString().split('T')[0], end: today };
+      case "mes-pasado":
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+        return { start: lastMonthStart.toISOString().split('T')[0], end: lastMonthEnd.toISOString().split('T')[0] };
+      case "este-año":
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        return { start: startOfYear.toISOString().split('T')[0], end: today };
+      case "año-pasado":
+        const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+        const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31);
+        return { start: lastYearStart.toISOString().split('T')[0], end: lastYearEnd.toISOString().split('T')[0] };
+      case "exactamente":
+        return fechaFilterValue ? { start: fechaFilterValue, end: fechaFilterValue } : null;
+      case "entre":
+        return fechaFilterValue && fechaFilterValueEnd ? { start: fechaFilterValue, end: fechaFilterValueEnd } : null;
+      case "despues-de":
+        return fechaFilterValue ? { start: fechaFilterValue, end: "9999-12-31" } : null;
+      case "antes-de":
+        return fechaFilterValue ? { start: "1900-01-01", end: fechaFilterValue } : null;
+      default:
+        return null;
+    }
+  }, [fechaFilterValue, fechaFilterValueEnd]);
 
   const dateRange = useMemo(() => {
     if (fechaFilterType === "exactamente" && fechaFilterValue) {
@@ -1815,6 +1855,11 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
     } else if (fechaFilterType !== "todos") {
       const range = getDateRange(fechaFilterType);
       if (range) {
+        // Si range ya devuelve strings, usarlos directamente
+        if (typeof range.start === 'string' && typeof range.end === 'string') {
+          return range;
+        }
+        // Si devuelve Date objects, formatearlos
         const formatDate = (date: Date): string => {
           return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         };
@@ -1825,7 +1870,7 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
       }
     }
     return null;
-  }, [fechaFilterType, fechaFilterValue, fechaFilterValueEnd]);
+  }, [fechaFilterType, fechaFilterValue, fechaFilterValueEnd, getDateRange]);
 
   // Obtener transacciones de LCDM con paginación del servidor (sin filtros)
   const { 
@@ -2089,55 +2134,6 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
     }
   });
 
-  // Función para aplicar filtros de fecha (idéntica a Minas)
-  const getDateRange = (filterType: DateFilterType) => {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    
-    switch (filterType) {
-      case "hoy":
-        return { start: today, end: today };
-      case "ayer":
-        const yesterday = new Date(now);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-        return { start: yesterdayStr, end: yesterdayStr };
-      case "esta-semana":
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        return { start: startOfWeek.toISOString().split('T')[0], end: today };
-      case "semana-pasada":
-        const lastWeekStart = new Date(now);
-        lastWeekStart.setDate(now.getDate() - now.getDay() - 7);
-        const lastWeekEnd = new Date(lastWeekStart);
-        lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
-        return { start: lastWeekStart.toISOString().split('T')[0], end: lastWeekEnd.toISOString().split('T')[0] };
-      case "este-mes":
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        return { start: startOfMonth.toISOString().split('T')[0], end: today };
-      case "mes-pasado":
-        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-        return { start: lastMonthStart.toISOString().split('T')[0], end: lastMonthEnd.toISOString().split('T')[0] };
-      case "este-año":
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        return { start: startOfYear.toISOString().split('T')[0], end: today };
-      case "año-pasado":
-        const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
-        const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31);
-        return { start: lastYearStart.toISOString().split('T')[0], end: lastYearEnd.toISOString().split('T')[0] };
-      case "exactamente":
-        return fechaFilterValue ? { start: fechaFilterValue, end: fechaFilterValue } : null;
-      case "entre":
-        return fechaFilterValue && fechaFilterValueEnd ? { start: fechaFilterValue, end: fechaFilterValueEnd } : null;
-      case "despues-de":
-        return fechaFilterValue ? { start: fechaFilterValue, end: "9999-12-31" } : null;
-      case "antes-de":
-        return fechaFilterValue ? { start: "1900-01-01", end: fechaFilterValue } : null;
-      default:
-        return null;
-    }
-  };
 
   // Resetear a página 1 cuando cambian los filtros
   useEffect(() => {
