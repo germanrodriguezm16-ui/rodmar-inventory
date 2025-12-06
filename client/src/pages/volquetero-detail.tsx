@@ -595,7 +595,7 @@ export default function VolqueteroDetail() {
     // Si balanceFilter === 'all', no filtrar por balance
     
     return filtered;
-  }, [transaccionesFormateadas, filterType, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, searchTerm, filterTransaccionesByDate]);
+  }, [transaccionesFormateadas, filterType, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, searchTerm, filterTransaccionesByDate, balanceFilter]);
   
   // Balance del encabezado (INCLUYE todas las transacciones y viajes, incluso ocultos)
   // Este balance NO debe cambiar al ocultar/mostrar transacciones
