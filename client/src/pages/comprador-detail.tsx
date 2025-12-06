@@ -758,9 +758,7 @@ export default function CompradorDetail() {
                   filterValueEnd={transaccionesFechaFilterValueEnd}
                 />
               </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+        </Tabs>
       </div>
 
       <NewTransactionModal 
