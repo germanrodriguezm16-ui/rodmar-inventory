@@ -669,29 +669,32 @@ export default function CompradorDetail() {
       {/* Contenido principal compacto */}
       <div className="max-w-7xl mx-auto px-4 py-3">
         <Tabs defaultValue="viajes" className="w-full">
-              <TabsList className="rodmar-tabs grid w-full grid-cols-3 gap-1 p-1">
-                <TabsTrigger 
-                  value="viajes" 
-                  className="flex items-center text-sm px-3 py-2"
-                >
-                  <Truck className="h-4 w-4 mr-2" />
-                  Viajes
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="transacciones"
-                  className="flex items-center text-sm px-3 py-2"
-                >
-                  <Receipt className="h-4 w-4 mr-2" />
-                  Transacciones
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="balance"
-                  className="flex items-center text-sm px-3 py-2"
-                >
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  Balance
-                </TabsTrigger>
-              </TabsList>
+          <TabsList className="rodmar-tabs grid w-full grid-cols-3 gap-1 p-1">
+            <TabsTrigger 
+              value="viajes" 
+              className="text-sm px-3 py-2"
+            >
+              Viajes
+              <Badge variant="secondary" className="ml-1">
+                {viajesFiltrados.length}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="transacciones"
+              className="text-sm px-3 py-2"
+            >
+              Transacciones
+              <Badge variant="secondary" className="ml-1">
+                {transaccionesFiltradas.length}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="balance"
+              className="text-sm px-3 py-2"
+            >
+              Balance
+            </TabsTrigger>
+          </TabsList>
 
               <TabsContent value="viajes" className="mt-6">
                 <CompradorViajesTab 
