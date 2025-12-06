@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, Users, Receipt, DollarSign, Truck, Calendar, X, Download, Eye, EyeOff,
-  TrendingUp, TrendingDown, PieChart, BarChart3, LineChart, Calculator, Edit, Trash2, Plus
+  TrendingUp, TrendingDown, PieChart, BarChart3, LineChart, Calculator, Edit, Trash2, Plus, Search
 } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Comprador, TransaccionWithSocio, ViajeWithDetails } from "@shared/schema";
