@@ -160,10 +160,12 @@ export function EditableTitle({ id, currentName, type, className = "" }: Editabl
     },
   });
 
-  const handleStartEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    e.nativeEvent.stopImmediatePropagation();
+  const handleStartEdit = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+      e.nativeEvent.stopImmediatePropagation();
+    }
     setIsEditing(true);
     setNewName(currentName);
   };
@@ -243,11 +245,12 @@ export function EditableTitle({ id, currentName, type, className = "" }: Editabl
   // Manejar doble click para activar edición
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevenir que active el click de la tarjeta
+    e.preventDefault();
     handleStartEdit();
   };
 
   return (
-    <div className={`flex items-center gap-2 group ${className}`} onClick={stopAllPropagation}>
+    <div className={`flex items-center gap-2 group ${className}`}>
       <h1 
         className="cursor-text select-none font-bold" 
         onDoubleClick={handleDoubleClick}
