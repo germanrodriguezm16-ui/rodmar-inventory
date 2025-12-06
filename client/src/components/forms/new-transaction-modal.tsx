@@ -271,6 +271,8 @@ function NewTransactionModal({
         // Invalidar queries de LCDM/Postobón si están involucradas
         if (data.deQuienTipo === 'lcdm' || data.paraQuienTipo === 'lcdm') {
           queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          // Refetch inmediato para actualizar balances de tarjetas
+          queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
           queryClient.invalidateQueries({
             predicate: (query) => {
               const queryKey = query.queryKey;
@@ -283,6 +285,8 @@ function NewTransactionModal({
         }
         if (data.deQuienTipo === 'postobon' || data.paraQuienTipo === 'postobon') {
           queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          // Refetch inmediato para actualizar balances de tarjetas
+          queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
           queryClient.invalidateQueries({
             predicate: (query) => {
               const queryKey = query.queryKey;
@@ -302,6 +306,8 @@ function NewTransactionModal({
         
         if (hasRodmarAccount) {
           queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          // Refetch inmediato para actualizar balances de tarjetas
+          queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
           queryClient.invalidateQueries({
             predicate: (query) => {
               const queryKey = query.queryKey;

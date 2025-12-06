@@ -389,7 +389,18 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         (updatedTransaction.deQuienTipo === 'rodmar' && rodmarAccountIds.includes(updatedTransaction.deQuienId || '')) ||
         (updatedTransaction.paraQuienTipo === 'rodmar' && rodmarAccountIds.includes(updatedTransaction.paraQuienId || ''));
       
-      if (hasRodmarAccount) {
+      // Detectar si cambió de una cuenta RodMar a otra (para actualizar ambas)
+      const originalDeQuienRodmar = originalTransaction?.deQuienTipo === 'rodmar' && rodmarAccountIds.includes(originalTransaction?.deQuienId || '');
+      const originalParaQuienRodmar = originalTransaction?.paraQuienTipo === 'rodmar' && rodmarAccountIds.includes(originalTransaction?.paraQuienId || '');
+      const updatedDeQuienRodmar = updatedTransaction.deQuienTipo === 'rodmar' && rodmarAccountIds.includes(updatedTransaction.deQuienId || '');
+      const updatedParaQuienRodmar = updatedTransaction.paraQuienTipo === 'rodmar' && rodmarAccountIds.includes(updatedTransaction.paraQuienId || '');
+      
+      const changedFromRodmarAccount = (originalDeQuienRodmar && !updatedDeQuienRodmar) || 
+                                       (originalParaQuienRodmar && !updatedParaQuienRodmar) ||
+                                       (originalDeQuienRodmar && updatedDeQuienRodmar && originalTransaction?.deQuienId !== updatedTransaction.deQuienId) ||
+                                       (originalParaQuienRodmar && updatedParaQuienRodmar && originalTransaction?.paraQuienId !== updatedTransaction.paraQuienId);
+      
+      if (hasRodmarAccount || changedFromRodmarAccount) {
         affectedEntityTypes.add('rodmar-cuenta');
       }
       
@@ -543,6 +554,8 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       if (affectedEntityTypes.has('lcdm') || affectedEntityTypes.has('postobon')) {
         // Invalidar queries de cuentas RodMar
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+        // Refetch inmediato para actualizar balances de tarjetas
+        queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
         
         // Invalidar queries específicas de LCDM (con paginación)
         if (affectedEntityTypes.has('lcdm')) {
@@ -578,6 +591,8 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       if (affectedEntityTypes.has('rodmar-cuenta')) {
         // Invalidar queries de cuentas RodMar
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+        // Refetch inmediato para actualizar balances de tarjetas
+        queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
         
         // Invalidar queries específicas de transacciones por cuenta
         queryClient.invalidateQueries({ 
@@ -600,6 +615,8 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       if (currentTransaction) {
         if (currentTransaction.deQuienTipo === 'lcdm' || currentTransaction.paraQuienTipo === 'lcdm') {
           queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          // Refetch inmediato para actualizar balances de tarjetas
+          queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
           queryClient.invalidateQueries({
             predicate: (query) => {
               const queryKey = query.queryKey;
@@ -613,6 +630,8 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         }
         if (currentTransaction.deQuienTipo === 'postobon' || currentTransaction.paraQuienTipo === 'postobon') {
           queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          // Refetch inmediato para actualizar balances de tarjetas
+          queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
           queryClient.invalidateQueries({
             predicate: (query) => {
               const queryKey = query.queryKey;

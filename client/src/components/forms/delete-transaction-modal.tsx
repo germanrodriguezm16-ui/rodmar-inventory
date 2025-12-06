@@ -330,6 +330,8 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       // Invalidar queries específicas para LCDM/Postobón
       if (transaction?.deQuienTipo === 'lcdm' || transaction?.paraQuienTipo === 'lcdm') {
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+        // Refetch inmediato para actualizar balances de tarjetas
+        queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
         // Invalidar queries de transacciones LCDM (con paginación)
         queryClient.invalidateQueries({
           predicate: (query) => {
@@ -345,6 +347,8 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       }
       if (transaction?.deQuienTipo === 'postobon' || transaction?.paraQuienTipo === 'postobon') {
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+        // Refetch inmediato para actualizar balances de tarjetas
+        queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
         // Invalidar queries de transacciones Postobón (con paginación)
         queryClient.invalidateQueries({
           predicate: (query) => {
@@ -368,6 +372,8 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       if (hasRodmarAccount) {
         // Invalidar queries de cuentas RodMar
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+        // Refetch inmediato para actualizar balances de tarjetas
+        queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
         
         // Invalidar queries específicas de transacciones por cuenta
         queryClient.invalidateQueries({ 
