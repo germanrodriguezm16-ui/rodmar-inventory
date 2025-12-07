@@ -282,20 +282,23 @@ export default function CompradorDetail() {
     
     // Para transacciones manuales, separar ingresos y egresos
     // Usar TODAS las transacciones (incluyendo ocultas) para el balance real
+    // EXCLUIR transacciones pendientes (no afectan balances)
     let totalManualesPositivos = 0;
     let totalManualesNegativos = 0;
 
-    todasTransaccionesIncOcultas.forEach(transaccion => {
-      const valor = parseFloat(transaccion.valor);
-      
-      if (transaccion.paraQuienTipo === 'comprador' && transaccion.paraQuienId === compradorId.toString()) {
-        // Transacciones hacia el comprador son egresos (negativos)
-        totalManualesNegativos += Math.abs(valor);
-      } else if (transaccion.deQuienTipo === 'comprador' && transaccion.deQuienId === compradorId.toString()) {
-        // Transacciones desde el comprador son ingresos (positivos)
-        totalManualesPositivos += Math.abs(valor);
-      }
-    });
+    todasTransaccionesIncOcultas
+      .filter(transaccion => transaccion.estado !== 'pendiente') // Excluir transacciones pendientes
+      .forEach(transaccion => {
+        const valor = parseFloat(transaccion.valor);
+        
+        if (transaccion.paraQuienTipo === 'comprador' && transaccion.paraQuienId === compradorId.toString()) {
+          // Transacciones hacia el comprador son egresos (negativos)
+          totalManualesNegativos += Math.abs(valor);
+        } else if (transaccion.deQuienTipo === 'comprador' && transaccion.deQuienId === compradorId.toString()) {
+          // Transacciones desde el comprador son ingresos (positivos)
+          totalManualesPositivos += Math.abs(valor);
+        }
+      });
     
     // Calcular egresos de viajes (valor a consignar) - usar directamente valorConsignar de BD
     const totalViajes = viajesCompletados.reduce((sum, viaje) => {

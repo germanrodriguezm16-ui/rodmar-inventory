@@ -724,10 +724,11 @@ export default function MinaDetail() {
       .filter(v => v.fechaDescargue && v.estado === "completado")
       .reduce((sum, v) => sum + parseFloat(v.totalCompra || '0'), 0);
 
-    // Transacciones netas (solo transacciones manuales, excluyendo viajes)
+    // Transacciones netas (solo transacciones manuales, excluyendo viajes y pendientes)
     // Usar TODAS las transacciones (incluyendo ocultas) para el balance real
+    // EXCLUIR transacciones pendientes (no afectan balances)
     const transaccionesNetas = (todasTransaccionesIncOcultas || [])
-      .filter(t => t.tipo !== "Viaje") // Excluir transacciones de viajes
+      .filter(t => t.tipo !== "Viaje" && t.estado !== 'pendiente') // Excluir transacciones de viajes y pendientes
       .reduce((sum, t) => {
         const valor = parseFloat(t.valor || '0');
         // Lógica estandarizada: Positivos (desde mina) - Negativos (hacia mina)

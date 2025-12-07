@@ -690,19 +690,22 @@ export default function VolqueteroDetail() {
     }, 0);
     
     // Calcular transacciones manuales (todas, incluyendo ocultas)
+    // EXCLUIR transacciones pendientes (no afectan balances)
     let totalManuales = 0;
-    todasTransaccionesIncOcultas.forEach((t: TransaccionWithSocio) => {
-      const valor = parseFloat(t.valor || "0");
-      
-      // Lógica correcta de signos para volqueteros:
-      // - Si deQuienTipo === 'volquetero' → POSITIVO (volquetero paga = suma a su balance)
-      // - Si paraQuienTipo === 'volquetero' → NEGATIVO (RodMar paga = reduce su saldo)
-      if (t.deQuienTipo === 'volquetero' && t.deQuienId === volqueteroIdActual.toString()) {
-        totalManuales += Math.abs(valor); // POSITIVO
-      } else if (t.paraQuienTipo === 'volquetero' && t.paraQuienId === volqueteroIdActual.toString()) {
-        totalManuales -= Math.abs(valor); // NEGATIVO
-      }
-    });
+    todasTransaccionesIncOcultas
+      .filter((t: TransaccionWithSocio) => t.estado !== 'pendiente') // Excluir transacciones pendientes
+      .forEach((t: TransaccionWithSocio) => {
+        const valor = parseFloat(t.valor || "0");
+        
+        // Lógica correcta de signos para volqueteros:
+        // - Si deQuienTipo === 'volquetero' → POSITIVO (volquetero paga = suma a su balance)
+        // - Si paraQuienTipo === 'volquetero' → NEGATIVO (RodMar paga = reduce su saldo)
+        if (t.deQuienTipo === 'volquetero' && t.deQuienId === volqueteroIdActual.toString()) {
+          totalManuales += Math.abs(valor); // POSITIVO
+        } else if (t.paraQuienTipo === 'volquetero' && t.paraQuienId === volqueteroIdActual.toString()) {
+          totalManuales -= Math.abs(valor); // NEGATIVO
+        }
+      });
     
     return {
       ingresosViajes,
