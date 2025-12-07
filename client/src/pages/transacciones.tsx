@@ -167,9 +167,9 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
 
   const handleDeleteTransaction = (transaction: TransaccionWithSocio) => {
     setSelectedTransaction(transaction);
-    // Si es transacción pendiente, abrir modal de detalles (que tiene el botón de eliminar)
+    // Si es transacción pendiente, abrir modal de confirmación de eliminación
     if (transaction.estado === 'pendiente') {
-      setShowPendingDetailModal(true);
+      setShowDeletePendingConfirm(true);
     } else {
       setShowDeleteModal(true);
     }
