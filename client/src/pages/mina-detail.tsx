@@ -1417,7 +1417,12 @@ export default function MinaDetail() {
                     onClick={() => {
                       if (transaccion.tipo !== "Temporal") {
                         setSelectedTransaction(transaccion);
-                        setShowTransactionDetail(true);
+                        // Si es transacción pendiente, abrir modal de detalles de solicitud
+                        if (transaccion.estado === 'pendiente') {
+                          setShowPendingDetailModal(true);
+                        } else {
+                          setShowTransactionDetail(true);
+                        }
                       }
                     }}
                   >

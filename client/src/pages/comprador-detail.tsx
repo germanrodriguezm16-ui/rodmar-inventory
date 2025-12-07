@@ -1972,7 +1972,12 @@ function CompradorTransaccionesTab({
                     className={`border-t cursor-pointer hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}
                     onClick={() => {
                       setSelectedTransaction(transaccion);
-                      setShowTransactionDetail(true);
+                      // Si es transacción pendiente, abrir modal de detalles de solicitud
+                      if (transaccion.estado === 'pendiente') {
+                        setShowPendingDetailModal(true);
+                      } else {
+                        setShowTransactionDetail(true);
+                      }
                     }}
                   >
                     <td className="p-3 text-sm">

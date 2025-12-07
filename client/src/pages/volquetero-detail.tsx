@@ -1074,7 +1074,12 @@ export default function VolqueteroDetail() {
                               onClick={() => {
                                 if (transaccion.tipo === "Manual" && transaccion.originalTransaction) {
                                   setSelectedTransaction(transaccion.originalTransaction);
-                                  setShowTransactionDetail(true);
+                                  // Si es transacción pendiente, abrir modal de detalles de solicitud
+                                  if (transaccion.originalTransaction.estado === 'pendiente') {
+                                    setShowPendingDetailModal(true);
+                                  } else {
+                                    setShowTransactionDetail(true);
+                                  }
                                 } else if (transaccion.tipo === "Temporal") {
                                   // Las transacciones temporales no tienen detalle, solo se pueden eliminar
                                 }
@@ -1245,7 +1250,12 @@ export default function VolqueteroDetail() {
                         onClick={() => {
                           if (transaccion.tipo === "Manual" && transaccion.originalTransaction) {
                             setSelectedTransaction(transaccion.originalTransaction);
-                            setShowTransactionDetail(true);
+                            // Si es transacción pendiente, abrir modal de detalles de solicitud
+                            if (transaccion.originalTransaction.estado === 'pendiente') {
+                              setShowPendingDetailModal(true);
+                            } else {
+                              setShowTransactionDetail(true);
+                            }
                           } else if (transaccion.tipo === "Temporal") {
                             // Las transacciones temporales no tienen detalle, solo se pueden eliminar
                           }

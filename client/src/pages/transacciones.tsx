@@ -229,7 +229,12 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
     if (isMultiSelectMode) return;
     
     setSelectedTransaction(transaction);
-    setShowDetailModal(true);
+    // Si es transacción pendiente, abrir modal de detalles de solicitud
+    if (transaction.estado === 'pendiente') {
+      setShowPendingDetailModal(true);
+    } else {
+      setShowDetailModal(true);
+    }
   };
 
   // Helper function to get date ranges for filtering (retorna strings ISO para el servidor)
