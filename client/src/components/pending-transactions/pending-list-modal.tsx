@@ -5,6 +5,7 @@ import { X, FileText, Clock } from "lucide-react";
 import { apiUrl } from "@/lib/api";
 import { useState } from "react";
 import { PendingDetailModal } from "./pending-detail-modal";
+import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 
 interface TransaccionPendiente {
   id: number;
@@ -27,6 +28,7 @@ interface PendingListModalProps {
 
 export function PendingListModal({ open, onClose }: PendingListModalProps) {
   const [selectedTransaccion, setSelectedTransaccion] = useState<TransaccionPendiente | null>(null);
+  const [editingTransaccion, setEditingTransaccion] = useState<TransaccionPendiente | null>(null);
 
   const { data: pendientes = [], isLoading } = useQuery<TransaccionPendiente[]>({
     queryKey: ["/api/transacciones/pendientes"],
@@ -116,6 +118,26 @@ export function PendingListModal({ open, onClose }: PendingListModalProps) {
           open={!!selectedTransaccion}
           transaccion={selectedTransaccion}
           onClose={() => setSelectedTransaccion(null)}
+          onEdit={(transaccion) => {
+            setEditingTransaccion(transaccion);
+            setSelectedTransaccion(null);
+          }}
+        />
+      )}
+
+      {/* Modal de editar solicitud */}
+      {editingTransaccion && (
+        <SolicitarTransaccionModal
+          open={!!editingTransaccion}
+          onClose={() => setEditingTransaccion(null)}
+          initialData={{
+            id: editingTransaccion.id,
+            paraQuienTipo: editingTransaccion.paraQuienTipo || "",
+            paraQuienId: editingTransaccion.paraQuienId || "",
+            valor: editingTransaccion.valor,
+            comentario: editingTransaccion.comentario || undefined,
+            detalle_solicitud: editingTransaccion.detalle_solicitud || "",
+          }}
         />
       )}
     </>

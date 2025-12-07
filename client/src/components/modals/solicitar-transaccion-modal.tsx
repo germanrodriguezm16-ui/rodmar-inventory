@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -27,6 +28,14 @@ const solicitarSchema = z.object({
 interface SolicitarTransaccionModalProps {
   open: boolean;
   onClose: () => void;
+  initialData?: {
+    id?: number;
+    paraQuienTipo: string;
+    paraQuienId: string;
+    valor: string;
+    comentario?: string;
+    detalle_solicitud: string;
+  };
 }
 
 // Opciones para RodMar
@@ -64,7 +73,7 @@ const getTodayLocalDate = () => {
   return `${year}-${month}-${day}`;
 };
 
-export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccionModalProps) {
+export function SolicitarTransaccionModal({ open, onClose, initialData }: SolicitarTransaccionModalProps) {
   const { toast } = useToast();
 
   // Fetch entities
@@ -86,13 +95,34 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
   const form = useForm<z.infer<typeof solicitarSchema>>({
     resolver: zodResolver(solicitarSchema),
     defaultValues: {
-      paraQuienTipo: "",
-      paraQuienId: "",
-      valor: "",
-      comentario: "",
-      detalle_solicitud: "",
+      paraQuienTipo: initialData?.paraQuienTipo || "",
+      paraQuienId: initialData?.paraQuienId || "",
+      valor: initialData?.valor || "",
+      comentario: initialData?.comentario || "",
+      detalle_solicitud: initialData?.detalle_solicitud || "",
     },
   });
+
+  // Resetear el formulario cuando cambian los datos iniciales
+  useEffect(() => {
+    if (initialData && open) {
+      form.reset({
+        paraQuienTipo: initialData.paraQuienTipo,
+        paraQuienId: initialData.paraQuienId,
+        valor: initialData.valor,
+        comentario: initialData.comentario || "",
+        detalle_solicitud: initialData.detalle_solicitud,
+      });
+    } else if (!initialData && open) {
+      form.reset({
+        paraQuienTipo: "",
+        paraQuienId: "",
+        valor: "",
+        comentario: "",
+        detalle_solicitud: "",
+      });
+    }
+  }, [initialData, open, form]);
 
   const watchedParaQuienTipo = form.watch("paraQuienTipo");
 
@@ -131,6 +161,16 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
 
   const createSolicitudMutation = useMutation({
     mutationFn: async (data: z.infer<typeof solicitarSchema>) => {
+      // Si hay initialData con ID, es una edición - primero eliminar la anterior y crear una nueva
+      if (initialData?.id) {
+        // Eliminar la transacción anterior
+        await fetch(apiUrl(`/api/transacciones/${initialData.id}`), {
+          method: "DELETE",
+          credentials: "include",
+        });
+      }
+
+      // Crear la nueva solicitud (o recrear si es edición)
       const response = await fetch(apiUrl("/api/transacciones/solicitar"), {
         method: "POST",
         headers: {
@@ -156,8 +196,10 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
     },
     onSuccess: (result) => {
       toast({
-        title: "Solicitud creada",
-        description: "La solicitud de transacción pendiente se ha creado exitosamente.",
+        title: initialData?.id ? "Solicitud actualizada" : "Solicitud creada",
+        description: initialData?.id 
+          ? "La solicitud de transacción pendiente se ha actualizado exitosamente."
+          : "La solicitud de transacción pendiente se ha creado exitosamente.",
       });
       
       // Invalidar queries de pendientes
@@ -215,7 +257,7 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2 text-orange-700 text-lg">
               <FileText className="h-5 w-5" />
-              Solicitar Transacción Pendiente
+              {initialData?.id ? "Editar Solicitud Pendiente" : "Solicitar Transacción Pendiente"}
             </DialogTitle>
             <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
               <X className="h-4 w-4" />
@@ -397,7 +439,9 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
                 disabled={createSolicitudMutation.isPending}
                 className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold shadow-md border-2 border-orange-600"
               >
-                {createSolicitudMutation.isPending ? "Creando..." : "Crear Solicitud"}
+                {createSolicitudMutation.isPending 
+                  ? (initialData?.id ? "Actualizando..." : "Creando...") 
+                  : (initialData?.id ? "Actualizar Solicitud" : "Crear Solicitud")}
               </Button>
             </div>
           </form>
