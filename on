@@ -1,0 +1,53 @@
+[33m6f99d77[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m docs: Agregar guía para reiniciar Railway
+[33mceb0416[m fix: Agregar migración SQL para campos de transacciones pendientes
+[33m3887a2a[m test: Verificar deploy automático en Vercel
+[33m7e25f65[m chore: Actualizar dependencias y mejoras en comprador-detail
+[33mdea631b[m docs: Agregar guías de diagnóstico para deploy automático en Vercel
+[33m833f2f0[m Fase 2: Modal de crear transacción - Modo Solicitar
+[33m6fa2c8f[m fix: Ajustar vercel.json para permitir acceso a manifest.json y archivos estáticos
+[33m8140ab9[m fix: Actualizar package-lock.json con dependencias de Capacitor
+[33ma514301[m fix: Mover manifest.json y iconos a client/public para PWABuilder
+[33m23cceda[m docs: Agregar documentación completa de mejoras de interacción en tarjetas
+[33mce64e7c[m fix: Remover stopPropagation del contenedor principal para permitir click en toda la tarjeta, mantenerlo solo en áreas específicas
+[33m3678522[m fix: Agregar handler para click simple en nombre que permite propagación al Card
+[33ma6630d6[m fix: Remover stopPropagation del contenedor de EditableTitle para permitir click simple en nombre que abra detalles
+[33m41dd545[m fix: Ajustar className en EditableTitle para que respete las clases pasadas como prop
+[33mace8008[m feat: Agregar doble click en nombre para editar y click simple en tarjeta para abrir detalles en listados de minas, compradores y volqueteros
+[33m12e8469[m fix: Corregir filtrado de balance en minas usando lógica de negocio y hacer tarjetas clickeables en compradores
+[33m4f0e550[m fix: Agregar balanceFilter a dependencias de useMemo en mina-detail para que el filtro funcione correctamente
+[33mad18cde[m fix: Agregar balanceFilter a dependencias de useMemo en volquetero-detail para que el filtro funcione correctamente
+[33mb97aa0f[m feat: Agregar filtrado interactivo por tarjetas de balance (Positivos, Negativos, Balance) en pestañas de transacciones de minas, compradores y volqueteros
+[33m69592cd[m fix: Eliminar Card restante que envolvía Tabs en comprador-detail
+[33m67b7c6d[m fix: Eliminar Card que envolvía Tabs en comprador-detail para igualar estructura de mina-detail
+[33mb6707b1[m refactor: Eliminar contenedor adicional en comprador-detail para igualar estructura de mina-detail y aprovechar mejor el espacio
+[33mfc5c3fd[m fix: Reorganizar layout de filtros - botón Temporal junto a select de fecha, fila de fechas solo cuando es necesaria
+[33mcb5f9c3[m refactor: Reorganizar encabezado de transacciones de compradores con tarjetas de balance y mejor layout
+[33ma029337[m fix: Agregar import de Search icon
+[33m0c8b123[m feat: Agregar filtro de búsqueda y hacer encabezado más compacto en pestaña de transacciones de compradores
+[33m4845270[m fix: Asegurar actualización de balance cuando se quita una cuenta RodMar de una transacción
+[33mf1085ab[m feat: Actualizar balances de tarjetas RodMar inmediatamente al crear/editar/eliminar transacciones
+[33me69b8d8[m fix: Mover definición de getDateRange antes de su uso para evitar error 'Cannot access before initialization'
+[33m465ed05[m fix: Crear fechas en hora local para filtros de RodMar (evitar problema UTC en Colombia)
+[33m5627711[m fix: Corregir problema de zona horaria en filtros de fecha de RodMar (Colombia UTC-5)
+[33mdcb3fa4[m fix: Actualizar balances de socios anteriores cuando se cambia origen o destino de una transacción
+[33mf59f945[m fix: Mejorar actualización de balances de compradores y volqueteros cuando cambian en un viaje
+[33md7aed71[m fix: Actualizar balance de mina anterior cuando se cambia la mina de un viaje
+[33mafbd5ae[m fix: Actualizar register-descargue-modal para usar información del viaje en invalidación
+[33mc3ca3ea[m feat: Refetch explícito de balances y queries específicas de socios al editar/completar viajes
+[33m2a54c4d[m fix: Mejorar invalidación de queries específicas de mina - incluir formato string directo
+[33mfd0d74c[m fix: Corregir detección de queries específicas de mina - usar regex para formato string directo
+[33m609c96b[m fix: Refetch explícito de queries específicas de mina al editar/completar viajes - actualizar balances y listados
+[33m55f6464[m feat: Optimizar invalidación de queries al editar/completar viajes - actualizar balances, transacciones dinámicas y pestañas de socios
+[33m26653e2[m fix: Agregar import faltante de invalidateTripRelatedQueries en edit-trip-modal
+[33ma100ae3[m fix: Actualizar register-descargue-modal para usar función optimizada de invalidación
+[33m2e53dd1[m feat: Optimizar actualización de transacciones y balances al completar/editar viajes
+[33m4bd6ec0[m fix: Agregar import de icono X para botón limpiar filtros
+[33m11f54e4[m fix: Mantener filtros y balance visibles cuando no hay resultados en transacciones de Volqueteros
+[33mf9a87cc[m fix: Corregir fechas de transacciones de viajes en Volqueteros - convertir strings a Date correctamente
+[33m5f8f330[m refactor: Eliminar botón Registrar redundante y reducir padding para aprovechar mejor el espacio en Compradores
+[33m3a8626a[m fix: Agregar botones de editar y eliminar en vista móvil de transacciones manuales en Compradores
+[33m73a674d[m fix: Actualizar script de migración para manejar schemas antiguos de Replit
+[33m1c45048[m feat: Agregar script de limpieza de datos de ensayo y guía de migración
+[33m427ac10[m docs: Agregar documentación completa de mejoras recientes (WebSockets, optimizaciones, UI/UX)
+[33m7ab9d2a[m Refactor: Mostrar solo íconos en botones de cámara y upload para evitar desbordamiento en modal
+[33m0abc574[m Refactor: Eliminar campo de texto de voucher y agregar botón de cámara para tomar foto directamente

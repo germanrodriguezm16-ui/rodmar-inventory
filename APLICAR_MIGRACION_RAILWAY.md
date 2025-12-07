@@ -122,3 +122,5 @@ Después de aplicar la migración:
 
 Una vez aplicada la migración, todo debería funcionar correctamente.
 
+
+

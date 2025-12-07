@@ -982,6 +982,7 @@ function NewTransactionModal({
                 variant="outline" 
                 onClick={handleSolicitar}
                 disabled={createSolicitudMutation.isPending || createTransactionMutation.isPending}
+                className="bg-green-200 hover:bg-green-300 text-green-800 border-green-300"
               >
                 {createSolicitudMutation.isPending ? "Creando solicitud..." : "Solicitar"}
               </Button>

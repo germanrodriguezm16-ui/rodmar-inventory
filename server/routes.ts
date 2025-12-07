@@ -2376,6 +2376,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conceptoGenerado = `Solicitud de pago a ${tipoCapitalizado} (${nombreDestino})`;
       }
 
+      // Convertir fecha de string YYYY-MM-DD a objeto Date
+      let fechaDate: Date;
+      if (data.fecha) {
+        // Si viene como string YYYY-MM-DD, convertir a Date
+        fechaDate = new Date(data.fecha + 'T00:00:00');
+        // Validar que la fecha es válida
+        if (isNaN(fechaDate.getTime())) {
+          fechaDate = new Date();
+        }
+      } else {
+        fechaDate = new Date();
+      }
+
       // Crear datos finales para la solicitud
       const finalData = {
         // Nuevos campos
@@ -2389,7 +2402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Campos comunes
         concepto: conceptoGenerado,
         valor: data.valor,
-        fecha: data.fecha || new Date().toISOString(),
+        fecha: fechaDate,
         formaPago: "pendiente", // Valor temporal
         voucher: undefined,
         comentario: data.comentario || undefined,

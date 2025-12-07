@@ -64,3 +64,5 @@ WHERE table_name = 'transacciones'
 AND column_name IN ('estado', 'detalle_solicitud', 'codigo_solicitud', 'tiene_voucher')
 ORDER BY column_name;
 
+
+
