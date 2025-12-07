@@ -275,7 +275,7 @@ export default function TransactionModal({ open, onClose }: TransactionModalProp
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
-                      <Input type="number" placeholder="0" className="pl-8" {...field} />
+                      <Input type="text" inputMode="numeric" placeholder="0" className="pl-8" {...field} />
                     </div>
                   </FormControl>
                   <FormMessage />

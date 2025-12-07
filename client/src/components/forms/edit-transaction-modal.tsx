@@ -978,6 +978,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
                         <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
                         <Input 
                           type="text"
+                          inputMode="numeric"
                           placeholder="0" 
                           className="pl-8 bg-white border-gray-300 focus:border-blue-500"
                           maxLength={20}

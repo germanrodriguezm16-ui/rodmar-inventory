@@ -484,6 +484,7 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
                   <FormControl>
                     <Input 
                       type="text" 
+                      inputMode="numeric"
                       placeholder="0" 
                       value={formatNumber(field.value)}
                       onChange={(e) => {
