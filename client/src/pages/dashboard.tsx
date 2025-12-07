@@ -12,13 +12,13 @@ const RodMar = lazy(() => import("@/components/modules/rodmar"));
 import RegisterCargueModal from "@/components/forms/register-cargue-modal";
 import RegisterDescargueModal from "@/components/forms/register-descargue-modal";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
-import { PendingButton } from "@/components/pending-transactions/pending-button";
 import { PendingListModal } from "@/components/pending-transactions/pending-list-modal";
 import { GestionarTransaccionesModal } from "@/components/modals/gestionar-transacciones-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { apiUrl } from "@/lib/api";
 
 type Module = "principal" | "minas" | "compradores" | "volqueteros" | "transacciones" | "rodmar";
 
@@ -27,7 +27,6 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ initialModule = "principal" }: DashboardProps) {
-  const { toast } = useToast();
   const [activeModule, setActiveModule] = useState<Module>(initialModule);
   const [showCargueModal, setShowCargueModal] = useState(false);
   const [showDescargueModal, setShowDescargueModal] = useState(false);
@@ -35,6 +34,22 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [showGestionarModal, setShowGestionarModal] = useState(false);
   const [showSolicitarModal, setShowSolicitarModal] = useState(false);
+
+  // Consultar el conteo de transacciones pendientes
+  const { data: pendingCount = 0 } = useQuery<number>({
+    queryKey: ["/api/transacciones/pendientes/count"],
+    queryFn: async () => {
+      const response = await fetch(apiUrl("/api/transacciones/pendientes/count"), {
+        credentials: "include",
+      });
+      if (!response.ok) return 0;
+      const data = await response.json();
+      return data.count || 0;
+    },
+    refetchInterval: 30000, // Refrescar cada 30 segundos
+  });
+
+  const hasPending = pendingCount > 0;
 
   const renderModule = () => {
     const LoadingFallback = () => (
@@ -90,11 +105,8 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   };
 
   const handleCompletar = () => {
-    // Por ahora, mostrar un mensaje indicando que esta funcionalidad está en desarrollo
-    toast({
-      title: "En desarrollo",
-      description: "La funcionalidad de completar transacciones estará disponible pronto.",
-    });
+    // Abrir el modal de transacciones pendientes
+    setShowPendingModal(true);
   };
 
   return (
@@ -110,17 +122,32 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         onModuleChange={setActiveModule}
       />
 
-      {/* Botón "P" para transacciones pendientes - visible solo cuando hay pendientes */}
-      <PendingButton onClick={() => setShowPendingModal(true)} />
-
       {/* Floating Action Button - visible en todos los módulos */}
+      {/* Si hay pendientes: mostrar "P" naranja parpadeante, si no: mostrar Plus normal */}
+      <style>{`
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        .blinking {
+          animation: blink 1.5s ease-in-out infinite;
+        }
+      `}</style>
       <Button
         size="icon"
-        className="fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-[100]"
+        className={`fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-[100] ${
+          hasPending 
+            ? "bg-orange-500 hover:bg-orange-600 text-white blinking" 
+            : ""
+        }`}
         onClick={handleQuickAction}
-        aria-label="Gestionar transacciones"
+        aria-label={hasPending ? `Gestionar transacciones (${pendingCount} pendiente${pendingCount > 1 ? 's' : ''})` : "Gestionar transacciones"}
       >
-        <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
+        {hasPending ? (
+          <span className="text-lg sm:text-xl font-bold">P</span>
+        ) : (
+          <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
+        )}
       </Button>
 
       {/* Modals */}
