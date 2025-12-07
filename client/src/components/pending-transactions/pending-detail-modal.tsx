@@ -102,10 +102,44 @@ export function PendingDetailModal({ open, transaccion, onClose, onEdit, onCompl
         description: "La transacción pendiente se ha eliminado exitosamente.",
       });
       
-      // Invalidar queries
+      // Invalidar queries de pendientes
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
+      
+      // Invalidar módulo general de transacciones (todas las páginas)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          return Array.isArray(queryKey) &&
+            queryKey.length > 0 &&
+            typeof queryKey[0] === "string" &&
+            queryKey[0] === "/api/transacciones";
+        },
+      });
+      
+      // Invalidar queries del socio destino
+      if (transaccion.paraQuienTipo && transaccion.paraQuienId) {
+        if (transaccion.paraQuienTipo === 'comprador') {
+          queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", parseInt(transaccion.paraQuienId)] });
+        }
+        if (transaccion.paraQuienTipo === 'mina') {
+          queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${transaccion.paraQuienId}`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${transaccion.paraQuienId}/all`] });
+        }
+        if (transaccion.paraQuienTipo === 'volquetero') {
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0] === "/api/volqueteros" &&
+                queryKey[1] === parseInt(transaccion.paraQuienId) &&
+                queryKey[2] === "transacciones";
+            },
+          });
+        }
+      }
       
       setShowDeleteConfirm(false);
       onClose();

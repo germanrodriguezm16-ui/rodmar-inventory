@@ -141,9 +141,46 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
         title: "Solicitud eliminada",
         description: "La transacción pendiente se ha eliminado exitosamente.",
       });
+      
+      // Invalidar queries de pendientes
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
+      
+      // Invalidar módulo general de transacciones (todas las páginas)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          return Array.isArray(queryKey) &&
+            queryKey.length > 0 &&
+            typeof queryKey[0] === "string" &&
+            queryKey[0] === "/api/transacciones";
+        },
+      });
+      
+      // Invalidar queries del socio destino
+      if (selectedTransaction?.paraQuienTipo && selectedTransaction?.paraQuienId) {
+        if (selectedTransaction.paraQuienTipo === 'comprador') {
+          queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", parseInt(selectedTransaction.paraQuienId)] });
+        }
+        if (selectedTransaction.paraQuienTipo === 'mina') {
+          queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${selectedTransaction.paraQuienId}`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${selectedTransaction.paraQuienId}/all`] });
+        }
+        if (selectedTransaction.paraQuienTipo === 'volquetero') {
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0] === "/api/volqueteros" &&
+                queryKey[1] === parseInt(selectedTransaction.paraQuienId) &&
+                queryKey[2] === "transacciones";
+            },
+          });
+        }
+      }
+      
       setShowDeletePendingConfirm(false);
       setSelectedTransaction(null);
     },

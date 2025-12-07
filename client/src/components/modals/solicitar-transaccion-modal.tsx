@@ -299,13 +299,25 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       
+      // Invalidar módulo general de transacciones (todas las páginas)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          return Array.isArray(queryKey) &&
+            queryKey.length > 0 &&
+            typeof queryKey[0] === "string" &&
+            queryKey[0] === "/api/transacciones";
+        },
+      });
+      
       // Si es una edición, invalidar también las queries del destino anterior
       if (initialData?.id && initialData.paraQuienTipo && initialData.paraQuienId) {
         if (initialData.paraQuienTipo === 'comprador') {
           queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", parseInt(initialData.paraQuienId)] });
         }
         if (initialData.paraQuienTipo === 'mina') {
-          queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", parseInt(initialData.paraQuienId)] });
+          queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${initialData.paraQuienId}`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${initialData.paraQuienId}/all`] });
         }
         if (initialData.paraQuienTipo === 'volquetero') {
           queryClient.invalidateQueries({
@@ -314,8 +326,9 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
               return Array.isArray(queryKey) &&
                 queryKey.length > 0 &&
                 typeof queryKey[0] === "string" &&
-                queryKey[0] === "/api/transacciones/volquetero" &&
-                queryKey[1] === initialData.paraQuienId;
+                queryKey[0] === "/api/volqueteros" &&
+                queryKey[1] === parseInt(initialData.paraQuienId) &&
+                queryKey[2] === "transacciones";
             },
           });
         }
@@ -329,7 +342,8 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
         queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", parseInt(paraQuienId)] });
       }
       if (paraQuienTipo === 'mina' && paraQuienId) {
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", parseInt(paraQuienId)] });
+        queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${paraQuienId}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${paraQuienId}/all`] });
       }
       if (paraQuienTipo === 'volquetero' && paraQuienId) {
         queryClient.invalidateQueries({
@@ -338,8 +352,9 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
             return Array.isArray(queryKey) &&
               queryKey.length > 0 &&
               typeof queryKey[0] === "string" &&
-              queryKey[0] === "/api/transacciones/volquetero" &&
-              queryKey[1] === paraQuienId;
+              queryKey[0] === "/api/volqueteros" &&
+              queryKey[1] === parseInt(paraQuienId) &&
+              queryKey[2] === "transacciones";
           },
         });
       }
