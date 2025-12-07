@@ -3797,14 +3797,13 @@ export class DatabaseStorage implements IStorage {
         }
       });
 
-      // Identificar minas que necesitan cálculo dinámico de balance
-      const minasNecesitanCalculo = allMinas.filter(m => !m.balanceCalculado || m.balanceDesactualizado);
-      
-      // QUERY 2: Transacciones agregadas solo para minas que necesitan cálculo (1 query para todas)
+      // QUERY 2: Transacciones agregadas para TODAS las minas (1 query para todas)
+      // SIEMPRE calcular para asegurar que se excluyan transacciones pendientes
+      const transaccionesStart = Date.now();
+      const minaIds = allMinas.map(m => m.id.toString());
       let transaccionesStatsMap = new Map<number, number>();
-      if (minasNecesitanCalculo.length > 0) {
-        const transaccionesStart = Date.now();
-        const minaIds = minasNecesitanCalculo.map(m => m.id.toString());
+      
+      if (minaIds.length > 0) {
         
         // Construir condiciones OR para cada mina (INCLUIR OCULTOS para balance real)
         // EXCLUIR transacciones pendientes (no afectan balances)
@@ -3847,22 +3846,17 @@ export class DatabaseStorage implements IStorage {
         });
 
         const transaccionesTime = Date.now() - transaccionesStart;
-        console.log(`⏱️  [PERF] Query agregada de transacciones: ${transaccionesTime}ms (${minasNecesitanCalculo.length} minas)`);
+        console.log(`⏱️  [PERF] Query agregada de transacciones: ${transaccionesTime}ms (${allMinas.length} minas)`);
       }
 
       // Construir resultado final combinando balances calculados y estadísticas
       for (const mina of allMinas) {
         const stats = viajesStatsMap.get(mina.id) || { viajesCount: 0, viajesUltimoMes: 0, ingresosViajes: 0 };
         
-        // Usar balanceCalculado si está disponible y actualizado
-        let balance: number;
-        if (mina.balanceCalculado && !mina.balanceDesactualizado) {
-          balance = parseFloat(mina.balanceCalculado);
-        } else {
-          // Calcular balance dinámicamente usando datos agregados
-          const transaccionesNetas = transaccionesStatsMap.get(mina.id) || 0;
-          balance = stats.ingresosViajes + transaccionesNetas;
-        }
+        // SIEMPRE calcular balance dinámicamente para asegurar que se excluyan transacciones pendientes
+        // (balanceCalculado podría incluir transacciones pendientes si fue calculado antes de implementar la exclusión)
+        const transaccionesNetas = transaccionesStatsMap.get(mina.id) || 0;
+        const balance = stats.ingresosViajes + transaccionesNetas;
 
         balances[mina.id] = {
           balance,
@@ -3872,7 +3866,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       const endTime = Date.now();
-      console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getMinasBalances: ${endTime - startTime}ms (${allMinas.length} minas, ${minasNecesitanCalculo.length} necesitaron cálculo dinámico)`);
+      console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getMinasBalances: ${endTime - startTime}ms (${allMinas.length} minas, todas con cálculo dinámico para excluir pendientes)`);
       return balances;
     });
   }
@@ -3933,14 +3927,13 @@ export class DatabaseStorage implements IStorage {
         }
       });
 
-      // Identificar compradores que necesitan cálculo dinámico de balance
-      const compradoresNecesitanCalculo = allCompradores.filter(c => !c.balanceCalculado || c.balanceDesactualizado);
-      
-      // QUERY 2: Transacciones agregadas solo para compradores que necesitan cálculo (1 query para todos)
+      // QUERY 2: Transacciones agregadas para TODOS los compradores (1 query para todos)
+      // SIEMPRE calcular para asegurar que se excluyan transacciones pendientes
+      const transaccionesStart = Date.now();
+      const compradorIds = allCompradores.map(c => c.id.toString());
       let transaccionesStatsMap = new Map<number, number>();
-      if (compradoresNecesitanCalculo.length > 0) {
-        const transaccionesStart = Date.now();
-        const compradorIds = compradoresNecesitanCalculo.map(c => c.id.toString());
+      
+      if (compradorIds.length > 0) {
         
         // Construir condiciones OR para cada comprador (INCLUIR OCULTOS para balance real)
         // EXCLUIR transacciones pendientes (no afectan balances)
@@ -3983,23 +3976,18 @@ export class DatabaseStorage implements IStorage {
         });
 
         const transaccionesTime = Date.now() - transaccionesStart;
-        console.log(`⏱️  [PERF] Query agregada de transacciones: ${transaccionesTime}ms (${compradoresNecesitanCalculo.length} compradores)`);
+        console.log(`⏱️  [PERF] Query agregada de transacciones: ${transaccionesTime}ms (${allCompradores.length} compradores)`);
       }
 
       // Construir resultado final combinando balances calculados y estadísticas
       for (const comprador of allCompradores) {
         const stats = viajesStatsMap.get(comprador.id) || { viajesCount: 0, viajesUltimoMes: 0, totalDeudaViajes: 0 };
         
-        // Usar balanceCalculado si está disponible y actualizado
-        let balance: number;
-        if (comprador.balanceCalculado && !comprador.balanceDesactualizado) {
-          balance = parseFloat(comprador.balanceCalculado);
-        } else {
-          // Calcular balance dinámicamente usando datos agregados
-          // Lógica estandarizada: Positivos (desde comprador) - Negativos (hacia comprador + viajes)
-          const transaccionesNetas = transaccionesStatsMap.get(comprador.id) || 0;
-          balance = transaccionesNetas - stats.totalDeudaViajes; // Negativo porque totalDeudaViajes es deuda
-        }
+        // SIEMPRE calcular balance dinámicamente para asegurar que se excluyan transacciones pendientes
+        // (balanceCalculado podría incluir transacciones pendientes si fue calculado antes de implementar la exclusión)
+        // Lógica estandarizada: Positivos (desde comprador) - Negativos (hacia comprador + viajes)
+        const transaccionesNetas = transaccionesStatsMap.get(comprador.id) || 0;
+        const balance = transaccionesNetas - stats.totalDeudaViajes; // Negativo porque totalDeudaViajes es deuda
 
         balances[comprador.id] = {
           balance,
@@ -4009,7 +3997,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       const endTime = Date.now();
-      console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getCompradoresBalances: ${endTime - startTime}ms (${allCompradores.length} compradores, ${compradoresNecesitanCalculo.length} necesitaron cálculo dinámico)`);
+      console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getCompradoresBalances: ${endTime - startTime}ms (${allCompradores.length} compradores, todos con cálculo dinámico para excluir pendientes)`);
       return balances;
     });
   }
@@ -4145,15 +4133,10 @@ export class DatabaseStorage implements IStorage {
         const viajesStats = viajesStatsMap.get(volquetero.nombre) || { viajesCount: 0, viajesUltimoMes: 0, ingresosFletes: 0 };
         const transaccionesStats = transaccionesStatsMap.get(volquetero.id) || { ingresos: 0, egresos: 0 };
         
-        // Usar balanceCalculado si está disponible y actualizado
-        let balance: number;
-        if (volquetero.balanceCalculado && !volquetero.balanceDesactualizado) {
-          balance = parseFloat(volquetero.balanceCalculado);
-        } else {
-          // Calcular balance dinámicamente usando datos agregados
-          // Lógica estandarizada: Positivos (viajes + desde volquetero) - Negativos (hacia volquetero)
-          balance = viajesStats.ingresosFletes + transaccionesStats.ingresos - transaccionesStats.egresos;
-        }
+        // SIEMPRE calcular balance dinámicamente para asegurar que se excluyan transacciones pendientes
+        // (balanceCalculado podría incluir transacciones pendientes si fue calculado antes de implementar la exclusión)
+        // Lógica estandarizada: Positivos (viajes + desde volquetero) - Negativos (hacia volquetero)
+        const balance = viajesStats.ingresosFletes + transaccionesStats.ingresos - transaccionesStats.egresos;
 
         balances[volquetero.id] = {
           balance,
