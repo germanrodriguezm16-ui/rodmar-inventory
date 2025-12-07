@@ -28,6 +28,16 @@ import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import { TransaccionesImageModal } from "@/components/modals/transacciones-image-modal";
 import ViajesImageModal from "@/components/modals/viajes-image-modal";
@@ -161,6 +171,40 @@ export default function MinaDetail() {
     }
   });
 
+  // Mutación para eliminar transacciones pendientes
+  const deletePendingTransactionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(apiUrl(`/api/transacciones/${id}`), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Solicitud eliminada",
+        description: "La transacción pendiente se ha eliminado exitosamente.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
+      setShowDeletePendingConfirm(false);
+      setSelectedTransaction(null);
+    },
+    onError: (error: any) => {
+      console.error("Error deleting solicitud:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la solicitud. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Mutación para mostrar todas las transacciones ocultas (manuales y viajes)
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
@@ -231,6 +275,7 @@ export default function MinaDetail() {
   const [selectedTransaction, setSelectedTransaction] = useState<TransaccionWithSocio | null>(null);
   const [showEditPendingTransaction, setShowEditPendingTransaction] = useState(false);
   const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
+  const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
   const [showTransactionDetail, setShowTransactionDetail] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("todos");
@@ -1495,9 +1540,9 @@ export default function MinaDetail() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedTransaction(transaccion);
-                                  // Si es transacción pendiente, abrir modal de detalle pendiente (que tiene botón de eliminar)
+                                  // Si es transacción pendiente, abrir modal de confirmación de eliminación
                                   if (transaccion.estado === 'pendiente') {
-                                    setShowPendingDetailModal(true);
+                                    setShowDeletePendingConfirm(true);
                                   } else {
                                     setShowDeleteTransaction(true);
                                   }
@@ -1679,6 +1724,32 @@ export default function MinaDetail() {
           />
         </>
       )}
+
+      {/* AlertDialog para confirmar eliminación de transacción pendiente */}
+      <AlertDialog open={showDeletePendingConfirm} onOpenChange={setShowDeletePendingConfirm}>
+        <AlertDialogContent className="border-2 border-red-300">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar solicitud?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente la transacción pendiente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedTransaction) {
+                  deletePendingTransactionMutation.mutate(selectedTransaction.id);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deletePendingTransactionMutation.isPending}
+            >
+              {deletePendingTransactionMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <TransactionDetailModal
         open={showTransactionDetail}

@@ -40,6 +40,16 @@ import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import CompradorViajesImageModal from "@/components/modals/comprador-viajes-image-modal";
 import { CompradorTransaccionesImageModal } from "@/components/modals/comprador-transacciones-image-modal";
@@ -75,6 +85,7 @@ export default function CompradorDetail() {
   const [showDeleteTransaction, setShowDeleteTransaction] = useState(false);
   const [showEditPendingTransaction, setShowEditPendingTransaction] = useState(false);
   const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
+  const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
   
   // Estados para filtros de viajes
   const [dateFilter, setDateFilter] = useState("todos");
@@ -556,6 +567,41 @@ export default function CompradorDetail() {
     }
   });
 
+  // Mutación para eliminar transacciones pendientes
+  const deletePendingTransactionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(apiUrl(`/api/transacciones/${id}`), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      const compradorId = parseInt(params?.id || "0");
+      toast({
+        title: "Solicitud eliminada",
+        description: "La transacción pendiente se ha eliminado exitosamente.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/comprador/${compradorId}`] });
+      setShowDeletePendingConfirm(false);
+      setSelectedTransaction(null);
+    },
+    onError: (error: any) => {
+      console.error("Error deleting solicitud:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la solicitud. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Mutación para mostrar todas las transacciones y viajes ocultos
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
@@ -892,6 +938,32 @@ export default function CompradorDetail() {
           />
         </>
       )}
+
+      {/* AlertDialog para confirmar eliminación de transacción pendiente */}
+      <AlertDialog open={showDeletePendingConfirm} onOpenChange={setShowDeletePendingConfirm}>
+        <AlertDialogContent className="border-2 border-red-300">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar solicitud?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente la transacción pendiente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedTransaction) {
+                  deletePendingTransactionMutation.mutate(selectedTransaction.id);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deletePendingTransactionMutation.isPending}
+            >
+              {deletePendingTransactionMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Modal de detalles de transacción */}
       {selectedTransaction && (
@@ -2386,9 +2458,9 @@ function CompradorTransaccionesTab({
                           const realTransaction = transacciones.find(t => t.id.toString() === realTransactionId);
                           if (realTransaction) {
                             setSelectedTransaction(realTransaction);
-                            // Si es transacción pendiente, abrir modal de detalle pendiente (que tiene botón de eliminar)
+                            // Si es transacción pendiente, abrir modal de confirmación de eliminación
                             if (realTransaction.estado === 'pendiente') {
-                              setShowPendingDetailModal(true);
+                              setShowDeletePendingConfirm(true);
                             } else {
                               setShowDeleteTransaction(true);
                             }

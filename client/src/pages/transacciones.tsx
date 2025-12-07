@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,16 @@ import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 import { PaginationControls } from "@/components/ui/pagination-controls";
@@ -39,6 +50,7 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
   const [selectedTransaction, setSelectedTransaction] = useState<TransaccionWithSocio | null>(null);
   const [showEditPendingTransaction, setShowEditPendingTransaction] = useState(false);
   const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
+  const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState<Set<number>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -122,9 +134,9 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
 
   const handleDeleteTransaction = (transaction: TransaccionWithSocio) => {
     setSelectedTransaction(transaction);
-    // Si es transacción pendiente, abrir modal de detalle pendiente (que tiene botón de eliminar)
+    // Si es transacción pendiente, abrir modal de confirmación de eliminación
     if (transaction.estado === 'pendiente') {
-      setShowPendingDetailModal(true);
+      setShowDeletePendingConfirm(true);
     } else {
       setShowDeleteModal(true);
     }
@@ -1129,6 +1141,32 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
           />
         </>
       )}
+
+      {/* AlertDialog para confirmar eliminación de transacción pendiente */}
+      <AlertDialog open={showDeletePendingConfirm} onOpenChange={setShowDeletePendingConfirm}>
+        <AlertDialogContent className="border-2 border-red-300">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar solicitud?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente la transacción pendiente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedTransaction) {
+                  deletePendingTransactionMutation.mutate(selectedTransaction.id);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deletePendingTransactionMutation.isPending}
+            >
+              {deletePendingTransactionMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Modal de detalle de transacción */}
       <TransactionDetailModal

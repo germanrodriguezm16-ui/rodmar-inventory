@@ -19,6 +19,18 @@ import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
+import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import type { ViajeWithDetails, TransaccionWithSocio } from "@shared/schema";
 
@@ -77,6 +89,9 @@ export default function VolqueteroDetail() {
   const [editingTransaction, setEditingTransaction] = useState<any | null>(null);
   const [deletingTransaction, setDeletingTransaction] = useState<any | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [showEditPendingTransaction, setShowEditPendingTransaction] = useState(false);
+  const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
+  const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
   const [showTransactionDetail, setShowTransactionDetail] = useState(false);
   
   // Estado para transacciones temporales (solo en memoria)
@@ -1104,7 +1119,14 @@ export default function VolqueteroDetail() {
                                       <Button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setEditingTransaction(transaccion.originalTransaction);
+                                          const realTransaction = transaccion.originalTransaction;
+                                          setSelectedTransaction(realTransaction);
+                                          // Si es transacción pendiente, abrir modal de editar pendiente
+                                          if (realTransaction?.estado === 'pendiente') {
+                                            setShowEditPendingTransaction(true);
+                                          } else {
+                                            setEditingTransaction(realTransaction);
+                                          }
                                         }}
                                         variant="ghost"
                                         size="sm"
@@ -1116,7 +1138,14 @@ export default function VolqueteroDetail() {
                                       <Button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setDeletingTransaction(transaccion.originalTransaction);
+                                          const realTransaction = transaccion.originalTransaction;
+                                          setSelectedTransaction(realTransaction);
+                                          // Si es transacción pendiente, abrir modal de confirmación de eliminación
+                                          if (realTransaction?.estado === 'pendiente') {
+                                            setShowDeletePendingConfirm(true);
+                                          } else {
+                                            setDeletingTransaction(realTransaction);
+                                          }
                                         }}
                                         variant="ghost"
                                         size="sm"
@@ -1281,7 +1310,14 @@ export default function VolqueteroDetail() {
                                     className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-blue-100 shrink-0"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setEditingTransaction(transaccion.originalTransaction);
+                                      const realTransaction = transaccion.originalTransaction;
+                                      setSelectedTransaction(realTransaction);
+                                      // Si es transacción pendiente, abrir modal de editar pendiente
+                                      if (realTransaction?.estado === 'pendiente') {
+                                        setShowEditPendingTransaction(true);
+                                      } else {
+                                        setEditingTransaction(realTransaction);
+                                      }
                                     }}
                                     title="Editar transacción"
                                   >
@@ -1293,7 +1329,14 @@ export default function VolqueteroDetail() {
                                     className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-red-100 shrink-0"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setDeletingTransaction(transaccion.originalTransaction);
+                                      const realTransaction = transaccion.originalTransaction;
+                                      setSelectedTransaction(realTransaction);
+                                      // Si es transacción pendiente, abrir modal de confirmación de eliminación
+                                      if (realTransaction?.estado === 'pendiente') {
+                                        setShowDeletePendingConfirm(true);
+                                      } else {
+                                        setDeletingTransaction(realTransaction);
+                                      }
                                     }}
                                     title="Eliminar transacción"
                                   >
@@ -1467,6 +1510,75 @@ export default function VolqueteroDetail() {
         }}
         transaction={deletingTransaction}
       />
+
+      {/* Modales para transacciones pendientes */}
+      {selectedTransaction && selectedTransaction.estado === 'pendiente' && (
+        <>
+          <SolicitarTransaccionModal
+            open={showEditPendingTransaction}
+            onClose={() => {
+              setShowEditPendingTransaction(false);
+              setSelectedTransaction(null);
+            }}
+            initialData={{
+              id: selectedTransaction.id,
+              paraQuienTipo: selectedTransaction.paraQuienTipo || '',
+              paraQuienId: selectedTransaction.paraQuienId || '',
+              valor: selectedTransaction.valor || '',
+              comentario: selectedTransaction.comentario || undefined,
+              detalle_solicitud: selectedTransaction.detalle_solicitud || '',
+            }}
+          />
+          <PendingDetailModal
+            open={showPendingDetailModal}
+            transaccion={{
+              id: selectedTransaction.id,
+              concepto: selectedTransaction.concepto || '',
+              valor: selectedTransaction.valor || '',
+              fecha: selectedTransaction.fecha?.toString() || '',
+              codigo_solicitud: selectedTransaction.codigo_solicitud || null,
+              detalle_solicitud: selectedTransaction.detalle_solicitud || null,
+              paraQuienTipo: selectedTransaction.paraQuienTipo || null,
+              paraQuienId: selectedTransaction.paraQuienId || null,
+              comentario: selectedTransaction.comentario || null,
+            }}
+            onClose={() => {
+              setShowPendingDetailModal(false);
+              setSelectedTransaction(null);
+            }}
+            onEdit={(transaccion) => {
+              setShowPendingDetailModal(false);
+              setShowEditPendingTransaction(true);
+            }}
+          />
+        </>
+      )}
+
+      {/* AlertDialog para confirmar eliminación de transacción pendiente */}
+      <AlertDialog open={showDeletePendingConfirm} onOpenChange={setShowDeletePendingConfirm}>
+        <AlertDialogContent className="border-2 border-red-300">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar solicitud?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente la transacción pendiente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedTransaction) {
+                  deletePendingTransactionMutation.mutate(selectedTransaction.id);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deletePendingTransactionMutation.isPending}
+            >
+              {deletePendingTransactionMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Navegación inferior */}
       <BottomNavigation />
