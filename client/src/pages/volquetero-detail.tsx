@@ -17,6 +17,8 @@ import { apiUrl } from "@/lib/api";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
+import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
+import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import type { ViajeWithDetails, TransaccionWithSocio } from "@shared/schema";
 

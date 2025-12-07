@@ -12,6 +12,8 @@ import { formatDate } from "@/lib/utils";
 import TransactionModal from "@/components/forms/transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
+import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
+import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 import { PaginationControls } from "@/components/ui/pagination-controls";
@@ -35,6 +37,8 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<TransaccionWithSocio | null>(null);
+  const [showEditPendingTransaction, setShowEditPendingTransaction] = useState(false);
+  const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState<Set<number>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -108,12 +112,22 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
 
   const handleEditTransaction = (transaction: TransaccionWithSocio) => {
     setSelectedTransaction(transaction);
-    setShowEditModal(true);
+    // Si es transacción pendiente, abrir modal de editar pendiente
+    if (transaction.estado === 'pendiente') {
+      setShowEditPendingTransaction(true);
+    } else {
+      setShowEditModal(true);
+    }
   };
 
   const handleDeleteTransaction = (transaction: TransaccionWithSocio) => {
     setSelectedTransaction(transaction);
-    setShowDeleteModal(true);
+    // Si es transacción pendiente, abrir modal de detalle pendiente (que tiene botón de eliminar)
+    if (transaction.estado === 'pendiente') {
+      setShowPendingDetailModal(true);
+    } else {
+      setShowDeleteModal(true);
+    }
   };
 
   const toggleTransactionSelection = (transactionId: number) => {

@@ -28,7 +28,7 @@ import {
   type FusionBackup
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, sql, isNull, inArray } from "drizzle-orm";
+import { eq, desc, and, or, sql, isNull, inArray, ne } from "drizzle-orm";
 import type { IStorage } from "./storage";
 
 // Helper para capturar errores de conexión y propagarlos correctamente
@@ -3705,11 +3705,13 @@ export class DatabaseStorage implements IStorage {
         const minaIds = minasNecesitanCalculo.map(m => m.id.toString());
         
         // Construir condiciones OR para cada mina (INCLUIR OCULTOS para balance real)
+        // EXCLUIR transacciones pendientes (no afectan balances)
         const transaccionesConditions = [
           or(
             and(eq(transacciones.deQuienTipo, 'mina'), inArray(transacciones.deQuienId, minaIds)),
             and(eq(transacciones.paraQuienTipo, 'mina'), inArray(transacciones.paraQuienId, minaIds))
-          )
+          ),
+          ne(transacciones.estado, 'pendiente') // Excluir transacciones pendientes
         ];
         
         const transaccionesStats = await db
@@ -3839,11 +3841,13 @@ export class DatabaseStorage implements IStorage {
         const compradorIds = compradoresNecesitanCalculo.map(c => c.id.toString());
         
         // Construir condiciones OR para cada comprador (INCLUIR OCULTOS para balance real)
+        // EXCLUIR transacciones pendientes (no afectan balances)
         const transaccionesConditions = [
           or(
             and(eq(transacciones.deQuienTipo, 'comprador'), inArray(transacciones.deQuienId, compradorIds)),
             and(eq(transacciones.paraQuienTipo, 'comprador'), inArray(transacciones.paraQuienId, compradorIds))
-          )
+          ),
+          ne(transacciones.estado, 'pendiente') // Excluir transacciones pendientes
         ];
         
         const transaccionesStats = await db
@@ -3979,11 +3983,13 @@ export class DatabaseStorage implements IStorage {
       const volqueteroIds = allVolqueteros.map(v => v.id.toString());
       
       // Construir condiciones OR para cada volquetero (INCLUIR OCULTOS para balance real)
+      // EXCLUIR transacciones pendientes (no afectan balances)
       const transaccionesConditions = [
         or(
           and(eq(transacciones.deQuienTipo, 'volquetero'), inArray(transacciones.deQuienId, volqueteroIds)),
           and(eq(transacciones.paraQuienTipo, 'volquetero'), inArray(transacciones.paraQuienId, volqueteroIds))
-        )
+        ),
+        ne(transacciones.estado, 'pendiente') // Excluir transacciones pendientes
       ];
       
       const transaccionesStats = await db

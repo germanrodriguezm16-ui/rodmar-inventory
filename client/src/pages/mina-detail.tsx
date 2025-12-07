@@ -26,6 +26,8 @@ import BottomNavigation from "@/components/layout/bottom-navigation";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
+import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
+import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import { TransaccionesImageModal } from "@/components/modals/transacciones-image-modal";
 import ViajesImageModal from "@/components/modals/viajes-image-modal";
@@ -1473,7 +1475,12 @@ export default function MinaDetail() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedTransaction(transaccion);
-                                  setShowEditTransaction(true);
+                                  // Si es transacción pendiente, abrir modal de editar pendiente
+                                  if (transaccion.estado === 'pendiente') {
+                                    setShowEditPendingTransaction(true);
+                                  } else {
+                                    setShowEditTransaction(true);
+                                  }
                                 }}
                                 title="Editar transacción"
                               >
@@ -1486,7 +1493,12 @@ export default function MinaDetail() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedTransaction(transaccion);
-                                  setShowDeleteTransaction(true);
+                                  // Si es transacción pendiente, abrir modal de detalle pendiente (que tiene botón de eliminar)
+                                  if (transaccion.estado === 'pendiente') {
+                                    setShowPendingDetailModal(true);
+                                  } else {
+                                    setShowDeleteTransaction(true);
+                                  }
                                 }}
                                 title="Eliminar transacción"
                               >
@@ -1622,6 +1634,49 @@ export default function MinaDetail() {
         }}
         transaction={selectedTransaction}
       />
+
+      {/* Modales para transacciones pendientes */}
+      {selectedTransaction && selectedTransaction.estado === 'pendiente' && (
+        <>
+          <SolicitarTransaccionModal
+            open={showEditPendingTransaction}
+            onClose={() => {
+              setShowEditPendingTransaction(false);
+              setSelectedTransaction(null);
+            }}
+            initialData={{
+              id: selectedTransaction.id,
+              paraQuienTipo: selectedTransaction.paraQuienTipo || '',
+              paraQuienId: selectedTransaction.paraQuienId || '',
+              valor: selectedTransaction.valor || '',
+              comentario: selectedTransaction.comentario || undefined,
+              detalle_solicitud: selectedTransaction.detalle_solicitud || '',
+            }}
+          />
+          <PendingDetailModal
+            open={showPendingDetailModal}
+            transaccion={{
+              id: selectedTransaction.id,
+              concepto: selectedTransaction.concepto || '',
+              valor: selectedTransaction.valor || '',
+              fecha: selectedTransaction.fecha?.toString() || '',
+              codigo_solicitud: selectedTransaction.codigo_solicitud || null,
+              detalle_solicitud: selectedTransaction.detalle_solicitud || null,
+              paraQuienTipo: selectedTransaction.paraQuienTipo || null,
+              paraQuienId: selectedTransaction.paraQuienId || null,
+              comentario: selectedTransaction.comentario || null,
+            }}
+            onClose={() => {
+              setShowPendingDetailModal(false);
+              setSelectedTransaction(null);
+            }}
+            onEdit={(transaccion) => {
+              setShowPendingDetailModal(false);
+              setShowEditPendingTransaction(true);
+            }}
+          />
+        </>
+      )}
 
       <TransactionDetailModal
         open={showTransactionDetail}
