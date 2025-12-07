@@ -1403,7 +1403,9 @@ function CompradorTransaccionesTab({
         paraQuienTipo: t.paraQuienTipo,
         paraQuienId: t.paraQuienId,
         voucher: t.voucher, // ¡Incluir el campo voucher!
-        comentario: t.comentario
+        comentario: t.comentario,
+        estado: t.estado, // Incluir el campo estado para transacciones pendientes
+        originalTransaction: t // Incluir la transacción original completa
       }));
 
     // Agregar transacciones temporales
@@ -1971,9 +1973,11 @@ function CompradorTransaccionesTab({
                     key={transaccion.id}
                     className={`border-t cursor-pointer hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}
                     onClick={() => {
-                      setSelectedTransaction(transaccion);
+                      // Usar originalTransaction si está disponible, sino usar la transacción directamente
+                      const realTransaction = (transaccion as any).originalTransaction || transaccion;
+                      setSelectedTransaction(realTransaction);
                       // Si es transacción pendiente, abrir modal de detalles de solicitud
-                      if (transaccion.estado === 'pendiente') {
+                      if (realTransaction.estado === 'pendiente') {
                         setShowPendingDetailModal(true);
                       } else {
                         setShowTransactionDetail(true);
@@ -2267,9 +2271,11 @@ function CompradorTransaccionesTab({
               key={transaccion.id}
               className="p-2 cursor-pointer hover:bg-gray-50 transition-colors"
               onClick={() => {
-                setSelectedTransaction(transaccion);
+                // Usar originalTransaction si está disponible, sino usar la transacción directamente
+                const realTransaction = (transaccion as any).originalTransaction || transaccion;
+                setSelectedTransaction(realTransaction);
                 // Si es transacción pendiente, abrir modal de detalles de solicitud
-                if (transaccion.estado === 'pendiente') {
+                if (realTransaction.estado === 'pendiente') {
                   setShowPendingDetailModal(true);
                 } else {
                   setShowTransactionDetail(true);
