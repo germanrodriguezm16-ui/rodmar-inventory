@@ -15,8 +15,7 @@ import { X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { SolicitudDetailModal } from "@/components/modals/solicitud-detail-modal";
-import { ConfirmSolicitudModal } from "@/components/modals/confirm-solicitud-modal";
+import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 // import { useOptimalMobileForm } from "@/hooks/useOptimalMobileForm";
 
 import type { Mina, Comprador, Volquetero } from "@shared/schema";
@@ -79,10 +78,8 @@ function NewTransactionModal({
 }: TransactionModalProps) {
   const { toast } = useToast();
   
-  // Estados para modales de solicitud
-  const [showSolicitudDetail, setShowSolicitudDetail] = useState(false);
-  const [showConfirmSolicitud, setShowConfirmSolicitud] = useState(false);
-  const [detalleSolicitud, setDetalleSolicitud] = useState("");
+  // Estado para modal de solicitar
+  const [showSolicitarModal, setShowSolicitarModal] = useState(false);
   
   // Hook súper optimizado para formularios móviles
   // const mobileForm = useOptimalMobileForm();
@@ -444,115 +441,10 @@ function NewTransactionModal({
     },
   });
 
-  // Mutación para crear solicitud pendiente
-  const createSolicitudMutation = useMutation({
-    mutationFn: async (data: { 
-      paraQuienTipo: string; 
-      paraQuienId: string; 
-      valor: string; 
-      fecha: string;
-      comentario?: string;
-      detalle_solicitud: string;
-    }) => {
-      const response = await fetch(apiUrl("/api/transacciones/solicitar"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => response.statusText);
-        throw new Error(`Error ${response.status}: ${errorText}`);
-      }
-
-      return response.json();
-    },
-    onSuccess: (result) => {
-      toast({
-        title: "Solicitud creada",
-        description: "La solicitud de transacción pendiente se ha creado exitosamente.",
-      });
-      
-      // Invalidar queries de pendientes
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
-      
-      // Invalidar queries del socio destino
-      if (result.paraQuienTipo === 'comprador' && result.paraQuienId) {
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", parseInt(result.paraQuienId)] });
-      }
-      if (result.paraQuienTipo === 'mina' && result.paraQuienId) {
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", parseInt(result.paraQuienId)] });
-      }
-      if (result.paraQuienTipo === 'volquetero' && result.paraQuienId) {
-        queryClient.invalidateQueries({
-          predicate: (query) => {
-            const queryKey = query.queryKey;
-            return Array.isArray(queryKey) &&
-              queryKey.length > 0 &&
-              typeof queryKey[0] === "string" &&
-              queryKey[0] === "/api/transacciones/volquetero" &&
-              queryKey[1] === result.paraQuienId;
-          },
-        });
-      }
-      
-      form.reset();
-      setDetalleSolicitud("");
-      setShowConfirmSolicitud(false);
-      setShowSolicitudDetail(false);
-      onClose();
-    },
-    onError: (error: any) => {
-      console.error("Error creating solicitud:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo crear la solicitud. Inténtalo de nuevo.",
-        variant: "destructive",
-      });
-    },
-  });
-
   // Función para manejar el botón "Solicitar"
   const handleSolicitar = () => {
-    const formData = form.getValues();
-    
-    // Validar campos mínimos para solicitud
-    if (!formData.paraQuienTipo || !formData.paraQuienId || !formData.valor) {
-      toast({
-        title: "Campos requeridos",
-        description: "Debe seleccionar destino y valor para crear una solicitud.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Abrir modal de detalle de solicitud
-    setShowSolicitudDetail(true);
-  };
-
-  // Función para manejar aceptar en modal de detalle
-  const handleAcceptDetalle = (detalle: string) => {
-    setDetalleSolicitud(detalle);
-    setShowSolicitudDetail(false);
-    setShowConfirmSolicitud(true);
-  };
-
-  // Función para confirmar solicitud
-  const handleConfirmSolicitud = () => {
-    const formData = form.getValues();
-    
-    createSolicitudMutation.mutate({
-      paraQuienTipo: formData.paraQuienTipo!,
-      paraQuienId: formData.paraQuienId!,
-      valor: formData.valor,
-      fecha: formData.fecha || getTodayLocalDate(),
-      comentario: formData.comentario || undefined,
-      detalle_solicitud: detalleSolicitud,
-    });
+    // Abrir directamente el nuevo modal de solicitar
+    setShowSolicitarModal(true);
   };
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
@@ -570,9 +462,7 @@ function NewTransactionModal({
 
   // Limpiar estados cuando se cierra el modal
   const handleClose = () => {
-    setShowSolicitudDetail(false);
-    setShowConfirmSolicitud(false);
-    setDetalleSolicitud("");
+    setShowSolicitarModal(false);
     onClose();
   };
 
@@ -981,14 +871,14 @@ function NewTransactionModal({
                 type="button" 
                 variant="outline" 
                 onClick={handleSolicitar}
-                disabled={createSolicitudMutation.isPending || createTransactionMutation.isPending}
+                disabled={createTransactionMutation.isPending}
                 className="bg-green-200 hover:bg-green-300 text-green-800 border-green-300"
               >
-                {createSolicitudMutation.isPending ? "Creando solicitud..." : "Solicitar"}
+                Solicitar
               </Button>
               <Button 
                 type="submit" 
-                disabled={createTransactionMutation.isPending || createSolicitudMutation.isPending}
+                disabled={createTransactionMutation.isPending}
               >
                 {createTransactionMutation.isPending ? "Registrando..." : "Crear Transacción"}
               </Button>
@@ -997,30 +887,10 @@ function NewTransactionModal({
         </Form>
       </DialogContent>
       
-      {/* Modal de detalle de solicitud */}
-      <SolicitudDetailModal
-        open={showSolicitudDetail}
-        onClose={() => setShowSolicitudDetail(false)}
-        onAccept={handleAcceptDetalle}
-      />
-      
-      {/* Modal de confirmación de solicitud */}
-      <ConfirmSolicitudModal
-        open={showConfirmSolicitud}
-        onClose={() => {
-          setShowConfirmSolicitud(false);
-          setDetalleSolicitud("");
-        }}
-        onConfirm={handleConfirmSolicitud}
-        socioDestino={(() => {
-          const paraQuienTipo = form.watch("paraQuienTipo");
-          const paraQuienId = form.watch("paraQuienId");
-          if (paraQuienTipo && paraQuienId) {
-            return getEntityName(paraQuienTipo, paraQuienId);
-          }
-          return undefined;
-        })()}
-        valor={form.watch("valor")}
+      {/* Modal de solicitar transacción */}
+      <SolicitarTransaccionModal
+        open={showSolicitarModal}
+        onClose={() => setShowSolicitarModal(false)}
       />
     </Dialog>
   );
