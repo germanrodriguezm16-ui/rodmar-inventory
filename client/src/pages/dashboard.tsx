@@ -12,6 +12,8 @@ const RodMar = lazy(() => import("@/components/modules/rodmar"));
 import RegisterCargueModal from "@/components/forms/register-cargue-modal";
 import RegisterDescargueModal from "@/components/forms/register-descargue-modal";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
+import { PendingButton } from "@/components/pending-transactions/pending-button";
+import { PendingListModal } from "@/components/pending-transactions/pending-list-modal";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -26,6 +28,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   const [showCargueModal, setShowCargueModal] = useState(false);
   const [showDescargueModal, setShowDescargueModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showPendingModal, setShowPendingModal] = useState(false);
 
   const renderModule = () => {
     const LoadingFallback = () => (
@@ -93,6 +96,9 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         onModuleChange={setActiveModule}
       />
 
+      {/* Botón "P" para transacciones pendientes - visible solo cuando hay pendientes */}
+      <PendingButton onClick={() => setShowPendingModal(true)} />
+
       {/* Floating Action Button - visible en todos los módulos */}
       <Button
         size="icon"
@@ -117,6 +123,11 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       <NewTransactionModal 
         open={showTransactionModal}
         onClose={() => setShowTransactionModal(false)}
+      />
+      
+      <PendingListModal 
+        open={showPendingModal}
+        onClose={() => setShowPendingModal(false)}
       />
     </div>
   );
