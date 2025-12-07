@@ -3159,18 +3159,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         voucher: req.body.voucher,
         comentario: req.body.comentario,
         oculta: req.body.oculta, // Agregar soporte para campo oculta
+        // Campos para transacciones pendientes
+        detalle_solicitud: req.body.detalle_solicitud,
+        estado: req.body.estado,
+        codigo_solicitud: req.body.codigo_solicitud,
+        tiene_voucher: req.body.tiene_voucher,
       };
 
       // Map new schema to old schema if present
       if (
-        req.body.deQuienTipo &&
-        req.body.deQuienId &&
         req.body.paraQuienTipo &&
         req.body.paraQuienId
       ) {
-        // For now, use the "paraQuien" (destination) as the main transaction target
-        updateData.deQuienTipo = req.body.deQuienTipo;
-        updateData.deQuienId = req.body.deQuienId;
+        // Actualizar campos de destino (para transacciones pendientes, deQuien puede ser null)
+        if (req.body.deQuienTipo !== undefined) {
+          updateData.deQuienTipo = req.body.deQuienTipo;
+        }
+        if (req.body.deQuienId !== undefined) {
+          updateData.deQuienId = req.body.deQuienId;
+        }
         updateData.paraQuienTipo = req.body.paraQuienTipo;
         updateData.paraQuienId = req.body.paraQuienId;
       } else if (req.body.tipoSocio && req.body.socioId) {

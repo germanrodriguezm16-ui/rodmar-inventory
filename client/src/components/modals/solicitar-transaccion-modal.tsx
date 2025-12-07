@@ -159,18 +159,78 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
     form.setValue("paraQuienId", "postobon");
   }
 
+  // Función para generar el concepto (similar al backend)
+  const generateConcepto = (data: z.infer<typeof solicitarSchema>) => {
+    const tipoCapitalizado = data.paraQuienTipo.charAt(0).toUpperCase() + data.paraQuienTipo.slice(1);
+    let nombreDestino = "Desconocido";
+    
+    switch (data.paraQuienTipo) {
+      case "mina":
+        const mina = minas.find(m => m.id.toString() === data.paraQuienId);
+        nombreDestino = mina?.nombre || data.paraQuienId;
+        break;
+      case "comprador":
+        const comprador = compradores.find(c => c.id.toString() === data.paraQuienId);
+        nombreDestino = comprador?.nombre || data.paraQuienId;
+        break;
+      case "volquetero":
+        const volquetero = volqueteros.find(v => v.id.toString() === data.paraQuienId);
+        nombreDestino = volquetero?.nombre || data.paraQuienId;
+        break;
+      case "rodmar":
+        const rodmarOption = rodmarOptions.find(o => o.value === data.paraQuienId);
+        nombreDestino = rodmarOption?.label || data.paraQuienId;
+        break;
+      case "banco":
+        nombreDestino = "Banco";
+        break;
+      case "lcdm":
+        nombreDestino = "La Casa del Motero";
+        break;
+      case "postobon":
+        nombreDestino = "Postobón";
+        break;
+      default:
+        nombreDestino = data.paraQuienId;
+    }
+    
+    return `Solicitud de pago a ${tipoCapitalizado} (${nombreDestino})`;
+  };
+
   const createSolicitudMutation = useMutation({
     mutationFn: async (data: z.infer<typeof solicitarSchema>) => {
-      // Si hay initialData con ID, es una edición - primero eliminar la anterior y crear una nueva
+      // Si hay initialData con ID, es una edición - usar PATCH para actualizar
       if (initialData?.id) {
-        // Eliminar la transacción anterior
-        await fetch(apiUrl(`/api/transacciones/${initialData.id}`), {
-          method: "DELETE",
+        const concepto = generateConcepto(data);
+        
+        const response = await fetch(apiUrl(`/api/transacciones/${initialData.id}`), {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paraQuienTipo: data.paraQuienTipo,
+            paraQuienId: data.paraQuienId,
+            concepto: concepto,
+            valor: getNumericValue(data.valor),
+            fecha: getTodayLocalDate(),
+            formaPago: "pendiente", // Mantener como pendiente
+            comentario: data.comentario || undefined,
+            detalle_solicitud: data.detalle_solicitud,
+            estado: "pendiente", // Mantener como pendiente
+          }),
           credentials: "include",
         });
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => response.statusText);
+          throw new Error(`Error ${response.status}: ${errorText}`);
+        }
+
+        return response.json();
       }
 
-      // Crear la nueva solicitud (o recrear si es edición)
+      // Si no hay ID, crear nueva solicitud
       const response = await fetch(apiUrl("/api/transacciones/solicitar"), {
         method: "POST",
         headers: {
@@ -194,7 +254,7 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
 
       return response.json();
     },
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       toast({
         title: initialData?.id ? "Solicitud actualizada" : "Solicitud creada",
         description: initialData?.id 
@@ -206,14 +266,39 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       
-      // Invalidar queries del socio destino
-      if (result.paraQuienTipo === 'comprador' && result.paraQuienId) {
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", parseInt(result.paraQuienId)] });
+      // Si es una edición, invalidar también las queries del destino anterior
+      if (initialData?.id && initialData.paraQuienTipo && initialData.paraQuienId) {
+        if (initialData.paraQuienTipo === 'comprador') {
+          queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", parseInt(initialData.paraQuienId)] });
+        }
+        if (initialData.paraQuienTipo === 'mina') {
+          queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", parseInt(initialData.paraQuienId)] });
+        }
+        if (initialData.paraQuienTipo === 'volquetero') {
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0] === "/api/transacciones/volquetero" &&
+                queryKey[1] === initialData.paraQuienId;
+            },
+          });
+        }
       }
-      if (result.paraQuienTipo === 'mina' && result.paraQuienId) {
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", parseInt(result.paraQuienId)] });
+      
+      // Invalidar queries del socio destino (nuevo o actualizado)
+      const paraQuienTipo = result.paraQuienTipo || variables.paraQuienTipo;
+      const paraQuienId = result.paraQuienId || variables.paraQuienId;
+      
+      if (paraQuienTipo === 'comprador' && paraQuienId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", parseInt(paraQuienId)] });
       }
-      if (result.paraQuienTipo === 'volquetero' && result.paraQuienId) {
+      if (paraQuienTipo === 'mina' && paraQuienId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", parseInt(paraQuienId)] });
+      }
+      if (paraQuienTipo === 'volquetero' && paraQuienId) {
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -221,7 +306,7 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
               queryKey.length > 0 &&
               typeof queryKey[0] === "string" &&
               queryKey[0] === "/api/transacciones/volquetero" &&
-              queryKey[1] === result.paraQuienId;
+              queryKey[1] === paraQuienId;
           },
         });
       }
