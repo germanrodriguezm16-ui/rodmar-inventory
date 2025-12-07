@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -14,19 +15,22 @@ import { X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { SolicitudDetailModal } from "@/components/modals/solicitud-detail-modal";
+import { ConfirmSolicitudModal } from "@/components/modals/confirm-solicitud-modal";
 // import { useOptimalMobileForm } from "@/hooks/useOptimalMobileForm";
 
 import type { Mina, Comprador, Volquetero } from "@shared/schema";
 
+// Schema base - campos opcionales para permitir solicitudes
 const formSchema = z.object({
-  deQuienTipo: z.string().min(1, "Debe seleccionar de quién es la transacción"),
-  deQuienId: z.string().min(1, "Debe especificar de quién"),
+  deQuienTipo: z.string().optional(), // Opcional para solicitudes
+  deQuienId: z.string().optional(), // Opcional para solicitudes
   paraQuienTipo: z.string().min(1, "Debe seleccionar para quién es la transacción"),
   paraQuienId: z.string().min(1, "Debe especificar para quién"),
   postobonCuenta: z.string().optional(),
   valor: z.string().min(1, "El valor es requerido"),
   fecha: z.string().min(1, "La fecha es requerida"),
-  formaPago: z.string().min(1, "La forma de pago es requerida"),
+  formaPago: z.string().optional(), // Opcional para solicitudes
   voucher: z.string().optional(),
   comentario: z.string().optional(),
 });
@@ -74,6 +78,11 @@ function NewTransactionModal({
   onTemporalSubmit 
 }: TransactionModalProps) {
   const { toast } = useToast();
+  
+  // Estados para modales de solicitud
+  const [showSolicitudDetail, setShowSolicitudDetail] = useState(false);
+  const [showConfirmSolicitud, setShowConfirmSolicitud] = useState(false);
+  const [detalleSolicitud, setDetalleSolicitud] = useState("");
   
   // Hook súper optimizado para formularios móviles
   // const mobileForm = useOptimalMobileForm();
@@ -256,16 +265,116 @@ function NewTransactionModal({
           queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
           queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
           queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] }); // Refetch inmediato
+          
+          // Invalidar queries específicas de la mina afectada
+          const minaIdAffected = data.deQuienTipo === 'mina' ? data.deQuienId : data.paraQuienId;
+          if (minaIdAffected) {
+            queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", parseInt(minaIdAffected)] });
+            queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", parseInt(minaIdAffected), "includeHidden"] });
+            queryClient.refetchQueries({ queryKey: ["/api/transacciones/mina", parseInt(minaIdAffected)] });
+            queryClient.refetchQueries({ queryKey: ["/api/transacciones/mina", parseInt(minaIdAffected), "includeHidden"] });
+          }
+          
+          // Si el modal tiene una minaActual específica (desde la página de detalle), invalidar también esa
+          if (minaActual) {
+            queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", minaActual.id] });
+            queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", minaActual.id, "includeHidden"] });
+            queryClient.refetchQueries({ queryKey: ["/api/transacciones/mina", minaActual.id] });
+            queryClient.refetchQueries({ queryKey: ["/api/transacciones/mina", minaActual.id, "includeHidden"] });
+          }
         }
         if (data.deQuienTipo === 'comprador' || data.paraQuienTipo === 'comprador') {
           queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
           queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
           queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
+          
+          // Invalidar queries específicas del comprador afectado
+          const compradorIdAffected = data.deQuienTipo === 'comprador' ? data.deQuienId : data.paraQuienId;
+          if (compradorIdAffected) {
+            const affectedId = parseInt(compradorIdAffected);
+            // Invalidar y forzar refetch inmediato
+            queryClient.invalidateQueries({ 
+              queryKey: ["/api/transacciones/comprador", affectedId],
+              refetchType: 'active' // Forzar refetch de queries activas
+            });
+            queryClient.invalidateQueries({ 
+              queryKey: ["/api/transacciones/comprador", affectedId, "includeHidden"],
+              refetchType: 'active'
+            });
+            // Refetch forzado ignorando staleTime
+            queryClient.refetchQueries({ 
+              queryKey: ["/api/transacciones/comprador", affectedId],
+              type: 'active'
+            });
+            queryClient.refetchQueries({ 
+              queryKey: ["/api/transacciones/comprador", affectedId, "includeHidden"],
+              type: 'active'
+            });
+          }
+          
+          // Si el modal tiene un compradorId específico (desde la página de detalle), invalidar también ese
+          if (compradorId) {
+            console.log("🔄 Invalidando queries del comprador actual:", compradorId);
+            // Eliminar queries del cache para forzar recarga completa
+            queryClient.removeQueries({ 
+              queryKey: ["/api/transacciones/comprador", compradorId]
+            });
+            queryClient.removeQueries({ 
+              queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"]
+            });
+            // Invalidar y forzar refetch inmediato
+            queryClient.invalidateQueries({ 
+              queryKey: ["/api/transacciones/comprador", compradorId],
+              refetchType: 'active' // Forzar refetch de queries activas
+            });
+            queryClient.invalidateQueries({ 
+              queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"],
+              refetchType: 'active'
+            });
+            // Refetch forzado ignorando staleTime (con pequeño delay para asegurar que la invalidación se complete)
+            setTimeout(() => {
+              queryClient.refetchQueries({ 
+                queryKey: ["/api/transacciones/comprador", compradorId],
+                type: 'active',
+                cancelRefetch: false // No cancelar refetches en progreso
+              });
+              queryClient.refetchQueries({ 
+                queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"],
+                type: 'active',
+                cancelRefetch: false
+              });
+            }, 100);
+          }
         }
         if (data.deQuienTipo === 'volquetero' || data.paraQuienTipo === 'volquetero') {
           queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
           queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
           queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
+          
+          // Invalidar queries específicas del volquetero afectado
+          const volqueteroNombreAffected = data.deQuienTipo === 'volquetero' ? data.deQuienId : data.paraQuienId;
+          if (volqueteroNombreAffected) {
+            queryClient.invalidateQueries({
+              predicate: (query) => {
+                const queryKey = query.queryKey;
+                return Array.isArray(queryKey) &&
+                  queryKey.length > 0 &&
+                  typeof queryKey[0] === "string" &&
+                  queryKey[0] === "/api/transacciones/volquetero" &&
+                  queryKey[1] === volqueteroNombreAffected;
+              },
+            });
+            queryClient.refetchQueries({
+              predicate: (query) => {
+                const queryKey = query.queryKey;
+                return Array.isArray(queryKey) &&
+                  queryKey.length > 0 &&
+                  typeof queryKey[0] === "string" &&
+                  queryKey[0] === "/api/transacciones/volquetero" &&
+                  queryKey[1] === volqueteroNombreAffected;
+              },
+            });
+          }
         }
         
         // Invalidar queries de LCDM/Postobón si están involucradas
@@ -335,21 +444,149 @@ function NewTransactionModal({
     },
   });
 
+  // Mutación para crear solicitud pendiente
+  const createSolicitudMutation = useMutation({
+    mutationFn: async (data: { 
+      paraQuienTipo: string; 
+      paraQuienId: string; 
+      valor: string; 
+      fecha: string;
+      comentario?: string;
+      detalle_solicitud: string;
+    }) => {
+      const response = await fetch(apiUrl("/api/transacciones/solicitar"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+
+      return response.json();
+    },
+    onSuccess: (result) => {
+      toast({
+        title: "Solicitud creada",
+        description: "La solicitud de transacción pendiente se ha creado exitosamente.",
+      });
+      
+      // Invalidar queries de pendientes
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
+      
+      // Invalidar queries del socio destino
+      if (result.paraQuienTipo === 'comprador' && result.paraQuienId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", parseInt(result.paraQuienId)] });
+      }
+      if (result.paraQuienTipo === 'mina' && result.paraQuienId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", parseInt(result.paraQuienId)] });
+      }
+      if (result.paraQuienTipo === 'volquetero' && result.paraQuienId) {
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            return Array.isArray(queryKey) &&
+              queryKey.length > 0 &&
+              typeof queryKey[0] === "string" &&
+              queryKey[0] === "/api/transacciones/volquetero" &&
+              queryKey[1] === result.paraQuienId;
+          },
+        });
+      }
+      
+      form.reset();
+      setDetalleSolicitud("");
+      setShowConfirmSolicitud(false);
+      setShowSolicitudDetail(false);
+      onClose();
+    },
+    onError: (error: any) => {
+      console.error("Error creating solicitud:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo crear la solicitud. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Función para manejar el botón "Solicitar"
+  const handleSolicitar = () => {
+    const formData = form.getValues();
+    
+    // Validar campos mínimos para solicitud
+    if (!formData.paraQuienTipo || !formData.paraQuienId || !formData.valor) {
+      toast({
+        title: "Campos requeridos",
+        description: "Debe seleccionar destino y valor para crear una solicitud.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Abrir modal de detalle de solicitud
+    setShowSolicitudDetail(true);
+  };
+
+  // Función para manejar aceptar en modal de detalle
+  const handleAcceptDetalle = (detalle: string) => {
+    setDetalleSolicitud(detalle);
+    setShowSolicitudDetail(false);
+    setShowConfirmSolicitud(true);
+  };
+
+  // Función para confirmar solicitud
+  const handleConfirmSolicitud = () => {
+    const formData = form.getValues();
+    
+    createSolicitudMutation.mutate({
+      paraQuienTipo: formData.paraQuienTipo!,
+      paraQuienId: formData.paraQuienId!,
+      valor: formData.valor,
+      fecha: formData.fecha || getTodayLocalDate(),
+      comentario: formData.comentario || undefined,
+      detalle_solicitud: detalleSolicitud,
+    });
+  };
+
   const onSubmit = (data: z.infer<typeof formSchema>) => {
-    createTransactionMutation.mutate(data);
+    // Validar campos requeridos para transacción normal
+    if (!data.deQuienTipo || !data.deQuienId || !data.formaPago) {
+      toast({
+        title: "Campos requeridos",
+        description: "Debe completar todos los campos para crear una transacción.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createTransactionMutation.mutate(data as any);
+  };
+
+  // Limpiar estados cuando se cierra el modal
+  const handleClose = () => {
+    setShowSolicitudDetail(false);
+    setShowConfirmSolicitud(false);
+    setDetalleSolicitud("");
+    onClose();
   };
 
   if (!open) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>
               {isTemporalMode ? "Crear Transacción Temporal" : "Registrar Transacción"}
             </DialogTitle>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" onClick={handleClose}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -362,13 +599,13 @@ function NewTransactionModal({
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* ¿De quién? */}
+            {/* ¿De quién? - Opcional para solicitudes */}
             <FormField
               control={form.control}
               name="deQuienTipo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>¿De quién?</FormLabel>
+                  <FormLabel>¿De quién? (Opcional para solicitudes)</FormLabel>
                   <Select 
                     onValueChange={(value) => {
                       field.onChange(value);
@@ -378,7 +615,7 @@ function NewTransactionModal({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar origen" />
+                        <SelectValue placeholder="Seleccionar origen (opcional)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -675,17 +912,17 @@ function NewTransactionModal({
               )}
             />
 
-            {/* Forma de Pago */}
+            {/* Forma de Pago - Opcional para solicitudes */}
             <FormField
               control={form.control}
               name="formaPago"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Forma de Pago</FormLabel>
+                  <FormLabel>Forma de Pago (Opcional para solicitudes)</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar forma de pago" />
+                        <SelectValue placeholder="Seleccionar forma de pago (opcional)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -740,19 +977,50 @@ function NewTransactionModal({
             />
 
             <div className="modal-buttons-container flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancelar
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleSolicitar}
+                disabled={createSolicitudMutation.isPending || createTransactionMutation.isPending}
+              >
+                {createSolicitudMutation.isPending ? "Creando solicitud..." : "Solicitar"}
               </Button>
               <Button 
                 type="submit" 
-                disabled={createTransactionMutation.isPending}
+                disabled={createTransactionMutation.isPending || createSolicitudMutation.isPending}
               >
-                {createTransactionMutation.isPending ? "Registrando..." : "Registrar Transacción"}
+                {createTransactionMutation.isPending ? "Registrando..." : "Crear Transacción"}
               </Button>
             </div>
           </form>
         </Form>
       </DialogContent>
+      
+      {/* Modal de detalle de solicitud */}
+      <SolicitudDetailModal
+        open={showSolicitudDetail}
+        onClose={() => setShowSolicitudDetail(false)}
+        onAccept={handleAcceptDetalle}
+      />
+      
+      {/* Modal de confirmación de solicitud */}
+      <ConfirmSolicitudModal
+        open={showConfirmSolicitud}
+        onClose={() => {
+          setShowConfirmSolicitud(false);
+          setDetalleSolicitud("");
+        }}
+        onConfirm={handleConfirmSolicitud}
+        socioDestino={(() => {
+          const paraQuienTipo = form.watch("paraQuienTipo");
+          const paraQuienId = form.watch("paraQuienId");
+          if (paraQuienTipo && paraQuienId) {
+            return getEntityName(paraQuienTipo, paraQuienId);
+          }
+          return undefined;
+        })()}
+        valor={form.watch("valor")}
+      />
     </Dialog>
   );
 }

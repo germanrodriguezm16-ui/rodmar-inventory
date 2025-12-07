@@ -2281,6 +2281,222 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Crear transacción pendiente (solicitud)
+  app.post("/api/transacciones/solicitar", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const data = req.body;
+
+      console.log("📝 Creando solicitud de transacción pendiente:", data);
+
+      // Validar campos requeridos para solicitud
+      if (!data.paraQuienTipo || !data.paraQuienId || !data.valor) {
+        return res.status(400).json({
+          error: "Campos requeridos faltantes",
+          details: "Se requiere: paraQuienTipo, paraQuienId, valor",
+        });
+      }
+
+      // Mapear tipoSocio y socioId para compatibilidad (similar a crear transacción normal)
+      let tipoSocio = data.paraQuienTipo;
+      let socioId: number;
+
+      switch (data.paraQuienTipo) {
+        case "mina":
+          socioId = parseInt(data.paraQuienId);
+          break;
+        case "comprador":
+          socioId = parseInt(data.paraQuienId);
+          break;
+        case "volquetero":
+          // Para volqueteros, el ID es el nombre
+          const volqueteros = await storage.getVolqueteros();
+          const volquetero = volqueteros.find(
+            (v) => v.nombre.toLowerCase() === data.paraQuienId.toLowerCase()
+          );
+          if (!volquetero) {
+            return res.status(400).json({
+              error: "Volquetero no encontrado",
+              details: `No se encontró volquetero con nombre: ${data.paraQuienId}`,
+            });
+          }
+          socioId = volquetero.id;
+          break;
+        default:
+          tipoSocio = "mina";
+          socioId = 1;
+      }
+
+      // Generar concepto descriptivo
+      let conceptoGenerado = data.concepto;
+      if (!conceptoGenerado) {
+        let nombreDestino = "Desconocido";
+        const tipoCapitalizado = data.paraQuienTipo.charAt(0).toUpperCase() + data.paraQuienTipo.slice(1);
+        
+        try {
+          switch (data.paraQuienTipo) {
+            case "mina":
+              const mina = await storage.getMinaById(socioId, userId);
+              nombreDestino = mina?.nombre || data.paraQuienId;
+              break;
+            case "comprador":
+              const comprador = await storage.getCompradorById(socioId, userId);
+              nombreDestino = comprador?.nombre || data.paraQuienId;
+              break;
+            case "volquetero":
+              nombreDestino = data.paraQuienId; // Ya es el nombre
+              break;
+            case "rodmar":
+              const rodmarOptions: Record<string, string> = {
+                "bemovil": "Bemovil",
+                "corresponsal": "Corresponsal",
+                "efectivo": "Efectivo",
+                "cuentas-german": "Cuentas German",
+                "cuentas-jhon": "Cuentas Jhon",
+                "otras": "Otras",
+              };
+              nombreDestino = rodmarOptions[data.paraQuienId] || data.paraQuienId;
+              break;
+            case "banco":
+              nombreDestino = "Banco";
+              break;
+            case "lcdm":
+              nombreDestino = "La Casa del Motero";
+              break;
+            case "postobon":
+              nombreDestino = "Postobón";
+              break;
+            default:
+              nombreDestino = data.paraQuienId;
+          }
+        } catch (error) {
+          console.error("Error obteniendo nombre de destino:", error);
+        }
+        
+        conceptoGenerado = `Solicitud de pago a ${tipoCapitalizado} (${nombreDestino})`;
+      }
+
+      // Crear datos finales para la solicitud
+      const finalData = {
+        // Nuevos campos
+        deQuienTipo: null, // Origen no definido aún
+        deQuienId: null,
+        paraQuienTipo: data.paraQuienTipo,
+        paraQuienId: data.paraQuienId,
+        // Legacy fields para compatibilidad
+        tipoSocio,
+        socioId,
+        // Campos comunes
+        concepto: conceptoGenerado,
+        valor: data.valor,
+        fecha: data.fecha || new Date().toISOString(),
+        formaPago: "pendiente", // Valor temporal
+        voucher: undefined,
+        comentario: data.comentario || undefined,
+        detalle_solicitud: data.detalle_solicitud || undefined,
+        // User isolation
+        userId,
+      };
+
+      // Crear la transacción pendiente
+      const transaccion = await storage.createTransaccionPendiente(finalData);
+
+      console.log(`✅ Solicitud de transacción creada exitosamente:`, transaccion);
+
+      res.json(transaccion);
+    } catch (error) {
+      console.error("Error creating solicitud:", error);
+      res
+        .status(400)
+        .json({
+          error: "Invalid solicitud data",
+          details: error instanceof Error ? error.message : String(error),
+        });
+    }
+  });
+
+  // Obtener todas las transacciones pendientes
+  app.get("/api/transacciones/pendientes", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const pendientes = await storage.getTransaccionesPendientes(userId);
+      res.json(pendientes);
+    } catch (error) {
+      console.error("Error getting pendientes:", error);
+      res
+        .status(500)
+        .json({
+          error: "Error al obtener transacciones pendientes",
+          details: error instanceof Error ? error.message : String(error),
+        });
+    }
+  });
+
+  // Contar transacciones pendientes
+  app.get("/api/transacciones/pendientes/count", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const count = await storage.countTransaccionesPendientes(userId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error counting pendientes:", error);
+      res
+        .status(500)
+        .json({
+          error: "Error al contar transacciones pendientes",
+          details: error instanceof Error ? error.message : String(error),
+        });
+    }
+  });
+
+  // Completar transacción pendiente
+  app.put("/api/transacciones/:id/completar", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const id = parseInt(req.params.id);
+      const data = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid transaction ID" });
+      }
+
+      // Validar campos requeridos
+      if (!data.deQuienTipo || !data.deQuienId || !data.formaPago) {
+        return res.status(400).json({
+          error: "Campos requeridos faltantes",
+          details: "Se requiere: deQuienTipo, deQuienId, formaPago",
+        });
+      }
+
+      // Completar la transacción
+      const transaccion = await storage.completarTransaccionPendiente(id, {
+        deQuienTipo: data.deQuienTipo,
+        deQuienId: data.deQuienId,
+        formaPago: data.formaPago,
+        voucher: data.voucher || undefined,
+        userId,
+      });
+
+      if (!transaccion) {
+        return res.status(404).json({
+          error: "Transacción no encontrada o no está pendiente",
+        });
+      }
+
+      console.log(`✅ Transacción ${id} completada exitosamente`);
+
+      res.json(transaccion);
+    } catch (error) {
+      console.error("Error completing transaccion:", error);
+      res
+        .status(400)
+        .json({
+          error: "Error al completar transacción",
+          details: error instanceof Error ? error.message : String(error),
+        });
+    }
+  });
+
   // Mostrar todas las transacciones ocultas - DEBE IR ANTES del endpoint genérico /:id
   app.patch("/api/transacciones/show-all-hidden", async (req, res) => {
     try {

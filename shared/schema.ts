@@ -117,6 +117,11 @@ export const transacciones = pgTable("transacciones", {
   ocultaEnMina: boolean("oculta_en_mina").default(false).notNull(),
   ocultaEnVolquetero: boolean("oculta_en_volquetero").default(false).notNull(),
   ocultaEnGeneral: boolean("oculta_en_general").default(false).notNull(),
+  // Campos para transacciones pendientes
+  estado: text("estado").default("completada").notNull(), // 'pendiente' o 'completada'
+  detalle_solicitud: text("detalle_solicitud"), // Texto con info de WhatsApp (cuenta, banco, etc.)
+  codigo_solicitud: varchar("codigo_solicitud", { length: 50 }), // Código único tipo TX-123, MP-348
+  tiene_voucher: boolean("tiene_voucher").default(false).notNull(), // Indica si tiene voucher adjunto
   userId: varchar("user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   // Campos compatibilidad (mantener existentes)

@@ -73,6 +73,12 @@ export interface IStorage {
   hideTransaccion(id: number, userId?: string): Promise<boolean>;
   showAllHiddenTransacciones(userId?: string): Promise<number>;
   
+  // Transacciones pendientes
+  createTransaccionPendiente(transaccion: InsertTransaccion & { userId?: string; detalle_solicitud?: string }): Promise<Transaccion>;
+  getTransaccionesPendientes(userId?: string): Promise<TransaccionWithSocio[]>;
+  countTransaccionesPendientes(userId?: string): Promise<number>;
+  completarTransaccionPendiente(id: number, updates: { deQuienTipo: string; deQuienId: string; formaPago: string; voucher?: string; userId?: string }): Promise<Transaccion | undefined>;
+  
   // Funciones específicas por módulo
   hideTransaccionEnComprador(id: number, userId?: string): Promise<boolean>;
   hideTransaccionEnMina(id: number, userId?: string): Promise<boolean>;

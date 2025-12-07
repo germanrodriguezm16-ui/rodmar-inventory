@@ -724,6 +724,10 @@ export class DatabaseStorage implements IStorage {
           ocultaEnMina: transacciones.ocultaEnMina,
           ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
           ocultaEnGeneral: transacciones.ocultaEnGeneral,
+          estado: transacciones.estado,
+          detalle_solicitud: transacciones.detalle_solicitud,
+          codigo_solicitud: transacciones.codigo_solicitud,
+          tiene_voucher: transacciones.tiene_voucher,
           userId: transacciones.userId,
           // Campos adicionales para compatibilidad
           tipoSocio: transacciones.deQuienTipo, // Alias para compatibilidad
@@ -1028,9 +1032,201 @@ export class DatabaseStorage implements IStorage {
     } as any).returning();
 
     // Actualizar balances calculados después de crear la transacción
-    await this.updateRelatedBalances(newTransaccion);
+    // Solo si la transacción NO está pendiente (las pendientes no afectan balances)
+    if (newTransaccion.estado !== 'pendiente') {
+      await this.updateRelatedBalances(newTransaccion);
+    }
 
     return newTransaccion;
+  }
+
+  // Crear transacción pendiente (solicitud)
+  async createTransaccionPendiente(
+    transaccion: InsertTransaccion & { 
+      userId?: string;
+      detalle_solicitud?: string;
+    }
+  ): Promise<Transaccion> {
+    // Generar código único para la solicitud (TX-{id} se generará después, pero preparamos el formato)
+    const [newTransaccion] = await db.insert(transacciones).values({
+      ...transaccion,
+      estado: 'pendiente',
+      deQuienTipo: null, // Origen no definido aún
+      deQuienId: null,
+      formaPago: transaccion.formaPago || 'pendiente', // Valor temporal
+      userId: transaccion.userId || 'main_user',
+      detalle_solicitud: transaccion.detalle_solicitud || null,
+      tiene_voucher: false,
+    } as any).returning();
+
+    // Generar código de solicitud basado en el ID
+    const codigoSolicitud = `TX-${newTransaccion.id}`;
+    await db
+      .update(transacciones)
+      .set({ codigo_solicitud: codigoSolicitud })
+      .where(eq(transacciones.id, newTransaccion.id));
+
+    // Las transacciones pendientes NO afectan balances
+    // No llamamos a updateRelatedBalances
+
+    return { ...newTransaccion, codigo_solicitud: codigoSolicitud } as Transaccion;
+  }
+
+  // Obtener todas las transacciones pendientes
+  async getTransaccionesPendientes(userId?: string): Promise<TransaccionWithSocio[]> {
+    return wrapDbOperation(async () => {
+      const conditions = [
+        eq(transacciones.estado, 'pendiente'),
+        eq(transacciones.oculta, false)
+      ];
+      
+      if (userId) {
+        conditions.push(eq(transacciones.userId, userId));
+      }
+
+      const results = await db
+        .select({
+          id: transacciones.id,
+          deQuienTipo: transacciones.deQuienTipo,
+          deQuienId: transacciones.deQuienId,
+          paraQuienTipo: transacciones.paraQuienTipo,
+          paraQuienId: transacciones.paraQuienId,
+          postobonCuenta: transacciones.postobonCuenta,
+          concepto: transacciones.concepto,
+          valor: transacciones.valor,
+          fecha: transacciones.fecha,
+          horaInterna: transacciones.horaInterna,
+          formaPago: transacciones.formaPago,
+          comentario: transacciones.comentario,
+          tipoTransaccion: transacciones.tipoTransaccion,
+          oculta: transacciones.oculta,
+          ocultaEnComprador: transacciones.ocultaEnComprador,
+          ocultaEnMina: transacciones.ocultaEnMina,
+          ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
+          ocultaEnGeneral: transacciones.ocultaEnGeneral,
+          estado: transacciones.estado,
+          detalle_solicitud: transacciones.detalle_solicitud,
+          codigo_solicitud: transacciones.codigo_solicitud,
+          tiene_voucher: transacciones.tiene_voucher,
+          userId: transacciones.userId,
+          tipoSocio: transacciones.deQuienTipo,
+          createdAt: transacciones.horaInterna,
+          hasVoucher: sql<boolean>`CASE WHEN ${transacciones.voucher} IS NOT NULL AND ${transacciones.voucher} != '' THEN true ELSE false END`
+        })
+        .from(transacciones)
+        .where(and(...conditions))
+        .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna));
+
+      // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 3 queries
+      const [allMinas, allCompradores, allVolqueteros] = await Promise.all([
+        db.select({ id: minas.id, nombre: minas.nombre }).from(minas),
+        db.select({ id: compradores.id, nombre: compradores.nombre }).from(compradores),
+        db.select({ id: volqueteros.id, nombre: volqueteros.nombre }).from(volqueteros),
+      ]);
+
+      // Crear Maps para lookup O(1)
+      const minasMap = new Map<number, string>();
+      const compradoresMap = new Map<number, string>();
+      const volqueterosMap = new Map<number, string>();
+
+      allMinas.forEach(m => minasMap.set(m.id, m.nombre));
+      allCompradores.forEach(c => compradoresMap.set(c.id, c.nombre));
+      allVolqueteros.forEach(v => volqueterosMap.set(v.id, v.nombre));
+
+      // Procesar resultados para incluir info de socios
+      const processedResults = results.map((t) => {
+        let socioNombre = 'Desconocido';
+        
+        // Determinar el socio principal (destino en solicitudes)
+        if (t.paraQuienTipo && t.paraQuienId && ['mina', 'comprador', 'volquetero'].includes(t.paraQuienTipo)) {
+          socioNombre = this.getSocioNombreFromMap(t.paraQuienTipo, parseInt(t.paraQuienId), minasMap, compradoresMap, volqueterosMap);
+        } else if (t.deQuienTipo && t.deQuienId && ['mina', 'comprador', 'volquetero'].includes(t.deQuienTipo)) {
+          socioNombre = this.getSocioNombreFromMap(t.deQuienTipo, parseInt(t.deQuienId), minasMap, compradoresMap, volqueterosMap);
+        }
+
+        // Actualizar concepto dinámicamente con nombres actuales
+        const conceptoActualizado = this.updateConceptoWithCurrentNamesSync(t, minasMap, compradoresMap, volqueterosMap);
+        
+        return {
+          ...t,
+          socioNombre,
+          concepto: conceptoActualizado,
+          voucher: null, // Excluir voucher para optimización
+        };
+      });
+
+      return processedResults;
+    });
+  }
+
+  // Contar transacciones pendientes
+  async countTransaccionesPendientes(userId?: string): Promise<number> {
+    return wrapDbOperation(async () => {
+      const conditions = [
+        eq(transacciones.estado, 'pendiente'),
+        eq(transacciones.oculta, false)
+      ];
+      
+      if (userId) {
+        conditions.push(eq(transacciones.userId, userId));
+      }
+
+      const [result] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(transacciones)
+        .where(and(...conditions));
+
+      return Number(result?.count || 0);
+    });
+  }
+
+  // Completar transacción pendiente
+  async completarTransaccionPendiente(
+    id: number,
+    updates: {
+      deQuienTipo: string;
+      deQuienId: string;
+      formaPago: string;
+      voucher?: string;
+      userId?: string;
+    }
+  ): Promise<Transaccion | undefined> {
+    return wrapDbOperation(async () => {
+      // Verificar que la transacción existe y está pendiente
+      const [transaccion] = await db
+        .select()
+        .from(transacciones)
+        .where(and(
+          eq(transacciones.id, id),
+          eq(transacciones.estado, 'pendiente')
+        ))
+        .limit(1);
+
+      if (!transaccion) {
+        throw new Error(`Transacción ${id} no encontrada o no está pendiente`);
+      }
+
+      // Actualizar la transacción
+      const [updatedTransaccion] = await db
+        .update(transacciones)
+        .set({
+          estado: 'completada',
+          deQuienTipo: updates.deQuienTipo,
+          deQuienId: updates.deQuienId,
+          formaPago: updates.formaPago,
+          voucher: updates.voucher || transaccion.voucher,
+          tiene_voucher: !!(updates.voucher || transaccion.voucher),
+        } as any)
+        .where(eq(transacciones.id, id))
+        .returning();
+
+      if (updatedTransaccion) {
+        // Ahora que está completada, actualizar balances
+        await this.updateRelatedBalances(updatedTransaccion);
+      }
+
+      return updatedTransaccion;
+    });
   }
 
   async updateTransaccion(id: number, updates: Partial<InsertTransaccion>, userId?: string): Promise<Transaccion | undefined> {
@@ -1322,6 +1518,9 @@ export class DatabaseStorage implements IStorage {
       eq(transacciones.paraQuienId, socioId.toString())
     ];
     
+    // NOTA: Las transacciones pendientes SÍ aparecen en las listas (para visualización)
+    // pero NO afectan los cálculos de balance (se excluyen en updateRelatedBalances)
+    
     // Solo agregar filtro de ocultas específico del módulo si no se incluyen las ocultas
     if (!includeHidden) {
       switch (modulo) {
@@ -1372,6 +1571,10 @@ export class DatabaseStorage implements IStorage {
         ocultaEnMina: transacciones.ocultaEnMina,
         ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
         ocultaEnGeneral: transacciones.ocultaEnGeneral,
+        estado: transacciones.estado,
+        detalle_solicitud: transacciones.detalle_solicitud,
+        codigo_solicitud: transacciones.codigo_solicitud,
+        tiene_voucher: transacciones.tiene_voucher,
         userId: transacciones.userId,
         // Campos adicionales para compatibilidad
         tipoSocio: transacciones.deQuienTipo,
@@ -1404,6 +1607,10 @@ export class DatabaseStorage implements IStorage {
         ocultaEnMina: transacciones.ocultaEnMina,
         ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
         ocultaEnGeneral: transacciones.ocultaEnGeneral,
+        estado: transacciones.estado,
+        detalle_solicitud: transacciones.detalle_solicitud,
+        codigo_solicitud: transacciones.codigo_solicitud,
+        tiene_voucher: transacciones.tiene_voucher,
         userId: transacciones.userId,
         // Campos adicionales para compatibilidad
         tipoSocio: transacciones.paraQuienTipo,
@@ -2135,6 +2342,18 @@ export class DatabaseStorage implements IStorage {
   // oldTransaccion es opcional y se usa cuando se actualiza una transacción para también actualizar balances de socios anteriores
   async updateRelatedBalances(transaccion: Transaccion, oldTransaccion?: Transaccion): Promise<void> {
     try {
+      // IMPORTANTE: Las transacciones pendientes NO afectan balances
+      // Si la transacción es pendiente, no actualizar balances
+      if (transaccion.estado === 'pendiente') {
+        console.log(`⏭️  [updateRelatedBalances] Transacción ${transaccion.id} está pendiente, no se actualizan balances`);
+        return;
+      }
+      
+      // Si hay una transacción anterior y era pendiente, tampoco afectaba balances, así que no hay que revertir nada
+      if (oldTransaccion && oldTransaccion.estado === 'pendiente') {
+        console.log(`⏭️  [updateRelatedBalances] Transacción anterior ${oldTransaccion.id} era pendiente, no se revierten balances`);
+        // Continuar con la actualización normal de la nueva transacción
+      }
       const affectedPartners: Array<{ tipo: 'mina' | 'comprador' | 'volquetero'; id: number }> = [];
       const processedPartnerIds = new Set<string>(); // Para evitar procesar el mismo socio dos veces
       
