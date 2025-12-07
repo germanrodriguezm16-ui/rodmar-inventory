@@ -2309,15 +2309,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           socioId = parseInt(data.paraQuienId);
           break;
         case "volquetero":
-          // Para volqueteros, el ID es el nombre
+          // Para volqueteros, primero intentar buscar por ID, luego por nombre
           const volqueteros = await storage.getVolqueteros();
-          const volquetero = volqueteros.find(
-            (v) => v.nombre.toLowerCase() === data.paraQuienId.toLowerCase()
-          );
+          let volquetero = null;
+          
+          // Intentar buscar por ID primero (si es un número)
+          const paraQuienIdNum = parseInt(data.paraQuienId);
+          if (!isNaN(paraQuienIdNum)) {
+            volquetero = volqueteros.find((v) => v.id === paraQuienIdNum);
+          }
+          
+          // Si no se encontró por ID, buscar por nombre
+          if (!volquetero) {
+            volquetero = volqueteros.find(
+              (v) => v.nombre.toLowerCase() === data.paraQuienId.toLowerCase()
+            );
+          }
+          
           if (!volquetero) {
             return res.status(400).json({
               error: "Volquetero no encontrado",
-              details: `No se encontró volquetero con nombre: ${data.paraQuienId}`,
+              details: `No se encontró volquetero con ID o nombre: ${data.paraQuienId}`,
             });
           }
           socioId = volquetero.id;
