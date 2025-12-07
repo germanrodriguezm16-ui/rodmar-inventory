@@ -515,6 +515,40 @@ export default function VolqueteroDetail() {
     }
   });
 
+  // Mutación para eliminar transacciones pendientes
+  const deletePendingTransactionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(apiUrl(`/api/transacciones/${id}`), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Solicitud eliminada",
+        description: "La transacción pendiente se ha eliminado exitosamente.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
+      setShowDeletePendingConfirm(false);
+      setSelectedTransaction(null);
+    },
+    onError: (error: any) => {
+      console.error("Error deleting solicitud:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la solicitud. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
       const { apiUrl } = await import('@/lib/api');
