@@ -210,28 +210,28 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-200 -m-6 mb-4 p-6">
+      <DialogContent className="sm:max-w-[450px] max-w-[90vw] max-h-[85vh] overflow-y-auto border-2 border-orange-300 rounded-xl shadow-xl">
+        <DialogHeader className="bg-gradient-to-r from-orange-50 to-amber-50 border-b-2 border-orange-200 -m-6 mb-4 p-4 rounded-t-xl">
           <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2 text-orange-700">
+            <DialogTitle className="flex items-center gap-2 text-orange-700 text-lg">
               <FileText className="h-5 w-5" />
               Solicitar Transacción Pendiente
             </DialogTitle>
-            <Button variant="ghost" size="icon" onClick={handleClose}>
+            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
               <X className="h-4 w-4" />
             </Button>
           </div>
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-1">
             {/* Para quién */}
             <FormField
               control={form.control}
               name="paraQuienTipo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-semibold">Para quién</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-gray-700">Para quién</FormLabel>
                   <Select 
                     onValueChange={(value) => {
                       field.onChange(value);
@@ -240,7 +240,7 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
                     value={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger className="bg-white">
+                      <SelectTrigger className="bg-white border-2 border-gray-200 h-10">
                         <SelectValue placeholder="Seleccionar destino" />
                       </SelectTrigger>
                     </FormControl>
@@ -266,10 +266,10 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
                 name="paraQuienId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-semibold">Cuenta RodMar</FormLabel>
+                    <FormLabel className="text-sm font-semibold text-gray-700">Cuenta RodMar</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="bg-white">
+                        <SelectTrigger className="bg-white border-2 border-gray-200 h-10">
                           <SelectValue placeholder="Seleccionar cuenta..." />
                         </SelectTrigger>
                       </FormControl>
@@ -320,7 +320,7 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
               name="valor"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-semibold">Valor</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-gray-700">Valor</FormLabel>
                   <FormControl>
                     <Input 
                       type="text" 
@@ -331,7 +331,7 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
                         const numericValue = getNumericValue(formattedValue);
                         field.onChange(numericValue);
                       }}
-                      className="bg-white"
+                      className="bg-white border-2 border-gray-200 h-10"
                     />
                   </FormControl>
                   <FormMessage />
@@ -345,12 +345,12 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
               name="comentario"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-semibold">Comentarios (Opcional)</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-gray-700">Comentarios (Opcional)</FormLabel>
                   <FormControl>
                     <Textarea 
                       placeholder="Comentarios adicionales..." 
-                      className="resize-none bg-white" 
-                      rows={3}
+                      className="resize-none bg-white border-2 border-gray-200" 
+                      rows={2}
                       {...field} 
                     />
                   </FormControl>
@@ -365,16 +365,16 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
               name="detalle_solicitud"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-semibold">Datos de la cuenta</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-gray-700">Datos de la cuenta</FormLabel>
                   <FormControl>
                     <Textarea 
                       placeholder="Pega aquí la información del WhatsApp (cuenta, banco, valor, titular, etc.)&#10;Ejemplo:&#10;Banco: Bancolombia&#10;Cuenta: 1234567890&#10;Titular: Juan Pérez&#10;Valor: $3.200.000" 
-                      className="resize-none bg-blue-50 border-blue-200 min-h-[150px]" 
-                      rows={6}
+                      className="resize-none bg-blue-50 border-2 border-blue-300 min-h-[120px]" 
+                      rows={5}
                       {...field} 
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Esta información será visible cuando completes la transacción para facilitar la transferencia.
                   </p>
                   <FormMessage />
@@ -382,21 +382,22 @@ export function SolicitarTransaccionModal({ open, onClose }: SolicitarTransaccio
               )}
             />
 
-            <div className="flex justify-end space-x-2 pt-4 border-t border-orange-200">
+            <div className="flex justify-end space-x-2 pt-3 border-t-2 border-orange-200 mt-4">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={handleClose}
                 disabled={createSolicitudMutation.isPending}
+                className="border-2"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={createSolicitudMutation.isPending}
-                className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold shadow-md"
+                className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold shadow-md border-2 border-orange-600"
               >
-                {createSolicitudMutation.isPending ? "Creando solicitud..." : "Crear Solicitud"}
+                {createSolicitudMutation.isPending ? "Creando..." : "Crear Solicitud"}
               </Button>
             </div>
           </form>
