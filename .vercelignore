@@ -1,0 +1,23 @@
+# Excluir archivos de Capacitor/Android para Vercel
+android/
+ios/
+.capacitor/
+capacitor.config.ts
+
+# Archivos APK y builds de Android
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# Archivos grandes innecesarios para el deploy web
+rodmar-proyecto.tar.gz
+RodMar-APK-debug.apk
+
+# Archivos de documentación de Android (no necesarios en producción web)
+GUIA_APK_ANDROID.md
+GUIA_INSTALACION_ANDROID_STUDIO.md
+INSTRUCCIONES_APK.md
+OPCION_RAPIDA_APK.md
+SOLUCION_APK_INVALIDO.md
+

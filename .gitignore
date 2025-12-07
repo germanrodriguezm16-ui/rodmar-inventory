@@ -2,6 +2,7 @@
 android/
 ios/
 .capacitor/
+capacitor.config.ts
 
 # Build outputs
 dist/
