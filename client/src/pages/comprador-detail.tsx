@@ -967,7 +967,7 @@ export default function CompradorDetail() {
       </AlertDialog>
 
       {/* Modal de detalles de transacción */}
-      {selectedTransaction && (
+      {selectedTransaction && selectedTransaction.estado !== 'pendiente' && (
         <TransactionDetailModal
           open={showTransactionDetail}
           onOpenChange={setShowTransactionDetail}
@@ -2268,7 +2268,12 @@ function CompradorTransaccionesTab({
               className="p-2 cursor-pointer hover:bg-gray-50 transition-colors"
               onClick={() => {
                 setSelectedTransaction(transaccion);
-                setShowTransactionDetail(true);
+                // Si es transacción pendiente, abrir modal de detalles de solicitud
+                if (transaccion.estado === 'pendiente') {
+                  setShowPendingDetailModal(true);
+                } else {
+                  setShowTransactionDetail(true);
+                }
               }}
             >
               <div className="flex items-center justify-between gap-2">
