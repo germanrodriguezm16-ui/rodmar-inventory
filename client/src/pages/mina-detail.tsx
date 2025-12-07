@@ -229,6 +229,8 @@ export default function MinaDetail() {
   const [showEditTransaction, setShowEditTransaction] = useState(false);
   const [showDeleteTransaction, setShowDeleteTransaction] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<TransaccionWithSocio | null>(null);
+  const [showEditPendingTransaction, setShowEditPendingTransaction] = useState(false);
+  const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
   const [showTransactionDetail, setShowTransactionDetail] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("todos");
