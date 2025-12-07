@@ -797,6 +797,7 @@ export default function CompradorDetail() {
                   setShowDeleteTransaction={setShowDeleteTransaction}
                   setShowEditPendingTransaction={setShowEditPendingTransaction}
                   setShowPendingDetailModal={setShowPendingDetailModal}
+                  setShowDeletePendingConfirm={setShowDeletePendingConfirm}
                 />
               </TabsContent>
 
@@ -1325,7 +1326,10 @@ function CompradorTransaccionesTab({
   setTransaccionesTemporales,
   setShowTemporalTransaction,
   setShowEditTransaction,
-  setShowDeleteTransaction
+  setShowDeleteTransaction,
+  setShowEditPendingTransaction,
+  setShowPendingDetailModal,
+  setShowDeletePendingConfirm
 }: { 
   transacciones: TransaccionWithSocio[];
   viajesCompletados: ViajeWithDetails[];
@@ -1357,6 +1361,7 @@ function CompradorTransaccionesTab({
   setShowDeleteTransaction: (show: boolean) => void;
   setShowEditPendingTransaction: (show: boolean) => void;
   setShowPendingDetailModal: (show: boolean) => void;
+  setShowDeletePendingConfirm: (show: boolean) => void;
 }) {
   // Estado para búsqueda
   const [searchTerm, setSearchTerm] = useState("");
@@ -2167,9 +2172,9 @@ function CompradorTransaccionesTab({
                                 const realTransaction = transacciones.find(t => t.id.toString() === realTransactionId);
                                 if (realTransaction) {
                                   setSelectedTransaction(realTransaction);
-                                  // Si es transacción pendiente, abrir modal de detalle pendiente (que tiene botón de eliminar)
+                                  // Si es transacción pendiente, abrir modal de confirmación de eliminación
                                   if (realTransaction.estado === 'pendiente') {
-                                    setShowPendingDetailModal(true);
+                                    setShowDeletePendingConfirm(true);
                                   } else {
                                     setShowDeleteTransaction(true);
                                   }
