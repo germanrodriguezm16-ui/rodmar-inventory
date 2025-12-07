@@ -59,6 +59,16 @@ const getNumericValue = (formattedValue: string): string => {
   return formattedValue.replace(/\./g, '');
 };
 
+// Función para normalizar el valor inicial (puede venir como número, string con formato, etc.)
+const normalizeInitialValue = (value: string | number | undefined): string => {
+  if (!value) return '';
+  // Convertir a string si es número
+  const stringValue = typeof value === 'number' ? value.toString() : value;
+  // Remover cualquier formato (puntos, comas, espacios)
+  const numericOnly = stringValue.replace(/[^\d]/g, '');
+  return numericOnly;
+};
+
 // Función para obtener la fecha local colombiana en formato YYYY-MM-DD
 const getTodayLocalDate = () => {
   const today = new Date();
@@ -97,7 +107,7 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
     defaultValues: {
       paraQuienTipo: initialData?.paraQuienTipo || "",
       paraQuienId: initialData?.paraQuienId || "",
-      valor: initialData?.valor || "",
+      valor: normalizeInitialValue(initialData?.valor),
       comentario: initialData?.comentario || "",
       detalle_solicitud: initialData?.detalle_solicitud || "",
     },
@@ -109,7 +119,7 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
       form.reset({
         paraQuienTipo: initialData.paraQuienTipo,
         paraQuienId: initialData.paraQuienId,
-        valor: initialData.valor,
+        valor: normalizeInitialValue(initialData.valor),
         comentario: initialData.comentario || "",
         detalle_solicitud: initialData.detalle_solicitud,
       });
