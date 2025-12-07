@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
+import { CompleteTransactionModal } from "@/components/modals/complete-transaction-modal";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import type { ViajeWithDetails, TransaccionWithSocio } from "@shared/schema";
 
@@ -91,6 +92,7 @@ export default function VolqueteroDetail() {
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [showEditPendingTransaction, setShowEditPendingTransaction] = useState(false);
   const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
   const [showTransactionDetail, setShowTransactionDetail] = useState(false);
   
@@ -1602,6 +1604,20 @@ export default function VolqueteroDetail() {
               setShowPendingDetailModal(false);
               setShowEditPendingTransaction(true);
             }}
+            onComplete={(transaccion) => {
+              setShowPendingDetailModal(false);
+              setShowCompleteModal(true);
+            }}
+          />
+          <CompleteTransactionModal
+            open={showCompleteModal}
+            onClose={() => {
+              setShowCompleteModal(false);
+              setSelectedTransaction(null);
+            }}
+            transaccionId={selectedTransaction.id}
+            paraQuienTipo={selectedTransaction.paraQuienTipo || undefined}
+            paraQuienId={selectedTransaction.paraQuienId || undefined}
           />
         </>
       )}

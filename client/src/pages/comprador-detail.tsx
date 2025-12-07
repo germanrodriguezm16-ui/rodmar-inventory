@@ -40,6 +40,7 @@ import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
+import { CompleteTransactionModal } from "@/components/modals/complete-transaction-modal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,6 +86,7 @@ export default function CompradorDetail() {
   const [showDeleteTransaction, setShowDeleteTransaction] = useState(false);
   const [showEditPendingTransaction, setShowEditPendingTransaction] = useState(false);
   const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
   
   // Estados para filtros de viajes
@@ -936,6 +938,20 @@ export default function CompradorDetail() {
               setShowPendingDetailModal(false);
               setShowEditPendingTransaction(true);
             }}
+            onComplete={(transaccion) => {
+              setShowPendingDetailModal(false);
+              setShowCompleteModal(true);
+            }}
+          />
+          <CompleteTransactionModal
+            open={showCompleteModal}
+            onClose={() => {
+              setShowCompleteModal(false);
+              setSelectedTransaction(null);
+            }}
+            transaccionId={selectedTransaction.id}
+            paraQuienTipo={selectedTransaction.paraQuienTipo || undefined}
+            paraQuienId={selectedTransaction.paraQuienId || undefined}
           />
         </>
       )}

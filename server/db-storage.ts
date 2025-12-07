@@ -1187,6 +1187,7 @@ export class DatabaseStorage implements IStorage {
       deQuienTipo: string;
       deQuienId: string;
       formaPago: string;
+      fecha?: string | Date;
       voucher?: string;
       userId?: string;
     }
@@ -1206,6 +1207,105 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Transacción ${id} no encontrada o no está pendiente`);
       }
 
+      // Convertir fecha si viene como string
+      let fechaDate: Date | undefined;
+      if (updates.fecha) {
+        if (typeof updates.fecha === 'string') {
+          // Si viene como string YYYY-MM-DD, convertir a Date
+          fechaDate = new Date(updates.fecha + 'T00:00:00');
+        } else {
+          fechaDate = updates.fecha;
+        }
+      }
+
+      // Generar concepto con el formato: ${formaPago} de ${deQuienTipo} (${deQuienNombre}) a ${paraQuienTipo} (${paraQuienNombre})
+      let deQuienNombre = "Desconocido";
+      let paraQuienNombre = "Desconocido";
+      
+      try {
+        // Obtener nombre de origen
+        switch (updates.deQuienTipo) {
+          case "mina":
+            const minaOrigen = await this.getMinaById(parseInt(updates.deQuienId), updates.userId);
+            deQuienNombre = minaOrigen?.nombre || updates.deQuienId;
+            break;
+          case "comprador":
+            const compradorOrigen = await this.getCompradorById(parseInt(updates.deQuienId), updates.userId);
+            deQuienNombre = compradorOrigen?.nombre || updates.deQuienId;
+            break;
+          case "volquetero":
+            const volqueteroOrigen = await this.getVolqueteroById(parseInt(updates.deQuienId), updates.userId);
+            deQuienNombre = volqueteroOrigen?.nombre || updates.deQuienId;
+            break;
+          case "rodmar":
+            const rodmarOptions: Record<string, string> = {
+              "bemovil": "Bemovil",
+              "corresponsal": "Corresponsal",
+              "efectivo": "Efectivo",
+              "cuentas-german": "Cuentas German",
+              "cuentas-jhon": "Cuentas Jhon",
+              "otras": "Otras",
+            };
+            deQuienNombre = rodmarOptions[updates.deQuienId] || updates.deQuienId;
+            break;
+          case "banco":
+            deQuienNombre = "Banco";
+            break;
+          case "lcdm":
+            deQuienNombre = "La Casa del Motero";
+            break;
+          case "postobon":
+            deQuienNombre = "Postobón";
+            break;
+          default:
+            deQuienNombre = updates.deQuienId;
+        }
+
+        // Obtener nombre de destino
+        switch (transaccion.paraQuienTipo) {
+          case "mina":
+            const minaDestino = await this.getMinaById(parseInt(transaccion.paraQuienId || ''), updates.userId);
+            paraQuienNombre = minaDestino?.nombre || transaccion.paraQuienId || "Desconocido";
+            break;
+          case "comprador":
+            const compradorDestino = await this.getCompradorById(parseInt(transaccion.paraQuienId || ''), updates.userId);
+            paraQuienNombre = compradorDestino?.nombre || transaccion.paraQuienId || "Desconocido";
+            break;
+          case "volquetero":
+            const volqueteroDestino = await this.getVolqueteroById(parseInt(transaccion.paraQuienId || ''), updates.userId);
+            paraQuienNombre = volqueteroDestino?.nombre || transaccion.paraQuienId || "Desconocido";
+            break;
+          case "rodmar":
+            const rodmarOptionsDest: Record<string, string> = {
+              "bemovil": "Bemovil",
+              "corresponsal": "Corresponsal",
+              "efectivo": "Efectivo",
+              "cuentas-german": "Cuentas German",
+              "cuentas-jhon": "Cuentas Jhon",
+              "otras": "Otras",
+            };
+            paraQuienNombre = rodmarOptionsDest[transaccion.paraQuienId || ''] || transaccion.paraQuienId || "Desconocido";
+            break;
+          case "banco":
+            paraQuienNombre = "Banco";
+            break;
+          case "lcdm":
+            paraQuienNombre = "La Casa del Motero";
+            break;
+          case "postobon":
+            paraQuienNombre = "Postobón";
+            break;
+          default:
+            paraQuienNombre = transaccion.paraQuienId || "Desconocido";
+        }
+      } catch (error) {
+        console.error("Error obteniendo nombres para concepto:", error);
+      }
+
+      const deQuienTipoCapitalizado = updates.deQuienTipo.charAt(0).toUpperCase() + updates.deQuienTipo.slice(1);
+      const paraQuienTipoCapitalizado = (transaccion.paraQuienTipo || '').charAt(0).toUpperCase() + (transaccion.paraQuienTipo || '').slice(1);
+      const conceptoGenerado = `${updates.formaPago} de ${deQuienTipoCapitalizado} (${deQuienNombre}) a ${paraQuienTipoCapitalizado} (${paraQuienNombre})`;
+
       // Actualizar la transacción
       const [updatedTransaccion] = await db
         .update(transacciones)
@@ -1214,8 +1314,10 @@ export class DatabaseStorage implements IStorage {
           deQuienTipo: updates.deQuienTipo,
           deQuienId: updates.deQuienId,
           formaPago: updates.formaPago,
+          fecha: fechaDate || transaccion.fecha,
           voucher: updates.voucher || transaccion.voucher,
           tiene_voucher: !!(updates.voucher || transaccion.voucher),
+          concepto: conceptoGenerado,
         } as any)
         .where(eq(transacciones.id, id))
         .returning();

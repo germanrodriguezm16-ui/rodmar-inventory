@@ -6,6 +6,7 @@ import { apiUrl } from "@/lib/api";
 import { useState } from "react";
 import { PendingDetailModal } from "./pending-detail-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
+import { CompleteTransactionModal } from "@/components/modals/complete-transaction-modal";
 
 interface TransaccionPendiente {
   id: number;
@@ -29,6 +30,7 @@ interface PendingListModalProps {
 export function PendingListModal({ open, onClose }: PendingListModalProps) {
   const [selectedTransaccion, setSelectedTransaccion] = useState<TransaccionPendiente | null>(null);
   const [editingTransaccion, setEditingTransaccion] = useState<TransaccionPendiente | null>(null);
+  const [completingTransaccion, setCompletingTransaccion] = useState<TransaccionPendiente | null>(null);
 
   const { data: pendientes = [], isLoading } = useQuery<TransaccionPendiente[]>({
     queryKey: ["/api/transacciones/pendientes"],
@@ -122,6 +124,10 @@ export function PendingListModal({ open, onClose }: PendingListModalProps) {
             setEditingTransaccion(transaccion);
             setSelectedTransaccion(null);
           }}
+          onComplete={(transaccion) => {
+            setCompletingTransaccion(transaccion);
+            setSelectedTransaccion(null);
+          }}
         />
       )}
 
@@ -138,6 +144,17 @@ export function PendingListModal({ open, onClose }: PendingListModalProps) {
             comentario: editingTransaccion.comentario || undefined,
             detalle_solicitud: editingTransaccion.detalle_solicitud || "",
           }}
+        />
+      )}
+
+      {/* Modal de completar transacción */}
+      {completingTransaccion && (
+        <CompleteTransactionModal
+          open={!!completingTransaccion}
+          onClose={() => setCompletingTransaccion(null)}
+          transaccionId={completingTransaccion.id}
+          paraQuienTipo={completingTransaccion.paraQuienTipo || undefined}
+          paraQuienId={completingTransaccion.paraQuienId || undefined}
         />
       )}
     </>

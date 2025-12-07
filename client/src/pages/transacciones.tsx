@@ -15,6 +15,7 @@ import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
+import { CompleteTransactionModal } from "@/components/modals/complete-transaction-modal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,7 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
   const [selectedTransaction, setSelectedTransaction] = useState<TransaccionWithSocio | null>(null);
   const [showEditPendingTransaction, setShowEditPendingTransaction] = useState(false);
   const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState<Set<number>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
@@ -1180,6 +1182,20 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
               setShowPendingDetailModal(false);
               setShowEditPendingTransaction(true);
             }}
+            onComplete={(transaccion) => {
+              setShowPendingDetailModal(false);
+              setShowCompleteModal(true);
+            }}
+          />
+          <CompleteTransactionModal
+            open={showCompleteModal}
+            onClose={() => {
+              setShowCompleteModal(false);
+              setSelectedTransaction(null);
+            }}
+            transaccionId={selectedTransaction.id}
+            paraQuienTipo={selectedTransaction.paraQuienTipo || undefined}
+            paraQuienId={selectedTransaction.paraQuienId || undefined}
           />
         </>
       )}

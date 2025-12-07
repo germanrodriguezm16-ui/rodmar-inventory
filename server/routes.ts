@@ -2498,6 +2498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         deQuienTipo: data.deQuienTipo,
         deQuienId: data.deQuienId,
         formaPago: data.formaPago,
+        fecha: data.fecha || undefined,
         voucher: data.voucher || undefined,
         userId,
       });

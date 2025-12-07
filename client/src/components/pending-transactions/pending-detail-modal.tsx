@@ -36,9 +36,10 @@ interface PendingDetailModalProps {
   transaccion: TransaccionPendiente;
   onClose: () => void;
   onEdit?: (transaccion: TransaccionPendiente) => void;
+  onComplete?: (transaccion: TransaccionPendiente) => void;
 }
 
-export function PendingDetailModal({ open, transaccion, onClose, onEdit }: PendingDetailModalProps) {
+export function PendingDetailModal({ open, transaccion, onClose, onEdit, onComplete }: PendingDetailModalProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -246,9 +247,11 @@ export function PendingDetailModal({ open, transaccion, onClose, onEdit }: Pendi
               <Button
                 className="flex-[2] bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold shadow-md border-2 border-orange-600"
                 onClick={() => {
-                  // TODO: Implementar navegación al modal de completar transacción
-                  // Por ahora, solo cerramos este modal
-                  onClose();
+                  if (onComplete) {
+                    onComplete(transaccion);
+                  } else {
+                    onClose();
+                  }
                 }}
               >
                 Completar
