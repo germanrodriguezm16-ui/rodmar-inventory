@@ -38,6 +38,17 @@ interface RegisterDescargueModalProps {
   onClose: () => void;
 }
 
+// Función para formatear números con separadores de miles
+const formatNumber = (value: string): string => {
+  const numbers = value.replace(/\D/g, '');
+  return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+// Función para obtener el valor numérico sin formato
+const getNumericValue = (formattedValue: string): string => {
+  return formattedValue.replace(/\./g, '');
+};
+
 export default function RegisterDescargueModal({ open, onClose }: RegisterDescargueModalProps) {
   const { toast } = useToast();
   const [formKey, setFormKey] = useState(0);
@@ -313,7 +324,18 @@ export default function RegisterDescargueModal({ open, onClose }: RegisterDescar
                     <FormItem>
                       <FormLabel className="text-xs">Venta/Ton ($)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" className="h-8 text-xs" {...field} />
+                        <Input 
+                          type="text" 
+                          inputMode="numeric"
+                          placeholder="0" 
+                          className="h-8 text-xs" 
+                          value={formatNumber(field.value)}
+                          onChange={(e) => {
+                            const formattedValue = formatNumber(e.target.value);
+                            const numericValue = getNumericValue(formattedValue);
+                            field.onChange(numericValue);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -327,7 +349,18 @@ export default function RegisterDescargueModal({ open, onClose }: RegisterDescar
                     <FormItem>
                       <FormLabel className="text-xs">Flete/Ton ($)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" className="h-8 text-xs" {...field} />
+                        <Input 
+                          type="text" 
+                          inputMode="numeric"
+                          placeholder="0" 
+                          className="h-8 text-xs" 
+                          value={formatNumber(field.value)}
+                          onChange={(e) => {
+                            const formattedValue = formatNumber(e.target.value);
+                            const numericValue = getNumericValue(formattedValue);
+                            field.onChange(numericValue);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -343,7 +376,18 @@ export default function RegisterDescargueModal({ open, onClose }: RegisterDescar
                     <FormItem>
                       <FormLabel className="text-xs">Otros Gastos ($)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" className="h-8 text-xs" {...field} />
+                        <Input 
+                          type="text" 
+                          inputMode="numeric"
+                          placeholder="0" 
+                          className="h-8 text-xs" 
+                          value={formatNumber(field.value || '')}
+                          onChange={(e) => {
+                            const formattedValue = formatNumber(e.target.value);
+                            const numericValue = getNumericValue(formattedValue);
+                            field.onChange(numericValue);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

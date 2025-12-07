@@ -42,6 +42,17 @@ interface RegisterCargueModalProps {
   onClose: () => void;
 }
 
+// Función para formatear números con separadores de miles
+const formatNumber = (value: string): string => {
+  const numbers = value.replace(/\D/g, '');
+  return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+// Función para obtener el valor numérico sin formato
+const getNumericValue = (formattedValue: string): string => {
+  return formattedValue.replace(/\./g, '');
+};
+
 export default function RegisterCargueModal({ open, onClose }: RegisterCargueModalProps) {
   const { toast } = useToast();
   const [formKey, setFormKey] = useState(0);
@@ -420,7 +431,18 @@ export default function RegisterCargueModal({ open, onClose }: RegisterCargueMod
                     <FormItem>
                       <FormLabel className="text-sm font-medium">Precio de Compra/Ton</FormLabel>
                       <FormControl>
-                        <Input inputMode="numeric" placeholder="50,000" {...field} className="h-9" />
+                        <Input 
+                          type="text"
+                          inputMode="numeric" 
+                          placeholder="50.000" 
+                          className="h-9" 
+                          value={formatNumber(field.value)}
+                          onChange={(e) => {
+                            const formattedValue = formatNumber(e.target.value);
+                            const numericValue = getNumericValue(formattedValue);
+                            field.onChange(numericValue);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
