@@ -61,11 +61,31 @@ const getNumericValue = (formattedValue: string): string => {
 
 // Función para normalizar el valor inicial (puede venir como número, string con formato, etc.)
 const normalizeInitialValue = (value: string | number | undefined): string => {
-  if (!value) return '';
+  if (!value && value !== 0) return '';
+  
   // Convertir a string si es número
-  const stringValue = typeof value === 'number' ? value.toString() : value;
-  // Remover cualquier formato (puntos, comas, espacios)
+  let stringValue: string;
+  if (typeof value === 'number') {
+    // Si es número, convertir a string sin decimales (redondear si es necesario)
+    // Usar Math.floor en lugar de Math.round para evitar redondeos no deseados
+    stringValue = Math.floor(Math.abs(value)).toString();
+  } else {
+    stringValue = String(value).trim();
+  }
+  
+  // Si está vacío después de trim, retornar vacío
+  if (!stringValue) return '';
+  
+  // Remover cualquier formato (puntos, comas, espacios, punto decimal y decimales)
+  // Primero, si tiene punto decimal, tomar solo la parte entera (antes del punto)
+  if (stringValue.includes('.')) {
+    stringValue = stringValue.split('.')[0];
+  }
+  
+  // Remover cualquier otro carácter no numérico (puntos de miles, comas, espacios, etc.)
   const numericOnly = stringValue.replace(/[^\d]/g, '');
+  
+  // Retornar solo dígitos (sin ceros a la izquierda innecesarios, pero mantener el valor)
   return numericOnly;
 };
 
@@ -115,15 +135,18 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
 
   // Resetear el formulario cuando cambian los datos iniciales
   useEffect(() => {
-    if (initialData && open) {
+    if (!open) return;
+    
+    if (initialData) {
+      const normalizedValor = normalizeInitialValue(initialData.valor);
       form.reset({
-        paraQuienTipo: initialData.paraQuienTipo,
-        paraQuienId: initialData.paraQuienId,
-        valor: normalizeInitialValue(initialData.valor),
+        paraQuienTipo: initialData.paraQuienTipo || "",
+        paraQuienId: initialData.paraQuienId || "",
+        valor: normalizedValor,
         comentario: initialData.comentario || "",
-        detalle_solicitud: initialData.detalle_solicitud,
+        detalle_solicitud: initialData.detalle_solicitud || "",
       });
-    } else if (!initialData && open) {
+    } else {
       form.reset({
         paraQuienTipo: "",
         paraQuienId: "",
@@ -132,7 +155,7 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
         detalle_solicitud: "",
       });
     }
-  }, [initialData, open, form]);
+  }, [initialData?.id, initialData?.valor, open]); // Solo resetear cuando cambian datos clave
 
   const watchedParaQuienTipo = form.watch("paraQuienTipo");
 
