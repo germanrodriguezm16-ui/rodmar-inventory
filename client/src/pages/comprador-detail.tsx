@@ -764,6 +764,7 @@ export default function CompradorDetail() {
       <NewTransactionModal 
         open={showNewTransaction} 
         onClose={() => setShowNewTransaction(false)}
+        compradorId={comprador?.id}
       />
 
       {/* Modal para transacciones temporales */}
