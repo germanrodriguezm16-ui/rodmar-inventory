@@ -749,6 +749,8 @@ export default function CompradorDetail() {
                   setShowTemporalTransaction={setShowTemporalTransaction}
                   setShowEditTransaction={setShowEditTransaction}
                   setShowDeleteTransaction={setShowDeleteTransaction}
+                  setShowEditPendingTransaction={setShowEditPendingTransaction}
+                  setShowPendingDetailModal={setShowPendingDetailModal}
                 />
               </TabsContent>
 
@@ -1281,6 +1283,8 @@ function CompradorTransaccionesTab({
   setShowTemporalTransaction: (show: boolean) => void;
   setShowEditTransaction: (show: boolean) => void;
   setShowDeleteTransaction: (show: boolean) => void;
+  setShowEditPendingTransaction: (show: boolean) => void;
+  setShowPendingDetailModal: (show: boolean) => void;
 }) {
   // Estado para búsqueda
   const [searchTerm, setSearchTerm] = useState("");
@@ -2359,7 +2363,12 @@ function CompradorTransaccionesTab({
                           const realTransaction = transacciones.find(t => t.id.toString() === realTransactionId);
                           if (realTransaction) {
                             setSelectedTransaction(realTransaction);
-                            setShowEditTransaction(true);
+                            // Si es transacción pendiente, abrir modal de editar pendiente
+                            if (realTransaction.estado === 'pendiente') {
+                              setShowEditPendingTransaction(true);
+                            } else {
+                              setShowEditTransaction(true);
+                            }
                           }
                         }}
                         variant="ghost"
@@ -2377,7 +2386,12 @@ function CompradorTransaccionesTab({
                           const realTransaction = transacciones.find(t => t.id.toString() === realTransactionId);
                           if (realTransaction) {
                             setSelectedTransaction(realTransaction);
-                            setShowDeleteTransaction(true);
+                            // Si es transacción pendiente, abrir modal de detalle pendiente (que tiene botón de eliminar)
+                            if (realTransaction.estado === 'pendiente') {
+                              setShowPendingDetailModal(true);
+                            } else {
+                              setShowDeleteTransaction(true);
+                            }
                           }
                         }}
                         variant="ghost"

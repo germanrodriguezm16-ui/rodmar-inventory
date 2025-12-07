@@ -1087,6 +1087,49 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
         transaction={selectedTransaction}
       />
 
+      {/* Modales para transacciones pendientes */}
+      {selectedTransaction && selectedTransaction.estado === 'pendiente' && (
+        <>
+          <SolicitarTransaccionModal
+            open={showEditPendingTransaction}
+            onClose={() => {
+              setShowEditPendingTransaction(false);
+              setSelectedTransaction(null);
+            }}
+            initialData={{
+              id: selectedTransaction.id,
+              paraQuienTipo: selectedTransaction.paraQuienTipo || '',
+              paraQuienId: selectedTransaction.paraQuienId || '',
+              valor: selectedTransaction.valor || '',
+              comentario: selectedTransaction.comentario || undefined,
+              detalle_solicitud: selectedTransaction.detalle_solicitud || '',
+            }}
+          />
+          <PendingDetailModal
+            open={showPendingDetailModal}
+            transaccion={{
+              id: selectedTransaction.id,
+              concepto: selectedTransaction.concepto || '',
+              valor: selectedTransaction.valor || '',
+              fecha: selectedTransaction.fecha?.toString() || '',
+              codigo_solicitud: selectedTransaction.codigo_solicitud || null,
+              detalle_solicitud: selectedTransaction.detalle_solicitud || null,
+              paraQuienTipo: selectedTransaction.paraQuienTipo || null,
+              paraQuienId: selectedTransaction.paraQuienId || null,
+              comentario: selectedTransaction.comentario || null,
+            }}
+            onClose={() => {
+              setShowPendingDetailModal(false);
+              setSelectedTransaction(null);
+            }}
+            onEdit={(transaccion) => {
+              setShowPendingDetailModal(false);
+              setShowEditPendingTransaction(true);
+            }}
+          />
+        </>
+      )}
+
       {/* Modal de detalle de transacción */}
       <TransactionDetailModal
         open={showDetailModal}
