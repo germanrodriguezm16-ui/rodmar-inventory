@@ -104,6 +104,7 @@ export function PendingDetailModal({ open, transaccion, onClose, onEdit }: Pendi
       // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
       
       setShowDeleteConfirm(false);
       onClose();

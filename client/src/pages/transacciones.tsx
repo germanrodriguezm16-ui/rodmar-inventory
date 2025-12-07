@@ -42,6 +42,7 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
   console.log('🎯 COMPONENTE TRANSACCIONES (PAGES) - Iniciando render');
   
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -120,7 +121,39 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
     return nombre;
   };
 
-
+  // Mutación para eliminar transacciones pendientes
+  const deletePendingTransactionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(apiUrl(`/api/transacciones/${id}`), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Solicitud eliminada",
+        description: "La transacción pendiente se ha eliminado exitosamente.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
+      setShowDeletePendingConfirm(false);
+      setSelectedTransaction(null);
+    },
+    onError: (error: any) => {
+      console.error("Error deleting solicitud:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la solicitud. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleEditTransaction = (transaction: TransaccionWithSocio) => {
     setSelectedTransaction(transaction);
@@ -134,9 +167,9 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
 
   const handleDeleteTransaction = (transaction: TransaccionWithSocio) => {
     setSelectedTransaction(transaction);
-    // Si es transacción pendiente, abrir modal de confirmación de eliminación
+    // Si es transacción pendiente, abrir modal de detalles (que tiene el botón de eliminar)
     if (transaction.estado === 'pendiente') {
-      setShowDeletePendingConfirm(true);
+      setShowPendingDetailModal(true);
     } else {
       setShowDeleteModal(true);
     }
