@@ -1277,7 +1277,8 @@ export default function MinaDetail() {
 
             {/* Balance dinámico basado en transacciones filtradas y visibles */}
             {(() => {
-              const transaccionesVisibles = transaccionesFiltradas.filter(t => !t.oculta);
+              // Excluir transacciones pendientes y ocultas del cálculo de balance
+              const transaccionesVisibles = transaccionesFiltradas.filter(t => !t.oculta && t.estado !== 'pendiente');
               
               const positivos = transaccionesVisibles.filter(t => {
                 // Verde/Positivo para minas - ORDEN CORRECTO:
@@ -1479,7 +1480,10 @@ export default function MinaDetail() {
                         <div className="flex items-center gap-1 sm:gap-2">
                           <span className={`font-medium text-xs sm:text-sm text-right min-w-0 ${
                             (() => {
-                              if (transaccion.deQuienTipo === 'viaje') {
+                              // Transacciones pendientes = azul claro (no afectan balances)
+                              if (transaccion.estado === 'pendiente') {
+                                return 'text-blue-400'; // Azul claro para pendientes
+                              } else if (transaccion.deQuienTipo === 'viaje') {
                                 return 'text-green-600'; // Viajes siempre positivos (verdes)
                               } else if (transaccion.deQuienTipo === 'mina' && transaccion.deQuienId === minaId.toString()) {
                                 return 'text-green-600'; // DESDE esta mina = ingreso positivo (verde)

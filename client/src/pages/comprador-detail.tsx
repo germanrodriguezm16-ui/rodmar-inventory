@@ -1628,7 +1628,11 @@ function CompradorTransaccionesTab({
     console.log('📊 transaccionesFiltradas.length:', transaccionesFiltradas.length);
     
     // NUEVO: Usar transaccionesFiltradas para el resumen dinámico
-    const manuales = transaccionesFiltradas.filter(t => t.tipo === "Manual");
+    // Excluir transacciones pendientes del cálculo de totales
+    const manuales = transaccionesFiltradas.filter(t => {
+      const realTransaction = (t as any).originalTransaction || t;
+      return t.tipo === "Manual" && realTransaction?.estado !== 'pendiente';
+    });
     const viajes = transaccionesFiltradas.filter(t => t.tipo === "Viaje");
     
     console.log('📊 RESUMEN - manuales:', manuales.length, 'viajes:', viajes.length);
@@ -2047,6 +2051,12 @@ function CompradorTransaccionesTab({
                     </td>
                     <td className={`p-3 text-sm text-right font-medium ${
                       (() => {
+                        // Transacciones pendientes = azul claro (no afectan balances)
+                        const realTransaction = (transaccion as any).originalTransaction || transaccion;
+                        if (realTransaction.estado === 'pendiente') {
+                          return "text-blue-400"; // Azul claro para pendientes
+                        }
+                        
                         // NUEVA REGLA ESPECÍFICA PARA COMPRADORES:
                         // 1. Transacciones automáticas de viajes = ROJO y NEGATIVO
                         // 2. Transacciones manuales desde comprador = VERDE y POSITIVO
@@ -2365,6 +2375,12 @@ function CompradorTransaccionesTab({
                 <div className="flex items-center gap-1 shrink-0">
                   <span className={`text-xs font-semibold ${
                     (() => {
+                      // Transacciones pendientes = azul claro (no afectan balances)
+                      const realTransaction = (transaccion as any).originalTransaction || transaccion;
+                      if (realTransaction?.estado === 'pendiente') {
+                        return "text-blue-400"; // Azul claro para pendientes
+                      }
+                      
                       if (transaccion.tipo === "Viaje") {
                         return "text-red-600 dark:text-red-400";
                       }

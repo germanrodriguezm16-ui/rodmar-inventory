@@ -685,7 +685,11 @@ export default function VolqueteroDetail() {
 
   // Calcular balance resumido correctamente (para la pestaña de transacciones - usa transacciones filtradas)
   const balanceResumido = useMemo(() => {
-    const transaccionesVisibles = transaccionesFiltradas.filter(t => !t.oculta);
+    // Excluir transacciones pendientes y ocultas del cálculo de balance
+    const transaccionesVisibles = transaccionesFiltradas.filter(t => {
+      const realTransaction = (t as any).originalTransaction || t;
+      return !t.oculta && realTransaction?.estado !== 'pendiente';
+    });
     
     let positivos = 0;
     let negativos = 0;
@@ -978,7 +982,10 @@ export default function VolqueteroDetail() {
                   >
                     <div className="text-green-600 text-xs font-medium">Positivos</div>
                     <div className="text-green-700 text-xs sm:text-sm font-semibold">
-                      +{transaccionesFiltradas.filter(t => !t.oculta && parseFloat(t.valor) > 0).length} {formatCurrency(balanceResumido.positivos)}
+                      +{transaccionesFiltradas.filter(t => {
+                        const realTransaction = (t as any).originalTransaction || t;
+                        return !t.oculta && realTransaction?.estado !== 'pendiente' && parseFloat(t.valor) > 0;
+                      }).length} {formatCurrency(balanceResumido.positivos)}
                     </div>
                   </div>
                   <div 
@@ -989,7 +996,10 @@ export default function VolqueteroDetail() {
                   >
                     <div className="text-red-600 text-xs font-medium">Negativos</div>
                     <div className="text-red-700 text-xs sm:text-sm font-semibold">
-                      -{transaccionesFiltradas.filter(t => !t.oculta && parseFloat(t.valor) < 0).length} {formatCurrency(balanceResumido.negativos)}
+                      -{transaccionesFiltradas.filter(t => {
+                        const realTransaction = (t as any).originalTransaction || t;
+                        return !t.oculta && realTransaction?.estado !== 'pendiente' && parseFloat(t.valor) < 0;
+                      }).length} {formatCurrency(balanceResumido.negativos)}
                     </div>
                   </div>
                   <div 
@@ -1131,11 +1141,19 @@ export default function VolqueteroDetail() {
                                 </div>
                               </TableCell>
                               <TableCell className={`p-3 text-sm text-right font-medium ${
-                                transaccion.tipo === "Viaje" 
-                                  ? 'text-green-600 dark:text-green-400'
-                                  : valor >= 0 
-                                    ? 'text-green-600 dark:text-green-400' 
-                                    : 'text-red-600 dark:text-red-400'
+                                (() => {
+                                  // Transacciones pendientes = azul claro (no afectan balances)
+                                  const realTransaction = transaccion.originalTransaction || transaccion;
+                                  if (realTransaction?.estado === 'pendiente') {
+                                    return 'text-blue-400'; // Azul claro para pendientes
+                                  } else if (transaccion.tipo === "Viaje") {
+                                    return 'text-green-600 dark:text-green-400';
+                                  } else if (valor >= 0) {
+                                    return 'text-green-600 dark:text-green-400';
+                                  } else {
+                                    return 'text-red-600 dark:text-red-400';
+                                  }
+                                })()
                               }`}>
                                 {transaccion.tipo === "Viaje" 
                                   ? `+${formatCurrency(Math.abs(valor))}`
@@ -1329,11 +1347,19 @@ export default function VolqueteroDetail() {
                             {/* Lado derecho: Valor y acción */}
                             <div className="flex items-center gap-1 sm:gap-2">
                               <span className={`font-medium text-xs sm:text-sm text-right min-w-0 ${
-                                transaccion.tipo === "Viaje" 
-                                  ? 'text-green-600'
-                                  : valor >= 0 
-                                    ? 'text-green-600' 
-                                    : 'text-red-600'
+                                (() => {
+                                  // Transacciones pendientes = azul claro (no afectan balances)
+                                  const realTransaction = transaccion.originalTransaction || transaccion;
+                                  if (realTransaction?.estado === 'pendiente') {
+                                    return 'text-blue-400'; // Azul claro para pendientes
+                                  } else if (transaccion.tipo === "Viaje") {
+                                    return 'text-green-600';
+                                  } else if (valor >= 0) {
+                                    return 'text-green-600';
+                                  } else {
+                                    return 'text-red-600';
+                                  }
+                                })()
                               }`}>
                                 {transaccion.tipo === "Viaje" 
                                   ? `+$ ${Math.abs(valor).toLocaleString()}`

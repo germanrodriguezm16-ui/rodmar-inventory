@@ -531,7 +531,8 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
     let negativos = 0;
     let balance = 0;
 
-    filteredAndSortedTransactions.forEach((t) => {
+    // Excluir transacciones pendientes del cálculo de balance
+    filteredAndSortedTransactions.filter(t => t.estado !== 'pendiente').forEach((t) => {
       const isFromPartner = t.deQuienTipo === 'mina' || 
                            t.deQuienTipo === 'comprador' || 
                            t.deQuienTipo === 'volquetero';
@@ -992,6 +993,11 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
                     {/* Valor y Acciones */}
                     <div className="flex flex-col items-end ml-3 shrink-0 gap-1">
                       <div className={`text-base font-semibold ${(() => {
+                        // Transacciones pendientes = azul claro (no afectan balances)
+                        if (transaction.estado === 'pendiente') {
+                          return 'text-blue-400'; // Azul claro para pendientes
+                        }
+                        
                         // NUEVAS REGLAS DE CODIFICACIÓN DE COLORES:
                         // 1. Transacciones desde mina/comprador/volquetero = Verde y positivo  
                         // 2. Transacciones RodMar a RodMar = Azul y no afecta balance
