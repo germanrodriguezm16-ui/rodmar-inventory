@@ -55,8 +55,8 @@ export function PendingListModal({ open, onClose }: PendingListModalProps) {
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader className="bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-200 -m-6 mb-0 p-6">
+        <DialogContent className="sm:max-w-[450px] max-w-[90vw] max-h-[85vh] overflow-y-auto border-2 border-orange-300 rounded-xl shadow-xl">
+          <DialogHeader className="bg-gradient-to-r from-orange-50 to-amber-50 border-b-2 border-orange-200 -m-6 mb-0 p-4 rounded-t-xl">
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2 text-orange-700">
                 <FileText className="h-5 w-5" />
@@ -68,7 +68,7 @@ export function PendingListModal({ open, onClose }: PendingListModalProps) {
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 py-3 px-1">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -79,47 +79,28 @@ export function PendingListModal({ open, onClose }: PendingListModalProps) {
                 <p>No hay transacciones pendientes</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {pendientes.map((transaccion, index) => (
+              <div className="space-y-2">
+                {pendientes.map((transaccion) => (
                   <div
                     key={transaccion.id}
-                    className="border-2 border-orange-200 rounded-xl p-4 hover:border-orange-400 hover:shadow-md cursor-pointer transition-all bg-gradient-to-br from-white to-orange-50/30"
+                    className="border-2 border-orange-200 rounded-lg p-3 hover:border-orange-400 hover:shadow-sm cursor-pointer transition-all bg-gradient-to-br from-white to-orange-50/30"
                     onClick={() => setSelectedTransaccion(transaccion)}
-                    style={{
-                      animationDelay: `${index * 50}ms`,
-                    }}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-xs font-mono bg-gradient-to-r from-orange-500 to-amber-500 text-white px-3 py-1.5 rounded-full font-bold shadow-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-mono bg-gradient-to-r from-orange-500 to-amber-500 text-white px-2 py-1 rounded-full font-bold shadow-sm whitespace-nowrap">
                             {transaccion.codigo_solicitud || `TX-${transaccion.id}`}
                           </span>
-                          <span className="text-xs text-orange-600 font-medium bg-orange-100 px-2 py-1 rounded">
+                          <span className="text-xs text-orange-600 font-medium bg-orange-100 px-2 py-1 rounded whitespace-nowrap">
                             {formatDate(transaccion.fecha)}
                           </span>
                         </div>
-                        <h3 className="font-semibold text-base mb-2 text-gray-800">{transaccion.concepto}</h3>
-                        <p className="text-xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+                        <h3 className="font-semibold text-sm mb-1 text-gray-800 truncate">{transaccion.concepto}</h3>
+                        <p className="text-lg font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
                           {formatCurrency(transaccion.valor)}
                         </p>
-                        {transaccion.comentario && (
-                          <p className="text-sm text-gray-600 mt-3 line-clamp-2 bg-gray-50 p-2 rounded border border-gray-200">
-                            {transaccion.comentario}
-                          </p>
-                        )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="ml-2 hover:bg-orange-100 hover:text-orange-600"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTransaccion(transaccion);
-                        }}
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
                     </div>
                   </div>
                 ))}
