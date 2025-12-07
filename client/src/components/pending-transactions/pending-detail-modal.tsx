@@ -102,11 +102,13 @@ export function PendingDetailModal({ open, transaccion, onClose, onEdit, onCompl
         description: "La transacción pendiente se ha eliminado exitosamente.",
       });
       
-      // Invalidar queries de pendientes
+      // Invalidar y refetch queries de pendientes
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
+      queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes"] });
+      queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       
-      // Invalidar módulo general de transacciones (todas las páginas)
+      // Invalidar y refetch módulo general de transacciones (todas las páginas)
       queryClient.invalidateQueries({
         predicate: (query) => {
           const queryKey = query.queryKey;
@@ -116,17 +118,32 @@ export function PendingDetailModal({ open, transaccion, onClose, onEdit, onCompl
             queryKey[0] === "/api/transacciones";
         },
       });
+      queryClient.refetchQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          return Array.isArray(queryKey) &&
+            queryKey.length > 0 &&
+            typeof queryKey[0] === "string" &&
+            queryKey[0] === "/api/transacciones";
+        },
+      });
       
-      // Invalidar queries del socio destino
+      // Invalidar y refetch queries del socio destino
       if (transaccion.paraQuienTipo && transaccion.paraQuienId) {
         if (transaccion.paraQuienTipo === 'comprador') {
-          queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", parseInt(transaccion.paraQuienId)] });
+          const compradorId = typeof transaccion.paraQuienId === 'string' ? parseInt(transaccion.paraQuienId) : transaccion.paraQuienId;
+          queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
+          queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
         }
         if (transaccion.paraQuienTipo === 'mina') {
-          queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${transaccion.paraQuienId}`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${transaccion.paraQuienId}/all`] });
+          const minaIdStr = String(transaccion.paraQuienId);
+          queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}/all`] });
+          queryClient.refetchQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}`] });
+          queryClient.refetchQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}/all`] });
         }
         if (transaccion.paraQuienTipo === 'volquetero') {
+          const volqueteroId = typeof transaccion.paraQuienId === 'string' ? parseInt(transaccion.paraQuienId) : transaccion.paraQuienId;
           queryClient.invalidateQueries({
             predicate: (query) => {
               const queryKey = query.queryKey;
@@ -134,7 +151,18 @@ export function PendingDetailModal({ open, transaccion, onClose, onEdit, onCompl
                 queryKey.length > 0 &&
                 typeof queryKey[0] === "string" &&
                 queryKey[0] === "/api/volqueteros" &&
-                queryKey[1] === parseInt(transaccion.paraQuienId) &&
+                queryKey[1] === volqueteroId &&
+                queryKey[2] === "transacciones";
+            },
+          });
+          queryClient.refetchQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0] === "/api/volqueteros" &&
+                queryKey[1] === volqueteroId &&
                 queryKey[2] === "transacciones";
             },
           });

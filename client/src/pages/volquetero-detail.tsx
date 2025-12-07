@@ -536,15 +536,27 @@ export default function VolqueteroDetail() {
         description: "La transacción pendiente se ha eliminado exitosamente.",
       });
       
-      // Invalidar queries de pendientes
+      // Invalidar y refetch queries de pendientes
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
+      queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes"] });
+      queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       
-      // Invalidar queries del volquetero
+      // Invalidar y refetch queries del volquetero
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
+      queryClient.refetchQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
       
-      // Invalidar módulo general de transacciones (todas las páginas)
+      // Invalidar y refetch módulo general de transacciones (todas las páginas)
       queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          return Array.isArray(queryKey) &&
+            queryKey.length > 0 &&
+            typeof queryKey[0] === "string" &&
+            queryKey[0] === "/api/transacciones";
+        },
+      });
+      queryClient.refetchQueries({
         predicate: (query) => {
           const queryKey = query.queryKey;
           return Array.isArray(queryKey) &&
