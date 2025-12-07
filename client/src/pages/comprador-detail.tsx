@@ -1971,7 +1971,11 @@ function CompradorTransaccionesTab({
                 return (
                   <tr 
                     key={transaccion.id}
-                    className={`border-t cursor-pointer hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}
+                    className={`border-t cursor-pointer transition-colors ${
+                      (transaccion as any).originalTransaction?.estado === 'pendiente' || transaccion.estado === 'pendiente'
+                        ? 'bg-orange-50 border-l-4 border-l-orange-400 hover:bg-orange-100'
+                        : `${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'} hover:bg-gray-50`
+                    }`}
                     onClick={() => {
                       // Usar originalTransaction si está disponible, sino usar la transacción directamente
                       const realTransaction = (transaccion as any).originalTransaction || transaccion;
@@ -2269,7 +2273,11 @@ function CompradorTransaccionesTab({
           return (
             <Card 
               key={transaccion.id}
-              className="p-2 cursor-pointer hover:bg-gray-50 transition-colors"
+              className={`p-2 cursor-pointer transition-colors ${
+                (transaccion as any).originalTransaction?.estado === 'pendiente' || transaccion.estado === 'pendiente'
+                  ? 'bg-orange-50 border-2 border-orange-300 hover:bg-orange-100'
+                  : 'hover:bg-gray-50'
+              }`}
               onClick={() => {
                 // Usar originalTransaction si está disponible, sino usar la transacción directamente
                 const realTransaction = (transaccion as any).originalTransaction || transaccion;

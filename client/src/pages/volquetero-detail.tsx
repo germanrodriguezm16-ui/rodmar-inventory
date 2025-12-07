@@ -1070,7 +1070,11 @@ export default function VolqueteroDetail() {
                           return (
                             <TableRow 
                               key={transaccion.id}
-                              className={`cursor-pointer hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}
+                              className={`cursor-pointer transition-colors ${
+                                transaccion.originalTransaction?.estado === 'pendiente'
+                                  ? 'bg-orange-50 border-l-4 border-l-orange-400 hover:bg-orange-100'
+                                  : `${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'} hover:bg-gray-50`
+                              }`}
                               onClick={() => {
                                 if (transaccion.tipo === "Manual" && transaccion.originalTransaction) {
                                   setSelectedTransaction(transaccion.originalTransaction);
@@ -1242,10 +1246,14 @@ export default function VolqueteroDetail() {
                     return (
                       <Card 
                         key={transaccion.id} 
-                        className={`border border-gray-200 transition-colors ${
-                          transaccion.tipo === "Manual" || transaccion.tipo === "Temporal"
-                            ? "cursor-pointer hover:bg-gray-50" 
-                            : "cursor-default"
+                        className={`transition-colors ${
+                          transaccion.originalTransaction?.estado === 'pendiente'
+                            ? 'bg-orange-50 border-2 border-orange-300 cursor-pointer hover:bg-orange-100'
+                            : `border border-gray-200 ${
+                                transaccion.tipo === "Manual" || transaccion.tipo === "Temporal"
+                                  ? "cursor-pointer hover:bg-gray-50" 
+                                  : "cursor-default"
+                              }`
                         }`}
                         onClick={() => {
                           if (transaccion.tipo === "Manual" && transaccion.originalTransaction) {

@@ -1409,10 +1409,12 @@ export default function MinaDetail() {
                 {transaccionesFiltradas.map((transaccion) => (
                   <Card 
                     key={transaccion.id} 
-                    className={`border border-gray-200 transition-colors ${
-                      transaccion.tipo === "Temporal" 
-                        ? "cursor-default hover:bg-orange-50" 
-                        : "cursor-pointer hover:bg-gray-50"
+                    className={`transition-colors ${
+                      transaccion.estado === 'pendiente'
+                        ? 'bg-orange-50 border-2 border-orange-300 cursor-pointer hover:bg-orange-100'
+                        : transaccion.tipo === "Temporal" 
+                          ? "border border-gray-200 cursor-default hover:bg-orange-50" 
+                          : "border border-gray-200 cursor-pointer hover:bg-gray-50"
                     }`}
                     onClick={() => {
                       if (transaccion.tipo !== "Temporal") {

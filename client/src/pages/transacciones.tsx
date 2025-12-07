@@ -914,7 +914,11 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
             {filteredAndSortedTransactions.map((transaction) => (
               <Card 
                 key={transaction.id} 
-                className="hover:shadow-sm transition-shadow cursor-pointer hover:bg-gray-50"
+                className={`hover:shadow-sm transition-shadow cursor-pointer ${
+                  transaction.estado === 'pendiente'
+                    ? 'bg-orange-50 border-2 border-orange-300 hover:bg-orange-100'
+                    : 'hover:bg-gray-50'
+                }`}
                 onClick={() => handleTransactionDetailClick(transaction)}
               >
                 <CardContent className="p-3">
