@@ -420,7 +420,7 @@ export default function RegisterCargueModal({ open, onClose }: RegisterCargueMod
                     <FormItem>
                       <FormLabel className="text-sm font-medium">Precio de Compra/Ton</FormLabel>
                       <FormControl>
-                        <Input placeholder="50,000" {...field} className="h-9" />
+                        <Input inputMode="numeric" placeholder="50,000" {...field} className="h-9" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
