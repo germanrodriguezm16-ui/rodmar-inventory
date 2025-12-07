@@ -14,8 +14,11 @@ import RegisterDescargueModal from "@/components/forms/register-descargue-modal"
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import { PendingButton } from "@/components/pending-transactions/pending-button";
 import { PendingListModal } from "@/components/pending-transactions/pending-list-modal";
+import { GestionarTransaccionesModal } from "@/components/modals/gestionar-transacciones-modal";
+import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 type Module = "principal" | "minas" | "compradores" | "volqueteros" | "transacciones" | "rodmar";
 
@@ -24,11 +27,14 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ initialModule = "principal" }: DashboardProps) {
+  const { toast } = useToast();
   const [activeModule, setActiveModule] = useState<Module>(initialModule);
   const [showCargueModal, setShowCargueModal] = useState(false);
   const [showDescargueModal, setShowDescargueModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
+  const [showGestionarModal, setShowGestionarModal] = useState(false);
+  const [showSolicitarModal, setShowSolicitarModal] = useState(false);
 
   const renderModule = () => {
     const LoadingFallback = () => (
@@ -79,8 +85,16 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   };
 
   const handleQuickAction = () => {
-    // El botón flotante siempre abre el modal de nueva transacción
-    setShowTransactionModal(true);
+    // El botón flotante ahora abre el modal de gestionar transacciones
+    setShowGestionarModal(true);
+  };
+
+  const handleCompletar = () => {
+    // Por ahora, mostrar un mensaje indicando que esta funcionalidad está en desarrollo
+    toast({
+      title: "En desarrollo",
+      description: "La funcionalidad de completar transacciones estará disponible pronto.",
+    });
   };
 
   return (
@@ -104,7 +118,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         size="icon"
         className="fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-[100]"
         onClick={handleQuickAction}
-        aria-label="Crear transacción"
+        aria-label="Gestionar transacciones"
       >
         <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
       </Button>
@@ -128,6 +142,19 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       <PendingListModal 
         open={showPendingModal}
         onClose={() => setShowPendingModal(false)}
+      />
+
+      <GestionarTransaccionesModal
+        open={showGestionarModal}
+        onClose={() => setShowGestionarModal(false)}
+        onCrear={() => setShowTransactionModal(true)}
+        onSolicitar={() => setShowSolicitarModal(true)}
+        onCompletar={handleCompletar}
+      />
+
+      <SolicitarTransaccionModal
+        open={showSolicitarModal}
+        onClose={() => setShowSolicitarModal(false)}
       />
     </div>
   );
