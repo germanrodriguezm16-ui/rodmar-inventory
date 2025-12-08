@@ -3,6 +3,7 @@ import AppHeader from "@/components/layout/app-header";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 import Principal from "@/components/modules/principal";
 import { useLocation } from "wouter";
+import { logger } from "@/lib/logger";
 
 // Lazy loading de componentes pesados
 const Minas = lazy(() => import("@/pages/minas"));
@@ -39,6 +40,11 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   const [showGestionarModal, setShowGestionarModal] = useState(false);
   const [showSolicitarModal, setShowSolicitarModal] = useState(false);
   const [location, setLocation] = useLocation();
+
+  // Log inicial del sistema
+  useEffect(() => {
+    logger.info('SYSTEM', 'Dashboard cargado', { initialModule, timestamp: Date.now() });
+  }, []);
 
   // Consultar el conteo de transacciones pendientes
   const { data: pendingCount = 0 } = useQuery<number>({
@@ -120,7 +126,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     readFromIndexedDB().then((indexedDBData) => {
       if (indexedDBData) {
         navData = indexedDBData;
-        console.log('📱 Datos de notificación encontrados en IndexedDB:', navData);
+        logger.info('NOTIFICATION', 'Datos de notificación encontrados en IndexedDB', navData);
       }
       
       // 2. Intentar leer de localStorage/sessionStorage
@@ -131,14 +137,14 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
           const parsed = JSON.parse(stored);
           if (!navData || parsed.timestamp > (navData.timestamp || 0)) {
             navData = parsed;
-            console.log('📱 Datos de notificación encontrados en localStorage:', navData);
+            logger.info('NOTIFICATION', 'Datos de notificación encontrados en localStorage', navData);
           }
           // Limpiar después de leer
           localStorage.removeItem('rodmar_notification_nav');
           sessionStorage.removeItem('rodmar_notification_nav');
         }
       } catch (e) {
-        console.warn('Error leyendo datos de notificación:', e);
+        logger.error('NOTIFICATION', 'Error leyendo datos de notificación', { error: e });
       }
       
       // Procesar los datos si se encontraron
@@ -172,7 +178,12 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     
     const transactionId = transactionIdParam ? parseInt(transactionIdParam, 10) : null;
     
-    console.log('🔍 Detección de notificación:', { pendingParam, transactionId, pendientesCount: pendientes.length, tieneNavData: !!navData });
+    logger.debug('NOTIFICATION', 'Detección de notificación', { 
+      pendingParam, 
+      transactionId, 
+      pendientesCount: pendientes.length, 
+      tieneNavData: !!navData 
+    });
     
     if (pendingParam === 'true') {
       // Cambiar al módulo de transacciones si no está ya ahí
@@ -187,10 +198,10 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         // Función para buscar y abrir el modal de detalle
         const buscarYAbrirDetalle = () => {
           const transaccion = pendientes.find((t: any) => t.id === transactionId);
-          console.log('📋 Transacción encontrada:', transaccion ? 'Sí' : 'No');
+          logger.info('NOTIFICATION', `Transacción encontrada: ${transaccion ? 'Sí' : 'No'}`, { transactionId, found: !!transaccion });
           
           if (transaccion) {
-            console.log('✅ Abriendo modal de detalle para transacción:', transactionId);
+            logger.success('NOTIFICATION', `Abriendo modal de detalle para transacción ${transactionId}`, { transactionId });
             setSelectedPendingTransaction(transaccion);
             setShowPendingDetailModal(true);
             return true;
@@ -202,16 +213,16 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         if (pendientes.length > 0) {
           if (!buscarYAbrirDetalle()) {
             // Si no se encuentra, abrir la lista de pendientes
-            console.log('⚠️ Transacción no encontrada, abriendo lista');
+            logger.warn('NOTIFICATION', 'Transacción no encontrada, abriendo lista', { transactionId });
             setShowPendingModal(true);
           }
         } else {
           // Si no hay pendientes cargados, esperar un poco y volver a intentar
-          console.log('⏳ Esperando a que se carguen los pendientes...');
+          logger.info('NOTIFICATION', 'Esperando a que se carguen los pendientes...', { transactionId });
           const timeoutId = setTimeout(() => {
             if (!buscarYAbrirDetalle()) {
               // Si después de esperar no se encuentra, abrir la lista
-              console.log('⚠️ Transacción no encontrada después de esperar, abriendo lista');
+              logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId });
               setShowPendingModal(true);
             }
           }, 1000);
@@ -221,7 +232,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         }
       } else {
         // Si no hay ID, abrir la lista de pendientes
-        console.log('📋 No hay ID de transacción, abriendo lista de pendientes');
+        logger.info('NOTIFICATION', 'No hay ID de transacción, abriendo lista de pendientes');
         setShowPendingModal(true);
       }
       
@@ -235,7 +246,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   const procesarNotificacionDesdeDatos = (navData: any) => {
     if (!navData) return;
     
-    console.log('📱 Procesando notificación desde datos almacenados:', navData);
+    logger.info('NOTIFICATION', 'Procesando notificación desde datos almacenados', navData);
     
     const url = navData.url || '';
     const transactionId = navData.transaccionId || 
@@ -254,15 +265,19 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       // Si hay un ID de transacción, buscar y abrir el modal de detalle directamente
       if (transactionId) {
         const transaccionIdNum = typeof transactionId === 'string' ? parseInt(transactionId, 10) : transactionId;
-        console.log('🔎 Buscando transacción con ID desde datos almacenados:', transaccionIdNum);
+        logger.debug('NOTIFICATION', 'Buscando transacción con ID desde datos almacenados', { transactionId: transaccionIdNum });
         
         // Función para buscar y abrir el modal de detalle
         const buscarYAbrirDetalle = () => {
           const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
-          console.log('📋 Transacción encontrada desde datos almacenados:', transaccion ? 'Sí' : 'No', transaccion ? `(ID: ${transaccion.id})` : '');
+          logger.debug('NOTIFICATION', 'Transacción encontrada desde datos almacenados', { 
+            encontrada: !!transaccion, 
+            transactionId: transaccionIdNum,
+            transaccionId: transaccion?.id 
+          });
           
           if (transaccion) {
-            console.log('✅ Abriendo modal de detalle desde datos almacenados para transacción:', transactionIdNum);
+            logger.success('NOTIFICATION', `Abriendo modal de detalle desde datos almacenados para transacción ${transaccionIdNum}`, { transactionId: transactionIdNum });
             setSelectedPendingTransaction(transaccion);
             setShowPendingDetailModal(true);
             return true;
@@ -273,29 +288,25 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         // Intentar buscar inmediatamente si ya hay pendientes cargados
         if (pendientes.length > 0) {
           if (!buscarYAbrirDetalle()) {
-            // Si no se encuentra, esperar un poco más y volver a intentar
-            console.log('⏳ Transacción no encontrada desde datos almacenados, esperando y reintentando...');
+            logger.warn('NOTIFICATION', 'Transacción no encontrada, esperando y reintentando', { transactionId: transaccionIdNum });
             setTimeout(() => {
               if (!buscarYAbrirDetalle()) {
-                console.log('⚠️ Transacción no encontrada después de esperar, abriendo lista');
+                logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId: transaccionIdNum });
                 setShowPendingModal(true);
               }
             }, 1500);
           }
         } else {
-          // Si no hay pendientes cargados, esperar un poco y volver a intentar
-          console.log('⏳ Esperando a que se carguen los pendientes desde datos almacenados...');
+          logger.debug('NOTIFICATION', 'Esperando a que se carguen los pendientes desde datos almacenados', { transactionId: transaccionIdNum });
           setTimeout(() => {
             if (!buscarYAbrirDetalle()) {
-              // Si después de esperar no se encuentra, abrir la lista
-              console.log('⚠️ Transacción no encontrada después de esperar, abriendo lista');
+              logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId: transaccionIdNum });
               setShowPendingModal(true);
             }
           }, 1500);
         }
       } else {
-        // Si no hay ID, abrir la lista de pendientes
-        console.log('📋 No hay ID de transacción desde datos almacenados, abriendo lista de pendientes');
+        logger.info('NOTIFICATION', 'No hay ID de transacción desde datos almacenados, abriendo lista de pendientes');
         setShowPendingModal(true);
       }
     }
@@ -305,7 +316,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   const procesarNotificacion = (navData: any) => {
     if (!navData) return;
     
-    console.log('📱 Procesando datos de notificación:', navData);
+    logger.info('NOTIFICATION', 'Procesando datos de notificación', navData);
     
     const url = navData.url || '';
     const transactionId = navData.transaccionId || 
@@ -324,15 +335,19 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       // Si hay un ID de transacción, buscar y abrir el modal de detalle directamente
       if (transactionId) {
         const transaccionIdNum = typeof transactionId === 'string' ? parseInt(transactionId, 10) : transactionId;
-        console.log('🔎 Buscando transacción con ID:', transaccionIdNum);
+        logger.debug('NOTIFICATION', 'Buscando transacción con ID', { transactionId: transaccionIdNum });
         
         // Función para buscar y abrir el modal de detalle
         const buscarYAbrirDetalle = () => {
           const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
-          console.log('📋 Transacción encontrada:', transaccion ? 'Sí' : 'No', transaccion ? `(ID: ${transaccion.id})` : '');
+          logger.debug('NOTIFICATION', 'Transacción encontrada', { 
+            encontrada: !!transaccion, 
+            transactionId: transaccionIdNum,
+            transaccionId: transaccion?.id 
+          });
           
           if (transaccion) {
-            console.log('✅ Abriendo modal de detalle para transacción:', transactionIdNum);
+            logger.success('NOTIFICATION', `Abriendo modal de detalle para transacción ${transactionIdNum}`, { transactionId: transactionIdNum });
             setSelectedPendingTransaction(transaccion);
             setShowPendingDetailModal(true);
             return true;
@@ -343,29 +358,25 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         // Intentar buscar inmediatamente si ya hay pendientes cargados
         if (pendientes.length > 0) {
           if (!buscarYAbrirDetalle()) {
-            // Si no se encuentra, esperar un poco más y volver a intentar
-            console.log('⏳ Transacción no encontrada, esperando y reintentando...');
+            logger.warn('NOTIFICATION', 'Transacción no encontrada, esperando y reintentando', { transactionId: transaccionIdNum });
             setTimeout(() => {
               if (!buscarYAbrirDetalle()) {
-                console.log('⚠️ Transacción no encontrada después de esperar, abriendo lista');
+                logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId: transaccionIdNum });
                 setShowPendingModal(true);
               }
             }, 1500);
           }
         } else {
-          // Si no hay pendientes cargados, esperar un poco y volver a intentar
-          console.log('⏳ Esperando a que se carguen los pendientes...');
+          logger.debug('NOTIFICATION', 'Esperando a que se carguen los pendientes', { transactionId: transaccionIdNum });
           setTimeout(() => {
             if (!buscarYAbrirDetalle()) {
-              // Si después de esperar no se encuentra, abrir la lista
-              console.log('⚠️ Transacción no encontrada después de esperar, abriendo lista');
+              logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId: transaccionIdNum });
               setShowPendingModal(true);
             }
           }, 1500);
         }
       } else {
-        // Si no hay ID, abrir la lista de pendientes
-        console.log('📋 No hay ID de transacción, abriendo lista de pendientes');
+        logger.info('NOTIFICATION', 'No hay ID de transacción, abriendo lista de pendientes');
         setShowPendingModal(true);
       }
     }
@@ -374,12 +385,29 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   // Escuchar mensajes del service worker para navegación desde notificaciones
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      console.log('📨 Mensaje recibido en Dashboard:', event.data);
-      console.log('📨 Tipo de mensaje:', event.data?.type);
+      logger.debug('SW_MESSAGE', 'Mensaje recibido en Dashboard', { type: event.data?.type, data: event.data });
+      
+      // Manejar logs del service worker
+      if (event.data && event.data.type === 'LOG') {
+        const level = event.data.level || 'info';
+        const category = event.data.category || 'SERVICE_WORKER';
+        const message = event.data.message || '';
+        const data = event.data.data;
+        
+        if (level === 'error') {
+          logger.error(category, message, data);
+        } else if (level === 'warn') {
+          logger.warn(category, message, data);
+        } else if (level === 'success') {
+          logger.success(category, message, data);
+        } else {
+          logger.info(category, message, data);
+        }
+        return;
+      }
       
       if (event.data && event.data.type === 'NAVIGATE') {
-        console.log('✅ Mensaje NAVIGATE detectado, procesando...');
-        console.log('📨 Datos completos del mensaje:', JSON.stringify(event.data, null, 2));
+        logger.info('NOTIFICATION', 'Mensaje NAVIGATE detectado, procesando notificación', event.data);
         
         // Guardar datos en localStorage para que la verificación periódica los encuentre
         try {
@@ -390,17 +418,15 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
             transaccionId: event.data.transaccionId
           };
           localStorage.setItem('rodmar_notification_nav', JSON.stringify(navDataToStore));
-          console.log('💾 Datos guardados en localStorage:', navDataToStore);
+          logger.debug('NOTIFICATION', 'Datos guardados en localStorage', navDataToStore);
         } catch (e) {
-          console.warn('⚠️ Error guardando en localStorage:', e);
+          logger.error('NOTIFICATION', 'Error guardando en localStorage', { error: e });
         }
         
         // Procesar la notificación inmediatamente
         const navData = event.data.navData || event.data;
-        console.log('🔄 Procesando notificación con navData:', navData);
+        logger.debug('NOTIFICATION', 'Procesando notificación con navData', navData);
         procesarNotificacion(navData);
-      } else {
-        console.log('⚠️ Mensaje recibido pero no es tipo NAVIGATE:', event.data);
       }
     };
 

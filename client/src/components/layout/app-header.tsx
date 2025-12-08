@@ -1,4 +1,4 @@
-import { Bell, Settings, Truck } from "lucide-react";
+import { Bell, Settings, Truck, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { NotificationsSettingsModal } from "@/components/modals/notifications-settings-modal";
+import { DebugLogsModal } from "@/components/modals/debug-logs-modal";
 
 interface AppHeaderProps {
   currentModule: string;
@@ -24,6 +25,7 @@ const moduleNames = {
 
 export default function AppHeader({ currentModule }: AppHeaderProps) {
   const [showNotificationsSettings, setShowNotificationsSettings] = useState(false);
+  const [showDebugLogs, setShowDebugLogs] = useState(false);
 
   return (
     <>
@@ -59,6 +61,13 @@ export default function AppHeader({ currentModule }: AppHeaderProps) {
                     <Bell className="mr-2 h-4 w-4" />
                     Notificaciones
                   </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => setShowDebugLogs(true)}
+                    className="cursor-pointer"
+                  >
+                    <Bug className="mr-2 h-4 w-4" />
+                    Logs de Depuración
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -69,6 +78,10 @@ export default function AppHeader({ currentModule }: AppHeaderProps) {
       <NotificationsSettingsModal 
         open={showNotificationsSettings}
         onClose={() => setShowNotificationsSettings(false)}
+      />
+      <DebugLogsModal 
+        open={showDebugLogs}
+        onClose={() => setShowDebugLogs(false)}
       />
     </>
   );

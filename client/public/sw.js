@@ -304,9 +304,43 @@ async function removePendingAction(actionId) {
   console.log('RodMar PWA: Removing pending action:', actionId);
 }
 
+// Función helper para enviar logs al cliente
+function sendLogToClient(level, category, message, data) {
+  try {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      clientList.forEach((client) => {
+        if (client.url.includes(self.location.origin)) {
+          client.postMessage({
+            type: 'LOG',
+            level: level,
+            category: category,
+            message: message,
+            data: data,
+            timestamp: Date.now()
+          });
+        }
+      });
+    });
+  } catch (e) {
+    // Ignorar errores al enviar logs
+  }
+}
+
+// Función helper para loggear y enviar al cliente
+function logAndSend(level, category, message, data) {
+  const emoji = {
+    info: 'ℹ️',
+    warn: '⚠️',
+    error: '❌',
+    success: '✅'
+  }[level] || 'ℹ️';
+  console.log(`${emoji} [${category}] ${message}`, data || '');
+  sendLogToClient(level, category, message, data);
+}
+
 // Notificaciones push
 self.addEventListener('push', (event) => {
-  console.log('RodMar PWA: Push notification received');
+  logAndSend('info', 'SERVICE_WORKER', 'Push notification received', { hasData: !!event.data });
   
   let notificationData = {
     title: 'RodMar Notification',
@@ -344,14 +378,22 @@ self.addEventListener('push', (event) => {
     }
   }
   
-  console.log('📬 Service Worker: Mostrando notificación con datos:', notificationData);
-  console.log('📬 Service Worker: Datos de la notificación (data):', notificationData.data);
+  sendLogToClient('info', 'SERVICE_WORKER', 'Mostrando notificación push', {
+    title: notificationData.title,
+    body: notificationData.body,
+    hasData: !!notificationData.data,
+    data: notificationData.data
+  });
   
   event.waitUntil(
     self.registration.showNotification(notificationData.title, notificationData).then(() => {
-      console.log('✅ Service Worker: Notificación mostrada exitosamente');
+      sendLogToClient('info', 'SERVICE_WORKER', 'Notificación mostrada exitosamente', {
+        title: notificationData.title
+      });
     }).catch((error) => {
-      console.error('❌ Service Worker: Error mostrando notificación:', error);
+      sendLogToClient('error', 'SERVICE_WORKER', 'Error mostrando notificación', {
+        error: error.message
+      });
     })
   );
 });
@@ -359,15 +401,15 @@ self.addEventListener('push', (event) => {
 // Manejo de clics en notificaciones
 self.addEventListener('notificationclick', (event) => {
   console.log('🔔 RodMar PWA: Notification clicked event fired!');
-  console.log('🔔 Notification object:', event.notification);
-  console.log('🔔 Notification data:', event.notification.data);
-  console.log('🔔 Notification title:', event.notification.title);
-  console.log('🔔 Notification body:', event.notification.body);
+  sendLogToClient('info', 'SERVICE_WORKER', 'Notification clicked event fired', {
+    title: event.notification.title,
+    body: event.notification.body,
+    data: event.notification.data
+  });
   
   event.notification.close();
   
   const notificationData = event.notification.data || {};
-  console.log('🔔 Notification data parsed:', notificationData);
   
   let urlToOpen = '/';
   
@@ -398,22 +440,22 @@ self.addEventListener('notificationclick', (event) => {
     transaccionId: notificationData.transaccionId || notificationData.id || (urlToOpen.match(/[?&]id=(\d+)/)?.[1])
   };
   
-  console.log('📱 Service Worker: Notification clicked, datos:', notificationData);
-  console.log('📱 Service Worker: URL a abrir:', urlToOpen);
-  console.log('📱 Service Worker: Transaction ID:', navData.transaccionId);
-  console.log('📱 Service Worker: NavData completo:', navData);
+  sendLogToClient('info', 'SERVICE_WORKER', 'Notification clicked, procesando', {
+    url: urlToOpen,
+    transactionId: navData.transaccionId,
+    notificationData: notificationData
+  });
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      console.log('📱 Service Worker: Clientes encontrados:', clientList.length);
-      console.log('📱 Service Worker: Clientes:', clientList.map(c => ({ url: c.url, focused: c.focused })));
+      sendLogToClient('debug', 'SERVICE_WORKER', 'Clientes encontrados', { count: clientList.length });
       
       // Buscar si ya hay una ventana abierta
       let clientFound = false;
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          console.log('📱 Service Worker: Cliente encontrado, enviando mensaje');
+          sendLogToClient('info', 'SERVICE_WORKER', 'Cliente encontrado, enviando mensaje', { url: client.url });
           clientFound = true;
           
           // Enviar mensaje al cliente con todos los datos
@@ -427,25 +469,25 @@ self.addEventListener('notificationclick', (event) => {
             navData: navData
           };
           
-          console.log('📤 Service Worker: Enviando mensaje:', JSON.stringify(messageData, null, 2));
+          sendLogToClient('debug', 'SERVICE_WORKER', 'Enviando mensaje NAVIGATE', messageData);
           client.postMessage(messageData);
-          console.log('✅ Service Worker: Mensaje enviado, enfocando cliente');
+          sendLogToClient('info', 'SERVICE_WORKER', 'Mensaje enviado, enfocando cliente');
           return client.focus();
         }
       }
       
       // Si no hay ventana abierta, abrir una nueva
       if (!clientFound) {
-        console.log('📱 Service Worker: No hay cliente abierto, abriendo nueva ventana');
+        sendLogToClient('info', 'SERVICE_WORKER', 'No hay cliente abierto, abriendo nueva ventana');
         if (clients.openWindow) {
           // Siempre abrir solo la ruta base para evitar 404
           const baseUrl = new URL('/', self.location.origin).href;
-          console.log('📱 Service Worker: Abriendo URL base:', baseUrl);
           
           // Guardar datos en IndexedDB para que la app los lea al cargar
           return saveNotificationDataToIndexedDB(navData).then(() => {
+            sendLogToClient('info', 'SERVICE_WORKER', 'Datos guardados en IndexedDB, abriendo ventana', { baseUrl });
             return clients.openWindow(baseUrl).then((windowClient) => {
-              console.log('📱 Service Worker: Nueva ventana abierta:', windowClient ? 'Sí' : 'No');
+              sendLogToClient('info', 'SERVICE_WORKER', 'Nueva ventana abierta', { success: !!windowClient });
               if (windowClient) {
                 // Esperar un momento para que la página cargue y luego enviar el mensaje
                 setTimeout(() => {
@@ -458,22 +500,22 @@ self.addEventListener('notificationclick', (event) => {
                     timestamp: navData.timestamp,
                     navData: navData
                   };
-                  console.log('📤 Service Worker: Enviando mensaje a nueva ventana:', messageData);
+                  sendLogToClient('debug', 'SERVICE_WORKER', 'Enviando mensaje a nueva ventana', messageData);
                   windowClient.postMessage(messageData);
                 }, 1500);
               }
             });
           }).catch((error) => {
-            console.error('❌ Service Worker: Error abriendo ventana:', error);
+            sendLogToClient('error', 'SERVICE_WORKER', 'Error abriendo ventana', { error: error.message });
             // Fallback: intentar abrir sin guardar en IndexedDB
             return clients.openWindow(baseUrl);
           });
         } else {
-          console.error('❌ Service Worker: clients.openWindow no está disponible');
+          sendLogToClient('error', 'SERVICE_WORKER', 'clients.openWindow no está disponible');
         }
       }
     }).catch((error) => {
-      console.error('❌ Service Worker: Error en notificationclick:', error);
+      sendLogToClient('error', 'SERVICE_WORKER', 'Error en notificationclick', { error: error.message });
     })
   );
 });
@@ -506,7 +548,7 @@ function saveNotificationDataToIndexedDB(navData) {
       const request = indexedDB.open('rodmar_notifications', 1);
       
       request.onerror = () => {
-        console.warn('⚠️ Service Worker: Error abriendo IndexedDB, usando fallback');
+        sendLogToClient('warn', 'SERVICE_WORKER', 'Error abriendo IndexedDB, usando fallback');
         // Fallback: intentar usar sessionStorage a través de un mensaje
         resolve();
       };
@@ -524,11 +566,11 @@ function saveNotificationDataToIndexedDB(navData) {
         
         store.put(data);
         transaction.oncomplete = () => {
-          console.log('💾 Service Worker: Datos guardados en IndexedDB');
+          sendLogToClient('debug', 'SERVICE_WORKER', 'Datos guardados en IndexedDB', { transactionId: navData.transaccionId });
           resolve();
         };
         transaction.onerror = () => {
-          console.warn('⚠️ Service Worker: Error guardando en IndexedDB');
+          sendLogToClient('warn', 'SERVICE_WORKER', 'Error guardando en IndexedDB');
           resolve(); // Continuar aunque falle
         };
       };
@@ -540,7 +582,7 @@ function saveNotificationDataToIndexedDB(navData) {
         }
       };
     } catch (error) {
-      console.warn('⚠️ Service Worker: Error con IndexedDB:', error);
+      sendLogToClient('warn', 'SERVICE_WORKER', 'Error con IndexedDB', { error: error.message });
       resolve(); // Continuar aunque falle
     }
   });
