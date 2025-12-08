@@ -400,10 +400,10 @@ self.addEventListener('push', (event) => {
 
 // Manejo de clics en notificaciones
 self.addEventListener('notificationclick', (event) => {
-  console.log('🔔 RodMar PWA: Notification clicked event fired!');
-  sendLogToClient('info', 'SERVICE_WORKER', 'Notification clicked event fired', {
+  logAndSend('info', 'SERVICE_WORKER', 'Notification clicked event fired', {
     title: event.notification.title,
     body: event.notification.body,
+    hasData: !!event.notification.data,
     data: event.notification.data
   });
   
@@ -416,11 +416,11 @@ self.addEventListener('notificationclick', (event) => {
   // Si hay una URL específica en los datos, usarla
   if (notificationData.url) {
     urlToOpen = notificationData.url;
-    console.log('🔔 Usando URL de notificationData:', urlToOpen);
+    logAndSend('info', 'SERVICE_WORKER', 'Usando URL de notificationData', { url: urlToOpen });
   } else if (notificationData.type === 'pending-transaction') {
     // Si es una notificación de transacción pendiente, abrir la lista de pendientes
     const transactionId = notificationData.transaccionId;
-    console.log('🔔 Tipo: pending-transaction, Transaction ID:', transactionId);
+    logAndSend('info', 'SERVICE_WORKER', 'Tipo: pending-transaction', { transactionId });
     if (transactionId) {
       urlToOpen = `/transacciones?pending=true&id=${transactionId}`;
     } else {
@@ -440,22 +440,25 @@ self.addEventListener('notificationclick', (event) => {
     transaccionId: notificationData.transaccionId || notificationData.id || (urlToOpen.match(/[?&]id=(\d+)/)?.[1])
   };
   
-  sendLogToClient('info', 'SERVICE_WORKER', 'Notification clicked, procesando', {
+  logAndSend('info', 'SERVICE_WORKER', 'Notification clicked, procesando navegación', {
     url: urlToOpen,
     transactionId: navData.transaccionId,
-    notificationData: notificationData
+    navData: navData
   });
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      sendLogToClient('debug', 'SERVICE_WORKER', 'Clientes encontrados', { count: clientList.length });
+      logAndSend('info', 'SERVICE_WORKER', `Clientes encontrados: ${clientList.length}`, { 
+        count: clientList.length,
+        clients: clientList.map(c => ({ url: c.url, focused: c.focused }))
+      });
       
       // Buscar si ya hay una ventana abierta
       let clientFound = false;
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          sendLogToClient('info', 'SERVICE_WORKER', 'Cliente encontrado, enviando mensaje', { url: client.url });
+          logAndSend('info', 'SERVICE_WORKER', 'Cliente encontrado, enviando mensaje', { url: client.url });
           clientFound = true;
           
           // Enviar mensaje al cliente con todos los datos
@@ -469,25 +472,26 @@ self.addEventListener('notificationclick', (event) => {
             navData: navData
           };
           
-          sendLogToClient('debug', 'SERVICE_WORKER', 'Enviando mensaje NAVIGATE', messageData);
+          logAndSend('info', 'SERVICE_WORKER', 'Enviando mensaje NAVIGATE al cliente', messageData);
           client.postMessage(messageData);
-          sendLogToClient('info', 'SERVICE_WORKER', 'Mensaje enviado, enfocando cliente');
+          logAndSend('success', 'SERVICE_WORKER', 'Mensaje enviado, enfocando cliente');
           return client.focus();
         }
       }
       
       // Si no hay ventana abierta, abrir una nueva
       if (!clientFound) {
-        sendLogToClient('info', 'SERVICE_WORKER', 'No hay cliente abierto, abriendo nueva ventana');
+        logAndSend('info', 'SERVICE_WORKER', 'No hay cliente abierto, abriendo nueva ventana');
         if (clients.openWindow) {
           // Siempre abrir solo la ruta base para evitar 404
           const baseUrl = new URL('/', self.location.origin).href;
+          logAndSend('info', 'SERVICE_WORKER', 'Abriendo URL base', { baseUrl });
           
           // Guardar datos en IndexedDB para que la app los lea al cargar
           return saveNotificationDataToIndexedDB(navData).then(() => {
-            sendLogToClient('info', 'SERVICE_WORKER', 'Datos guardados en IndexedDB, abriendo ventana', { baseUrl });
+            logAndSend('success', 'SERVICE_WORKER', 'Datos guardados en IndexedDB', { transactionId: navData.transaccionId });
             return clients.openWindow(baseUrl).then((windowClient) => {
-              sendLogToClient('info', 'SERVICE_WORKER', 'Nueva ventana abierta', { success: !!windowClient });
+              logAndSend('info', 'SERVICE_WORKER', `Nueva ventana abierta: ${windowClient ? 'Sí' : 'No'}`, { hasWindowClient: !!windowClient });
               if (windowClient) {
                 // Esperar un momento para que la página cargue y luego enviar el mensaje
                 setTimeout(() => {
@@ -500,22 +504,22 @@ self.addEventListener('notificationclick', (event) => {
                     timestamp: navData.timestamp,
                     navData: navData
                   };
-                  sendLogToClient('debug', 'SERVICE_WORKER', 'Enviando mensaje a nueva ventana', messageData);
+                  logAndSend('info', 'SERVICE_WORKER', 'Enviando mensaje a nueva ventana', messageData);
                   windowClient.postMessage(messageData);
                 }, 1500);
               }
             });
           }).catch((error) => {
-            sendLogToClient('error', 'SERVICE_WORKER', 'Error abriendo ventana', { error: error.message });
+            logAndSend('error', 'SERVICE_WORKER', 'Error abriendo ventana', { error: error.message });
             // Fallback: intentar abrir sin guardar en IndexedDB
             return clients.openWindow(baseUrl);
           });
         } else {
-          sendLogToClient('error', 'SERVICE_WORKER', 'clients.openWindow no está disponible');
+          logAndSend('error', 'SERVICE_WORKER', 'clients.openWindow no está disponible');
         }
       }
     }).catch((error) => {
-      sendLogToClient('error', 'SERVICE_WORKER', 'Error en notificationclick', { error: error.message });
+      logAndSend('error', 'SERVICE_WORKER', 'Error en notificationclick', { error: error.message });
     })
   );
 });
