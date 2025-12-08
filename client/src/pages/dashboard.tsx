@@ -243,20 +243,22 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       if (event.data && event.data.type === 'NAVIGATE') {
         console.log('📨 Mensaje del service worker recibido:', event.data);
         
-        // Leer datos de localStorage también (por si el mensaje no incluye todos los datos)
-        let navData = event.data;
+        // Guardar datos en localStorage para que la verificación periódica los encuentre
         try {
-          const stored = localStorage.getItem('rodmar_notification_nav');
-          if (stored) {
-            const storedData = JSON.parse(stored);
-            // Combinar datos del mensaje con los de localStorage
-            navData = { ...storedData, ...event.data };
-            console.log('📦 Datos combinados de localStorage y mensaje:', navData);
-          }
+          const navDataToStore = event.data.navData || {
+            url: event.data.url,
+            timestamp: event.data.timestamp || Date.now(),
+            notificationData: event.data.notificationData,
+            transaccionId: event.data.transaccionId
+          };
+          localStorage.setItem('rodmar_notification_nav', JSON.stringify(navDataToStore));
+          console.log('💾 Datos guardados en localStorage:', navDataToStore);
         } catch (e) {
-          console.warn('Error leyendo localStorage en mensaje:', e);
+          console.warn('⚠️ Error guardando en localStorage:', e);
         }
         
+        // Procesar la notificación inmediatamente
+        const navData = event.data.navData || event.data;
         procesarNotificacion(navData);
       }
     };

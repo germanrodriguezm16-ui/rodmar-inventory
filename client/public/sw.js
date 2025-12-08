@@ -383,53 +383,64 @@ self.addEventListener('notificationclick', (event) => {
     transaccionId: notificationData.transaccionId || notificationData.id || (urlToOpen.match(/[?&]id=(\d+)/)?.[1])
   };
   
-  console.log('📱 Service Worker: Guardando datos de navegación:', navData);
+  console.log('📱 Service Worker: Notification clicked, datos:', notificationData);
+  console.log('📱 Service Worker: URL a abrir:', urlToOpen);
+  console.log('📱 Service Worker: Transaction ID:', navData.transaccionId);
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      console.log('📱 Service Worker: Clientes encontrados:', clientList.length);
+      
       // Buscar si ya hay una ventana abierta
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          // Guardar datos en localStorage
-          try {
-            localStorage.setItem('rodmar_notification_nav', JSON.stringify(navData));
-          } catch (e) {
-            console.warn('No se pudo guardar en localStorage:', e);
-          }
+          console.log('📱 Service Worker: Enviando mensaje a cliente existente');
           
           // Enviar mensaje al cliente con todos los datos
-          client.postMessage({
+          // El cliente guardará en localStorage
+          const messageData = {
             type: 'NAVIGATE',
             url: urlToOpen,
             absoluteUrl: absoluteUrl,
             notificationData: notificationData,
             transaccionId: navData.transaccionId,
-            timestamp: navData.timestamp
-          });
-          console.log('📤 Mensaje enviado al cliente:', {
-            type: 'NAVIGATE',
-            url: urlToOpen,
-            transaccionId: navData.transaccionId
-          });
+            timestamp: navData.timestamp,
+            // Incluir todos los datos para que el cliente los guarde
+            navData: navData
+          };
+          
+          client.postMessage(messageData);
+          console.log('📤 Service Worker: Mensaje enviado al cliente:', messageData);
           return client.focus();
         }
       }
+      
       // Si no hay ventana abierta, abrir una nueva
-      // Usar solo la ruta base (sin query params) para evitar 404
+      console.log('📱 Service Worker: No hay cliente abierto, abriendo nueva ventana');
       if (clients.openWindow) {
         const basePath = urlToOpen.split('?')[0];
         const baseUrl = new URL(basePath, self.location.origin).href;
         
-        // Guardar datos en sessionStorage antes de abrir (más confiable para nuevas ventanas)
-        try {
-          sessionStorage.setItem('rodmar_notification_nav', JSON.stringify(navData));
-        } catch (e) {
-          console.warn('No se pudo guardar en sessionStorage:', e);
-        }
-        
-        return clients.openWindow(baseUrl).catch((error) => {
-          console.error('Error abriendo ventana:', error);
+        return clients.openWindow(baseUrl).then((windowClient) => {
+          if (windowClient) {
+            // Esperar un momento para que la página cargue y luego enviar el mensaje
+            setTimeout(() => {
+              const messageData = {
+                type: 'NAVIGATE',
+                url: urlToOpen,
+                absoluteUrl: absoluteUrl,
+                notificationData: notificationData,
+                transaccionId: navData.transaccionId,
+                timestamp: navData.timestamp,
+                navData: navData
+              };
+              windowClient.postMessage(messageData);
+              console.log('📤 Service Worker: Mensaje enviado a nueva ventana:', messageData);
+            }, 1000);
+          }
+        }).catch((error) => {
+          console.error('❌ Service Worker: Error abriendo ventana:', error);
         });
       }
     })
