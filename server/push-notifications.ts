@@ -56,6 +56,7 @@ export async function sendPushNotification(
     const results = await Promise.allSettled(
       subscriptions.map(async (subscription) => {
         try {
+          console.log(`📤 Enviando notificación push a suscripción ${subscription.id} (endpoint: ${subscription.endpoint.substring(0, 50)}...)`);
           await webpush.sendNotification(
             {
               endpoint: subscription.endpoint,
@@ -66,14 +67,16 @@ export async function sendPushNotification(
             },
             payload
           );
+          console.log(`✅ Notificación enviada exitosamente a suscripción ${subscription.id}`);
           return { success: true, subscriptionId: subscription.id };
         } catch (error: any) {
+          console.error(`❌ Error enviando notificación a suscripción ${subscription.id}:`, error.message, error.statusCode);
           // Si la suscripción es inválida (410 Gone), eliminarla
           if (error.statusCode === 410) {
             console.log(`🗑️  Eliminando suscripción inválida ${subscription.id}`);
             await storage.deletePushSubscription(userId, subscription.endpoint);
           }
-          return { success: false, subscriptionId: subscription.id, error: error.message };
+          return { success: false, subscriptionId: subscription.id, error: error.message, statusCode: error.statusCode };
         }
       })
     );
@@ -81,7 +84,20 @@ export async function sendPushNotification(
     const sent = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
     const failed = results.length - sent;
 
-    console.log(`📱 Notificación enviada: ${sent} exitosas, ${failed} fallidas`);
+    // Log detallado de resultados
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        if (result.value.success) {
+          console.log(`✅ Suscripción ${index + 1}: Enviada exitosamente`);
+        } else {
+          console.error(`❌ Suscripción ${index + 1}: Falló - ${result.value.error} (Status: ${result.value.statusCode || 'N/A'})`);
+        }
+      } else {
+        console.error(`❌ Suscripción ${index + 1}: Error - ${result.reason}`);
+      }
+    });
+
+    console.log(`📱 Resumen: ${sent} exitosas, ${failed} fallidas de ${subscriptions.length} suscripciones`);
     return { sent, failed };
   } catch (error) {
     console.error('❌ Error al enviar notificaciones push:', error);
@@ -101,7 +117,7 @@ export async function notifyPendingTransaction(
     valor: string;
     codigoSolicitud?: string;
   }
-): Promise<void> {
+): Promise<{ sent: number; failed: number }> {
   const valorFormateado = new Intl.NumberFormat('es-CO', {
     style: 'currency',
     currency: 'COP',
@@ -111,7 +127,7 @@ export async function notifyPendingTransaction(
   const tipoCapitalizado = transaccion.paraQuienTipo.charAt(0).toUpperCase() + 
     transaccion.paraQuienTipo.slice(1);
 
-  await sendPushNotification(
+  const result = await sendPushNotification(
     userId,
     'Nueva transacción pendiente',
     `${tipoCapitalizado} ${transaccion.paraQuienNombre} – ${valorFormateado}`,
@@ -122,6 +138,8 @@ export async function notifyPendingTransaction(
       url: '/transacciones?pending=true'
     }
   );
+
+  return result;
 }
 
 /**

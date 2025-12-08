@@ -2431,13 +2431,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enviar notificación push (no bloquear la respuesta si falla)
       try {
         const { notifyPendingTransaction } = await import('./push-notifications');
-        await notifyPendingTransaction(userId, {
+        const result = await notifyPendingTransaction(userId, {
           id: transaccion.id,
           paraQuienTipo: data.paraQuienTipo,
           paraQuienNombre: nombreDestino,
           valor: data.valor,
           codigoSolicitud: transaccion.codigo_solicitud || undefined
         });
+        console.log(`📱 Notificación push enviada: ${result.sent} exitosas, ${result.failed} fallidas`);
       } catch (pushError) {
         console.error('⚠️  Error al enviar notificación push (no crítico):', pushError);
       }
