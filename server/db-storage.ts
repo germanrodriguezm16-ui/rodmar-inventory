@@ -4006,26 +4006,60 @@ export class DatabaseStorage implements IStorage {
           ne(transacciones.estado, 'pendiente') // Excluir transacciones pendientes
         ];
         
-        const transaccionesStats = await db
+        // Query mejorada para manejar transacciones entre compradores correctamente
+        // Hace dos queries separadas: una para compradores como origen, otra para compradores como destino
+        // Esto asegura que las transacciones entre compradores se cuenten en ambos compradores
+        
+        // 1. Transacciones donde el comprador es origen (deQuienTipo = 'comprador') - valor positivo
+        const transaccionesDesdeCompradores = await db
           .select({
-            compradorId: sql<string>`CASE 
-              WHEN ${transacciones.deQuienTipo} = 'comprador' THEN ${transacciones.deQuienId}
-              WHEN ${transacciones.paraQuienTipo} = 'comprador' THEN ${transacciones.paraQuienId}
-            END`,
-            transaccionesNetas: sql<number>`COALESCE(SUM(
-              CASE 
-                WHEN ${transacciones.deQuienTipo} = 'comprador' THEN CAST(${transacciones.valor} AS NUMERIC)
-                WHEN ${transacciones.paraQuienTipo} = 'comprador' THEN -CAST(${transacciones.valor} AS NUMERIC)
-                ELSE 0
-              END
-            ), 0)`
+            compradorId: transacciones.deQuienId,
+            valor: sql<number>`CAST(${transacciones.valor} AS NUMERIC)`.as('valor')
           })
           .from(transacciones)
-          .where(and(...transaccionesConditions))
-          .groupBy(sql`CASE 
-            WHEN ${transacciones.deQuienTipo} = 'comprador' THEN ${transacciones.deQuienId}
-            WHEN ${transacciones.paraQuienTipo} = 'comprador' THEN ${transacciones.paraQuienId}
-          END`);
+          .where(and(
+            eq(transacciones.deQuienTipo, 'comprador'),
+            inArray(transacciones.deQuienId, compradorIds),
+            ne(transacciones.estado, 'pendiente')
+          ));
+
+        // 2. Transacciones donde el comprador es destino (paraQuienTipo = 'comprador') - valor negativo
+        const transaccionesHaciaCompradores = await db
+          .select({
+            compradorId: transacciones.paraQuienId,
+            valor: sql<number>`-CAST(${transacciones.valor} AS NUMERIC)`.as('valor')
+          })
+          .from(transacciones)
+          .where(and(
+            eq(transacciones.paraQuienTipo, 'comprador'),
+            inArray(transacciones.paraQuienId, compradorIds),
+            ne(transacciones.estado, 'pendiente')
+          ));
+
+        // Combinar ambas queries y agrupar por compradorId
+        const transaccionesCombinadas = [
+          ...transaccionesDesdeCompradores.map(t => ({ compradorId: t.compradorId, valor: t.valor })),
+          ...transaccionesHaciaCompradores.map(t => ({ compradorId: t.compradorId, valor: t.valor }))
+        ];
+
+        // Agrupar por compradorId y sumar valores
+        const transaccionesStatsMapTemp = new Map<number, number>();
+        transaccionesCombinadas.forEach(t => {
+          if (t.compradorId) {
+            const compradorIdNum = parseInt(t.compradorId);
+            if (!isNaN(compradorIdNum)) {
+              const valorActual = transaccionesStatsMapTemp.get(compradorIdNum) || 0;
+              const valorNuevo = typeof t.valor === 'number' ? t.valor : parseFloat(String(t.valor || 0));
+              transaccionesStatsMapTemp.set(compradorIdNum, valorActual + (isNaN(valorNuevo) ? 0 : valorNuevo));
+            }
+          }
+        });
+
+        // Convertir a formato esperado
+        const transaccionesStats = Array.from(transaccionesStatsMapTemp.entries()).map(([compradorId, transaccionesNetas]) => ({
+          compradorId: compradorId.toString(),
+          transaccionesNetas
+        }));
 
         transaccionesStats.forEach(stat => {
           if (stat.compradorId) {
@@ -4143,31 +4177,71 @@ export class DatabaseStorage implements IStorage {
         ne(transacciones.estado, 'pendiente') // Excluir transacciones pendientes
       ];
       
-      const transaccionesStats = await db
+      // Query mejorada para manejar transacciones entre volqueteros correctamente
+      // Hace dos queries separadas: una para volqueteros como origen (ingresos), otra para volqueteros como destino (egresos)
+      // Esto asegura que las transacciones entre volqueteros se cuenten en ambos volqueteros
+      
+      // 1. Transacciones donde el volquetero es origen (deQuienTipo = 'volquetero') - ingresos
+      const transaccionesDesdeVolqueteros = await db
         .select({
-          volqueteroId: sql<string>`CASE 
-            WHEN ${transacciones.deQuienTipo} = 'volquetero' THEN ${transacciones.deQuienId}
-            WHEN ${transacciones.paraQuienTipo} = 'volquetero' THEN ${transacciones.paraQuienId}
-          END`,
-          ingresos: sql<number>`COALESCE(SUM(
-            CASE 
-              WHEN ${transacciones.deQuienTipo} = 'volquetero' THEN CAST(${transacciones.valor} AS NUMERIC)
-              ELSE 0
-            END
-          ), 0)`,
-          egresos: sql<number>`COALESCE(SUM(
-            CASE 
-              WHEN ${transacciones.paraQuienTipo} = 'volquetero' THEN CAST(${transacciones.valor} AS NUMERIC)
-              ELSE 0
-            END
-          ), 0)`
+          volqueteroId: transacciones.deQuienId,
+          valor: sql<number>`CAST(${transacciones.valor} AS NUMERIC)`.as('valor')
         })
         .from(transacciones)
-        .where(and(...transaccionesConditions))
-        .groupBy(sql`CASE 
-          WHEN ${transacciones.deQuienTipo} = 'volquetero' THEN ${transacciones.deQuienId}
-          WHEN ${transacciones.paraQuienTipo} = 'volquetero' THEN ${transacciones.paraQuienId}
-        END`);
+        .where(and(
+          eq(transacciones.deQuienTipo, 'volquetero'),
+          inArray(transacciones.deQuienId, volqueteroIds),
+          ne(transacciones.estado, 'pendiente')
+        ));
+
+      // 2. Transacciones donde el volquetero es destino (paraQuienTipo = 'volquetero') - egresos
+      const transaccionesHaciaVolqueteros = await db
+        .select({
+          volqueteroId: transacciones.paraQuienId,
+          valor: sql<number>`CAST(${transacciones.valor} AS NUMERIC)`.as('valor')
+        })
+        .from(transacciones)
+        .where(and(
+          eq(transacciones.paraQuienTipo, 'volquetero'),
+          inArray(transacciones.paraQuienId, volqueteroIds),
+          ne(transacciones.estado, 'pendiente')
+        ));
+
+      // Combinar ambas queries y agrupar por volqueteroId
+      const ingresosMap = new Map<number, number>();
+      const egresosMap = new Map<number, number>();
+
+      transaccionesDesdeVolqueteros.forEach(t => {
+        if (t.volqueteroId) {
+          const volqueteroIdNum = parseInt(t.volqueteroId);
+          if (!isNaN(volqueteroIdNum)) {
+            const valorActual = ingresosMap.get(volqueteroIdNum) || 0;
+            const valorNuevo = typeof t.valor === 'number' ? t.valor : parseFloat(String(t.valor || 0));
+            ingresosMap.set(volqueteroIdNum, valorActual + (isNaN(valorNuevo) ? 0 : valorNuevo));
+          }
+        }
+      });
+
+      transaccionesHaciaVolqueteros.forEach(t => {
+        if (t.volqueteroId) {
+          const volqueteroIdNum = parseInt(t.volqueteroId);
+          if (!isNaN(volqueteroIdNum)) {
+            const valorActual = egresosMap.get(volqueteroIdNum) || 0;
+            const valorNuevo = typeof t.valor === 'number' ? t.valor : parseFloat(String(t.valor || 0));
+            egresosMap.set(volqueteroIdNum, valorActual + (isNaN(valorNuevo) ? 0 : valorNuevo));
+          }
+        }
+      });
+
+      // Convertir a formato esperado
+      const transaccionesStats = Array.from(new Set([
+        ...Array.from(ingresosMap.keys()),
+        ...Array.from(egresosMap.keys())
+      ])).map(volqueteroId => ({
+        volqueteroId: volqueteroId.toString(),
+        ingresos: ingresosMap.get(volqueteroId) || 0,
+        egresos: egresosMap.get(volqueteroId) || 0
+      }));
 
       // Crear map de transacciones por volquetero
       const transaccionesStatsMap = new Map<number, { ingresos: number; egresos: number }>();
