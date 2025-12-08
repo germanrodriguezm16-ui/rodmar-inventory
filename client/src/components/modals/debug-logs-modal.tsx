@@ -1,8 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useDebugLogger } from '@/hooks/useDebugLogger';
-import { Bug, Trash2, Play, Square } from 'lucide-react';
-import { useEffect } from 'react';
+import { Bug, Trash2, Play, Square, Copy, Check } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 interface DebugLogsModalProps {
   open: boolean;
@@ -11,6 +12,8 @@ interface DebugLogsModalProps {
 
 export function DebugLogsModal({ open, onClose }: DebugLogsModalProps) {
   const { logs, isActive, startLogging, stopLogging, clearLogs } = useDebugLogger();
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -29,6 +32,30 @@ export function DebugLogsModal({ open, onClose }: DebugLogsModalProps) {
       case 'error': return 'text-red-600 dark:text-red-400';
       case 'warn': return 'text-yellow-600 dark:text-yellow-400';
       default: return 'text-blue-600 dark:text-blue-400';
+    }
+  };
+
+  const copyLogs = async () => {
+    try {
+      const logsText = logs.map(log => {
+        const time = formatTime(log.timestamp);
+        const level = log.level.toUpperCase();
+        return `[${time}] ${level} ${log.message}${log.data ? '\n  Data: ' + JSON.stringify(log.data, null, 2) : ''}`;
+      }).join('\n\n');
+      
+      await navigator.clipboard.writeText(logsText);
+      setCopied(true);
+      toast({
+        title: 'Logs copiados',
+        description: 'Los logs se han copiado al portapapeles.',
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'No se pudieron copiar los logs.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -84,8 +111,11 @@ export function DebugLogsModal({ open, onClose }: DebugLogsModalProps) {
           </div>
         </div>
 
-        <div className="px-6 pt-4 pb-6 shrink-0">
-          <Button onClick={onClose} className="w-full">Cerrar</Button>
+        <div className="px-6 pt-4 pb-6 shrink-0 flex gap-2">
+          <Button onClick={copyLogs} variant="outline" size="icon" title="Copiar logs">
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+          </Button>
+          <Button onClick={onClose} className="flex-1">Cerrar</Button>
         </div>
       </DialogContent>
     </Dialog>
