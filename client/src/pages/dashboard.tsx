@@ -339,9 +339,21 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         
         // Función para buscar y abrir el modal de detalle
         const buscarYAbrirDetalle = () => {
-          console.log('🔍 Buscando transacción en pendientes:', { transactionId: transaccionIdNum, totalPendientes: pendientes.length });
+          console.log('🔍 Buscando transacción en pendientes:', { 
+            transactionId: transaccionIdNum, 
+            totalPendientes: pendientes.length,
+            idsDisponibles: pendientes.map((t: any) => t.id)
+          });
+          
           const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
-          console.log('📋 Resultado de búsqueda:', { encontrada: !!transaccion, transaccionId: transaccion?.id, buscando: transaccionIdNum });
+          
+          console.log('📋 Resultado de búsqueda:', { 
+            encontrada: !!transaccion, 
+            transaccionId: transaccion?.id, 
+            buscando: transaccionIdNum,
+            tipoBuscando: typeof transaccionIdNum,
+            tiposEnPendientes: pendientes.map((t: any) => ({ id: t.id, tipo: typeof t.id }))
+          });
           
           logger.debug('NOTIFICATION', 'Transacción encontrada', { 
             encontrada: !!transaccion, 
@@ -350,11 +362,19 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
           });
           
           if (transaccion) {
-            console.log('✅ Transacción encontrada, abriendo modal de detalle');
+            console.log('✅ Transacción encontrada, abriendo modal de detalle', transaccion);
             logger.success('NOTIFICATION', `Abriendo modal de detalle para transacción ${transactionIdNum}`, { transactionId: transactionIdNum });
-            setSelectedPendingTransaction(transaccion);
-            setShowPendingDetailModal(true);
-            console.log('✅ Estados actualizados: selectedPendingTransaction y showPendingDetailModal');
+            
+            // Usar setTimeout para asegurar que React procese los cambios de estado
+            setTimeout(() => {
+              setSelectedPendingTransaction(transaccion);
+              setShowPendingDetailModal(true);
+              console.log('✅ Estados actualizados: selectedPendingTransaction y showPendingDetailModal', {
+                selectedPendingTransaction: transaccion,
+                showPendingDetailModal: true
+              });
+            }, 0);
+            
             return true;
           }
           console.log('❌ Transacción no encontrada');
@@ -365,21 +385,43 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         if (pendientes.length > 0) {
           if (!buscarYAbrirDetalle()) {
             logger.warn('NOTIFICATION', 'Transacción no encontrada, esperando y reintentando', { transactionId: transaccionIdNum });
-            setTimeout(() => {
-              if (!buscarYAbrirDetalle()) {
-                logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId: transaccionIdNum });
+            // Esperar más tiempo y reintentar varias veces
+            let intentos = 0;
+            const maxIntentos = 5;
+            const intervalo = setInterval(() => {
+              intentos++;
+              console.log(`🔄 Reintento ${intentos}/${maxIntentos} buscando transacción ${transaccionIdNum}`);
+              if (buscarYAbrirDetalle()) {
+                clearInterval(intervalo);
+              } else if (intentos >= maxIntentos) {
+                clearInterval(intervalo);
+                logger.warn('NOTIFICATION', 'Transacción no encontrada después de múltiples intentos, abriendo lista', { transactionId: transaccionIdNum });
                 setShowPendingModal(true);
               }
-            }, 1500);
+            }, 500);
           }
         } else {
           logger.debug('NOTIFICATION', 'Esperando a que se carguen los pendientes', { transactionId: transaccionIdNum });
-          setTimeout(() => {
-            if (!buscarYAbrirDetalle()) {
-              logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId: transaccionIdNum });
+          // Esperar a que se carguen y luego buscar
+          let intentos = 0;
+          const maxIntentos = 10;
+          const intervalo = setInterval(() => {
+            intentos++;
+            console.log(`⏳ Esperando pendientes... intento ${intentos}/${maxIntentos}, pendientes: ${pendientes.length}`);
+            if (pendientes.length > 0) {
+              if (buscarYAbrirDetalle()) {
+                clearInterval(intervalo);
+              } else if (intentos >= maxIntentos) {
+                clearInterval(intervalo);
+                logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId: transaccionIdNum });
+                setShowPendingModal(true);
+              }
+            } else if (intentos >= maxIntentos) {
+              clearInterval(intervalo);
+              logger.warn('NOTIFICATION', 'Pendientes no cargados después de esperar, abriendo lista', { transactionId: transaccionIdNum });
               setShowPendingModal(true);
             }
-          }, 1500);
+          }, 500);
         }
       } else {
         logger.info('NOTIFICATION', 'No hay ID de transacción, abriendo lista de pendientes');
@@ -605,7 +647,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
 
       {selectedPendingTransaction && (
         <PendingDetailModal
-          open={showPendingDetailModal}
+          open={showPendingDetailModal && !!selectedPendingTransaction}
           transaccion={selectedPendingTransaction}
           onClose={() => {
             setShowPendingDetailModal(false);
