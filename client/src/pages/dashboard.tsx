@@ -272,7 +272,22 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         
         // Función para buscar y abrir el modal de detalle
         const buscarYAbrirDetalle = () => {
+          console.log('🔍 [DATOS ALMACENADOS] Buscando transacción en pendientes:', { 
+            transactionId: transaccionIdNum, 
+            totalPendientes: pendientes.length,
+            idsDisponibles: pendientes.map((t: any) => t.id)
+          });
+          
           const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
+          
+          console.log('📋 [DATOS ALMACENADOS] Resultado de búsqueda:', { 
+            encontrada: !!transaccion, 
+            transaccionId: transaccion?.id, 
+            buscando: transaccionIdNum,
+            tipoBuscando: typeof transaccionIdNum,
+            tiposEnPendientes: pendientes.map((t: any) => ({ id: t.id, tipo: typeof t.id }))
+          });
+          
           logger.debug('NOTIFICATION', 'Transacción encontrada desde datos almacenados', { 
             encontrada: !!transaccion, 
             transactionId: transaccionIdNum,
@@ -280,11 +295,22 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
           });
           
           if (transaccion) {
+            console.log('✅ [DATOS ALMACENADOS] Transacción encontrada, abriendo modal de detalle', transaccion);
             logger.success('NOTIFICATION', `Abriendo modal de detalle desde datos almacenados para transacción ${transaccionIdNum}`, { transactionId: transactionIdNum });
-            setSelectedPendingTransaction(transaccion);
-            setShowPendingDetailModal(true);
+            
+            // Usar setTimeout para asegurar que React procese los cambios de estado
+            setTimeout(() => {
+              setSelectedPendingTransaction(transaccion);
+              setShowPendingDetailModal(true);
+              console.log('✅ [DATOS ALMACENADOS] Estados actualizados: selectedPendingTransaction y showPendingDetailModal', {
+                selectedPendingTransaction: transaccion,
+                showPendingDetailModal: true
+              });
+            }, 0);
+            
             return true;
           }
+          console.log('❌ [DATOS ALMACENADOS] Transacción no encontrada');
           return false;
         };
         
@@ -292,21 +318,43 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         if (pendientes.length > 0) {
           if (!buscarYAbrirDetalle()) {
             logger.warn('NOTIFICATION', 'Transacción no encontrada, esperando y reintentando', { transactionId: transaccionIdNum });
-            setTimeout(() => {
-              if (!buscarYAbrirDetalle()) {
-                logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId: transaccionIdNum });
+            // Esperar más tiempo y reintentar varias veces
+            let intentos = 0;
+            const maxIntentos = 5;
+            const intervalo = setInterval(() => {
+              intentos++;
+              console.log(`🔄 [DATOS ALMACENADOS] Reintento ${intentos}/${maxIntentos} buscando transacción ${transaccionIdNum}`);
+              if (buscarYAbrirDetalle()) {
+                clearInterval(intervalo);
+              } else if (intentos >= maxIntentos) {
+                clearInterval(intervalo);
+                logger.warn('NOTIFICATION', 'Transacción no encontrada después de múltiples intentos, abriendo lista', { transactionId: transaccionIdNum });
                 setShowPendingModal(true);
               }
-            }, 1500);
+            }, 500);
           }
         } else {
           logger.debug('NOTIFICATION', 'Esperando a que se carguen los pendientes desde datos almacenados', { transactionId: transaccionIdNum });
-          setTimeout(() => {
-            if (!buscarYAbrirDetalle()) {
-              logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId: transaccionIdNum });
+          // Esperar a que se carguen y luego buscar
+          let intentos = 0;
+          const maxIntentos = 10;
+          const intervalo = setInterval(() => {
+            intentos++;
+            console.log(`⏳ [DATOS ALMACENADOS] Esperando pendientes... intento ${intentos}/${maxIntentos}, pendientes: ${pendientes.length}`);
+            if (pendientes.length > 0) {
+              if (buscarYAbrirDetalle()) {
+                clearInterval(intervalo);
+              } else if (intentos >= maxIntentos) {
+                clearInterval(intervalo);
+                logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId: transaccionIdNum });
+                setShowPendingModal(true);
+              }
+            } else if (intentos >= maxIntentos) {
+              clearInterval(intervalo);
+              logger.warn('NOTIFICATION', 'Pendientes no cargados después de esperar, abriendo lista', { transactionId: transaccionIdNum });
               setShowPendingModal(true);
             }
-          }, 1500);
+          }, 500);
         }
       } else {
         logger.info('NOTIFICATION', 'No hay ID de transacción desde datos almacenados, abriendo lista de pendientes');
