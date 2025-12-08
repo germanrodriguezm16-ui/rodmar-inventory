@@ -71,28 +71,92 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
 
   // Detectar query params o datos de notificación para abrir modal de pendientes
   useEffect(() => {
-    // Primero verificar localStorage/sessionStorage para datos de notificación
-    let navData = null;
-    try {
-      const stored = localStorage.getItem('rodmar_notification_nav') || 
-                     sessionStorage.getItem('rodmar_notification_nav');
-      if (stored) {
-        navData = JSON.parse(stored);
-        console.log('📱 Datos de notificación encontrados:', navData);
-        // Limpiar después de leer
-        localStorage.removeItem('rodmar_notification_nav');
-        sessionStorage.removeItem('rodmar_notification_nav');
-      }
-    } catch (e) {
-      console.warn('Error leyendo datos de notificación:', e);
-    }
+    // Función para leer de IndexedDB
+    const readFromIndexedDB = (): Promise<any> => {
+      return new Promise((resolve) => {
+        try {
+          const request = indexedDB.open('rodmar_notifications', 1);
+          
+          request.onsuccess = (event) => {
+            const db = event.target.result;
+            const transaction = db.transaction(['notifications'], 'readonly');
+            const store = transaction.objectStore('notifications');
+            const getRequest = store.get('latest');
+            
+            getRequest.onsuccess = () => {
+              const data = getRequest.result;
+              if (data) {
+                // Eliminar después de leer
+                const deleteTransaction = db.transaction(['notifications'], 'readwrite');
+                const deleteStore = deleteTransaction.objectStore('notifications');
+                deleteStore.delete('latest');
+                resolve(data);
+              } else {
+                resolve(null);
+              }
+            };
+            
+            getRequest.onerror = () => resolve(null);
+          };
+          
+          request.onerror = () => resolve(null);
+          
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('notifications')) {
+              db.createObjectStore('notifications', { keyPath: 'id' });
+            }
+          };
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    };
     
-    // Verificar query params de la URL
+    // Leer datos de notificación de múltiples fuentes
+    let navData = null;
+    
+    // 1. Intentar leer de IndexedDB primero (más confiable para nuevas ventanas)
+    readFromIndexedDB().then((indexedDBData) => {
+      if (indexedDBData) {
+        navData = indexedDBData;
+        console.log('📱 Datos de notificación encontrados en IndexedDB:', navData);
+      }
+      
+      // 2. Intentar leer de localStorage/sessionStorage
+      try {
+        const stored = localStorage.getItem('rodmar_notification_nav') || 
+                       sessionStorage.getItem('rodmar_notification_nav');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (!navData || parsed.timestamp > (navData.timestamp || 0)) {
+            navData = parsed;
+            console.log('📱 Datos de notificación encontrados en localStorage:', navData);
+          }
+          // Limpiar después de leer
+          localStorage.removeItem('rodmar_notification_nav');
+          sessionStorage.removeItem('rodmar_notification_nav');
+        }
+      } catch (e) {
+        console.warn('Error leyendo datos de notificación:', e);
+      }
+      
+      // Procesar los datos si se encontraron
+      if (navData) {
+        procesarNotificacionDesdeDatos(navData);
+      }
+    });
+    
+    // Verificar query params de la URL (solo si no hay datos de notificación)
     const urlParams = new URLSearchParams(window.location.search);
-    const pendingParam = urlParams.get('pending') || (navData?.url?.includes('pending=true') ? 'true' : null);
+    const pendingParamFromUrl = urlParams.get('pending');
+    const transactionIdFromUrl = urlParams.get('id');
+    
+    // Si hay datos de notificación, usarlos; si no, usar URL params
+    const pendingParam = navData ? (navData.url?.includes('pending=true') || navData.notificationData?.type === 'pending-transaction' ? 'true' : null) : (pendingParamFromUrl || null);
     
     // Extraer ID de múltiples fuentes posibles (en orden de prioridad)
-    let transactionIdParam = urlParams.get('id') || 
+    let transactionIdParam = transactionIdFromUrl ||
                             navData?.transaccionId ||  // Directo del navData
                             navData?.notificationData?.transaccionId ||
                             navData?.notificationData?.id ||
@@ -108,7 +172,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     
     const transactionId = transactionIdParam ? parseInt(transactionIdParam, 10) : null;
     
-    console.log('🔍 Detección de notificación:', { pendingParam, transactionId, pendientesCount: pendientes.length });
+    console.log('🔍 Detección de notificación:', { pendingParam, transactionId, pendientesCount: pendientes.length, tieneNavData: !!navData });
     
     if (pendingParam === 'true') {
       // Cambiar al módulo de transacciones si no está ya ahí
@@ -166,6 +230,76 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       window.history.replaceState({}, '', newUrl);
     }
   }, [location, activeModule, pendientes]);
+
+  // Función para procesar datos de notificación desde datos almacenados
+  const procesarNotificacionDesdeDatos = (navData: any) => {
+    if (!navData) return;
+    
+    console.log('📱 Procesando notificación desde datos almacenados:', navData);
+    
+    const url = navData.url || '';
+    const transactionId = navData.transaccionId || 
+                         navData.notificationData?.transaccionId || 
+                         navData.notificationData?.id ||
+                         (url.match(/[?&]id=(\d+)/)?.[1]);
+    
+    const pendingParam = url.includes('pending=true') || navData.notificationData?.type === 'pending-transaction';
+    
+    if (pendingParam) {
+      // Cambiar al módulo de transacciones si no está ya ahí
+      if (activeModule !== 'transacciones') {
+        setActiveModule('transacciones');
+      }
+      
+      // Si hay un ID de transacción, buscar y abrir el modal de detalle directamente
+      if (transactionId) {
+        const transaccionIdNum = typeof transactionId === 'string' ? parseInt(transactionId, 10) : transactionId;
+        console.log('🔎 Buscando transacción con ID desde datos almacenados:', transaccionIdNum);
+        
+        // Función para buscar y abrir el modal de detalle
+        const buscarYAbrirDetalle = () => {
+          const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
+          console.log('📋 Transacción encontrada desde datos almacenados:', transaccion ? 'Sí' : 'No', transaccion ? `(ID: ${transaccion.id})` : '');
+          
+          if (transaccion) {
+            console.log('✅ Abriendo modal de detalle desde datos almacenados para transacción:', transactionIdNum);
+            setSelectedPendingTransaction(transaccion);
+            setShowPendingDetailModal(true);
+            return true;
+          }
+          return false;
+        };
+        
+        // Intentar buscar inmediatamente si ya hay pendientes cargados
+        if (pendientes.length > 0) {
+          if (!buscarYAbrirDetalle()) {
+            // Si no se encuentra, esperar un poco más y volver a intentar
+            console.log('⏳ Transacción no encontrada desde datos almacenados, esperando y reintentando...');
+            setTimeout(() => {
+              if (!buscarYAbrirDetalle()) {
+                console.log('⚠️ Transacción no encontrada después de esperar, abriendo lista');
+                setShowPendingModal(true);
+              }
+            }, 1500);
+          }
+        } else {
+          // Si no hay pendientes cargados, esperar un poco y volver a intentar
+          console.log('⏳ Esperando a que se carguen los pendientes desde datos almacenados...');
+          setTimeout(() => {
+            if (!buscarYAbrirDetalle()) {
+              // Si después de esperar no se encuentra, abrir la lista
+              console.log('⚠️ Transacción no encontrada después de esperar, abriendo lista');
+              setShowPendingModal(true);
+            }
+          }, 1500);
+        }
+      } else {
+        // Si no hay ID, abrir la lista de pendientes
+        console.log('📋 No hay ID de transacción desde datos almacenados, abriendo lista de pendientes');
+        setShowPendingModal(true);
+      }
+    }
+  };
 
   // Función para procesar datos de notificación y abrir el modal correspondiente
   const procesarNotificacion = (navData: any) => {

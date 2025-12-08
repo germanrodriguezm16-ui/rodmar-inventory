@@ -344,8 +344,15 @@ self.addEventListener('push', (event) => {
     }
   }
   
+  console.log('📬 Service Worker: Mostrando notificación con datos:', notificationData);
+  console.log('📬 Service Worker: Datos de la notificación (data):', notificationData.data);
+  
   event.waitUntil(
-    self.registration.showNotification(notificationData.title, notificationData)
+    self.registration.showNotification(notificationData.title, notificationData).then(() => {
+      console.log('✅ Service Worker: Notificación mostrada exitosamente');
+    }).catch((error) => {
+      console.error('❌ Service Worker: Error mostrando notificación:', error);
+    })
   );
 });
 
@@ -431,30 +438,35 @@ self.addEventListener('notificationclick', (event) => {
       if (!clientFound) {
         console.log('📱 Service Worker: No hay cliente abierto, abriendo nueva ventana');
         if (clients.openWindow) {
-          const basePath = urlToOpen.split('?')[0];
-          const baseUrl = new URL(basePath, self.location.origin).href;
+          // Siempre abrir solo la ruta base para evitar 404
+          const baseUrl = new URL('/', self.location.origin).href;
           console.log('📱 Service Worker: Abriendo URL base:', baseUrl);
           
-          return clients.openWindow(baseUrl).then((windowClient) => {
-            console.log('📱 Service Worker: Nueva ventana abierta:', windowClient ? 'Sí' : 'No');
-            if (windowClient) {
-              // Esperar un momento para que la página cargue y luego enviar el mensaje
-              setTimeout(() => {
-                const messageData = {
-                  type: 'NAVIGATE',
-                  url: urlToOpen,
-                  absoluteUrl: absoluteUrl,
-                  notificationData: notificationData,
-                  transaccionId: navData.transaccionId,
-                  timestamp: navData.timestamp,
-                  navData: navData
-                };
-                console.log('📤 Service Worker: Enviando mensaje a nueva ventana:', messageData);
-                windowClient.postMessage(messageData);
-              }, 1000);
-            }
+          // Guardar datos en IndexedDB para que la app los lea al cargar
+          return saveNotificationDataToIndexedDB(navData).then(() => {
+            return clients.openWindow(baseUrl).then((windowClient) => {
+              console.log('📱 Service Worker: Nueva ventana abierta:', windowClient ? 'Sí' : 'No');
+              if (windowClient) {
+                // Esperar un momento para que la página cargue y luego enviar el mensaje
+                setTimeout(() => {
+                  const messageData = {
+                    type: 'NAVIGATE',
+                    url: urlToOpen,
+                    absoluteUrl: absoluteUrl,
+                    notificationData: notificationData,
+                    transaccionId: navData.transaccionId,
+                    timestamp: navData.timestamp,
+                    navData: navData
+                  };
+                  console.log('📤 Service Worker: Enviando mensaje a nueva ventana:', messageData);
+                  windowClient.postMessage(messageData);
+                }, 1500);
+              }
+            });
           }).catch((error) => {
             console.error('❌ Service Worker: Error abriendo ventana:', error);
+            // Fallback: intentar abrir sin guardar en IndexedDB
+            return clients.openWindow(baseUrl);
           });
         } else {
           console.error('❌ Service Worker: clients.openWindow no está disponible');
@@ -486,5 +498,52 @@ self.addEventListener('appinstalled', (event) => {
     });
   });
 });
+
+// Función para guardar datos de notificación en IndexedDB
+function saveNotificationDataToIndexedDB(navData) {
+  return new Promise((resolve, reject) => {
+    try {
+      const request = indexedDB.open('rodmar_notifications', 1);
+      
+      request.onerror = () => {
+        console.warn('⚠️ Service Worker: Error abriendo IndexedDB, usando fallback');
+        // Fallback: intentar usar sessionStorage a través de un mensaje
+        resolve();
+      };
+      
+      request.onsuccess = (event) => {
+        const db = event.target.result;
+        const transaction = db.transaction(['notifications'], 'readwrite');
+        const store = transaction.objectStore('notifications');
+        
+        const data = {
+          id: 'latest',
+          ...navData,
+          timestamp: Date.now()
+        };
+        
+        store.put(data);
+        transaction.oncomplete = () => {
+          console.log('💾 Service Worker: Datos guardados en IndexedDB');
+          resolve();
+        };
+        transaction.onerror = () => {
+          console.warn('⚠️ Service Worker: Error guardando en IndexedDB');
+          resolve(); // Continuar aunque falle
+        };
+      };
+      
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('notifications')) {
+          db.createObjectStore('notifications', { keyPath: 'id' });
+        }
+      };
+    } catch (error) {
+      console.warn('⚠️ Service Worker: Error con IndexedDB:', error);
+      resolve(); // Continuar aunque falle
+    }
+  });
+}
 
 console.log('RodMar PWA: Service Worker v3.0.0 loaded successfully');
