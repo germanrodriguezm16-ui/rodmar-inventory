@@ -2339,52 +2339,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
           socioId = 1;
       }
 
+      // Obtener nombre del destino (necesario para concepto y notificación)
+      let nombreDestino = "Desconocido";
+      const tipoCapitalizado = data.paraQuienTipo.charAt(0).toUpperCase() + data.paraQuienTipo.slice(1);
+      
+      try {
+        switch (data.paraQuienTipo) {
+          case "mina":
+            const mina = await storage.getMinaById(socioId, userId);
+            nombreDestino = mina?.nombre || data.paraQuienId;
+            break;
+          case "comprador":
+            const comprador = await storage.getCompradorById(socioId, userId);
+            nombreDestino = comprador?.nombre || data.paraQuienId;
+            break;
+          case "volquetero":
+            nombreDestino = data.paraQuienId; // Ya es el nombre
+            break;
+          case "rodmar":
+            const rodmarOptions: Record<string, string> = {
+              "bemovil": "Bemovil",
+              "corresponsal": "Corresponsal",
+              "efectivo": "Efectivo",
+              "cuentas-german": "Cuentas German",
+              "cuentas-jhon": "Cuentas Jhon",
+              "otras": "Otras",
+            };
+            nombreDestino = rodmarOptions[data.paraQuienId] || data.paraQuienId;
+            break;
+          case "banco":
+            nombreDestino = "Banco";
+            break;
+          case "lcdm":
+            nombreDestino = "La Casa del Motero";
+            break;
+          case "postobon":
+            nombreDestino = "Postobón";
+            break;
+          default:
+            nombreDestino = data.paraQuienId;
+        }
+      } catch (error) {
+        console.error("Error obteniendo nombre de destino:", error);
+      }
+
       // Generar concepto descriptivo
       let conceptoGenerado = data.concepto;
       if (!conceptoGenerado) {
-        let nombreDestino = "Desconocido";
-        const tipoCapitalizado = data.paraQuienTipo.charAt(0).toUpperCase() + data.paraQuienTipo.slice(1);
-        
-        try {
-          switch (data.paraQuienTipo) {
-            case "mina":
-              const mina = await storage.getMinaById(socioId, userId);
-              nombreDestino = mina?.nombre || data.paraQuienId;
-              break;
-            case "comprador":
-              const comprador = await storage.getCompradorById(socioId, userId);
-              nombreDestino = comprador?.nombre || data.paraQuienId;
-              break;
-            case "volquetero":
-              nombreDestino = data.paraQuienId; // Ya es el nombre
-              break;
-            case "rodmar":
-              const rodmarOptions: Record<string, string> = {
-                "bemovil": "Bemovil",
-                "corresponsal": "Corresponsal",
-                "efectivo": "Efectivo",
-                "cuentas-german": "Cuentas German",
-                "cuentas-jhon": "Cuentas Jhon",
-                "otras": "Otras",
-              };
-              nombreDestino = rodmarOptions[data.paraQuienId] || data.paraQuienId;
-              break;
-            case "banco":
-              nombreDestino = "Banco";
-              break;
-            case "lcdm":
-              nombreDestino = "La Casa del Motero";
-              break;
-            case "postobon":
-              nombreDestino = "Postobón";
-              break;
-            default:
-              nombreDestino = data.paraQuienId;
-          }
-        } catch (error) {
-          console.error("Error obteniendo nombre de destino:", error);
-        }
-        
         conceptoGenerado = `Solicitud de pago a ${tipoCapitalizado} (${nombreDestino})`;
       }
 
