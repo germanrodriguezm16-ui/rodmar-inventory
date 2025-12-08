@@ -12,7 +12,8 @@ export interface DebugLog {
 const MAX_LOGS = 100; // Solo mantener los últimos 100 logs
 const LOG_PATTERNS = [
   /^🔔/, /^📱/, /^📨/, /^📤/, /^💾/, /^🔍/, /^🔎/, /^📋/, /^✅/, /^⚠️/, /^❌/,
-  /^📬/, /^⏳/, /^RodMar PWA:/, /^Service Worker:/, /^Detección de notificación:/
+  /^📬/, /^⏳/, /^🔄/, /^RodMar PWA:/, /^Service Worker:/, /^Detección de notificación:/,
+  /^\[NOTIFICATION\]/, /^\[SYSTEM\]/, /^\[SW_MESSAGE\]/
 ];
 
 class DebugLogger {
@@ -119,6 +120,9 @@ class DebugLogger {
 
 // Singleton instance
 const debugLogger = new DebugLogger();
+
+// Exportar instancia para integración con logger
+export { debugLogger };
 
 export function useDebugLogger() {
   const [logs, setLogs] = useState<DebugLog[]>([]);

@@ -3,7 +3,8 @@ import AppHeader from "@/components/layout/app-header";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 import Principal from "@/components/modules/principal";
 import { useLocation } from "wouter";
-import { logger } from "@/lib/logger";
+import { logger, setDebugLoggerInstance } from "@/lib/logger";
+import { debugLogger } from "@/hooks/useDebugLogger";
 
 // Lazy loading de componentes pesados
 const Minas = lazy(() => import("@/pages/minas"));
@@ -43,6 +44,8 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
 
   // Log inicial del sistema
   useEffect(() => {
+    // Integrar el logger con el debug logger
+    setDebugLoggerInstance(debugLogger);
     logger.info('SYSTEM', 'Dashboard cargado', { initialModule, timestamp: Date.now() });
   }, []);
 
@@ -442,12 +445,15 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         const message = event.data.message || '';
         const data = event.data.data;
         
+        // Loggear usando el logger personalizado (que ahora se integra con debug logger)
         if (level === 'error') {
           logger.error(category, message, data);
         } else if (level === 'warn') {
           logger.warn(category, message, data);
         } else if (level === 'success') {
           logger.success(category, message, data);
+        } else if (level === 'debug') {
+          logger.debug(category, message, data);
         } else {
           logger.info(category, message, data);
         }

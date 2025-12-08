@@ -5,6 +5,13 @@
  * - Buffer circular para eficiencia
  */
 
+// Importar el debug logger para integración
+let debugLoggerInstance: any = null;
+
+export function setDebugLoggerInstance(instance: any) {
+  debugLoggerInstance = instance;
+}
+
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug' | 'success';
 
 export interface LogEntry {
@@ -47,10 +54,21 @@ class Logger {
       this.notifyListeners();
     }
 
-    // También loggear en consola para desarrollo
-    if (process.env.NODE_ENV === 'development') {
-      const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
-      console[consoleMethod](`[${category}] ${message}`, data || '');
+    // También loggear en consola (siempre, no solo en desarrollo)
+    const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
+    
+    // Agregar emojis para que el debug logger los capture
+    const emoji = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : level === 'success' ? '✅' : level === 'debug' ? '🔍' : '📱';
+    const logMessage = `${emoji} [${category}] ${message}`;
+    console[consoleMethod](logMessage, data || '');
+    
+    // También enviar directamente al debug logger si está disponible
+    if (debugLoggerInstance && debugLoggerInstance.addManualLog) {
+      try {
+        debugLoggerInstance.addManualLog(level === 'success' ? 'info' : level, logMessage, data);
+      } catch (e) {
+        // Ignorar errores si el debug logger no está listo
+      }
     }
   }
 
