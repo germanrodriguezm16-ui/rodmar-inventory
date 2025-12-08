@@ -1,4 +1,4 @@
-espimport {
+import {
   users,
   minas,
   compradores,
