@@ -24,6 +24,20 @@ export function initializeSocket(httpServer: HttpServer): SocketServer {
   io.on("connection", (socket: Socket) => {
     console.log(`🔌 Cliente conectado: ${socket.id}`);
 
+    // Escuchar eventos de invalidación de caché de clientes
+    socket.on("cache-invalidate", (data: {
+      invalidations: Array<any>;
+      timestamp: number;
+    }) => {
+      // Reenviar a todos los demás clientes (excepto al que lo envió)
+      socket.broadcast.emit("cache-invalidate", data);
+      
+      console.log(`📡 [CacheSync] Invalidación reenviada a otros clientes:`, {
+        invalidationsCount: data.invalidations.length,
+        from: socket.id
+      });
+    });
+
     socket.on("disconnect", () => {
       console.log(`🔌 Cliente desconectado: ${socket.id}`);
     });

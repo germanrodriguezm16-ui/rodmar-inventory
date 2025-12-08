@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { useQueryClient } from "@tanstack/react-query";
+import { setupCacheSync, setupCacheSyncListener } from "@/lib/cacheSync";
 
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
@@ -26,6 +27,10 @@ export function useSocket() {
     });
 
     socketRef.current = socket;
+
+    // Configurar sincronización de caché
+    setupCacheSync(queryClient, socket);
+    setupCacheSyncListener(queryClient, socket);
 
     // Escuchar eventos de actualización de transacciones
     socket.on("transaction-updated", (data: {
