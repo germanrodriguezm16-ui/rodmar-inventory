@@ -6,12 +6,31 @@ import type { PushSubscription } from '@shared/schema';
 // Estas keys deben estar en las variables de entorno
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:rodmar@example.com';
+let vapidSubject = process.env.VAPID_SUBJECT || 'mailto:rodmar@example.com';
 
-if (vapidPublicKey && vapidPrivateKey) {
-  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+// Asegurar que el subject tenga el formato correcto (mailto: o https://)
+if (vapidSubject && !vapidSubject.startsWith('mailto:') && !vapidSubject.startsWith('https://')) {
+  // Si es solo un email, agregar mailto:
+  if (vapidSubject.includes('@')) {
+    vapidSubject = `mailto:${vapidSubject}`;
+  } else {
+    // Si no es un email ni URL, usar un valor por defecto
+    vapidSubject = 'mailto:rodmar@example.com';
+  }
+}
+
+if (vapidPublicKey && vapidPrivateKey && vapidSubject) {
+  try {
+    webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+    console.log('✅ VAPID keys configuradas correctamente');
+  } catch (error) {
+    console.error('❌ Error configurando VAPID keys:', error);
+  }
 } else {
   console.warn('⚠️  VAPID keys no configuradas. Las notificaciones push no funcionarán.');
+  if (!vapidPublicKey) console.warn('   - VAPID_PUBLIC_KEY faltante');
+  if (!vapidPrivateKey) console.warn('   - VAPID_PRIVATE_KEY faltante');
+  if (!vapidSubject) console.warn('   - VAPID_SUBJECT faltante');
 }
 
 /**
