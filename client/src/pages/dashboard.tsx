@@ -288,29 +288,66 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
             tiposEnPendientes: pendientes.map((t: any) => ({ id: t.id, tipo: typeof t.id }))
           });
           
-          logger.debug('NOTIFICATION', 'Transacción encontrada desde datos almacenados', { 
-            encontrada: !!transaccion, 
-            transactionId: transaccionIdNum,
-            transaccionId: transaccion?.id 
+          const encontrada = !!transaccion;
+          console.log('🔍 [DATOS ALMACENADOS] Verificando transacción encontrada:', {
+            encontrada,
+            tieneTransaccion: !!transaccion,
+            transaccionId: transaccion?.id,
+            buscando: transaccionIdNum,
+            tipoTransaccion: typeof transaccion,
+            esObjeto: transaccion && typeof transaccion === 'object'
           });
           
-          if (transaccion) {
-            console.log('✅ [DATOS ALMACENADOS] Transacción encontrada, abriendo modal de detalle', transaccion);
-            logger.success('NOTIFICATION', `Abriendo modal de detalle desde datos almacenados para transacción ${transaccionIdNum}`, { transactionId: transactionIdNum });
+          logger.debug('NOTIFICATION', 'Transacción encontrada desde datos almacenados', { 
+            encontrada, 
+            transactionId: transaccionIdNum,
+            transaccionId: transaccion?.id,
+            transaccionCompleta: transaccion ? { id: transaccion.id, tipo: typeof transaccion.id } : null
+          });
+          
+          // Verificar múltiples condiciones para asegurar que la transacción existe
+          if (transaccion && encontrada && transaccion.id === transaccionIdNum) {
+            console.log('✅ [DATOS ALMACENADOS] CONDICIÓN CUMPLIDA - Abriendo modal de detalle', { 
+              transaccionId: transaccion.id,
+              buscando: transaccionIdNum,
+              idsCoinciden: transaccion.id === transaccionIdNum
+            });
+            logger.success('NOTIFICATION', `Abriendo modal de detalle desde datos almacenados para transacción ${transaccionIdNum}`, { 
+              transactionId: transactionIdNum,
+              transaccionId: transaccion.id 
+            });
             
-            // Usar setTimeout para asegurar que React procese los cambios de estado
-            setTimeout(() => {
-              setSelectedPendingTransaction(transaccion);
-              setShowPendingDetailModal(true);
-              console.log('✅ [DATOS ALMACENADOS] Estados actualizados: selectedPendingTransaction y showPendingDetailModal', {
-                selectedPendingTransaction: transaccion,
-                showPendingDetailModal: true
-              });
-            }, 0);
+            // Abrir el modal inmediatamente - usar función de actualización de estado
+            console.log('🔧 [DATOS ALMACENADOS] Llamando setSelectedPendingTransaction y setShowPendingDetailModal');
+            setSelectedPendingTransaction(() => {
+              console.log('🔧 [DATOS ALMACENADOS] setSelectedPendingTransaction ejecutado', transaccion);
+              return transaccion;
+            });
+            setShowPendingDetailModal(() => {
+              console.log('🔧 [DATOS ALMACENADOS] setShowPendingDetailModal ejecutado', true);
+              return true;
+            });
+            
+            console.log('✅ [DATOS ALMACENADOS] Estados actualizados inmediatamente', {
+              selectedPendingTransactionId: transaccion.id,
+              showPendingDetailModal: true
+            });
             
             return true;
+          } else {
+            console.log('❌ [DATOS ALMACENADOS] CONDICIÓN NO CUMPLIDA', {
+              tieneTransaccion: !!transaccion,
+              encontrada,
+              idsCoinciden: transaccion?.id === transaccionIdNum,
+              transaccionId: transaccion?.id,
+              buscando: transaccionIdNum
+            });
           }
-          console.log('❌ [DATOS ALMACENADOS] Transacción no encontrada');
+          console.log('❌ [DATOS ALMACENADOS] Transacción no encontrada', { 
+            encontrada, 
+            transactionId: transaccionIdNum,
+            pendientesIds: pendientes.map((t: any) => t.id)
+          });
           return false;
         };
         
