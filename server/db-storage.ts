@@ -3819,7 +3819,10 @@ export class DatabaseStorage implements IStorage {
             and(eq(transacciones.deQuienTipo, 'mina'), inArray(transacciones.deQuienId, minaIds)),
             and(eq(transacciones.paraQuienTipo, 'mina'), inArray(transacciones.paraQuienId, minaIds))
           ),
-          ne(transacciones.estado, 'pendiente'), // Excluir transacciones pendientes
+          or(
+            eq(transacciones.estado, 'completada'),
+            isNull(transacciones.estado) // Incluir transacciones antiguas sin estado
+          ),
           sql`LOWER(${transacciones.concepto}) NOT LIKE '%viaje%'` // Excluir transacciones con "viaje" en concepto (igual que calculateAndUpdateMinaBalance)
         ];
         
