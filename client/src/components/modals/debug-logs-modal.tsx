@@ -34,8 +34,8 @@ export function DebugLogsModal({ open, onClose }: DebugLogsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-w-[90vw] max-h-[85vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[600px] max-w-[90vw] h-[85vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Bug className="h-5 w-5 text-blue-600" />
             Logs de Depuración
@@ -43,7 +43,7 @@ export function DebugLogsModal({ open, onClose }: DebugLogsModalProps) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-2 px-6 pb-4 shrink-0">
           {!isActive ? (
             <Button onClick={startLogging} size="sm" variant="outline">
               <Play className="h-4 w-4 mr-2" />
@@ -64,25 +64,29 @@ export function DebugLogsModal({ open, onClose }: DebugLogsModalProps) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto border rounded-lg p-4 bg-muted/30 font-mono text-xs">
-          {logs.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              No hay logs. Activa el logging para comenzar.
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {logs.map((log) => (
-                <div key={log.id} className="flex gap-2 items-start">
-                  <span className="text-muted-foreground shrink-0">{formatTime(log.timestamp)}</span>
-                  <span className={`shrink-0 w-12 ${getLevelColor(log.level)}`}>{log.level}</span>
-                  <span className="flex-1 break-words">{log.message}</span>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="flex-1 min-h-0 overflow-hidden border-t border-b">
+          <div className="h-full overflow-y-auto p-4 bg-muted/30 font-mono text-xs">
+            {logs.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                No hay logs. Activa el logging para comenzar.
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {logs.map((log) => (
+                  <div key={log.id} className="flex gap-2 items-start break-words">
+                    <span className="text-muted-foreground shrink-0 whitespace-nowrap">{formatTime(log.timestamp)}</span>
+                    <span className={`shrink-0 w-12 ${getLevelColor(log.level)}`}>{log.level}</span>
+                    <span className="flex-1 break-words overflow-wrap-anywhere">{log.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        <Button onClick={onClose} className="mt-4">Cerrar</Button>
+        <div className="px-6 pt-4 pb-6 shrink-0">
+          <Button onClick={onClose} className="w-full">Cerrar</Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

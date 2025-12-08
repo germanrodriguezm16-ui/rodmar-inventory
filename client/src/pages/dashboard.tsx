@@ -339,7 +339,10 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         
         // Función para buscar y abrir el modal de detalle
         const buscarYAbrirDetalle = () => {
+          console.log('🔍 Buscando transacción en pendientes:', { transactionId: transaccionIdNum, totalPendientes: pendientes.length });
           const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
+          console.log('📋 Resultado de búsqueda:', { encontrada: !!transaccion, transaccionId: transaccion?.id, buscando: transaccionIdNum });
+          
           logger.debug('NOTIFICATION', 'Transacción encontrada', { 
             encontrada: !!transaccion, 
             transactionId: transaccionIdNum,
@@ -347,11 +350,14 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
           });
           
           if (transaccion) {
+            console.log('✅ Transacción encontrada, abriendo modal de detalle');
             logger.success('NOTIFICATION', `Abriendo modal de detalle para transacción ${transactionIdNum}`, { transactionId: transactionIdNum });
             setSelectedPendingTransaction(transaccion);
             setShowPendingDetailModal(true);
+            console.log('✅ Estados actualizados: selectedPendingTransaction y showPendingDetailModal');
             return true;
           }
+          console.log('❌ Transacción no encontrada');
           return false;
         };
         
