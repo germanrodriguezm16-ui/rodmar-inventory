@@ -3826,26 +3826,68 @@ export class DatabaseStorage implements IStorage {
           sql`LOWER(${transacciones.concepto}) NOT LIKE '%viaje%'` // Excluir transacciones con "viaje" en concepto (igual que calculateAndUpdateMinaBalance)
         ];
         
-        const transaccionesStats = await db
+        // Query mejorada para manejar transacciones entre minas correctamente
+        // Hace dos queries separadas: una para minas como origen, otra para minas como destino
+        // Esto asegura que las transacciones entre minas se cuenten en ambas minas
+        
+        // 1. Transacciones donde la mina es origen (deQuienTipo = 'mina') - valor positivo
+        const transaccionesDesdeMinas = await db
           .select({
-            minaId: sql<string>`CASE 
-              WHEN ${transacciones.deQuienTipo} = 'mina' THEN ${transacciones.deQuienId}
-              WHEN ${transacciones.paraQuienTipo} = 'mina' THEN ${transacciones.paraQuienId}
-            END`,
-            transaccionesNetas: sql<number>`COALESCE(SUM(
-              CASE 
-                WHEN ${transacciones.deQuienTipo} = 'mina' THEN CAST(${transacciones.valor} AS NUMERIC)
-                WHEN ${transacciones.paraQuienTipo} = 'mina' THEN -CAST(${transacciones.valor} AS NUMERIC)
-                ELSE 0
-              END
-            ), 0)`
+            minaId: transacciones.deQuienId,
+            valor: sql<number>`CAST(${transacciones.valor} AS NUMERIC)`.as('valor')
           })
           .from(transacciones)
-          .where(and(...transaccionesConditions))
-          .groupBy(sql`CASE 
-            WHEN ${transacciones.deQuienTipo} = 'mina' THEN ${transacciones.deQuienId}
-            WHEN ${transacciones.paraQuienTipo} = 'mina' THEN ${transacciones.paraQuienId}
-          END`);
+          .where(and(
+            eq(transacciones.deQuienTipo, 'mina'),
+            inArray(transacciones.deQuienId, minaIds),
+            or(
+              eq(transacciones.estado, 'completada'),
+              isNull(transacciones.estado)
+            ),
+            sql`LOWER(${transacciones.concepto}) NOT LIKE '%viaje%'`
+          ));
+
+        // 2. Transacciones donde la mina es destino (paraQuienTipo = 'mina') - valor negativo
+        const transaccionesHaciaMinas = await db
+          .select({
+            minaId: transacciones.paraQuienId,
+            valor: sql<number>`-CAST(${transacciones.valor} AS NUMERIC)`.as('valor')
+          })
+          .from(transacciones)
+          .where(and(
+            eq(transacciones.paraQuienTipo, 'mina'),
+            inArray(transacciones.paraQuienId, minaIds),
+            or(
+              eq(transacciones.estado, 'completada'),
+              isNull(transacciones.estado)
+            ),
+            sql`LOWER(${transacciones.concepto}) NOT LIKE '%viaje%'`
+          ));
+
+        // Combinar ambas queries y agrupar por minaId
+        const transaccionesCombinadas = [
+          ...transaccionesDesdeMinas.map(t => ({ minaId: t.minaId, valor: t.valor })),
+          ...transaccionesHaciaMinas.map(t => ({ minaId: t.minaId, valor: t.valor }))
+        ];
+
+        // Agrupar por minaId y sumar valores
+        const transaccionesStatsMapTemp = new Map<number, number>();
+        transaccionesCombinadas.forEach(t => {
+          if (t.minaId) {
+            const minaIdNum = parseInt(t.minaId);
+            if (!isNaN(minaIdNum)) {
+              const valorActual = transaccionesStatsMapTemp.get(minaIdNum) || 0;
+              const valorNuevo = typeof t.valor === 'number' ? t.valor : parseFloat(String(t.valor || 0));
+              transaccionesStatsMapTemp.set(minaIdNum, valorActual + (isNaN(valorNuevo) ? 0 : valorNuevo));
+            }
+          }
+        });
+
+        // Convertir a formato esperado
+        const transaccionesStats = Array.from(transaccionesStatsMapTemp.entries()).map(([minaId, transaccionesNetas]) => ({
+          minaId: minaId.toString(),
+          transaccionesNetas
+        }));
 
         transaccionesStats.forEach(stat => {
           if (stat.minaId) {
