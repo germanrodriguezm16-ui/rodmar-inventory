@@ -78,6 +78,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
                      sessionStorage.getItem('rodmar_notification_nav');
       if (stored) {
         navData = JSON.parse(stored);
+        console.log('📱 Datos de notificación encontrados:', navData);
         // Limpiar después de leer
         localStorage.removeItem('rodmar_notification_nav');
         sessionStorage.removeItem('rodmar_notification_nav');
@@ -89,8 +90,25 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     // Verificar query params de la URL
     const urlParams = new URLSearchParams(window.location.search);
     const pendingParam = urlParams.get('pending') || (navData?.url?.includes('pending=true') ? 'true' : null);
-    const transactionIdParam = urlParams.get('id') || navData?.notificationData?.transaccionId;
+    
+    // Extraer ID de múltiples fuentes posibles (en orden de prioridad)
+    let transactionIdParam = urlParams.get('id') || 
+                            navData?.transaccionId ||  // Directo del navData
+                            navData?.notificationData?.transaccionId ||
+                            navData?.notificationData?.id ||
+                            (navData?.url?.match(/[?&]id=(\d+)/)?.[1]);
+    
+    // Si la URL contiene el ID, extraerlo
+    if (!transactionIdParam && navData?.url) {
+      const urlMatch = navData.url.match(/[?&]id=(\d+)/);
+      if (urlMatch) {
+        transactionIdParam = urlMatch[1];
+      }
+    }
+    
     const transactionId = transactionIdParam ? parseInt(transactionIdParam, 10) : null;
+    
+    console.log('🔍 Detección de notificación:', { pendingParam, transactionId, pendientesCount: pendientes.length });
     
     if (pendingParam === 'true') {
       // Cambiar al módulo de transacciones si no está ya ahí
@@ -99,17 +117,47 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       }
       
       // Si hay un ID de transacción, buscar y abrir el modal de detalle directamente
-      if (transactionId && pendientes.length > 0) {
-        const transaccion = pendientes.find((t: any) => t.id === transactionId);
-        if (transaccion) {
-          setSelectedPendingTransaction(transaccion);
-          setShowPendingDetailModal(true);
+      if (transactionId) {
+        console.log('🔎 Buscando transacción con ID:', transactionId);
+        
+        // Función para buscar y abrir el modal de detalle
+        const buscarYAbrirDetalle = () => {
+          const transaccion = pendientes.find((t: any) => t.id === transactionId);
+          console.log('📋 Transacción encontrada:', transaccion ? 'Sí' : 'No');
+          
+          if (transaccion) {
+            console.log('✅ Abriendo modal de detalle para transacción:', transactionId);
+            setSelectedPendingTransaction(transaccion);
+            setShowPendingDetailModal(true);
+            return true;
+          }
+          return false;
+        };
+        
+        // Intentar buscar inmediatamente si ya hay pendientes cargados
+        if (pendientes.length > 0) {
+          if (!buscarYAbrirDetalle()) {
+            // Si no se encuentra, abrir la lista de pendientes
+            console.log('⚠️ Transacción no encontrada, abriendo lista');
+            setShowPendingModal(true);
+          }
         } else {
-          // Si no se encuentra, abrir la lista de pendientes
-          setShowPendingModal(true);
+          // Si no hay pendientes cargados, esperar un poco y volver a intentar
+          console.log('⏳ Esperando a que se carguen los pendientes...');
+          const timeoutId = setTimeout(() => {
+            if (!buscarYAbrirDetalle()) {
+              // Si después de esperar no se encuentra, abrir la lista
+              console.log('⚠️ Transacción no encontrada después de esperar, abriendo lista');
+              setShowPendingModal(true);
+            }
+          }, 1000);
+          
+          // Limpiar timeout si el componente se desmonta
+          return () => clearTimeout(timeoutId);
         }
       } else {
         // Si no hay ID, abrir la lista de pendientes
+        console.log('📋 No hay ID de transacción, abriendo lista de pendientes');
         setShowPendingModal(true);
       }
       
@@ -125,6 +173,8 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       if (event.data && event.data.type === 'NAVIGATE') {
         const url = event.data.url || event.data.absoluteUrl;
         if (!url) return;
+        
+        console.log('📨 Mensaje del service worker recibido:', event.data);
         
         try {
           const urlObj = new URL(url, window.location.origin);
@@ -146,34 +196,44 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
               // Si hay un ID de transacción, buscar y abrir el modal de detalle directamente
               if (transactionId) {
                 const transaccionIdNum = parseInt(transactionId, 10);
-                // Buscar en los pendientes actuales o esperar a que se carguen
-                const buscarTransaccion = () => {
+                console.log('🔎 Buscando transacción desde mensaje SW:', transaccionIdNum);
+                
+                // Función para buscar y abrir el modal de detalle
+                const buscarYAbrirDetalle = () => {
                   const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
+                  console.log('📋 Transacción encontrada desde SW:', transaccion ? 'Sí' : 'No');
+                  
                   if (transaccion) {
+                    console.log('✅ Abriendo modal de detalle desde SW para transacción:', transaccionIdNum);
                     setSelectedPendingTransaction(transaccion);
                     setShowPendingDetailModal(true);
-                  } else {
-                    // Si no se encuentra, esperar un poco más y volver a intentar
-                    setTimeout(() => {
-                      const transaccionRetry = pendientes.find((t: any) => t.id === transaccionIdNum);
-                      if (transaccionRetry) {
-                        setSelectedPendingTransaction(transaccionRetry);
-                        setShowPendingDetailModal(true);
-                      } else {
-                        // Si aún no se encuentra, abrir la lista
-                        setShowPendingModal(true);
-                      }
-                    }, 500);
+                    return true;
                   }
+                  return false;
                 };
                 
                 if (pendientes.length > 0) {
-                  buscarTransaccion();
+                  if (!buscarYAbrirDetalle()) {
+                    // Si no se encuentra, esperar un poco más y volver a intentar
+                    setTimeout(() => {
+                      if (!buscarYAbrirDetalle()) {
+                        console.log('⚠️ Transacción no encontrada desde SW, abriendo lista');
+                        setShowPendingModal(true);
+                      }
+                    }, 1000);
+                  }
                 } else {
                   // Esperar a que se carguen los pendientes
-                  setTimeout(buscarTransaccion, 500);
+                  console.log('⏳ Esperando pendientes desde SW...');
+                  setTimeout(() => {
+                    if (!buscarYAbrirDetalle()) {
+                      console.log('⚠️ Transacción no encontrada desde SW después de esperar, abriendo lista');
+                      setShowPendingModal(true);
+                    }
+                  }, 1000);
                 }
               } else {
+                console.log('📋 No hay ID desde SW, abriendo lista');
                 setShowPendingModal(true);
               }
             }, 100);

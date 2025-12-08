@@ -378,8 +378,12 @@ self.addEventListener('notificationclick', (event) => {
   const navData = {
     url: urlToOpen,
     timestamp: Date.now(),
-    notificationData: notificationData
+    notificationData: notificationData,
+    // Asegurar que el transaccionId esté disponible directamente
+    transaccionId: notificationData.transaccionId || notificationData.id || (urlToOpen.match(/[?&]id=(\d+)/)?.[1])
   };
+  
+  console.log('📱 Service Worker: Guardando datos de navegación:', navData);
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
