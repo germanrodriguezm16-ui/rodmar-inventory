@@ -3789,10 +3789,15 @@ export class DatabaseStorage implements IStorage {
       const viajesStatsMap = new Map<number, { viajesCount: number; viajesUltimoMes: number; ingresosViajes: number }>();
       viajesStats.forEach(stat => {
         if (stat.minaId) {
+          // Asegurar que ingresosViajes sea un número válido
+          const ingresosViajes = typeof stat.ingresosViajes === 'number' 
+            ? stat.ingresosViajes 
+            : parseFloat(String(stat.ingresosViajes || 0));
+          
           viajesStatsMap.set(stat.minaId, {
-            viajesCount: stat.viajesCount,
-            viajesUltimoMes: stat.viajesUltimoMes,
-            ingresosViajes: stat.ingresosViajes
+            viajesCount: stat.viajesCount || 0,
+            viajesUltimoMes: stat.viajesUltimoMes || 0,
+            ingresosViajes: isNaN(ingresosViajes) ? 0 : ingresosViajes
           });
         }
       });
@@ -3840,7 +3845,11 @@ export class DatabaseStorage implements IStorage {
           if (stat.minaId) {
             const minaIdNum = parseInt(stat.minaId);
             if (!isNaN(minaIdNum)) {
-              transaccionesStatsMap.set(minaIdNum, stat.transaccionesNetas);
+              // Asegurar que transaccionesNetas sea un número válido
+              const transaccionesNetas = typeof stat.transaccionesNetas === 'number'
+                ? stat.transaccionesNetas
+                : parseFloat(String(stat.transaccionesNetas || 0));
+              transaccionesStatsMap.set(minaIdNum, isNaN(transaccionesNetas) ? 0 : transaccionesNetas);
             }
           }
         });
@@ -3856,12 +3865,16 @@ export class DatabaseStorage implements IStorage {
         // SIEMPRE calcular balance dinámicamente para asegurar que se excluyan transacciones pendientes
         // (balanceCalculado podría incluir transacciones pendientes si fue calculado antes de implementar la exclusión)
         const transaccionesNetas = transaccionesStatsMap.get(mina.id) || 0;
-        const balance = stats.ingresosViajes + transaccionesNetas;
+        
+        // Asegurar que los valores sean números válidos
+        const ingresosViajes = typeof stats.ingresosViajes === 'number' ? stats.ingresosViajes : parseFloat(String(stats.ingresosViajes || 0));
+        const transaccionesNetasNum = typeof transaccionesNetas === 'number' ? transaccionesNetas : parseFloat(String(transaccionesNetas || 0));
+        const balance = ingresosViajes + transaccionesNetasNum;
 
         balances[mina.id] = {
-          balance,
-          viajesCount: stats.viajesCount,
-          viajesUltimoMes: stats.viajesUltimoMes
+          balance: isNaN(balance) ? 0 : balance,
+          viajesCount: stats.viajesCount || 0,
+          viajesUltimoMes: stats.viajesUltimoMes || 0
         };
       }
 
