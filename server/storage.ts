@@ -6,7 +6,8 @@ import {
   type Viaje, type InsertViaje, type UpdateViaje, type ViajeWithDetails,
   type Transaccion, type InsertTransaccion, type TransaccionWithSocio,
   type Inversion, type InsertInversion,
-  type VolqueteroConPlacas
+  type VolqueteroConPlacas,
+  type PushSubscription, type InsertPushSubscription
 } from "@shared/schema";
 
 export interface IStorage {
@@ -78,6 +79,11 @@ export interface IStorage {
   getTransaccionesPendientes(userId?: string): Promise<TransaccionWithSocio[]>;
   countTransaccionesPendientes(userId?: string): Promise<number>;
   completarTransaccionPendiente(id: number, updates: { deQuienTipo: string; deQuienId: string; formaPago: string; fecha?: string | Date; voucher?: string; userId?: string }): Promise<Transaccion | undefined>;
+  
+  // Push subscriptions
+  savePushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription>;
+  getPushSubscriptions(userId: string): Promise<PushSubscription[]>;
+  deletePushSubscription(userId: string, endpoint: string): Promise<boolean>;
   
   // Funciones específicas por módulo
   hideTransaccionEnComprador(id: number, userId?: string): Promise<boolean>;

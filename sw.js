@@ -304,35 +304,81 @@ async function removePendingAction(actionId) {
   console.log('RodMar PWA: Removing pending action:', actionId);
 }
 
-// Notificaciones push (preparado para futuro)
+// Notificaciones push
 self.addEventListener('push', (event) => {
   console.log('RodMar PWA: Push notification received');
   
+  let notificationData = {
+    title: 'RodMar Notification',
+    body: 'Nueva notificación',
+    icon: '/rodmar-circular-192.png',
+    badge: '/rodmar-circular-192.png',
+    data: {},
+    vibrate: [200, 100, 200],
+    tag: 'rodmar-notification',
+    requireInteraction: false
+  };
+
   if (event.data) {
-    const options = {
-      body: event.data.text(),
-      icon: '/rodmar-final-192-1751393827453.png',
-      badge: '/rodmar-final-192-1751393827453.png',
-      vibrate: [200, 100, 200],
-      data: {
-        dateOfArrival: Date.now(),
-        primaryKey: '1'
-      }
-    };
-    
-    event.waitUntil(
-      self.registration.showNotification('RodMar Notification', options)
-    );
+    try {
+      const payload = event.data.json();
+      notificationData = {
+        title: payload.title || notificationData.title,
+        body: payload.body || notificationData.body,
+        icon: payload.icon || notificationData.icon,
+        badge: payload.badge || notificationData.badge,
+        data: payload.data || notificationData.data,
+        vibrate: payload.vibrate || notificationData.vibrate,
+        tag: payload.tag || notificationData.tag,
+        requireInteraction: payload.requireInteraction || notificationData.requireInteraction,
+        actions: payload.actions || [
+          {
+            action: 'open',
+            title: 'Abrir RodMar'
+          }
+        ]
+      };
+    } catch (e) {
+      // Si no es JSON, usar como texto
+      notificationData.body = event.data.text();
+    }
   }
+  
+  event.waitUntil(
+    self.registration.showNotification(notificationData.title, notificationData)
+  );
 });
 
 // Manejo de clics en notificaciones
 self.addEventListener('notificationclick', (event) => {
-  console.log('RodMar PWA: Notification clicked');
+  console.log('RodMar PWA: Notification clicked', event.notification.data);
   event.notification.close();
   
+  const notificationData = event.notification.data || {};
+  let urlToOpen = '/';
+  
+  // Si hay una URL específica en los datos, usarla
+  if (notificationData.url) {
+    urlToOpen = notificationData.url;
+  } else if (notificationData.type === 'pending-transaction') {
+    // Si es una notificación de transacción pendiente, abrir la lista de pendientes
+    urlToOpen = '/transacciones?pending=true';
+  }
+  
   event.waitUntil(
-    clients.openWindow('/')
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Buscar si ya hay una ventana abierta
+      for (let i = 0; i < clientList.length; i++) {
+        const client = clientList[i];
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.navigate(urlToOpen).then(() => client.focus());
+        }
+      }
+      // Si no hay ventana abierta, abrir una nueva
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
   );
 });
 

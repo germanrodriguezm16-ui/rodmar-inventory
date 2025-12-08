@@ -7,6 +7,7 @@ import {
   transacciones,
   inversiones,
   fusionBackups,
+  pushSubscriptions,
   type User,
   type UpsertUser,
   type Mina,
@@ -25,7 +26,9 @@ import {
   type InsertInversion,
   type ViajeWithDetails,
   type VolqueteroConPlacas,
-  type FusionBackup
+  type FusionBackup,
+  type PushSubscription,
+  type InsertPushSubscription
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, isNull, inArray, ne } from "drizzle-orm";
@@ -4283,6 +4286,66 @@ export class DatabaseStorage implements IStorage {
       const endTime = Date.now();
       console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getVolqueterosBalances: ${endTime - startTime}ms (${allVolqueteros.length} volqueteros)`);
       return balances;
+    });
+  }
+
+  // Push subscriptions methods
+  async savePushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription> {
+    return wrapDbOperation(async () => {
+      // Intentar actualizar si ya existe, sino crear
+      const [existing] = await db
+        .select()
+        .from(pushSubscriptions)
+        .where(
+          and(
+            eq(pushSubscriptions.userId, subscription.userId),
+            eq(pushSubscriptions.endpoint, subscription.endpoint)
+          )
+        )
+        .limit(1);
+
+      if (existing) {
+        const [updated] = await db
+          .update(pushSubscriptions)
+          .set({
+            p256dh: subscription.p256dh,
+            auth: subscription.auth,
+            updatedAt: new Date()
+          })
+          .where(eq(pushSubscriptions.id, existing.id))
+          .returning();
+        return updated;
+      } else {
+        const [newSubscription] = await db
+          .insert(pushSubscriptions)
+          .values(subscription)
+          .returning();
+        return newSubscription;
+      }
+    });
+  }
+
+  async getPushSubscriptions(userId: string): Promise<PushSubscription[]> {
+    return wrapDbOperation(async () => {
+      return await db
+        .select()
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.userId, userId));
+    });
+  }
+
+  async deletePushSubscription(userId: string, endpoint: string): Promise<boolean> {
+    return wrapDbOperation(async () => {
+      const result = await db
+        .delete(pushSubscriptions)
+        .where(
+          and(
+            eq(pushSubscriptions.userId, userId),
+            eq(pushSubscriptions.endpoint, endpoint)
+          )
+        )
+        .returning();
+      return result.length > 0;
     });
   }
 }

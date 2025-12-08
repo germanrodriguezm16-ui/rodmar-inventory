@@ -146,6 +146,20 @@ export const inversiones = pgTable("inversiones", {
 });
 
 // Fusion Backups - Para respaldo de fusiones y reversión inteligente
+// Push subscriptions table for web push notifications
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  endpoint: text("endpoint").notNull(),
+  p256dh: text("p256dh").notNull(), // Public key
+  auth: text("auth").notNull(), // Auth secret
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("unique_user_endpoint").on(table.userId, table.endpoint),
+  index("idx_push_user").on(table.userId),
+]);
+
 export const fusionBackups = pgTable("fusion_backups", {
   id: serial("id").primaryKey(),
   tipoEntidad: varchar("tipo_entidad", { length: 20 }).notNull(), // 'volquetero', 'mina', 'comprador'
@@ -436,6 +450,14 @@ export type UpdateVolqueteroNombre = z.infer<typeof updateVolqueteroNombreSchema
 export type FusionBackup = typeof fusionBackups.$inferSelect;
 export type FusionRequest = z.infer<typeof fusionSchema>;
 export type RevertFusionRequest = z.infer<typeof revertFusionSchema>;
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type InsertPushSubscription = {
+  userId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+};
 
 // Extended types for joined data
 export type ViajeWithDetails = Viaje & {

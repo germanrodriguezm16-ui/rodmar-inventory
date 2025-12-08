@@ -2428,6 +2428,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ Solicitud de transacción creada exitosamente:`, transaccion);
 
+      // Enviar notificación push (no bloquear la respuesta si falla)
+      try {
+        const { notifyPendingTransaction } = await import('./push-notifications');
+        await notifyPendingTransaction(userId, {
+          id: transaccion.id,
+          paraQuienTipo: data.paraQuienTipo,
+          paraQuienNombre: nombreDestino,
+          valor: data.valor,
+          codigoSolicitud: transaccion.codigo_solicitud || undefined
+        });
+      } catch (pushError) {
+        console.error('⚠️  Error al enviar notificación push (no crítico):', pushError);
+      }
+
       res.json(transaccion);
     } catch (error) {
       console.error("Error creating solicitud:", error);
@@ -2437,6 +2451,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: "Invalid solicitud data",
           details: error instanceof Error ? error.message : String(error),
         });
+    }
+  });
+
+  // Push subscriptions endpoints
+  app.post("/api/push/subscribe", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { subscription } = req.body;
+
+      if (!subscription || !subscription.endpoint || !subscription.keys) {
+        return res.status(400).json({
+          error: "Invalid subscription data",
+          details: "Se requiere: subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth"
+        });
+      }
+
+      const savedSubscription = await storage.savePushSubscription({
+        userId,
+        endpoint: subscription.endpoint,
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth
+      });
+
+      console.log(`✅ Suscripción push registrada para usuario ${userId}`);
+      res.json({ success: true, subscription: savedSubscription });
+    } catch (error) {
+      console.error("Error registering push subscription:", error);
+      res.status(500).json({
+        error: "Failed to register push subscription",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.delete("/api/push/unsubscribe", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { endpoint } = req.body;
+
+      if (!endpoint) {
+        return res.status(400).json({
+          error: "Invalid request",
+          details: "Se requiere: endpoint"
+        });
+      }
+
+      const deleted = await storage.deletePushSubscription(userId, endpoint);
+      
+      if (deleted) {
+        console.log(`✅ Suscripción push eliminada para usuario ${userId}`);
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Subscription not found" });
+      }
+    } catch (error) {
+      console.error("Error unregistering push subscription:", error);
+      res.status(500).json({
+        error: "Failed to unregister push subscription",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.get("/api/push/vapid-public-key", requireAuth, async (req, res) => {
+    try {
+      const { getVapidPublicKey } = await import('./push-notifications');
+      const publicKey = getVapidPublicKey();
+      
+      if (!publicKey) {
+        return res.status(503).json({
+          error: "Push notifications not configured",
+          details: "VAPID keys no están configuradas en el servidor"
+        });
+      }
+
+      res.json({ publicKey });
+    } catch (error) {
+      console.error("Error getting VAPID public key:", error);
+      res.status(500).json({
+        error: "Failed to get VAPID public key",
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
