@@ -3828,8 +3828,8 @@ export class DatabaseStorage implements IStorage {
             END`,
             transaccionesNetas: sql<number>`COALESCE(SUM(
               CASE 
-                WHEN ${transacciones.deQuienTipo} = 'mina' AND LOWER(${transacciones.concepto}) NOT LIKE '%viaje%' THEN CAST(${transacciones.valor} AS NUMERIC)
-                WHEN ${transacciones.paraQuienTipo} = 'mina' AND LOWER(${transacciones.concepto}) NOT LIKE '%viaje%' THEN -CAST(${transacciones.valor} AS NUMERIC)
+                WHEN ${transacciones.deQuienTipo} = 'mina' THEN CAST(${transacciones.valor} AS NUMERIC)
+                WHEN ${transacciones.paraQuienTipo} = 'mina' THEN -CAST(${transacciones.valor} AS NUMERIC)
                 ELSE 0
               END
             ), 0)`
