@@ -14,6 +14,7 @@ import RegisterCargueModal from "@/components/forms/register-cargue-modal";
 import RegisterDescargueModal from "@/components/forms/register-descargue-modal";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import { PendingListModal } from "@/components/pending-transactions/pending-list-modal";
+import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
 import { GestionarTransaccionesModal } from "@/components/modals/gestionar-transacciones-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { Plus } from "lucide-react";
@@ -33,6 +34,8 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   const [showDescargueModal, setShowDescargueModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
+  const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
+  const [selectedPendingTransaction, setSelectedPendingTransaction] = useState<any>(null);
   const [showGestionarModal, setShowGestionarModal] = useState(false);
   const [showSolicitarModal, setShowSolicitarModal] = useState(false);
   const [location, setLocation] = useLocation();
@@ -52,6 +55,19 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   });
 
   const hasPending = pendingCount > 0;
+
+  // Obtener lista de transacciones pendientes para buscar por ID
+  const { data: pendientes = [] } = useQuery<any[]>({
+    queryKey: ["/api/transacciones/pendientes"],
+    queryFn: async () => {
+      const response = await fetch(apiUrl("/api/transacciones/pendientes"), {
+        credentials: "include",
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    refetchInterval: 30000, // Refrescar cada 30 segundos
+  });
 
   // Detectar query params o datos de notificación para abrir modal de pendientes
   useEffect(() => {
@@ -73,21 +89,35 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     // Verificar query params de la URL
     const urlParams = new URLSearchParams(window.location.search);
     const pendingParam = urlParams.get('pending') || (navData?.url?.includes('pending=true') ? 'true' : null);
-    const transactionId = urlParams.get('id') || navData?.notificationData?.transaccionId;
+    const transactionIdParam = urlParams.get('id') || navData?.notificationData?.transaccionId;
+    const transactionId = transactionIdParam ? parseInt(transactionIdParam, 10) : null;
     
     if (pendingParam === 'true') {
       // Cambiar al módulo de transacciones si no está ya ahí
       if (activeModule !== 'transacciones') {
         setActiveModule('transacciones');
       }
-      // Abrir el modal de pendientes
-      setShowPendingModal(true);
+      
+      // Si hay un ID de transacción, buscar y abrir el modal de detalle directamente
+      if (transactionId && pendientes.length > 0) {
+        const transaccion = pendientes.find((t: any) => t.id === transactionId);
+        if (transaccion) {
+          setSelectedPendingTransaction(transaccion);
+          setShowPendingDetailModal(true);
+        } else {
+          // Si no se encuentra, abrir la lista de pendientes
+          setShowPendingModal(true);
+        }
+      } else {
+        // Si no hay ID, abrir la lista de pendientes
+        setShowPendingModal(true);
+      }
       
       // Limpiar los query params de la URL
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
     }
-  }, [location, activeModule]);
+  }, [location, activeModule, pendientes]);
 
   // Escuchar mensajes del service worker para navegación desde notificaciones
   useEffect(() => {
@@ -107,12 +137,45 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
           
           // Si es una notificación de transacción pendiente, abrir el modal
           if (pendingParam === 'true') {
-            // Pequeño delay para asegurar que el routing se complete
+            // Pequeño delay para asegurar que el routing se complete y los datos se carguen
             setTimeout(() => {
               if (activeModule !== 'transacciones') {
                 setActiveModule('transacciones');
               }
-              setShowPendingModal(true);
+              
+              // Si hay un ID de transacción, buscar y abrir el modal de detalle directamente
+              if (transactionId) {
+                const transaccionIdNum = parseInt(transactionId, 10);
+                // Buscar en los pendientes actuales o esperar a que se carguen
+                const buscarTransaccion = () => {
+                  const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
+                  if (transaccion) {
+                    setSelectedPendingTransaction(transaccion);
+                    setShowPendingDetailModal(true);
+                  } else {
+                    // Si no se encuentra, esperar un poco más y volver a intentar
+                    setTimeout(() => {
+                      const transaccionRetry = pendientes.find((t: any) => t.id === transaccionIdNum);
+                      if (transaccionRetry) {
+                        setSelectedPendingTransaction(transaccionRetry);
+                        setShowPendingDetailModal(true);
+                      } else {
+                        // Si aún no se encuentra, abrir la lista
+                        setShowPendingModal(true);
+                      }
+                    }, 500);
+                  }
+                };
+                
+                if (pendientes.length > 0) {
+                  buscarTransaccion();
+                } else {
+                  // Esperar a que se carguen los pendientes
+                  setTimeout(buscarTransaccion, 500);
+                }
+              } else {
+                setShowPendingModal(true);
+              }
             }, 100);
           }
         } catch (error) {
@@ -136,7 +199,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         navigator.serviceWorker.removeEventListener('message', handleMessage);
       };
     }
-  }, [activeModule, setLocation]);
+  }, [activeModule, setLocation, pendientes]);
 
   const renderModule = () => {
     const LoadingFallback = () => (
@@ -257,6 +320,17 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         open={showPendingModal}
         onClose={() => setShowPendingModal(false)}
       />
+
+      {selectedPendingTransaction && (
+        <PendingDetailModal
+          open={showPendingDetailModal}
+          transaccion={selectedPendingTransaction}
+          onClose={() => {
+            setShowPendingDetailModal(false);
+            setSelectedPendingTransaction(null);
+          }}
+        />
+      )}
 
       <GestionarTransaccionesModal
         open={showGestionarModal}
