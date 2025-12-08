@@ -351,18 +351,27 @@ self.addEventListener('push', (event) => {
 
 // Manejo de clics en notificaciones
 self.addEventListener('notificationclick', (event) => {
-  console.log('RodMar PWA: Notification clicked', event.notification.data);
+  console.log('🔔 RodMar PWA: Notification clicked event fired!');
+  console.log('🔔 Notification object:', event.notification);
+  console.log('🔔 Notification data:', event.notification.data);
+  console.log('🔔 Notification title:', event.notification.title);
+  console.log('🔔 Notification body:', event.notification.body);
+  
   event.notification.close();
   
   const notificationData = event.notification.data || {};
+  console.log('🔔 Notification data parsed:', notificationData);
+  
   let urlToOpen = '/';
   
   // Si hay una URL específica en los datos, usarla
   if (notificationData.url) {
     urlToOpen = notificationData.url;
+    console.log('🔔 Usando URL de notificationData:', urlToOpen);
   } else if (notificationData.type === 'pending-transaction') {
     // Si es una notificación de transacción pendiente, abrir la lista de pendientes
     const transactionId = notificationData.transaccionId;
+    console.log('🔔 Tipo: pending-transaction, Transaction ID:', transactionId);
     if (transactionId) {
       urlToOpen = `/transacciones?pending=true&id=${transactionId}`;
     } else {
@@ -373,8 +382,7 @@ self.addEventListener('notificationclick', (event) => {
   // Construir URL absoluta
   const absoluteUrl = new URL(urlToOpen, self.location.origin).href;
   
-  // Guardar datos de navegación en localStorage para que el cliente los lea
-  // Esto funciona incluso cuando se abre una nueva ventana
+  // Guardar datos de navegación
   const navData = {
     url: urlToOpen,
     timestamp: Date.now(),
@@ -386,19 +394,22 @@ self.addEventListener('notificationclick', (event) => {
   console.log('📱 Service Worker: Notification clicked, datos:', notificationData);
   console.log('📱 Service Worker: URL a abrir:', urlToOpen);
   console.log('📱 Service Worker: Transaction ID:', navData.transaccionId);
+  console.log('📱 Service Worker: NavData completo:', navData);
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       console.log('📱 Service Worker: Clientes encontrados:', clientList.length);
+      console.log('📱 Service Worker: Clientes:', clientList.map(c => ({ url: c.url, focused: c.focused })));
       
       // Buscar si ya hay una ventana abierta
+      let clientFound = false;
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          console.log('📱 Service Worker: Enviando mensaje a cliente existente');
+          console.log('📱 Service Worker: Cliente encontrado, enviando mensaje');
+          clientFound = true;
           
           // Enviar mensaje al cliente con todos los datos
-          // El cliente guardará en localStorage
           const messageData = {
             type: 'NAVIGATE',
             url: urlToOpen,
@@ -406,43 +417,51 @@ self.addEventListener('notificationclick', (event) => {
             notificationData: notificationData,
             transaccionId: navData.transaccionId,
             timestamp: navData.timestamp,
-            // Incluir todos los datos para que el cliente los guarde
             navData: navData
           };
           
+          console.log('📤 Service Worker: Enviando mensaje:', JSON.stringify(messageData, null, 2));
           client.postMessage(messageData);
-          console.log('📤 Service Worker: Mensaje enviado al cliente:', messageData);
+          console.log('✅ Service Worker: Mensaje enviado, enfocando cliente');
           return client.focus();
         }
       }
       
       // Si no hay ventana abierta, abrir una nueva
-      console.log('📱 Service Worker: No hay cliente abierto, abriendo nueva ventana');
-      if (clients.openWindow) {
-        const basePath = urlToOpen.split('?')[0];
-        const baseUrl = new URL(basePath, self.location.origin).href;
-        
-        return clients.openWindow(baseUrl).then((windowClient) => {
-          if (windowClient) {
-            // Esperar un momento para que la página cargue y luego enviar el mensaje
-            setTimeout(() => {
-              const messageData = {
-                type: 'NAVIGATE',
-                url: urlToOpen,
-                absoluteUrl: absoluteUrl,
-                notificationData: notificationData,
-                transaccionId: navData.transaccionId,
-                timestamp: navData.timestamp,
-                navData: navData
-              };
-              windowClient.postMessage(messageData);
-              console.log('📤 Service Worker: Mensaje enviado a nueva ventana:', messageData);
-            }, 1000);
-          }
-        }).catch((error) => {
-          console.error('❌ Service Worker: Error abriendo ventana:', error);
-        });
+      if (!clientFound) {
+        console.log('📱 Service Worker: No hay cliente abierto, abriendo nueva ventana');
+        if (clients.openWindow) {
+          const basePath = urlToOpen.split('?')[0];
+          const baseUrl = new URL(basePath, self.location.origin).href;
+          console.log('📱 Service Worker: Abriendo URL base:', baseUrl);
+          
+          return clients.openWindow(baseUrl).then((windowClient) => {
+            console.log('📱 Service Worker: Nueva ventana abierta:', windowClient ? 'Sí' : 'No');
+            if (windowClient) {
+              // Esperar un momento para que la página cargue y luego enviar el mensaje
+              setTimeout(() => {
+                const messageData = {
+                  type: 'NAVIGATE',
+                  url: urlToOpen,
+                  absoluteUrl: absoluteUrl,
+                  notificationData: notificationData,
+                  transaccionId: navData.transaccionId,
+                  timestamp: navData.timestamp,
+                  navData: navData
+                };
+                console.log('📤 Service Worker: Enviando mensaje a nueva ventana:', messageData);
+                windowClient.postMessage(messageData);
+              }, 1000);
+            }
+          }).catch((error) => {
+            console.error('❌ Service Worker: Error abriendo ventana:', error);
+          });
+        } else {
+          console.error('❌ Service Worker: clients.openWindow no está disponible');
+        }
       }
+    }).catch((error) => {
+      console.error('❌ Service Worker: Error en notificationclick:', error);
     })
   );
 });

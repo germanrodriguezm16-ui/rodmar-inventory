@@ -240,8 +240,12 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   // Escuchar mensajes del service worker para navegación desde notificaciones
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      console.log('📨 Mensaje recibido en Dashboard:', event.data);
+      console.log('📨 Tipo de mensaje:', event.data?.type);
+      
       if (event.data && event.data.type === 'NAVIGATE') {
-        console.log('📨 Mensaje del service worker recibido:', event.data);
+        console.log('✅ Mensaje NAVIGATE detectado, procesando...');
+        console.log('📨 Datos completos del mensaje:', JSON.stringify(event.data, null, 2));
         
         // Guardar datos en localStorage para que la verificación periódica los encuentre
         try {
@@ -259,7 +263,10 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         
         // Procesar la notificación inmediatamente
         const navData = event.data.navData || event.data;
+        console.log('🔄 Procesando notificación con navData:', navData);
         procesarNotificacion(navData);
+      } else {
+        console.log('⚠️ Mensaje recibido pero no es tipo NAVIGATE:', event.data);
       }
     };
 
