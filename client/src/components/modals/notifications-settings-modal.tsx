@@ -13,7 +13,7 @@ interface NotificationsSettingsModalProps {
 }
 
 export function NotificationsSettingsModal({ open, onClose }: NotificationsSettingsModalProps) {
-  const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications();
+  const { isSupported, isSubscribed, isLoading, vapidPublicKey, subscribe, unsubscribe } = usePushNotifications();
   const [isToggling, setIsToggling] = useState(false);
   const { toast } = useToast();
 
@@ -53,7 +53,7 @@ export function NotificationsSettingsModal({ open, onClose }: NotificationsSetti
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Estado de soporte */}
+          {/* Estado de soporte del navegador */}
           {!isSupported && (
             <div className="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
               <XCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
@@ -62,14 +62,29 @@ export function NotificationsSettingsModal({ open, onClose }: NotificationsSetti
                   Notificaciones no disponibles
                 </p>
                 <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-                  Tu navegador no soporta notificaciones push o no están configuradas en el servidor.
+                  Tu navegador no soporta notificaciones push. Prueba con Chrome, Firefox o Edge en un dispositivo móvil o escritorio.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Estado de configuración del servidor */}
+          {isSupported && !vapidPublicKey && (
+            <div className="flex items-start gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+              <XCircle className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                  Configuración pendiente
+                </p>
+                <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                  Las notificaciones push no están configuradas en el servidor. Contacta al administrador para configurar las claves VAPID.
                 </p>
               </div>
             </div>
           )}
 
           {/* Estado de suscripción */}
-          {isSupported && (
+          {isSupported && vapidPublicKey && (
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <div className="flex items-center gap-3">

@@ -20,30 +20,42 @@ export function usePushNotifications() {
   // Verificar soporte y obtener VAPID public key
   useEffect(() => {
     const checkSupport = async () => {
-      if (
+      // Verificar soporte del navegador
+      const browserSupports = (
         'serviceWorker' in navigator &&
         'PushManager' in window &&
         'Notification' in window
-      ) {
-        setIsSupported(true);
+      );
+
+      if (!browserSupports) {
+        setIsSupported(false);
+        return;
+      }
+
+      setIsSupported(true);
+      
+      // Obtener VAPID public key del servidor
+      try {
+        const response = await fetch(apiUrl('/api/push/vapid-public-key'), {
+          credentials: 'include'
+        });
         
-        // Obtener VAPID public key del servidor
-        try {
-          const response = await fetch(apiUrl('/api/push/vapid-public-key'), {
-            credentials: 'include'
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
+        if (response.ok) {
+          const data = await response.json();
+          if (data.publicKey) {
             setVapidPublicKey(data.publicKey);
           } else {
-            console.warn('⚠️  VAPID public key no disponible');
+            console.warn('⚠️  VAPID public key vacía en la respuesta');
           }
-        } catch (error) {
-          console.error('Error obteniendo VAPID public key:', error);
+        } else if (response.status === 503) {
+          // Las claves VAPID no están configuradas en el servidor
+          console.warn('⚠️  VAPID keys no configuradas en el servidor');
+          setVapidPublicKey(null);
+        } else {
+          console.warn('⚠️  Error obteniendo VAPID public key:', response.status);
         }
-      } else {
-        setIsSupported(false);
+      } catch (error) {
+        console.error('Error obteniendo VAPID public key:', error);
       }
     };
 
@@ -198,6 +210,7 @@ export function usePushNotifications() {
     isSupported,
     isSubscribed,
     isLoading,
+    vapidPublicKey,
     subscribe,
     unsubscribe
   };
