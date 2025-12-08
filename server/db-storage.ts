@@ -3812,14 +3812,15 @@ export class DatabaseStorage implements IStorage {
         
         // Construir condiciones OR para cada mina (INCLUIR OCULTOS para balance real)
         // EXCLUIR transacciones pendientes (no afectan balances)
-        // NOTA: No excluir transacciones con "viaje" en concepto o deQuienTipo = 'viaje' porque
-        // el frontend calcula el tipo "Viaje" dinámicamente y esas transacciones no existen en la BD
+        // EXCLUIR transacciones con "viaje" en el concepto (igual que calculateAndUpdateMinaBalance)
+        // para mantener consistencia con el cálculo del encabezado y balanceCalculado en BD
         const transaccionesConditions = [
           or(
             and(eq(transacciones.deQuienTipo, 'mina'), inArray(transacciones.deQuienId, minaIds)),
             and(eq(transacciones.paraQuienTipo, 'mina'), inArray(transacciones.paraQuienId, minaIds))
           ),
-          ne(transacciones.estado, 'pendiente') // Excluir transacciones pendientes
+          ne(transacciones.estado, 'pendiente'), // Excluir transacciones pendientes
+          sql`LOWER(${transacciones.concepto}) NOT LIKE '%viaje%'` // Excluir transacciones con "viaje" en concepto (igual que calculateAndUpdateMinaBalance)
         ];
         
         const transaccionesStats = await db
