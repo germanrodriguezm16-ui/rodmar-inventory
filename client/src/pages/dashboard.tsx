@@ -78,6 +78,48 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     refetchInterval: 30000, // Refrescar cada 30 segundos
   });
 
+  // Estado para rastrear si hay una notificación pendiente de procesar
+  const [pendingNotification, setPendingNotification] = useState<any>(null);
+
+  // Efecto para intentar procesar notificación cuando se cargan los pendientes
+  useEffect(() => {
+    if (pendingNotification && pendientes.length > 0) {
+      console.log('🔄 [EFECTO] Pendientes cargados, reintentando procesar notificación', {
+        pendingNotification,
+        pendientesCount: pendientes.length,
+        idsDisponibles: pendientes.map((t: any) => t.id)
+      });
+      
+      const transactionId = pendingNotification.transaccionId || 
+                           pendingNotification.notificationData?.transaccionId;
+      
+      if (transactionId) {
+        const transaccionIdNum = typeof transactionId === 'string' ? parseInt(transactionId, 10) : transactionId;
+        const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
+        
+        if (transaccion) {
+          console.log('✅ [EFECTO] Transacción encontrada después de cargar pendientes', {
+            transaccionId: transaccion.id,
+            buscando: transaccionIdNum
+          });
+          
+          setSelectedPendingTransaction(transaccion);
+          setShowPendingDetailModal(true);
+          setPendingNotification(null); // Limpiar notificación pendiente
+          
+          logger.success('NOTIFICATION', `Modal abierto desde efecto después de cargar pendientes para transacción ${transaccionIdNum}`, {
+            transactionId: transaccionIdNum
+          });
+        } else {
+          console.log('❌ [EFECTO] Transacción aún no encontrada', {
+            buscando: transaccionIdNum,
+            idsDisponibles: pendientes.map((t: any) => t.id)
+          });
+        }
+      }
+    }
+  }, [pendientes, pendingNotification]);
+
   // Detectar query params o datos de notificación para abrir modal de pendientes
   useEffect(() => {
     // Función para leer de IndexedDB
@@ -317,16 +359,12 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
               transaccionId: transaccion.id 
             });
             
-            // Abrir el modal inmediatamente - usar función de actualización de estado
-            console.log('🔧 [DATOS ALMACENADOS] Llamando setSelectedPendingTransaction y setShowPendingDetailModal');
-            setSelectedPendingTransaction(() => {
-              console.log('🔧 [DATOS ALMACENADOS] setSelectedPendingTransaction ejecutado', transaccion);
-              return transaccion;
-            });
-            setShowPendingDetailModal(() => {
-              console.log('🔧 [DATOS ALMACENADOS] setShowPendingDetailModal ejecutado', true);
-              return true;
-            });
+            // Limpiar notificación pendiente ya que la encontramos
+            setPendingNotification(null);
+            
+            // Abrir el modal inmediatamente
+            setSelectedPendingTransaction(transaccion);
+            setShowPendingDetailModal(true);
             
             console.log('✅ [DATOS ALMACENADOS] Estados actualizados inmediatamente', {
               selectedPendingTransactionId: transaccion.id,
@@ -351,47 +389,18 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
           return false;
         };
         
+        // Guardar notificación pendiente para que el efecto la procese cuando se carguen los pendientes
+        setPendingNotification(navData);
+        
         // Intentar buscar inmediatamente si ya hay pendientes cargados
         if (pendientes.length > 0) {
           if (!buscarYAbrirDetalle()) {
-            logger.warn('NOTIFICATION', 'Transacción no encontrada, esperando y reintentando', { transactionId: transaccionIdNum });
-            // Esperar más tiempo y reintentar varias veces
-            let intentos = 0;
-            const maxIntentos = 5;
-            const intervalo = setInterval(() => {
-              intentos++;
-              console.log(`🔄 [DATOS ALMACENADOS] Reintento ${intentos}/${maxIntentos} buscando transacción ${transaccionIdNum}`);
-              if (buscarYAbrirDetalle()) {
-                clearInterval(intervalo);
-              } else if (intentos >= maxIntentos) {
-                clearInterval(intervalo);
-                logger.warn('NOTIFICATION', 'Transacción no encontrada después de múltiples intentos, abriendo lista', { transactionId: transaccionIdNum });
-                setShowPendingModal(true);
-              }
-            }, 500);
+            logger.warn('NOTIFICATION', 'Transacción no encontrada, guardada como pendiente para reintentar cuando se carguen más pendientes', { transactionId: transaccionIdNum });
+            // No abrir la lista todavía, esperar a que el efecto la procese
           }
         } else {
           logger.debug('NOTIFICATION', 'Esperando a que se carguen los pendientes desde datos almacenados', { transactionId: transaccionIdNum });
-          // Esperar a que se carguen y luego buscar
-          let intentos = 0;
-          const maxIntentos = 10;
-          const intervalo = setInterval(() => {
-            intentos++;
-            console.log(`⏳ [DATOS ALMACENADOS] Esperando pendientes... intento ${intentos}/${maxIntentos}, pendientes: ${pendientes.length}`);
-            if (pendientes.length > 0) {
-              if (buscarYAbrirDetalle()) {
-                clearInterval(intervalo);
-              } else if (intentos >= maxIntentos) {
-                clearInterval(intervalo);
-                logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId: transaccionIdNum });
-                setShowPendingModal(true);
-              }
-            } else if (intentos >= maxIntentos) {
-              clearInterval(intervalo);
-              logger.warn('NOTIFICATION', 'Pendientes no cargados después de esperar, abriendo lista', { transactionId: transaccionIdNum });
-              setShowPendingModal(true);
-            }
-          }, 500);
+          // La notificación ya está guardada en pendingNotification, el efecto la procesará cuando se carguen los pendientes
         }
       } else {
         logger.info('NOTIFICATION', 'No hay ID de transacción desde datos almacenados, abriendo lista de pendientes');
