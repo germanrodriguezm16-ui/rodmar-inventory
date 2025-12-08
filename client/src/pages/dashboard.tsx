@@ -53,11 +53,27 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
 
   const hasPending = pendingCount > 0;
 
-  // Detectar query params para abrir modal de pendientes desde notificación
+  // Detectar query params o datos de notificación para abrir modal de pendientes
   useEffect(() => {
+    // Primero verificar localStorage/sessionStorage para datos de notificación
+    let navData = null;
+    try {
+      const stored = localStorage.getItem('rodmar_notification_nav') || 
+                     sessionStorage.getItem('rodmar_notification_nav');
+      if (stored) {
+        navData = JSON.parse(stored);
+        // Limpiar después de leer
+        localStorage.removeItem('rodmar_notification_nav');
+        sessionStorage.removeItem('rodmar_notification_nav');
+      }
+    } catch (e) {
+      console.warn('Error leyendo datos de notificación:', e);
+    }
+    
+    // Verificar query params de la URL
     const urlParams = new URLSearchParams(window.location.search);
-    const pendingParam = urlParams.get('pending');
-    const transactionId = urlParams.get('id');
+    const pendingParam = urlParams.get('pending') || (navData?.url?.includes('pending=true') ? 'true' : null);
+    const transactionId = urlParams.get('id') || navData?.notificationData?.transaccionId;
     
     if (pendingParam === 'true') {
       // Cambiar al módulo de transacciones si no está ya ahí
@@ -77,24 +93,50 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'NAVIGATE') {
-        const url = new URL(event.data.url, window.location.origin);
-        const pendingParam = url.searchParams.get('pending');
+        const url = event.data.url || event.data.absoluteUrl;
+        if (!url) return;
         
-        if (pendingParam === 'true') {
-          if (activeModule !== 'transacciones') {
-            setActiveModule('transacciones');
+        try {
+          const urlObj = new URL(url, window.location.origin);
+          const pendingParam = urlObj.searchParams.get('pending');
+          const transactionId = urlObj.searchParams.get('id');
+          
+          // Navegar usando wouter
+          const pathWithQuery = urlObj.pathname + urlObj.search;
+          setLocation(pathWithQuery);
+          
+          // Si es una notificación de transacción pendiente, abrir el modal
+          if (pendingParam === 'true') {
+            // Pequeño delay para asegurar que el routing se complete
+            setTimeout(() => {
+              if (activeModule !== 'transacciones') {
+                setActiveModule('transacciones');
+              }
+              setShowPendingModal(true);
+            }, 100);
           }
-          setShowPendingModal(true);
+        } catch (error) {
+          console.error('Error procesando navegación desde notificación:', error);
+          // Fallback: solo abrir el modal si es una notificación pendiente
+          if (url.includes('pending=true')) {
+            if (activeModule !== 'transacciones') {
+              setActiveModule('transacciones');
+            }
+            setShowPendingModal(true);
+          }
         }
       }
     };
 
-    navigator.serviceWorker?.addEventListener('message', handleMessage);
-    
-    return () => {
-      navigator.serviceWorker?.removeEventListener('message', handleMessage);
-    };
-  }, [activeModule]);
+    // Registrar listener para mensajes del service worker
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', handleMessage);
+      
+      return () => {
+        navigator.serviceWorker.removeEventListener('message', handleMessage);
+      };
+    }
+  }, [activeModule, setLocation]);
 
   const renderModule = () => {
     const LoadingFallback = () => (

@@ -370,28 +370,55 @@ self.addEventListener('notificationclick', (event) => {
     }
   }
   
+  // Construir URL absoluta
+  const absoluteUrl = new URL(urlToOpen, self.location.origin).href;
+  
+  // Guardar datos de navegación en localStorage para que el cliente los lea
+  // Esto funciona incluso cuando se abre una nueva ventana
+  const navData = {
+    url: urlToOpen,
+    timestamp: Date.now(),
+    notificationData: notificationData
+  };
+  
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       // Buscar si ya hay una ventana abierta
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          // Si el cliente soporta navigate, usarlo (navegadores modernos)
-          if ('navigate' in client && typeof client.navigate === 'function') {
-            return client.navigate(urlToOpen).then(() => client.focus());
-          } else {
-            // Fallback: enviar mensaje al cliente para que navegue
-            client.postMessage({
-              type: 'NAVIGATE',
-              url: urlToOpen
-            });
-            return client.focus();
+          // Guardar datos en localStorage
+          try {
+            localStorage.setItem('rodmar_notification_nav', JSON.stringify(navData));
+          } catch (e) {
+            console.warn('No se pudo guardar en localStorage:', e);
           }
+          
+          // Enviar mensaje al cliente
+          client.postMessage({
+            type: 'NAVIGATE',
+            url: urlToOpen,
+            absoluteUrl: absoluteUrl
+          });
+          return client.focus();
         }
       }
       // Si no hay ventana abierta, abrir una nueva
+      // Usar solo la ruta base (sin query params) para evitar 404
       if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
+        const basePath = urlToOpen.split('?')[0];
+        const baseUrl = new URL(basePath, self.location.origin).href;
+        
+        // Guardar datos en sessionStorage antes de abrir (más confiable para nuevas ventanas)
+        try {
+          sessionStorage.setItem('rodmar_notification_nav', JSON.stringify(navData));
+        } catch (e) {
+          console.warn('No se pudo guardar en sessionStorage:', e);
+        }
+        
+        return clients.openWindow(baseUrl).catch((error) => {
+          console.error('Error abriendo ventana:', error);
+        });
       }
     })
   );
