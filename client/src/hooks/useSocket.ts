@@ -151,31 +151,8 @@ export function useSocket() {
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
       }
 
-      // Forzar refetch de queries activas para actualización inmediata
-      // Solo refetch queries que realmente necesitan actualizarse (no todas)
-      queryClient.refetchQueries({ 
-        type: "active",
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          if (!Array.isArray(queryKey) || queryKey.length === 0) return false;
-          const firstKey = queryKey[0] as string;
-          
-          // Refetch solo queries relevantes
-          return firstKey === "/api/transacciones" ||
-                 firstKey === "/api/minas" ||
-                 firstKey === "/api/compradores" ||
-                 firstKey === "/api/volqueteros" ||
-                 firstKey === "/api/balances/minas" ||
-                 firstKey === "/api/balances/compradores" ||
-                 firstKey === "/api/balances/volqueteros" ||
-                 firstKey === "/api/rodmar-accounts" ||
-                 firstKey === "/api/transacciones/lcdm" ||
-                 firstKey === "/api/transacciones/postobon" ||
-                 firstKey?.startsWith("/api/transacciones/cuenta/") ||
-                 firstKey?.startsWith("/api/transacciones/socio/") ||
-                 firstKey?.startsWith("/api/transacciones/comprador/");
-        }
-      });
+      // React Query refetchea automáticamente las queries activas cuando se invalidan
+      // No es necesario forzar refetch aquí - React Query lo hace automáticamente
     });
 
     // Listener para eventos específicos de transacciones actualizadas (patrón dinámico)

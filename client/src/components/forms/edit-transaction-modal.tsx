@@ -649,15 +649,10 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         }
       }
       
-      // 6. Force immediate refetch
-      queryClient.refetchQueries({ queryKey: ["/api/transacciones"] });
-      
       console.log("=== Cache invalidation completed - closing modal");
       
-      // Esperar un poco antes de cerrar para que el parent component reciba los datos actualizados
-      setTimeout(() => {
-        onClose();
-      }, 150);
+      // Cerrar modal - React Query actualizará automáticamente los datos visibles
+      onClose();
     },
     onError: (error: any) => {
       console.error("=== Error updating transaction:", error);

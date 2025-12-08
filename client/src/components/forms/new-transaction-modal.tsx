@@ -268,16 +268,14 @@ function NewTransactionModal({
           if (minaIdAffected) {
             queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", parseInt(minaIdAffected)] });
             queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", parseInt(minaIdAffected), "includeHidden"] });
-            queryClient.refetchQueries({ queryKey: ["/api/transacciones/mina", parseInt(minaIdAffected)] });
-            queryClient.refetchQueries({ queryKey: ["/api/transacciones/mina", parseInt(minaIdAffected), "includeHidden"] });
+            // React Query refetchea automáticamente si la query está activa
           }
           
           // Si el modal tiene una minaActual específica (desde la página de detalle), invalidar también esa
           if (minaActual) {
             queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", minaActual.id] });
             queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", minaActual.id, "includeHidden"] });
-            queryClient.refetchQueries({ queryKey: ["/api/transacciones/mina", minaActual.id] });
-            queryClient.refetchQueries({ queryKey: ["/api/transacciones/mina", minaActual.id, "includeHidden"] });
+            // React Query refetchea automáticamente si la query está activa
           }
         }
         if (data.deQuienTipo === 'comprador' || data.paraQuienTipo === 'comprador') {
@@ -289,7 +287,6 @@ function NewTransactionModal({
           const compradorIdAffected = data.deQuienTipo === 'comprador' ? data.deQuienId : data.paraQuienId;
           if (compradorIdAffected) {
             const affectedId = parseInt(compradorIdAffected);
-            // Invalidar y forzar refetch inmediato
             queryClient.invalidateQueries({ 
               queryKey: ["/api/transacciones/comprador", affectedId],
               refetchType: 'active' // Forzar refetch de queries activas
@@ -298,28 +295,12 @@ function NewTransactionModal({
               queryKey: ["/api/transacciones/comprador", affectedId, "includeHidden"],
               refetchType: 'active'
             });
-            // Refetch forzado ignorando staleTime
-            queryClient.refetchQueries({ 
-              queryKey: ["/api/transacciones/comprador", affectedId],
-              type: 'active'
-            });
-            queryClient.refetchQueries({ 
-              queryKey: ["/api/transacciones/comprador", affectedId, "includeHidden"],
-              type: 'active'
-            });
+            // React Query refetchea automáticamente si la query está activa
           }
           
           // Si el modal tiene un compradorId específico (desde la página de detalle), invalidar también ese
           if (compradorId) {
             console.log("🔄 Invalidando queries del comprador actual:", compradorId);
-            // Eliminar queries del cache para forzar recarga completa
-            queryClient.removeQueries({ 
-              queryKey: ["/api/transacciones/comprador", compradorId]
-            });
-            queryClient.removeQueries({ 
-              queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"]
-            });
-            // Invalidar y forzar refetch inmediato
             queryClient.invalidateQueries({ 
               queryKey: ["/api/transacciones/comprador", compradorId],
               refetchType: 'active' // Forzar refetch de queries activas
@@ -328,19 +309,7 @@ function NewTransactionModal({
               queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"],
               refetchType: 'active'
             });
-            // Refetch forzado ignorando staleTime (con pequeño delay para asegurar que la invalidación se complete)
-            setTimeout(() => {
-              queryClient.refetchQueries({ 
-                queryKey: ["/api/transacciones/comprador", compradorId],
-                type: 'active',
-                cancelRefetch: false // No cancelar refetches en progreso
-              });
-              queryClient.refetchQueries({ 
-                queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"],
-                type: 'active',
-                cancelRefetch: false
-              });
-            }, 100);
+            // React Query refetchea automáticamente si la query está activa
           }
         }
         if (data.deQuienTipo === 'volquetero' || data.paraQuienTipo === 'volquetero') {
@@ -361,16 +330,7 @@ function NewTransactionModal({
                   queryKey[1] === volqueteroNombreAffected;
               },
             });
-            queryClient.refetchQueries({
-              predicate: (query) => {
-                const queryKey = query.queryKey;
-                return Array.isArray(queryKey) &&
-                  queryKey.length > 0 &&
-                  typeof queryKey[0] === "string" &&
-                  queryKey[0] === "/api/transacciones/volquetero" &&
-                  queryKey[1] === volqueteroNombreAffected;
-              },
-            });
+            // React Query refetchea automáticamente si la query está activa
           }
         }
         

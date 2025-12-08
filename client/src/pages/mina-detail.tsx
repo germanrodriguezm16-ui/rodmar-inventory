@@ -191,37 +191,20 @@ export default function MinaDetail() {
         description: "La transacción pendiente se ha eliminado exitosamente.",
       });
       
-      // Invalidar y refetch queries de pendientes
+      // Invalidar y refetch queries de pendientes (crítico para notificaciones push)
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       
-      // Invalidar y refetch queries de la mina
+      // Invalidar queries de la mina
       queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}/all`] });
-      queryClient.refetchQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
-      queryClient.refetchQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}/all`] });
+      // React Query refetchea automáticamente si la query está activa
       
-      // Invalidar y refetch módulo general de transacciones (todas las páginas)
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          return Array.isArray(queryKey) &&
-            queryKey.length > 0 &&
-            typeof queryKey[0] === "string" &&
-            queryKey[0] === "/api/transacciones";
-        },
-      });
-      queryClient.refetchQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          return Array.isArray(queryKey) &&
-            queryKey.length > 0 &&
-            typeof queryKey[0] === "string" &&
-            queryKey[0] === "/api/transacciones";
-        },
-      });
+      // Invalidar módulo general de transacciones
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
+      // React Query refetchea automáticamente si la query está activa
       
       setShowDeletePendingConfirm(false);
       setSelectedTransaction(null);

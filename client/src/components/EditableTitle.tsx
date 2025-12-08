@@ -57,36 +57,19 @@ export function EditableTitle({ id, currentName, type, className = "" }: Editabl
       // 1. ACTUALIZACIÓN INMEDIATA: Cambiar displayName localmente para feedback instantáneo
       setDisplayName(newName.trim());
       
-      // 2. INVALIDACIÓN ULTRA-AGRESIVA: Limpiar todo el cache y refrescar
-      console.log(`🔄 INVALIDACIÓN MASIVA: Actualizando nombre de ${type} ID ${id} a "${newName.trim()}"`);
+      // 2. INVALIDACIÓN SELECTIVA: Solo queries que contienen nombres
+      console.log(`🔄 Actualizando nombre de ${type} ID ${id} a "${newName.trim()}"`);
       
       // 3. Definir endpoint correcto antes de usarlo
       const entityEndpoint = type === 'comprador' ? '/api/compradores' : type === 'volquetero' ? '/api/volqueteros' : '/api/minas';
       
-      // 4. Usar predicates para capturar TODAS las queries que pueden contener nombres
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          if (!Array.isArray(queryKey)) return false;
-          
-          // Invalidar cualquier query que contenga transacciones, viajes, o entidades
-          const keyStr = queryKey.join('/').toLowerCase();
-          return keyStr.includes('transacciones') || 
-                 keyStr.includes('viajes') || 
-                 keyStr.includes('minas') || 
-                 keyStr.includes('compradores') || 
-                 keyStr.includes('volqueteros') ||
-                 keyStr.includes('rodmar-accounts');
-        }
-      });
+      // 4. Invalidar queries específicas que contienen nombres
+      queryClient.invalidateQueries({ queryKey: [entityEndpoint] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/viajes"] });
       
-      // 5. Remover completamente del cache las queries más críticas
-      queryClient.removeQueries({ queryKey: ["/api/transacciones"] });
-      queryClient.removeQueries({ queryKey: ["/api/viajes"] });
-      queryClient.removeQueries({ queryKey: [entityEndpoint] });
-      
-      // 3. INVALIDACIÓN ESPECÍFICA: Transacciones por socio (crítico para nombres actualizados)
-      queryClient.removeQueries({ 
+      // 5. Invalidar queries específicas del socio afectado (crítico para nombres actualizados)
+      queryClient.invalidateQueries({ 
         predicate: (query) => {
           const queryKey = query.queryKey;
           if (!Array.isArray(queryKey) || queryKey.length < 3) return false;
@@ -99,48 +82,34 @@ export function EditableTitle({ id, currentName, type, className = "" }: Editabl
         }
       });
       
-      // 3. Configurar staleTime: 0 para forzar queries frescas
-      queryClient.setQueriesData(
-        { queryKey: ["/api/transacciones"] },
-        undefined // Esto limpia el cache
-      );
+      // 6. Invalidar queries específicas de volqueteros que usan nombres
+      if (type === 'volquetero') {
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            if (!Array.isArray(queryKey)) return false;
+            
+            // Invalidar queries como ["/api/volqueteros", ID, "transacciones"]
+            return queryKey.length === 3 && 
+                   queryKey[0] === "/api/volqueteros" && 
+                   queryKey[2] === "transacciones";
+          }
+        });
+      }
       
-      // 4. Forzar refetch inmediato de entidades específicas
+      // 7. Invalidar balances si es necesario (para actualizar nombres en tarjetas)
+      if (type === 'mina') {
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] }); // Refetch inmediato para balances
+      } else if (type === 'comprador') {
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato para balances
+      } else if (type === 'volquetero') {
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato para balances
+      }
       
-      queryClient.refetchQueries({ 
-        queryKey: [entityEndpoint],
-        type: 'active'
-      });
-      
-      queryClient.refetchQueries({ 
-        queryKey: ["/api/transacciones"],
-        type: 'active'
-      });
-      
-      queryClient.refetchQueries({ 
-        queryKey: ["/api/viajes"],
-        type: 'active'
-      });
-      
-      // 5. También refrescar queries específicas de volqueteros que usan nombres
-      queryClient.refetchQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          if (!Array.isArray(queryKey)) return false;
-          
-          // Refrescar queries como ["/api/volqueteros", ID, "transacciones"]
-          return queryKey.length === 3 && 
-                 queryKey[0] === "/api/volqueteros" && 
-                 queryKey[2] === "transacciones";
-        }
-      });
-      
-      // 6. Wait and force final refresh (para asegurar consistency)
-      setTimeout(() => {
-        queryClient.refetchQueries({ queryKey: [entityEndpoint] });
-        queryClient.refetchQueries({ queryKey: ["/api/transacciones"] });
-        console.log(`🔄 REFETCH TARDÍO: Nombres actualizados completamente`);
-      }, 500);
+      // React Query refetchea automáticamente las queries activas
       
       toast({
         title: "Nombre actualizado",

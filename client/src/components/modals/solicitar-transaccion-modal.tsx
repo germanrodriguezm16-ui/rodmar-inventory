@@ -295,31 +295,15 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
           : "La solicitud de transacción pendiente se ha creado exitosamente.",
       });
       
-      // Invalidar y refetch queries de pendientes
+      // Invalidar y refetch queries de pendientes (crítico para notificaciones push)
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       
-      // Invalidar y refetch módulo general de transacciones (todas las páginas)
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          return Array.isArray(queryKey) &&
-            queryKey.length > 0 &&
-            typeof queryKey[0] === "string" &&
-            queryKey[0] === "/api/transacciones";
-        },
-      });
-      queryClient.refetchQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          return Array.isArray(queryKey) &&
-            queryKey.length > 0 &&
-            typeof queryKey[0] === "string" &&
-            queryKey[0] === "/api/transacciones";
-        },
-      });
+      // Invalidar módulo general de transacciones
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
+      // React Query refetchea automáticamente si la query está activa
       
       // Si es una edición, invalidar también las queries del destino anterior
       if (initialData?.id && initialData.paraQuienTipo && initialData.paraQuienId) {

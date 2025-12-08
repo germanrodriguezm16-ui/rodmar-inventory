@@ -537,14 +537,15 @@ export default function VolqueteroDetail() {
       });
       
       // Invalidar y refetch queries de pendientes
+      // Invalidar y refetch queries de pendientes (crítico para notificaciones push)
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       
-      // Invalidar y refetch queries del volquetero
+      // Invalidar queries del volquetero
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
-      queryClient.refetchQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
+      // React Query refetchea automáticamente si la query está activa
       
       // Invalidar y refetch módulo general de transacciones (todas las páginas)
       queryClient.invalidateQueries({

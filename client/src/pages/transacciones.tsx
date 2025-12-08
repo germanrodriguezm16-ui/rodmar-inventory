@@ -142,45 +142,28 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
         description: "La transacción pendiente se ha eliminado exitosamente.",
       });
       
-      // Invalidar y refetch queries de pendientes
+      // Invalidar y refetch queries de pendientes (crítico para notificaciones push)
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       
-      // Invalidar y refetch módulo general de transacciones (todas las páginas)
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          return Array.isArray(queryKey) &&
-            queryKey.length > 0 &&
-            typeof queryKey[0] === "string" &&
-            queryKey[0] === "/api/transacciones";
-        },
-      });
-      queryClient.refetchQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          return Array.isArray(queryKey) &&
-            queryKey.length > 0 &&
-            typeof queryKey[0] === "string" &&
-            queryKey[0] === "/api/transacciones";
-        },
-      });
+      // Invalidar módulo general de transacciones
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
+      // React Query refetchea automáticamente si la query está activa
       
       // Invalidar y refetch queries del socio destino
       if (selectedTransaction?.paraQuienTipo && selectedTransaction?.paraQuienId) {
         if (selectedTransaction.paraQuienTipo === 'comprador') {
           const compradorId = typeof selectedTransaction.paraQuienId === 'string' ? parseInt(selectedTransaction.paraQuienId) : selectedTransaction.paraQuienId;
           queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
-          queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
+          // React Query refetchea automáticamente si la query está activa
         }
         if (selectedTransaction.paraQuienTipo === 'mina') {
           const minaIdStr = String(selectedTransaction.paraQuienId);
           queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}`] });
           queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}/all`] });
-          queryClient.refetchQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}`] });
-          queryClient.refetchQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}/all`] });
+          // React Query refetchea automáticamente si la query está activa
         }
         if (selectedTransaction.paraQuienTipo === 'volquetero') {
           const volqueteroId = typeof selectedTransaction.paraQuienId === 'string' ? parseInt(selectedTransaction.paraQuienId) : selectedTransaction.paraQuienId;
@@ -195,17 +178,7 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
                 queryKey[2] === "transacciones";
             },
           });
-          queryClient.refetchQueries({
-            predicate: (query) => {
-              const queryKey = query.queryKey;
-              return Array.isArray(queryKey) &&
-                queryKey.length > 0 &&
-                typeof queryKey[0] === "string" &&
-                queryKey[0] === "/api/volqueteros" &&
-                queryKey[1] === volqueteroId &&
-                queryKey[2] === "transacciones";
-            },
-          });
+          // React Query refetchea automáticamente si la query está activa
         }
       }
       
