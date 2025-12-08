@@ -1,7 +1,8 @@
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, useEffect } from "react";
 import AppHeader from "@/components/layout/app-header";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 import Principal from "@/components/modules/principal";
+import { useLocation } from "wouter";
 
 // Lazy loading de componentes pesados
 const Minas = lazy(() => import("@/pages/minas"));
@@ -34,6 +35,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [showGestionarModal, setShowGestionarModal] = useState(false);
   const [showSolicitarModal, setShowSolicitarModal] = useState(false);
+  const [location, setLocation] = useLocation();
 
   // Consultar el conteo de transacciones pendientes
   const { data: pendingCount = 0 } = useQuery<number>({
@@ -50,6 +52,49 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   });
 
   const hasPending = pendingCount > 0;
+
+  // Detectar query params para abrir modal de pendientes desde notificación
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pendingParam = urlParams.get('pending');
+    const transactionId = urlParams.get('id');
+    
+    if (pendingParam === 'true') {
+      // Cambiar al módulo de transacciones si no está ya ahí
+      if (activeModule !== 'transacciones') {
+        setActiveModule('transacciones');
+      }
+      // Abrir el modal de pendientes
+      setShowPendingModal(true);
+      
+      // Limpiar los query params de la URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [location, activeModule]);
+
+  // Escuchar mensajes del service worker para navegación desde notificaciones
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'NAVIGATE') {
+        const url = new URL(event.data.url, window.location.origin);
+        const pendingParam = url.searchParams.get('pending');
+        
+        if (pendingParam === 'true') {
+          if (activeModule !== 'transacciones') {
+            setActiveModule('transacciones');
+          }
+          setShowPendingModal(true);
+        }
+      }
+    };
+
+    navigator.serviceWorker?.addEventListener('message', handleMessage);
+    
+    return () => {
+      navigator.serviceWorker?.removeEventListener('message', handleMessage);
+    };
+  }, [activeModule]);
 
   const renderModule = () => {
     const LoadingFallback = () => (

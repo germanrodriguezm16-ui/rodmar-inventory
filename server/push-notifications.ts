@@ -61,7 +61,9 @@ export async function sendPushNotification(
       icon: '/rodmar-circular-192.png',
       badge: '/rodmar-circular-192.png',
       data: data || {},
-      vibrate: [200, 100, 200],
+      vibrate: [200, 100, 200, 100, 200, 100, 200], // Patrón de vibración más largo
+      // Nota: El sonido se maneja automáticamente por el navegador en Android/iOS
+      // Para un sonido personalizado, se necesitaría un archivo en public/ y configurar el manifest
       tag: 'rodmar-notification',
       requireInteraction: false,
       actions: [

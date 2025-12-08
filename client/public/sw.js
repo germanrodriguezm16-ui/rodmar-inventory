@@ -362,7 +362,12 @@ self.addEventListener('notificationclick', (event) => {
     urlToOpen = notificationData.url;
   } else if (notificationData.type === 'pending-transaction') {
     // Si es una notificación de transacción pendiente, abrir la lista de pendientes
-    urlToOpen = '/transacciones?pending=true';
+    const transactionId = notificationData.transaccionId;
+    if (transactionId) {
+      urlToOpen = `/transacciones?pending=true&id=${transactionId}`;
+    } else {
+      urlToOpen = '/transacciones?pending=true';
+    }
   }
   
   event.waitUntil(
@@ -371,7 +376,17 @@ self.addEventListener('notificationclick', (event) => {
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          return client.navigate(urlToOpen).then(() => client.focus());
+          // Si el cliente soporta navigate, usarlo (navegadores modernos)
+          if ('navigate' in client && typeof client.navigate === 'function') {
+            return client.navigate(urlToOpen).then(() => client.focus());
+          } else {
+            // Fallback: enviar mensaje al cliente para que navegue
+            client.postMessage({
+              type: 'NAVIGATE',
+              url: urlToOpen
+            });
+            return client.focus();
+          }
         }
       }
       // Si no hay ventana abierta, abrir una nueva
