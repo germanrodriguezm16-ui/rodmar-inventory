@@ -167,87 +167,97 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     }
   }, [location, activeModule, pendientes]);
 
+  // Función para procesar datos de notificación y abrir el modal correspondiente
+  const procesarNotificacion = (navData: any) => {
+    if (!navData) return;
+    
+    console.log('📱 Procesando datos de notificación:', navData);
+    
+    const url = navData.url || '';
+    const transactionId = navData.transaccionId || 
+                         navData.notificationData?.transaccionId || 
+                         navData.notificationData?.id ||
+                         (url.match(/[?&]id=(\d+)/)?.[1]);
+    
+    const pendingParam = url.includes('pending=true') || navData.notificationData?.type === 'pending-transaction';
+    
+    if (pendingParam) {
+      // Cambiar al módulo de transacciones si no está ya ahí
+      if (activeModule !== 'transacciones') {
+        setActiveModule('transacciones');
+      }
+      
+      // Si hay un ID de transacción, buscar y abrir el modal de detalle directamente
+      if (transactionId) {
+        const transaccionIdNum = typeof transactionId === 'string' ? parseInt(transactionId, 10) : transactionId;
+        console.log('🔎 Buscando transacción con ID:', transaccionIdNum);
+        
+        // Función para buscar y abrir el modal de detalle
+        const buscarYAbrirDetalle = () => {
+          const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
+          console.log('📋 Transacción encontrada:', transaccion ? 'Sí' : 'No', transaccion ? `(ID: ${transaccion.id})` : '');
+          
+          if (transaccion) {
+            console.log('✅ Abriendo modal de detalle para transacción:', transactionIdNum);
+            setSelectedPendingTransaction(transaccion);
+            setShowPendingDetailModal(true);
+            return true;
+          }
+          return false;
+        };
+        
+        // Intentar buscar inmediatamente si ya hay pendientes cargados
+        if (pendientes.length > 0) {
+          if (!buscarYAbrirDetalle()) {
+            // Si no se encuentra, esperar un poco más y volver a intentar
+            console.log('⏳ Transacción no encontrada, esperando y reintentando...');
+            setTimeout(() => {
+              if (!buscarYAbrirDetalle()) {
+                console.log('⚠️ Transacción no encontrada después de esperar, abriendo lista');
+                setShowPendingModal(true);
+              }
+            }, 1500);
+          }
+        } else {
+          // Si no hay pendientes cargados, esperar un poco y volver a intentar
+          console.log('⏳ Esperando a que se carguen los pendientes...');
+          setTimeout(() => {
+            if (!buscarYAbrirDetalle()) {
+              // Si después de esperar no se encuentra, abrir la lista
+              console.log('⚠️ Transacción no encontrada después de esperar, abriendo lista');
+              setShowPendingModal(true);
+            }
+          }, 1500);
+        }
+      } else {
+        // Si no hay ID, abrir la lista de pendientes
+        console.log('📋 No hay ID de transacción, abriendo lista de pendientes');
+        setShowPendingModal(true);
+      }
+    }
+  };
+
   // Escuchar mensajes del service worker para navegación desde notificaciones
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'NAVIGATE') {
-        const url = event.data.url || event.data.absoluteUrl;
-        if (!url) return;
-        
         console.log('📨 Mensaje del service worker recibido:', event.data);
         
+        // Leer datos de localStorage también (por si el mensaje no incluye todos los datos)
+        let navData = event.data;
         try {
-          const urlObj = new URL(url, window.location.origin);
-          const pendingParam = urlObj.searchParams.get('pending');
-          const transactionId = urlObj.searchParams.get('id');
-          
-          // Navegar usando wouter
-          const pathWithQuery = urlObj.pathname + urlObj.search;
-          setLocation(pathWithQuery);
-          
-          // Si es una notificación de transacción pendiente, abrir el modal
-          if (pendingParam === 'true') {
-            // Pequeño delay para asegurar que el routing se complete y los datos se carguen
-            setTimeout(() => {
-              if (activeModule !== 'transacciones') {
-                setActiveModule('transacciones');
-              }
-              
-              // Si hay un ID de transacción, buscar y abrir el modal de detalle directamente
-              if (transactionId) {
-                const transaccionIdNum = parseInt(transactionId, 10);
-                console.log('🔎 Buscando transacción desde mensaje SW:', transaccionIdNum);
-                
-                // Función para buscar y abrir el modal de detalle
-                const buscarYAbrirDetalle = () => {
-                  const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
-                  console.log('📋 Transacción encontrada desde SW:', transaccion ? 'Sí' : 'No');
-                  
-                  if (transaccion) {
-                    console.log('✅ Abriendo modal de detalle desde SW para transacción:', transaccionIdNum);
-                    setSelectedPendingTransaction(transaccion);
-                    setShowPendingDetailModal(true);
-                    return true;
-                  }
-                  return false;
-                };
-                
-                if (pendientes.length > 0) {
-                  if (!buscarYAbrirDetalle()) {
-                    // Si no se encuentra, esperar un poco más y volver a intentar
-                    setTimeout(() => {
-                      if (!buscarYAbrirDetalle()) {
-                        console.log('⚠️ Transacción no encontrada desde SW, abriendo lista');
-                        setShowPendingModal(true);
-                      }
-                    }, 1000);
-                  }
-                } else {
-                  // Esperar a que se carguen los pendientes
-                  console.log('⏳ Esperando pendientes desde SW...');
-                  setTimeout(() => {
-                    if (!buscarYAbrirDetalle()) {
-                      console.log('⚠️ Transacción no encontrada desde SW después de esperar, abriendo lista');
-                      setShowPendingModal(true);
-                    }
-                  }, 1000);
-                }
-              } else {
-                console.log('📋 No hay ID desde SW, abriendo lista');
-                setShowPendingModal(true);
-              }
-            }, 100);
+          const stored = localStorage.getItem('rodmar_notification_nav');
+          if (stored) {
+            const storedData = JSON.parse(stored);
+            // Combinar datos del mensaje con los de localStorage
+            navData = { ...storedData, ...event.data };
+            console.log('📦 Datos combinados de localStorage y mensaje:', navData);
           }
-        } catch (error) {
-          console.error('Error procesando navegación desde notificación:', error);
-          // Fallback: solo abrir el modal si es una notificación pendiente
-          if (url.includes('pending=true')) {
-            if (activeModule !== 'transacciones') {
-              setActiveModule('transacciones');
-            }
-            setShowPendingModal(true);
-          }
+        } catch (e) {
+          console.warn('Error leyendo localStorage en mensaje:', e);
         }
+        
+        procesarNotificacion(navData);
       }
     };
 
@@ -259,7 +269,44 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         navigator.serviceWorker.removeEventListener('message', handleMessage);
       };
     }
-  }, [activeModule, setLocation, pendientes]);
+  }, [activeModule, pendientes]);
+
+  // Verificar periódicamente si hay datos de notificación en localStorage
+  // (por si el mensaje del service worker no se recibió)
+  useEffect(() => {
+    const checkNotificationData = () => {
+      try {
+        const stored = localStorage.getItem('rodmar_notification_nav') || 
+                       sessionStorage.getItem('rodmar_notification_nav');
+        if (stored) {
+          const navData = JSON.parse(stored);
+          // Solo procesar si los datos son recientes (menos de 5 segundos)
+          const age = Date.now() - (navData.timestamp || 0);
+          if (age < 5000) {
+            console.log('🔔 Datos de notificación encontrados en almacenamiento:', navData);
+            procesarNotificacion(navData);
+            // Limpiar después de procesar
+            localStorage.removeItem('rodmar_notification_nav');
+            sessionStorage.removeItem('rodmar_notification_nav');
+          }
+        }
+      } catch (e) {
+        // Ignorar errores
+      }
+    };
+
+    // Verificar inmediatamente
+    checkNotificationData();
+    
+    // Verificar cada segundo durante los primeros 5 segundos después de montar
+    const intervalId = setInterval(checkNotificationData, 1000);
+    const timeoutId = setTimeout(() => clearInterval(intervalId), 5000);
+    
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
+    };
+  }, [pendientes, activeModule]);
 
   const renderModule = () => {
     const LoadingFallback = () => (

@@ -398,11 +398,19 @@ self.addEventListener('notificationclick', (event) => {
             console.warn('No se pudo guardar en localStorage:', e);
           }
           
-          // Enviar mensaje al cliente
+          // Enviar mensaje al cliente con todos los datos
           client.postMessage({
             type: 'NAVIGATE',
             url: urlToOpen,
-            absoluteUrl: absoluteUrl
+            absoluteUrl: absoluteUrl,
+            notificationData: notificationData,
+            transaccionId: navData.transaccionId,
+            timestamp: navData.timestamp
+          });
+          console.log('📤 Mensaje enviado al cliente:', {
+            type: 'NAVIGATE',
+            url: urlToOpen,
+            transaccionId: navData.transaccionId
           });
           return client.focus();
         }
