@@ -597,7 +597,6 @@ export function TransactionDetailModal({
           volqueteros={volqueteros}
         />
       )}
-      )}
     </Dialog>
   );
 }
