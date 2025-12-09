@@ -175,30 +175,30 @@ export function TransactionReceiptModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] max-w-[90vw] max-h-[90vh] overflow-y-auto p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+      <DialogContent className="sm:max-w-[500px] md:max-w-[450px] max-w-[90vw] max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg">
+            <DialogTitle className="text-base sm:text-lg">
               ¿Compartir comprobante a {socioDestinoNombre}?
             </DialogTitle>
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-              <X className="h-4 w-4" />
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7 sm:h-8 sm:w-8">
+              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
           </div>
         </DialogHeader>
 
         {/* Comprobante - Este es el que se capturará como imagen */}
-        <div ref={receiptRef} className="bg-gradient-to-br from-blue-50 via-white to-green-50 p-6 space-y-4 border-4 border-blue-300 rounded-xl shadow-2xl">
+        <div ref={receiptRef} className="bg-gradient-to-br from-blue-50 via-white to-green-50 p-3 sm:p-4 md:p-6 space-y-2 sm:space-y-3 md:space-y-4 border-2 sm:border-2 md:border-4 border-blue-300 rounded-lg sm:rounded-xl shadow-xl sm:shadow-2xl">
           {/* Arriba: Nombre, Valor, Fecha */}
-          <div className="space-y-3 border-b-2 border-blue-200 pb-4 bg-white/50 rounded-lg p-4">
-            <div className="text-xl font-bold text-blue-700">
+          <div className="space-y-2 sm:space-y-3 border-b-2 border-blue-200 pb-3 sm:pb-4 bg-white/50 rounded-lg p-2 sm:p-3 md:p-4">
+            <div className="text-base sm:text-lg md:text-xl font-bold text-blue-700">
               {socioDestinoNombre}
             </div>
-            <div className="flex justify-between items-center">
-              <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 text-transparent bg-clip-text">
+            <div className="flex justify-between items-center gap-2">
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 text-transparent bg-clip-text">
                 {formatCurrency(transaction.valor)}
               </div>
-              <div className="text-sm font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full border border-blue-300">
+              <div className="text-xs sm:text-sm font-semibold text-blue-600 bg-blue-100 px-2 sm:px-2.5 md:px-3 py-0.5 sm:py-1 rounded-full border border-blue-300 whitespace-nowrap">
                 {formatDate(transaction.fecha)}
               </div>
             </div>
@@ -206,17 +206,17 @@ export function TransactionReceiptModal({
 
           {/* Voucher como protagonista */}
           {voucherImage ? (
-            <div className="flex justify-center bg-white rounded-xl p-3 border-4 border-green-300 shadow-lg">
+            <div className="flex justify-center bg-white rounded-lg sm:rounded-xl p-2 sm:p-2.5 md:p-3 border-2 sm:border-2 md:border-4 border-green-300 shadow-md sm:shadow-lg">
               <img
                 src={voucherImage}
                 alt="Voucher"
-                className="max-w-full h-auto rounded-lg"
-                style={{ maxHeight: '400px' }}
+                className="max-w-full h-auto rounded-md sm:rounded-lg"
+                style={{ maxHeight: 'clamp(250px, 30vh, 400px)' }}
               />
             </div>
           ) : (
-            <div className="flex justify-center items-center h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl border-2 border-dashed border-gray-300">
-              <span className="text-gray-500 text-sm font-medium">Sin voucher adjunto</span>
+            <div className="flex justify-center items-center h-32 sm:h-40 md:h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg sm:rounded-xl border-2 border-dashed border-gray-300">
+              <span className="text-gray-500 text-xs sm:text-sm font-medium">Sin voucher adjunto</span>
             </div>
           )}
 
@@ -225,7 +225,7 @@ export function TransactionReceiptModal({
            ((transaction as any).detalle_solicitud && (transaction as any).detalle_solicitud.trim()) ||
            ((transaction as any).origenDetalle && (transaction as any).origenDetalle.trim()) ||
            ((transaction as any).destinoDetalle && (transaction as any).destinoDetalle.trim()) ? (
-            <div className="space-y-2 pt-4 border-t-2 border-gray-200 bg-white/30 rounded-lg p-3">
+            <div className="space-y-1.5 sm:space-y-2 pt-3 sm:pt-4 border-t-2 border-gray-200 bg-white/30 rounded-lg p-2 sm:p-2.5 md:p-3">
               {transaction.comentario && transaction.comentario.trim() && (
                 <div className="text-xs text-gray-700">
                   <span className="font-semibold text-blue-600">Comentario:</span> {transaction.comentario}
@@ -251,14 +251,14 @@ export function TransactionReceiptModal({
         </div>
 
         {/* Botón de compartir */}
-        <div className="px-6 pb-6 pt-4 border-t">
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4 border-t">
           <Button
             onClick={handleShare}
             disabled={isGenerating}
-            className="w-full bg-green-600 hover:bg-green-700 text-white"
-            size="lg"
+            className="w-full bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base"
+            size="default"
           >
-            <Share2 className="h-5 w-5 mr-2" />
+            <Share2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             {isGenerating ? 'Generando...' : 'Compartir Comprobante'}
           </Button>
         </div>
