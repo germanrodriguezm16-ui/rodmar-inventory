@@ -68,14 +68,34 @@ export function TransactionReceiptModal({
     }).format(numValue);
   };
 
-  // Formatear fecha
+  // Formatear fecha con día de la semana (ej: "Lun. 25 Nov 2025")
   const formatDate = (date: string | Date): string => {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return new Intl.DateTimeFormat('es-CO', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }).format(dateObj);
+    let dateObj: Date;
+    
+    if (typeof date === 'string') {
+      // Si es string, puede venir en formato YYYY-MM-DD o ISO
+      if (date.includes('T')) {
+        dateObj = new Date(date);
+      } else {
+        // Formato YYYY-MM-DD - crear fecha en zona horaria local para evitar día anterior
+        const [year, month, day] = date.split('-').map(Number);
+        dateObj = new Date(year, month - 1, day);
+      }
+    } else {
+      dateObj = date;
+    }
+    
+    // Días de la semana abreviados
+    const diasSemana = ['Dom.', 'Lun.', 'Mar.', 'Mié.', 'Jue.', 'Vie.', 'Sáb.'];
+    // Meses abreviados
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    
+    const diaSemana = diasSemana[dateObj.getDay()];
+    const dia = dateObj.getDate();
+    const mes = meses[dateObj.getMonth()];
+    const año = dateObj.getFullYear();
+    
+    return `${diaSemana} ${dia} ${mes} ${año}`;
   };
 
   // Generar imagen del comprobante usando Canvas

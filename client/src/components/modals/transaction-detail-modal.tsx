@@ -590,7 +590,11 @@ export function TransactionDetailModal({
         <TransactionReceiptModal
           open={showReceiptModal}
           onClose={() => setShowReceiptModal(false)}
-          transaction={transaction}
+          transaction={{
+            ...transaction,
+            // Incluir voucher del cache si está cargado
+            voucher: currentVoucher || transaction.voucher
+          }}
           socioDestinoNombre={socioDestinoNombre}
           minas={minas}
           compradores={compradores}

@@ -258,8 +258,16 @@ function NewTransactionModal({
         });
         
         // Guardar transacción creada para mostrar comprobante
-        setCreatedTransaction(result);
-        setShowReceiptModal(true);
+        console.log("=== NewTransactionModal - Transacción creada:", result);
+        console.log("=== NewTransactionModal - paraQuienTipo:", result?.paraQuienTipo);
+        console.log("=== NewTransactionModal - paraQuienId:", result?.paraQuienId);
+        
+        if (result && result.paraQuienTipo) {
+          setCreatedTransaction(result);
+          setShowReceiptModal(true);
+        } else {
+          console.warn("=== NewTransactionModal - No se puede mostrar comprobante: falta paraQuienTipo en result");
+        }
         
         // INVALIDACIÓN SELECTIVA - Solo entidades afectadas
         console.log("=== INVALIDACIÓN SELECTIVA POST-CREACIÓN ===");
