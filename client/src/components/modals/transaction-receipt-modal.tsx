@@ -195,16 +195,7 @@ export function TransactionReceiptModal({
               {socioDestinoNombre}
             </div>
             <div className="flex justify-between items-center gap-2">
-              <div 
-                className="text-xl sm:text-2xl md:text-3xl font-bold"
-                style={{
-                  background: 'linear-gradient(to right, #16a34a, #059669)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  color: '#16a34a', // Fallback para html2canvas
-                }}
-              >
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-emerald-600">
                 {formatCurrency(transaction.valor)}
               </div>
               <div className="text-xs sm:text-sm font-semibold text-blue-600 bg-blue-100 px-2.5 sm:px-3 md:px-3.5 py-1 sm:py-1.5 rounded-full border border-blue-300 whitespace-nowrap flex-shrink-0">
