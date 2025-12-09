@@ -587,7 +587,6 @@ export function TransactionDetailModal({
       </DialogContent>
       
       {transaction?.paraQuienTipo && (
-      {transaction?.paraQuienTipo && (
         <TransactionReceiptModal
           open={showReceiptModal}
           onClose={() => setShowReceiptModal(false)}
