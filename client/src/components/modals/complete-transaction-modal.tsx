@@ -14,6 +14,8 @@ import { X, CheckCircle } from "lucide-react";
 import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { TransactionReceiptModal } from "@/components/modals/transaction-receipt-modal";
+import { getSocioNombre } from "@/lib/getSocioNombre";
 import type { Mina, Comprador, Volquetero } from "@shared/schema";
 
 const completeSchema = z.object({
@@ -64,6 +66,10 @@ export function CompleteTransactionModal({
   paraQuienId 
 }: CompleteTransactionModalProps) {
   const { toast } = useToast();
+  
+  // Estado para modal de comprobante
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [completedTransaction, setCompletedTransaction] = useState<any>(null);
 
   // Fetch entities
   const { data: minas = [] } = useQuery<Mina[]>({
@@ -164,11 +170,25 @@ export function CompleteTransactionModal({
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (result) => {
       toast({
         title: "Transacción completada",
         description: "La transacción pendiente se ha completado exitosamente.",
       });
+      
+      // Obtener la transacción completada para mostrar comprobante
+      try {
+        const response = await fetch(apiUrl(`/api/transacciones/${transaccionId}`), {
+          credentials: "include",
+        });
+        if (response.ok) {
+          const transaction = await response.json();
+          setCompletedTransaction(transaction);
+          setShowReceiptModal(true);
+        }
+      } catch (error) {
+        console.error('Error obteniendo transacción completada:', error);
+      }
       
       // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
@@ -198,7 +218,7 @@ export function CompleteTransactionModal({
       }
       
       form.reset();
-      onClose();
+      // No cerrar el modal aquí, se cerrará cuando se cierre el modal de comprobante
     },
     onError: (error: any) => {
       console.error("Error completing transaction:", error);
@@ -411,6 +431,28 @@ export function CompleteTransactionModal({
           </form>
         </Form>
       </DialogContent>
+      
+      {completedTransaction && (
+        <TransactionReceiptModal
+          open={showReceiptModal}
+          onClose={() => {
+            setShowReceiptModal(false);
+            setCompletedTransaction(null);
+            onClose();
+          }}
+          transaction={completedTransaction}
+          socioDestinoNombre={getSocioNombre(
+            completedTransaction.paraQuienTipo,
+            completedTransaction.paraQuienId,
+            minas,
+            compradores,
+            volqueteros
+          ) || 'Socio'}
+          minas={minas}
+          compradores={compradores}
+          volqueteros={volqueteros}
+        />
+      )}
     </Dialog>
   );
 }

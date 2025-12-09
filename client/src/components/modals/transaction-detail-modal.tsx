@@ -2,13 +2,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, FileText, Receipt, MessageSquare, Eye, EyeOff, Download } from "lucide-react";
+import { Calendar, DollarSign, FileText, Receipt, MessageSquare, Eye, EyeOff, Download, Share2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { formatDateWithDaySpanish } from "@/lib/date-utils";
 import { VoucherViewer } from "@/components/ui/voucher-viewer";
 import { useVouchers } from "@/hooks/useVouchers";
+import { TransactionReceiptModal } from "@/components/modals/transaction-receipt-modal";
+import { getSocioNombre } from "@/lib/getSocioNombre";
+import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import html2canvas from "html2canvas";
+import type { Mina, Comprador, Volquetero } from "@shared/schema";
 
 interface TransactionDetailModalProps {
   open: boolean;
@@ -25,6 +29,33 @@ export function TransactionDetailModal({
 }: TransactionDetailModalProps) {
   
   const { loadVoucher, getVoucherFromCache, isVoucherLoading } = useVouchers();
+  
+  // Estado para modal de comprobante
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  
+  // Fetch entities para obtener nombre del socio
+  const { data: minas = [] } = useQuery<Mina[]>({
+    queryKey: ["/api/minas"],
+    enabled: open,
+  });
+
+  const { data: compradores = [] } = useQuery<Comprador[]>({
+    queryKey: ["/api/compradores"],
+    enabled: open,
+  });
+
+  const { data: volqueteros = [] } = useQuery<Volquetero[]>({
+    queryKey: ["/api/volqueteros"],
+    enabled: open,
+  });
+  
+  const socioDestinoNombre = getSocioNombre(
+    transaction.paraQuienTipo,
+    transaction.paraQuienId,
+    minas,
+    compradores,
+    volqueteros
+  ) || 'Socio';
   
   // Log para debugging
   useEffect(() => {
@@ -535,12 +566,33 @@ export function TransactionDetailModal({
               </Card>
             )}
 
+            {/* Botón de compartir comprobante */}
+            <div className="pt-4 border-t">
+              <Button
+                onClick={() => setShowReceiptModal(true)}
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                size="lg"
+              >
+                <Share2 className="h-5 w-5 mr-2" />
+                Compartir Comprobante
+              </Button>
+            </div>
 
           </div>
 
 
         </div>
       </DialogContent>
+      
+      <TransactionReceiptModal
+        open={showReceiptModal}
+        onClose={() => setShowReceiptModal(false)}
+        transaction={transaction}
+        socioDestinoNombre={socioDestinoNombre}
+        minas={minas}
+        compradores={compradores}
+        volqueteros={volqueteros}
+      />
     </Dialog>
   );
 }

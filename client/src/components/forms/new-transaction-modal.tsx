@@ -16,6 +16,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
+import { TransactionReceiptModal } from "@/components/modals/transaction-receipt-modal";
+import { getSocioNombre } from "@/lib/getSocioNombre";
 // import { useOptimalMobileForm } from "@/hooks/useOptimalMobileForm";
 
 import type { Mina, Comprador, Volquetero } from "@shared/schema";
@@ -80,6 +82,10 @@ function NewTransactionModal({
   
   // Estado para modal de solicitar
   const [showSolicitarModal, setShowSolicitarModal] = useState(false);
+  
+  // Estado para modal de comprobante
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [createdTransaction, setCreatedTransaction] = useState<any>(null);
   
   // Hook súper optimizado para formularios móviles
   // const mobileForm = useOptimalMobileForm();
@@ -250,6 +256,10 @@ function NewTransactionModal({
           title: "Transacción registrada",
           description: "La transacción se ha registrado exitosamente.",
         });
+        
+        // Guardar transacción creada para mostrar comprobante
+        setCreatedTransaction(result);
+        setShowReceiptModal(true);
         
         // INVALIDACIÓN SELECTIVA - Solo entidades afectadas
         console.log("=== INVALIDACIÓN SELECTIVA POST-CREACIÓN ===");
