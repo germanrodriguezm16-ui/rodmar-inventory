@@ -195,10 +195,10 @@ export function TransactionReceiptModal({
               {socioDestinoNombre}
             </div>
             <div className="flex justify-between items-center gap-2">
-              <div className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 text-transparent bg-clip-text">
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">
                 {formatCurrency(transaction.valor)}
               </div>
-              <div className="text-xs sm:text-sm font-semibold text-blue-600 bg-blue-100 px-2 sm:px-2.5 md:px-3 py-0.5 sm:py-1 rounded-full border border-blue-300 whitespace-nowrap">
+              <div className="text-xs sm:text-sm font-semibold text-blue-600 bg-blue-100 px-2.5 sm:px-3 md:px-3.5 py-1 sm:py-1.5 rounded-full border border-blue-300 whitespace-nowrap flex-shrink-0">
                 {formatDate(transaction.fecha)}
               </div>
             </div>
