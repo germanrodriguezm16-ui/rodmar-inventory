@@ -49,13 +49,15 @@ export function TransactionDetailModal({
     enabled: open,
   });
   
-  const socioDestinoNombre = getSocioNombre(
-    transaction.paraQuienTipo,
-    transaction.paraQuienId,
-    minas,
-    compradores,
-    volqueteros
-  ) || 'Socio';
+  const socioDestinoNombre = transaction?.paraQuienTipo 
+    ? getSocioNombre(
+        transaction.paraQuienTipo,
+        transaction.paraQuienId,
+        minas,
+        compradores,
+        volqueteros
+      ) || 'Socio'
+    : 'Socio';
   
   // Log para debugging
   useEffect(() => {
@@ -584,15 +586,19 @@ export function TransactionDetailModal({
         </div>
       </DialogContent>
       
-      <TransactionReceiptModal
-        open={showReceiptModal}
-        onClose={() => setShowReceiptModal(false)}
-        transaction={transaction}
-        socioDestinoNombre={socioDestinoNombre}
-        minas={minas}
-        compradores={compradores}
-        volqueteros={volqueteros}
-      />
+      {transaction?.paraQuienTipo && (
+      {transaction?.paraQuienTipo && (
+        <TransactionReceiptModal
+          open={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+          transaction={transaction}
+          socioDestinoNombre={socioDestinoNombre}
+          minas={minas}
+          compradores={compradores}
+          volqueteros={volqueteros}
+        />
+      )}
+      )}
     </Dialog>
   );
 }

@@ -170,25 +170,15 @@ export function CompleteTransactionModal({
 
       return response.json();
     },
-    onSuccess: async (result) => {
+    onSuccess: (result) => {
       toast({
         title: "Transacción completada",
         description: "La transacción pendiente se ha completado exitosamente.",
       });
       
-      // Obtener la transacción completada para mostrar comprobante
-      try {
-        const response = await fetch(apiUrl(`/api/transacciones/${transaccionId}`), {
-          credentials: "include",
-        });
-        if (response.ok) {
-          const transaction = await response.json();
-          setCompletedTransaction(transaction);
-          setShowReceiptModal(true);
-        }
-      } catch (error) {
-        console.error('Error obteniendo transacción completada:', error);
-      }
+      // El resultado ya contiene la transacción completada
+      setCompletedTransaction(result);
+      setShowReceiptModal(true);
       
       // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
@@ -432,7 +422,7 @@ export function CompleteTransactionModal({
         </Form>
       </DialogContent>
       
-      {completedTransaction && (
+      {completedTransaction && completedTransaction.paraQuienTipo && (
         <TransactionReceiptModal
           open={showReceiptModal}
           onClose={() => {

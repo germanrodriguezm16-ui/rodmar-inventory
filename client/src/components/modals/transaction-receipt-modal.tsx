@@ -24,6 +24,11 @@ export function TransactionReceiptModal({
   const [isGenerating, setIsGenerating] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
 
+  // Validar que transaction existe y tiene los datos necesarios
+  if (!transaction || !transaction.paraQuienTipo) {
+    return null;
+  }
+
   // Extraer imagen del voucher (limpiar prefijos si existen)
   const getVoucherImage = (): string | null => {
     if (!transaction.voucher) return null;

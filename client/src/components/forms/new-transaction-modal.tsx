@@ -863,6 +863,30 @@ function NewTransactionModal({
         open={showSolicitarModal}
         onClose={() => setShowSolicitarModal(false)}
       />
+      
+      {/* Modal de comprobante */}
+      {createdTransaction && createdTransaction.paraQuienTipo && (
+        <TransactionReceiptModal
+          open={showReceiptModal}
+          onClose={() => {
+            setShowReceiptModal(false);
+            setCreatedTransaction(null);
+            form.reset();
+            onClose();
+          }}
+          transaction={createdTransaction}
+          socioDestinoNombre={getSocioNombre(
+            createdTransaction.paraQuienTipo,
+            createdTransaction.paraQuienId,
+            minas,
+            compradores,
+            volqueteros
+          ) || 'Socio'}
+          minas={minas}
+          compradores={compradores}
+          volqueteros={volqueteros}
+        />
+      )}
     </Dialog>
   );
 }
