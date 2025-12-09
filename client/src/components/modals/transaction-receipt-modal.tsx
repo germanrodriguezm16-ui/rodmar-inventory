@@ -188,17 +188,17 @@ export function TransactionReceiptModal({
         </DialogHeader>
 
         {/* Comprobante - Este es el que se capturará como imagen */}
-        <div ref={receiptRef} className="bg-white p-6 space-y-4">
+        <div ref={receiptRef} className="bg-gradient-to-br from-blue-50 via-white to-green-50 p-6 space-y-4 border-4 border-blue-300 rounded-xl shadow-2xl">
           {/* Arriba: Nombre, Valor, Fecha */}
-          <div className="space-y-2 border-b pb-4">
-            <div className="text-lg font-semibold text-gray-900">
+          <div className="space-y-3 border-b-2 border-blue-200 pb-4 bg-white/50 rounded-lg p-4">
+            <div className="text-xl font-bold text-blue-700">
               {socioDestinoNombre}
             </div>
             <div className="flex justify-between items-center">
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 text-transparent bg-clip-text">
                 {formatCurrency(transaction.valor)}
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full border border-blue-300">
                 {formatDate(transaction.fecha)}
               </div>
             </div>
@@ -206,43 +206,48 @@ export function TransactionReceiptModal({
 
           {/* Voucher como protagonista */}
           {voucherImage ? (
-            <div className="flex justify-center">
+            <div className="flex justify-center bg-white rounded-xl p-3 border-4 border-green-300 shadow-lg">
               <img
                 src={voucherImage}
                 alt="Voucher"
-                className="max-w-full h-auto rounded-lg shadow-md"
+                className="max-w-full h-auto rounded-lg"
                 style={{ maxHeight: '400px' }}
               />
             </div>
           ) : (
-            <div className="flex justify-center items-center h-48 bg-gray-100 rounded-lg">
-              <span className="text-gray-400 text-sm">Sin voucher adjunto</span>
+            <div className="flex justify-center items-center h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl border-2 border-dashed border-gray-300">
+              <span className="text-gray-500 text-sm font-medium">Sin voucher adjunto</span>
             </div>
           )}
 
           {/* Debajo: Comentarios y Detalle (texto pequeño, sin tarjetas grandes) */}
-          <div className="space-y-2 pt-4 border-t">
-            {transaction.comentario && transaction.comentario.trim() && (
-              <div className="text-xs text-gray-600">
-                <span className="font-medium">Comentario:</span> {transaction.comentario}
-              </div>
-            )}
-            {(transaction as any).detalle_solicitud && (transaction as any).detalle_solicitud.trim() && (
-              <div className="text-xs text-gray-600">
-                <span className="font-medium">Detalle:</span> {(transaction as any).detalle_solicitud}
-              </div>
-            )}
-            {(transaction as any).origenDetalle && (transaction as any).origenDetalle.trim() && (
-              <div className="text-xs text-gray-600">
-                <span className="font-medium">Origen:</span> {(transaction as any).origenDetalle}
-              </div>
-            )}
-            {(transaction as any).destinoDetalle && (transaction as any).destinoDetalle.trim() && (
-              <div className="text-xs text-gray-600">
-                <span className="font-medium">Destino:</span> {(transaction as any).destinoDetalle}
-              </div>
-            )}
-          </div>
+          {(transaction.comentario && transaction.comentario.trim()) || 
+           ((transaction as any).detalle_solicitud && (transaction as any).detalle_solicitud.trim()) ||
+           ((transaction as any).origenDetalle && (transaction as any).origenDetalle.trim()) ||
+           ((transaction as any).destinoDetalle && (transaction as any).destinoDetalle.trim()) ? (
+            <div className="space-y-2 pt-4 border-t-2 border-gray-200 bg-white/30 rounded-lg p-3">
+              {transaction.comentario && transaction.comentario.trim() && (
+                <div className="text-xs text-gray-700">
+                  <span className="font-semibold text-blue-600">Comentario:</span> {transaction.comentario}
+                </div>
+              )}
+              {(transaction as any).detalle_solicitud && (transaction as any).detalle_solicitud.trim() && (
+                <div className="text-xs text-gray-700">
+                  <span className="font-semibold text-green-600">Detalle:</span> {(transaction as any).detalle_solicitud}
+                </div>
+              )}
+              {(transaction as any).origenDetalle && (transaction as any).origenDetalle.trim() && (
+                <div className="text-xs text-gray-700">
+                  <span className="font-semibold text-purple-600">Origen:</span> {(transaction as any).origenDetalle}
+                </div>
+              )}
+              {(transaction as any).destinoDetalle && (transaction as any).destinoDetalle.trim() && (
+                <div className="text-xs text-gray-700">
+                  <span className="font-semibold text-orange-600">Destino:</span> {(transaction as any).destinoDetalle}
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
 
         {/* Botón de compartir */}
