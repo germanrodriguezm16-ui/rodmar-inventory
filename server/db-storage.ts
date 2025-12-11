@@ -1617,6 +1617,8 @@ export class DatabaseStorage implements IStorage {
   // Nueva función que maneja el filtrado por módulo específico
   async getTransaccionesForModule(tipoSocio: string, socioId: number, userId?: string, includeHidden: boolean = false, modulo: 'general' | 'comprador' | 'mina' | 'volquetero' = 'general'): Promise<TransaccionWithSocio[]> {
     return wrapDbOperation(async () => {
+      console.log(`🔍 [getTransaccionesForModule] Iniciando - tipoSocio: ${tipoSocio}, socioId: ${socioId}, modulo: ${modulo}, includeHidden: ${includeHidden}`);
+      
       // Buscar transacciones que VIENEN DESDE el socio O que VAN HACIA el socio
       const conditionsFrom = [
         eq(transacciones.deQuienTipo, tipoSocio), 
@@ -1632,29 +1634,30 @@ export class DatabaseStorage implements IStorage {
       
       // Solo agregar filtro de ocultas específico del módulo si no se incluyen las ocultas
       // IMPORTANTE: Las transacciones con null en ocultaEn* deben tratarse como no ocultas (visible)
-      // SOLUCIÓN SIMPLE: Usar SQL directo con sintaxis correcta para manejar null
+      // SOLUCIÓN: Usar or(isNull(...), eq(..., false)) - la forma estándar de drizzle-orm
       if (!includeHidden) {
+        console.log(`🔍 [getTransaccionesForModule] Agregando filtro de ocultas para módulo: ${modulo}`);
         switch (modulo) {
           case 'comprador':
             // Incluir transacciones con ocultaEnComprador = false O null (transacciones antiguas)
-            conditionsFrom.push(sql`(${transacciones.ocultaEnComprador} IS NULL OR ${transacciones.ocultaEnComprador} = ${false})`);
-            conditionsTo.push(sql`(${transacciones.ocultaEnComprador} IS NULL OR ${transacciones.ocultaEnComprador} = ${false})`);
+            conditionsFrom.push(or(isNull(transacciones.ocultaEnComprador), eq(transacciones.ocultaEnComprador, false)));
+            conditionsTo.push(or(isNull(transacciones.ocultaEnComprador), eq(transacciones.ocultaEnComprador, false)));
             break;
           case 'mina':
             // Incluir transacciones con ocultaEnMina = false O null (transacciones antiguas)
-            conditionsFrom.push(sql`(${transacciones.ocultaEnMina} IS NULL OR ${transacciones.ocultaEnMina} = ${false})`);
-            conditionsTo.push(sql`(${transacciones.ocultaEnMina} IS NULL OR ${transacciones.ocultaEnMina} = ${false})`);
+            conditionsFrom.push(or(isNull(transacciones.ocultaEnMina), eq(transacciones.ocultaEnMina, false)));
+            conditionsTo.push(or(isNull(transacciones.ocultaEnMina), eq(transacciones.ocultaEnMina, false)));
             break;
           case 'volquetero':
             // Incluir transacciones con ocultaEnVolquetero = false O null (transacciones antiguas)
-            conditionsFrom.push(sql`(${transacciones.ocultaEnVolquetero} IS NULL OR ${transacciones.ocultaEnVolquetero} = ${false})`);
-            conditionsTo.push(sql`(${transacciones.ocultaEnVolquetero} IS NULL OR ${transacciones.ocultaEnVolquetero} = ${false})`);
+            conditionsFrom.push(or(isNull(transacciones.ocultaEnVolquetero), eq(transacciones.ocultaEnVolquetero, false)));
+            conditionsTo.push(or(isNull(transacciones.ocultaEnVolquetero), eq(transacciones.ocultaEnVolquetero, false)));
             break;
           case 'general':
           default:
             // Incluir transacciones con ocultaEnGeneral = false O null (transacciones antiguas)
-            conditionsFrom.push(sql`(${transacciones.ocultaEnGeneral} IS NULL OR ${transacciones.ocultaEnGeneral} = ${false})`);
-            conditionsTo.push(sql`(${transacciones.ocultaEnGeneral} IS NULL OR ${transacciones.ocultaEnGeneral} = ${false})`);
+            conditionsFrom.push(or(isNull(transacciones.ocultaEnGeneral), eq(transacciones.ocultaEnGeneral, false)));
+            conditionsTo.push(or(isNull(transacciones.ocultaEnGeneral), eq(transacciones.ocultaEnGeneral, false)));
             break;
         }
       }
@@ -1663,6 +1666,8 @@ export class DatabaseStorage implements IStorage {
         conditionsFrom.push(eq(transacciones.userId, userId));
         conditionsTo.push(eq(transacciones.userId, userId));
       }
+
+      console.log(`🔍 [getTransaccionesForModule] Ejecutando queries - conditionsFrom: ${conditionsFrom.length}, conditionsTo: ${conditionsTo.length}`);
 
       // Obtener transacciones que vienen DESDE el socio (sin vouchers para optimización)
       const resultsFrom = await db
@@ -1738,11 +1743,15 @@ export class DatabaseStorage implements IStorage {
         .where(and(...conditionsTo))
         .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna));
 
+      console.log(`🔍 [getTransaccionesForModule] Queries ejecutadas - resultsFrom: ${resultsFrom.length}, resultsTo: ${resultsTo.length}`);
+
       // Combinar resultados y eliminar duplicados
       const allResults = [...resultsFrom, ...resultsTo];
       const uniqueResults = allResults.filter((transaction, index, self) => 
         index === self.findIndex(t => t.id === transaction.id)
       );
+      
+      console.log(`🔍 [getTransaccionesForModule] Resultados únicos: ${uniqueResults.length}`);
 
       // Ordenar transacciones: completadas por fecha de finalización (updatedAt), pendientes por fecha de solicitud (fecha)
       uniqueResults.sort((a, b) => {
