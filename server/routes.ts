@@ -2127,6 +2127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Usar getTransaccionesForModule con el módulo correcto en lugar de getTransaccionesBySocio
+        console.log(`🔍 [DEBUG] getTransaccionesForModule - tipoSocio: ${tipoSocio}, socioId: ${socioId}, modulo: ${modulo}, includeHidden: ${includeHidden === "true"}`);
         const transacciones = await storage.getTransaccionesForModule(
           tipoSocio as string,
           parseInt(socioId as string),
@@ -2134,11 +2135,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           includeHidden === "true",
           modulo,
         );
+        console.log(`✅ [DEBUG] getTransaccionesForModule - Retornando ${transacciones.length} transacciones`);
         res.json(transacciones);
       } catch (error: any) {
-        console.error("Error fetching transacciones by socio:", error);
-        console.error("Error details:", error.message, error.stack);
-        res.status(500).json({ error: "Failed to fetch transacciones" });
+        console.error("❌ [ERROR] Error fetching transacciones by socio:", error);
+        console.error("❌ [ERROR] Error details:", error.message, error.stack);
+        console.error("❌ [ERROR] Error code:", error.code);
+        res.status(500).json({ error: "Failed to fetch transacciones", details: error.message });
       }
     },
   );
