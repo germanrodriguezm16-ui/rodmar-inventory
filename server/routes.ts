@@ -2429,6 +2429,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ Solicitud de transacción creada exitosamente:`, transaccion);
 
+      // Emitir evento Socket.io para invalidar caché en otros clientes
+      const affectedEntityTypes = new Set<string>();
+      if (data.paraQuienTipo) affectedEntityTypes.add(data.paraQuienTipo);
+      emitTransactionUpdate({
+        type: "created",
+        transactionId: transaccion.id,
+        affectedEntityTypes,
+        affectedAccounts: [],
+      });
+
       // Enviar notificación push (no bloquear la respuesta si falla)
       try {
         const { notifyPendingTransaction } = await import('./push-notifications');

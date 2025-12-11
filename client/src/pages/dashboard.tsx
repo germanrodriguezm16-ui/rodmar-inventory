@@ -22,7 +22,7 @@ import { GestionarTransaccionesModal } from "@/components/modals/gestionar-trans
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiUrl } from "@/lib/api";
 
 type Module = "principal" | "minas" | "compradores" | "volqueteros" | "transacciones" | "rodmar";
@@ -67,6 +67,8 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   });
 
   const hasPending = pendingCount > 0;
+
+  const queryClient = useQueryClient();
 
   // Obtener lista de transacciones pendientes para buscar por ID
   const { data: pendientes = [] } = useQuery<any[]>({
@@ -278,17 +280,24 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         setActiveModule('transacciones');
       }
       
+      // Invalidar y refetchear pendientes en background (no bloqueante) para mantener caché actualizado
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
+      queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes"] }).catch(() => {
+        // Ignorar errores de refetch, es en background
+      });
+      
       // Si hay un ID de transacción, buscar y abrir el modal de detalle directamente
       if (transactionId) {
         console.log('🔎 Buscando transacción con ID:', transactionId);
         
-        // Función para buscar y abrir el modal de detalle
+        // ESTRATEGIA OPTIMIZADA: Intentar múltiples fuentes en paralelo
         const buscarYAbrirDetalle = () => {
+          // 1. Intentar inmediatamente con caché (más rápido)
           const transaccion = pendientes.find((t: any) => t.id === transactionId);
-          logger.info('NOTIFICATION', `Transacción encontrada: ${transaccion ? 'Sí' : 'No'}`, { transactionId, found: !!transaccion });
+          logger.info('NOTIFICATION', `Transacción encontrada en caché: ${transaccion ? 'Sí' : 'No'}`, { transactionId, found: !!transaccion });
           
           if (transaccion) {
-            logger.success('NOTIFICATION', `Abriendo modal de detalle para transacción ${transactionId}`, { transactionId });
+            logger.success('NOTIFICATION', `Abriendo modal de detalle para transacción ${transactionId} (desde caché)`, { transactionId });
             setSelectedPendingTransaction(transaccion);
             setShowPendingDetailModal(true);
             return true;
@@ -296,26 +305,45 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
           return false;
         };
         
-        // Intentar buscar inmediatamente si ya hay pendientes cargados
-        if (pendientes.length > 0) {
-          if (!buscarYAbrirDetalle()) {
-            // Si no se encuentra, abrir la lista de pendientes
-            logger.warn('NOTIFICATION', 'Transacción no encontrada, abriendo lista', { transactionId });
-            setShowPendingModal(true);
-          }
-        } else {
-          // Si no hay pendientes cargados, esperar un poco y volver a intentar
-          logger.info('NOTIFICATION', 'Esperando a que se carguen los pendientes...', { transactionId });
-          const timeoutId = setTimeout(() => {
-            if (!buscarYAbrirDetalle()) {
-              // Si después de esperar no se encuentra, abrir la lista
-              logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId });
+        // Intentar buscar inmediatamente con caché
+        const encontradaEnCache = buscarYAbrirDetalle();
+        
+        if (!encontradaEnCache) {
+          // 2. Si no está en caché, hacer fetch directo al servidor (rápido, ~100-300ms)
+          logger.info('NOTIFICATION', 'Transacción no encontrada en caché, buscando en servidor...', { transactionId });
+          
+          const buscarEnServidor = async () => {
+            try {
+              // Intentar buscar como transacción pendiente primero
+              const response = await fetch(apiUrl(`/api/transacciones/pendientes`), {
+                credentials: "include",
+              });
+              
+              if (response.ok) {
+                const todasPendientes = await response.json();
+                const transaccion = todasPendientes.find((t: any) => t.id === transactionId);
+                
+                if (transaccion) {
+                  logger.success('NOTIFICATION', `Transacción encontrada en servidor, abriendo modal`, { transactionId });
+                  setSelectedPendingTransaction(transaccion);
+                  setShowPendingDetailModal(true);
+                  return true;
+                }
+              }
+            } catch (error) {
+              console.error('Error buscando transacción en servidor:', error);
+            }
+            return false;
+          };
+          
+          // Ejecutar búsqueda en servidor (no bloquea, se ejecuta en paralelo)
+          buscarEnServidor().then((encontrada) => {
+            if (!encontrada) {
+              // Si tampoco se encuentra en servidor, abrir lista de pendientes
+              logger.warn('NOTIFICATION', 'Transacción no encontrada, abriendo lista de pendientes', { transactionId });
               setShowPendingModal(true);
             }
-          }, 1000);
-          
-          // Limpiar timeout si el componente se desmonta
-          return () => clearTimeout(timeoutId);
+          });
         }
       } else {
         // Si no hay ID, abrir la lista de pendientes
@@ -384,100 +412,73 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         setActiveModule('transacciones');
       }
       
+      // Invalidar y refetchear pendientes en background (no bloqueante) para mantener caché actualizado
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
+      queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes"] }).catch(() => {
+        // Ignorar errores de refetch, es en background
+      });
+      
       // Si hay un ID de transacción, buscar y abrir el modal de detalle directamente
       if (transactionId) {
         const transaccionIdNum = typeof transactionId === 'string' ? parseInt(transactionId, 10) : transactionId;
         logger.debug('NOTIFICATION', 'Buscando transacción con ID desde datos almacenados', { transactionId: transaccionIdNum });
         
-        // Función para buscar y abrir el modal de detalle
+        // ESTRATEGIA OPTIMIZADA: Intentar múltiples fuentes en paralelo
         const buscarYAbrirDetalle = () => {
-          console.log('🔍 [DATOS ALMACENADOS] Buscando transacción en pendientes:', { 
-            transactionId: transaccionIdNum, 
-            totalPendientes: pendientes.length,
-            idsDisponibles: pendientes.map((t: any) => t.id)
-          });
-          
+          // 1. Intentar inmediatamente con caché (más rápido)
           const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
+          logger.info('NOTIFICATION', `Transacción encontrada en caché: ${transaccion ? 'Sí' : 'No'}`, { transactionId: transaccionIdNum, found: !!transaccion });
           
-          console.log('📋 [DATOS ALMACENADOS] Resultado de búsqueda:', { 
-            encontrada: !!transaccion, 
-            transaccionId: transaccion?.id, 
-            buscando: transaccionIdNum,
-            tipoBuscando: typeof transaccionIdNum,
-            tiposEnPendientes: pendientes.map((t: any) => ({ id: t.id, tipo: typeof t.id }))
-          });
-          
-          const encontrada = !!transaccion;
-          console.log('🔍 [DATOS ALMACENADOS] Verificando transacción encontrada:', {
-            encontrada,
-            tieneTransaccion: !!transaccion,
-            transaccionId: transaccion?.id,
-            buscando: transaccionIdNum,
-            tipoTransaccion: typeof transaccion,
-            esObjeto: transaccion && typeof transaccion === 'object'
-          });
-          
-          logger.debug('NOTIFICATION', 'Transacción encontrada desde datos almacenados', { 
-            encontrada, 
-            transactionId: transaccionIdNum,
-            transaccionId: transaccion?.id,
-            transaccionCompleta: transaccion ? { id: transaccion.id, tipo: typeof transaccion.id } : null
-          });
-          
-          // Verificar múltiples condiciones para asegurar que la transacción existe
-          if (transaccion && encontrada && transaccion.id === transaccionIdNum) {
-            console.log('✅ [DATOS ALMACENADOS] CONDICIÓN CUMPLIDA - Abriendo modal de detalle', { 
-              transaccionId: transaccion.id,
-              buscando: transaccionIdNum,
-              idsCoinciden: transaccion.id === transaccionIdNum
-            });
-            logger.success('NOTIFICATION', `Abriendo modal de detalle desde datos almacenados para transacción ${transaccionIdNum}`, { 
-              transactionId: transactionIdNum,
-              transaccionId: transaccion.id 
-            });
-            
-            // Limpiar notificación pendiente ya que la encontramos
-            setPendingNotification(null);
-            
-            // Abrir el modal inmediatamente
+          if (transaccion) {
+            logger.success('NOTIFICATION', `Abriendo modal de detalle desde datos almacenados para transacción ${transaccionIdNum} (desde caché)`, { transactionId: transaccionIdNum });
+            setPendingNotification(null); // Limpiar notificación pendiente
             setSelectedPendingTransaction(transaccion);
             setShowPendingDetailModal(true);
-            
-            console.log('✅ [DATOS ALMACENADOS] Estados actualizados inmediatamente', {
-              selectedPendingTransactionId: transaccion.id,
-              showPendingDetailModal: true
-            });
-            
             return true;
-          } else {
-            console.log('❌ [DATOS ALMACENADOS] CONDICIÓN NO CUMPLIDA', {
-              tieneTransaccion: !!transaccion,
-              encontrada,
-              idsCoinciden: transaccion?.id === transaccionIdNum,
-              transaccionId: transaccion?.id,
-              buscando: transaccionIdNum
-            });
           }
-          console.log('❌ [DATOS ALMACENADOS] Transacción no encontrada', { 
-            encontrada, 
-            transactionId: transaccionIdNum,
-            pendientesIds: pendientes.map((t: any) => t.id)
-          });
           return false;
         };
         
-        // Guardar notificación pendiente para que el efecto la procese cuando se carguen los pendientes
-        setPendingNotification(navData);
+        // Intentar buscar inmediatamente con caché
+        const encontradaEnCache = buscarYAbrirDetalle();
         
-        // Intentar buscar inmediatamente si ya hay pendientes cargados
-        if (pendientes.length > 0) {
-          if (!buscarYAbrirDetalle()) {
-            logger.warn('NOTIFICATION', 'Transacción no encontrada, guardada como pendiente para reintentar cuando se carguen más pendientes', { transactionId: transaccionIdNum });
-            // No abrir la lista todavía, esperar a que el efecto la procese
-          }
-        } else {
-          logger.debug('NOTIFICATION', 'Esperando a que se carguen los pendientes desde datos almacenados', { transactionId: transaccionIdNum });
-          // La notificación ya está guardada en pendingNotification, el efecto la procesará cuando se carguen los pendientes
+        if (!encontradaEnCache) {
+          // 2. Si no está en caché, hacer fetch directo al servidor (rápido, ~100-300ms)
+          logger.info('NOTIFICATION', 'Transacción no encontrada en caché, buscando en servidor...', { transactionId: transaccionIdNum });
+          
+          const buscarEnServidor = async () => {
+            try {
+              // Intentar buscar como transacción pendiente primero
+              const response = await fetch(apiUrl(`/api/transacciones/pendientes`), {
+                credentials: "include",
+              });
+              
+              if (response.ok) {
+                const todasPendientes = await response.json();
+                const transaccion = todasPendientes.find((t: any) => t.id === transaccionIdNum);
+                
+                if (transaccion) {
+                  logger.success('NOTIFICATION', `Transacción encontrada en servidor desde datos almacenados, abriendo modal`, { transactionId: transaccionIdNum });
+                  setPendingNotification(null); // Limpiar notificación pendiente
+                  setSelectedPendingTransaction(transaccion);
+                  setShowPendingDetailModal(true);
+                  return true;
+                }
+              }
+            } catch (error) {
+              console.error('Error buscando transacción en servidor desde datos almacenados:', error);
+            }
+            return false;
+          };
+          
+          // Ejecutar búsqueda en servidor (no bloquea, se ejecuta en paralelo)
+          buscarEnServidor().then((encontrada) => {
+            if (!encontrada) {
+              // Si tampoco se encuentra en servidor, guardar como pendiente para reintentar
+              logger.warn('NOTIFICATION', 'Transacción no encontrada, guardada como pendiente para reintentar', { transactionId: transaccionIdNum });
+              setPendingNotification(navData);
+            }
+          });
         }
       } else {
         logger.info('NOTIFICATION', 'No hay ID de transacción desde datos almacenados, abriendo lista de pendientes');
@@ -510,101 +511,108 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         setActiveModule('transacciones');
       }
       
+      // Invalidar y refetchear pendientes en background (no bloqueante) para mantener caché actualizado
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
+      queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes"] }).catch(() => {
+        // Ignorar errores de refetch, es en background
+      });
+      
       // Si hay un ID de transacción, buscar y abrir el modal de detalle directamente
       if (transactionId) {
         const transaccionIdNum = typeof transactionId === 'string' ? parseInt(transactionId, 10) : transactionId;
         logger.debug('NOTIFICATION', 'Buscando transacción con ID', { transactionId: transaccionIdNum });
         
-        // Función para buscar y abrir el modal de detalle
+        // ESTRATEGIA OPTIMIZADA: Intentar múltiples fuentes en paralelo
         const buscarYAbrirDetalle = () => {
-          console.log('🔍 Buscando transacción en pendientes:', { 
-            transactionId: transaccionIdNum, 
-            totalPendientes: pendientes.length,
-            idsDisponibles: pendientes.map((t: any) => t.id)
-          });
-          
+          // 1. Intentar inmediatamente con caché (más rápido)
           const transaccion = pendientes.find((t: any) => t.id === transaccionIdNum);
-          
-          console.log('📋 Resultado de búsqueda:', { 
-            encontrada: !!transaccion, 
-            transaccionId: transaccion?.id, 
-            buscando: transaccionIdNum,
-            tipoBuscando: typeof transaccionIdNum,
-            tiposEnPendientes: pendientes.map((t: any) => ({ id: t.id, tipo: typeof t.id }))
-          });
-          
-          logger.debug('NOTIFICATION', 'Transacción encontrada', { 
-            encontrada: !!transaccion, 
-            transactionId: transaccionIdNum,
-            transaccionId: transaccion?.id 
-          });
+          logger.info('NOTIFICATION', `Transacción encontrada en caché: ${transaccion ? 'Sí' : 'No'}`, { transactionId: transaccionIdNum, found: !!transaccion });
           
           if (transaccion) {
-            console.log('✅ Transacción encontrada, abriendo modal de detalle', transaccion);
-            logger.success('NOTIFICATION', `Abriendo modal de detalle para transacción ${transactionIdNum}`, { transactionId: transactionIdNum });
-            
-            // Usar setTimeout para asegurar que React procese los cambios de estado
-            setTimeout(() => {
-              setSelectedPendingTransaction(transaccion);
-              setShowPendingDetailModal(true);
-              console.log('✅ Estados actualizados: selectedPendingTransaction y showPendingDetailModal', {
-                selectedPendingTransaction: transaccion,
-                showPendingDetailModal: true
-              });
-            }, 0);
-            
+            logger.success('NOTIFICATION', `Abriendo modal de detalle para transacción ${transaccionIdNum} (desde caché)`, { transactionId: transaccionIdNum });
+            setSelectedPendingTransaction(transaccion);
+            setShowPendingDetailModal(true);
             return true;
           }
-          console.log('❌ Transacción no encontrada');
           return false;
         };
         
-        // Intentar buscar inmediatamente si ya hay pendientes cargados
-        if (pendientes.length > 0) {
-          if (!buscarYAbrirDetalle()) {
-            logger.warn('NOTIFICATION', 'Transacción no encontrada, esperando y reintentando', { transactionId: transaccionIdNum });
-            // Esperar más tiempo y reintentar varias veces
-            let intentos = 0;
-            const maxIntentos = 5;
-            const intervalo = setInterval(() => {
-              intentos++;
-              console.log(`🔄 Reintento ${intentos}/${maxIntentos} buscando transacción ${transaccionIdNum}`);
-              if (buscarYAbrirDetalle()) {
-                clearInterval(intervalo);
-              } else if (intentos >= maxIntentos) {
-                clearInterval(intervalo);
-                logger.warn('NOTIFICATION', 'Transacción no encontrada después de múltiples intentos, abriendo lista', { transactionId: transaccionIdNum });
-                setShowPendingModal(true);
+        // Intentar buscar inmediatamente con caché
+        const encontradaEnCache = buscarYAbrirDetalle();
+        
+        if (!encontradaEnCache) {
+          // 2. Si no está en caché, hacer fetch directo al servidor (rápido, ~100-300ms)
+          logger.info('NOTIFICATION', 'Transacción no encontrada en caché, buscando en servidor...', { transactionId: transaccionIdNum });
+          
+          const buscarEnServidor = async () => {
+            try {
+              // Intentar buscar como transacción pendiente primero
+              const response = await fetch(apiUrl(`/api/transacciones/pendientes`), {
+                credentials: "include",
+              });
+              
+              if (response.ok) {
+                const todasPendientes = await response.json();
+                const transaccion = todasPendientes.find((t: any) => t.id === transaccionIdNum);
+                
+                if (transaccion) {
+                  logger.success('NOTIFICATION', `Transacción encontrada en servidor, abriendo modal`, { transactionId: transaccionIdNum });
+                  setSelectedPendingTransaction(transaccion);
+                  setShowPendingDetailModal(true);
+                  return true;
+                }
               }
-            }, 500);
-          }
-        } else {
-          logger.debug('NOTIFICATION', 'Esperando a que se carguen los pendientes', { transactionId: transaccionIdNum });
-          // Esperar a que se carguen y luego buscar
-          let intentos = 0;
-          const maxIntentos = 10;
-          const intervalo = setInterval(() => {
-            intentos++;
-            console.log(`⏳ Esperando pendientes... intento ${intentos}/${maxIntentos}, pendientes: ${pendientes.length}`);
-            if (pendientes.length > 0) {
-              if (buscarYAbrirDetalle()) {
-                clearInterval(intervalo);
-              } else if (intentos >= maxIntentos) {
-                clearInterval(intervalo);
-                logger.warn('NOTIFICATION', 'Transacción no encontrada después de esperar, abriendo lista', { transactionId: transaccionIdNum });
-                setShowPendingModal(true);
-              }
-            } else if (intentos >= maxIntentos) {
-              clearInterval(intervalo);
-              logger.warn('NOTIFICATION', 'Pendientes no cargados después de esperar, abriendo lista', { transactionId: transaccionIdNum });
+            } catch (error) {
+              console.error('Error buscando transacción en servidor:', error);
+            }
+            return false;
+          };
+          
+          // Ejecutar búsqueda en servidor (no bloquea, se ejecuta en paralelo)
+          buscarEnServidor().then((encontrada) => {
+            if (!encontrada) {
+              // Si tampoco se encuentra en servidor, abrir lista de pendientes
+              logger.warn('NOTIFICATION', 'Transacción no encontrada, abriendo lista de pendientes', { transactionId: transaccionIdNum });
               setShowPendingModal(true);
             }
-          }, 500);
+          });
         }
       } else {
+        // Si no hay ID, abrir la lista de pendientes
         logger.info('NOTIFICATION', 'No hay ID de transacción, abriendo lista de pendientes');
         setShowPendingModal(true);
       }
+    }
+    
+    // Manejar notificación de transacción completada
+    if (isCompletedNotification && transactionId) {
+      // Cambiar al módulo de transacciones si no está ya ahí
+      if (activeModule !== 'transacciones') {
+        setActiveModule('transacciones');
+      }
+      
+      // Buscar la transacción completada directamente en el servidor (ya optimizado)
+      const buscarTransaccionCompletada = async () => {
+        try {
+          const transaccionIdNum = typeof transactionId === 'string' ? parseInt(transactionId, 10) : transactionId;
+          const response = await fetch(apiUrl(`/api/transacciones/${transaccionIdNum}`), {
+            credentials: "include",
+          });
+          if (response.ok) {
+            const transaccion = await response.json();
+            logger.success('NOTIFICATION', `Transacción completada encontrada, abriendo modal de detalle`, { transactionId: transaccionIdNum });
+            setSelectedTransaction(transaccion);
+            setShowTransactionDetailModal(true);
+            return true;
+          }
+        } catch (error) {
+          console.error('Error buscando transacción completada:', error);
+        }
+        return false;
+      };
+      
+      buscarTransaccionCompletada();
+      return;
     }
   };
 

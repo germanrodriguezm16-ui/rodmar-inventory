@@ -46,6 +46,10 @@ export function useSocket() {
 
       // Invalidar queries de transacciones principales
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
+      
+      // Invalidar pendientes si la transacción es pendiente (crítico para notificaciones)
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
 
       // Invalidar queries específicas según entidades afectadas
       if (affectedEntityTypes.includes("mina")) {
