@@ -1632,35 +1632,8 @@ export class DatabaseStorage implements IStorage {
       // NOTA: Las transacciones pendientes SÍ aparecen en las listas (para visualización)
       // pero NO afectan los cálculos de balance (se excluyen en updateRelatedBalances)
       
-      // Solo agregar filtro de ocultas específico del módulo si no se incluyen las ocultas
-      // IMPORTANTE: Las transacciones con null en ocultaEn* deben tratarse como no ocultas (visible)
-      // SOLUCIÓN: Usar or(isNull(...), eq(..., false)) - la forma estándar de drizzle-orm
-      if (!includeHidden) {
-        console.log(`🔍 [getTransaccionesForModule] Agregando filtro de ocultas para módulo: ${modulo}`);
-        switch (modulo) {
-          case 'comprador':
-            // Incluir transacciones con ocultaEnComprador = false O null (transacciones antiguas)
-            conditionsFrom.push(or(isNull(transacciones.ocultaEnComprador), eq(transacciones.ocultaEnComprador, false)));
-            conditionsTo.push(or(isNull(transacciones.ocultaEnComprador), eq(transacciones.ocultaEnComprador, false)));
-            break;
-          case 'mina':
-            // Incluir transacciones con ocultaEnMina = false O null (transacciones antiguas)
-            conditionsFrom.push(or(isNull(transacciones.ocultaEnMina), eq(transacciones.ocultaEnMina, false)));
-            conditionsTo.push(or(isNull(transacciones.ocultaEnMina), eq(transacciones.ocultaEnMina, false)));
-            break;
-          case 'volquetero':
-            // Incluir transacciones con ocultaEnVolquetero = false O null (transacciones antiguas)
-            conditionsFrom.push(or(isNull(transacciones.ocultaEnVolquetero), eq(transacciones.ocultaEnVolquetero, false)));
-            conditionsTo.push(or(isNull(transacciones.ocultaEnVolquetero), eq(transacciones.ocultaEnVolquetero, false)));
-            break;
-          case 'general':
-          default:
-            // Incluir transacciones con ocultaEnGeneral = false O null (transacciones antiguas)
-            conditionsFrom.push(or(isNull(transacciones.ocultaEnGeneral), eq(transacciones.ocultaEnGeneral, false)));
-            conditionsTo.push(or(isNull(transacciones.ocultaEnGeneral), eq(transacciones.ocultaEnGeneral, false)));
-            break;
-        }
-      }
+      // NO agregar filtro de ocultas en la consulta SQL - lo haremos después para evitar problemas con null
+      // Las transacciones con null en ocultaEn* se tratarán como no ocultas (visible) en el filtrado posterior
       
       if (userId) {
         conditionsFrom.push(eq(transacciones.userId, userId));
@@ -1747,11 +1720,27 @@ export class DatabaseStorage implements IStorage {
 
       // Combinar resultados y eliminar duplicados
       const allResults = [...resultsFrom, ...resultsTo];
-      const uniqueResults = allResults.filter((transaction, index, self) => 
+      let uniqueResults = allResults.filter((transaction, index, self) => 
         index === self.findIndex(t => t.id === transaction.id)
       );
       
-      console.log(`🔍 [getTransaccionesForModule] Resultados únicos: ${uniqueResults.length}`);
+      console.log(`🔍 [getTransaccionesForModule] Resultados únicos antes de filtrar ocultas: ${uniqueResults.length}`);
+      
+      // Filtrar transacciones ocultas DESPUÉS de obtener los resultados (para manejar null correctamente)
+      if (!includeHidden) {
+        const campoOculta = modulo === 'comprador' ? 'ocultaEnComprador' :
+                           modulo === 'mina' ? 'ocultaEnMina' :
+                           modulo === 'volquetero' ? 'ocultaEnVolquetero' :
+                           'ocultaEnGeneral';
+        
+        uniqueResults = uniqueResults.filter((transaction: any) => {
+          const valorOculta = transaction[campoOculta];
+          // Incluir si es null (transacciones antiguas) o false (no oculta)
+          return valorOculta === null || valorOculta === false;
+        });
+        
+        console.log(`🔍 [getTransaccionesForModule] Resultados únicos después de filtrar ocultas: ${uniqueResults.length}`);
+      }
 
       // Ordenar transacciones: completadas por fecha de finalización (updatedAt), pendientes por fecha de solicitud (fecha)
       uniqueResults.sort((a, b) => {
