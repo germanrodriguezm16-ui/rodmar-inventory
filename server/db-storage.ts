@@ -1631,31 +1631,30 @@ export class DatabaseStorage implements IStorage {
       // pero NO afectan los cálculos de balance (se excluyen en updateRelatedBalances)
       
       // Solo agregar filtro de ocultas específico del módulo si no se incluyen las ocultas
-      // IMPORTANTE: Usar or(isNull(...), eq(..., false)) para incluir transacciones con null O false
-      // NOTA: Las transacciones con null en ocultaEn* deben tratarse como no ocultas (visible)
-      // SOLUCIÓN: Envolver or() en una expresión que drizzle pueda manejar correctamente
+      // IMPORTANTE: Las transacciones con null en ocultaEn* deben tratarse como no ocultas (visible)
+      // SOLUCIÓN SIMPLE: Usar SQL directo con sintaxis correcta para manejar null
       if (!includeHidden) {
         switch (modulo) {
           case 'comprador':
             // Incluir transacciones con ocultaEnComprador = false O null (transacciones antiguas)
-            conditionsFrom.push(or(isNull(transacciones.ocultaEnComprador), eq(transacciones.ocultaEnComprador, false)));
-            conditionsTo.push(or(isNull(transacciones.ocultaEnComprador), eq(transacciones.ocultaEnComprador, false)));
+            conditionsFrom.push(sql`(${transacciones.ocultaEnComprador} IS NULL OR ${transacciones.ocultaEnComprador} = ${false})`);
+            conditionsTo.push(sql`(${transacciones.ocultaEnComprador} IS NULL OR ${transacciones.ocultaEnComprador} = ${false})`);
             break;
           case 'mina':
             // Incluir transacciones con ocultaEnMina = false O null (transacciones antiguas)
-            conditionsFrom.push(or(isNull(transacciones.ocultaEnMina), eq(transacciones.ocultaEnMina, false)));
-            conditionsTo.push(or(isNull(transacciones.ocultaEnMina), eq(transacciones.ocultaEnMina, false)));
+            conditionsFrom.push(sql`(${transacciones.ocultaEnMina} IS NULL OR ${transacciones.ocultaEnMina} = ${false})`);
+            conditionsTo.push(sql`(${transacciones.ocultaEnMina} IS NULL OR ${transacciones.ocultaEnMina} = ${false})`);
             break;
           case 'volquetero':
             // Incluir transacciones con ocultaEnVolquetero = false O null (transacciones antiguas)
-            conditionsFrom.push(or(isNull(transacciones.ocultaEnVolquetero), eq(transacciones.ocultaEnVolquetero, false)));
-            conditionsTo.push(or(isNull(transacciones.ocultaEnVolquetero), eq(transacciones.ocultaEnVolquetero, false)));
+            conditionsFrom.push(sql`(${transacciones.ocultaEnVolquetero} IS NULL OR ${transacciones.ocultaEnVolquetero} = ${false})`);
+            conditionsTo.push(sql`(${transacciones.ocultaEnVolquetero} IS NULL OR ${transacciones.ocultaEnVolquetero} = ${false})`);
             break;
           case 'general':
           default:
             // Incluir transacciones con ocultaEnGeneral = false O null (transacciones antiguas)
-            conditionsFrom.push(or(isNull(transacciones.ocultaEnGeneral), eq(transacciones.ocultaEnGeneral, false)));
-            conditionsTo.push(or(isNull(transacciones.ocultaEnGeneral), eq(transacciones.ocultaEnGeneral, false)));
+            conditionsFrom.push(sql`(${transacciones.ocultaEnGeneral} IS NULL OR ${transacciones.ocultaEnGeneral} = ${false})`);
+            conditionsTo.push(sql`(${transacciones.ocultaEnGeneral} IS NULL OR ${transacciones.ocultaEnGeneral} = ${false})`);
             break;
         }
       }
