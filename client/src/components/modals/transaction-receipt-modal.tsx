@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Share2, X } from "lucide-react";
+import { formatDateWithDaySpanish } from "@/lib/date-utils";
 import type { TransaccionWithSocio } from "@shared/schema";
 import type { Mina, Comprador, Volquetero } from "@shared/schema";
 
@@ -69,38 +70,19 @@ export function TransactionReceiptModal({
   };
 
   // Formatear fecha con día de la semana (ej: "Lun. 25 Nov 2025")
+  // Usar formatDateWithDaySpanish y convertir formato de "Lun. 25/11/2025" a "Lun. 25 Nov 2025"
   const formatDate = (date: string | Date): string => {
-    let dateObj: Date;
-    
-    // Extraer siempre la parte de fecha (YYYY-MM-DD) sin importar el formato
-    let dateString: string;
-    if (typeof date === 'string') {
-      // Si es string ISO (ej: "2025-07-02T00:00:00.000Z"), extraer solo la parte de fecha
-      dateString = date.includes('T') ? date.split('T')[0] : date;
-    } else {
-      // Si ya es Date, extraer componentes usando UTC para evitar problemas de zona horaria
-      // Usar UTC para obtener la fecha correcta sin importar la zona horaria local
-      const year = date.getUTCFullYear();
-      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(date.getUTCDate()).padStart(2, '0');
-      dateString = `${year}-${month}-${day}`;
+    // Usar la función que ya funciona correctamente
+    const formatted = formatDateWithDaySpanish(date);
+    // Convertir formato de "Lun. 25/11/2025" a "Lun. 25 Nov 2025"
+    const match = formatted.match(/^(\w+\.)\s+(\d+)\/(\d+)\/(\d+)$/);
+    if (match) {
+      const [, diaSemana, dia, mesNum, año] = match;
+      const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const mes = meses[parseInt(mesNum) - 1];
+      return `${diaSemana} ${dia} ${mes} ${año}`;
     }
-    
-    // Crear fecha en mediodía local usando solo la parte de fecha extraída
-    const [year, month, day] = dateString.split('-').map(Number);
-    dateObj = new Date(year, month - 1, day, 12, 0, 0);
-    
-    // Días de la semana abreviados
-    const diasSemana = ['Dom.', 'Lun.', 'Mar.', 'Mié.', 'Jue.', 'Vie.', 'Sáb.'];
-    // Meses abreviados
-    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    
-    const diaSemana = diasSemana[dateObj.getDay()];
-    const dia = dateObj.getDate();
-    const mes = meses[dateObj.getMonth()];
-    const año = dateObj.getFullYear();
-    
-    return `${diaSemana} ${dia} ${mes} ${año}`;
+    return formatted;
   };
 
   // Generar imagen del comprobante usando Canvas

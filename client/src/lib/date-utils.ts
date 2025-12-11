@@ -58,8 +58,12 @@ export function formatDateWithDaySpanish(date: Date | string): string {
     const dateString = date.includes('T') ? date.split('T')[0] : date;
     dateObj = new Date(dateString + 'T12:00:00'); // Mediodía para evitar problemas de zona horaria
   } else {
-    // Si ya es Date, crear nueva fecha con solo la parte de fecha
-    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    // Si ya es Date, extraer componentes usando UTC para evitar problemas de zona horaria
+    // Usar UTC para obtener la fecha correcta sin importar la zona horaria local
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
     dateObj = new Date(dateString + 'T12:00:00');
   }
   

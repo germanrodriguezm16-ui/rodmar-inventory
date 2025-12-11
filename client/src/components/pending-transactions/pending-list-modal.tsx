@@ -7,6 +7,7 @@ import { useState } from "react";
 import { PendingDetailModal } from "./pending-detail-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { CompleteTransactionModal } from "@/components/modals/complete-transaction-modal";
+import { formatDateWithDaySpanish } from "@/lib/date-utils";
 
 interface TransaccionPendiente {
   id: number;
@@ -48,12 +49,19 @@ export function PendingListModal({ open, onClose }: PendingListModalProps) {
   };
 
   const formatDate = (dateString: string) => {
-    // Extraer solo la parte de fecha para evitar problemas de zona horaria
-    // Si viene como string ISO (ej: "2025-07-02T00:00:00.000Z"), extraer solo YYYY-MM-DD
+    // Usar formatDateWithDaySpanish y convertir a formato corto
+    const formatted = formatDateWithDaySpanish(dateString);
+    // Convertir de "Lun. 25/11/2025" a formato corto "25 nov 2025"
+    const match = formatted.match(/^(\w+\.)\s+(\d+)\/(\d+)\/(\d+)$/);
+    if (match) {
+      const [, , dia, mesNum, año] = match;
+      const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const mes = meses[parseInt(mesNum) - 1];
+      return `${dia} ${mes} ${año}`;
+    }
+    // Fallback: usar Intl.DateTimeFormat
     const dateOnly = dateString.includes('T') ? dateString.split('T')[0] : dateString;
     const [year, month, day] = dateOnly.split('-').map(Number);
-    // Crear fecha en mediodía local usando solo la parte de fecha extraída
-    // Esto evita que JavaScript interprete la fecha en UTC
     const date = new Date(year, month - 1, day, 12, 0, 0);
     return new Intl.DateTimeFormat("es-CO", {
       year: "numeric",

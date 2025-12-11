@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiUrl } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
+import { formatDateWithDaySpanish } from "@/lib/date-utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,12 +55,19 @@ export function PendingDetailModal({ open, transaccion, onClose, onEdit, onCompl
   };
 
   const formatDate = (dateString: string) => {
-    // Extraer solo la parte de fecha para evitar problemas de zona horaria
-    // Si viene como string ISO (ej: "2025-07-02T00:00:00.000Z"), extraer solo YYYY-MM-DD
+    // Usar formatDateWithDaySpanish y convertir a formato largo
+    const formatted = formatDateWithDaySpanish(dateString);
+    // Convertir de "Lun. 25/11/2025" a formato largo
+    const match = formatted.match(/^(\w+\.)\s+(\d+)\/(\d+)\/(\d+)$/);
+    if (match) {
+      const [, , dia, mesNum, año] = match;
+      const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      const mes = meses[parseInt(mesNum) - 1];
+      return `${dia} de ${mes} de ${año}`;
+    }
+    // Fallback: usar Intl.DateTimeFormat
     const dateOnly = dateString.includes('T') ? dateString.split('T')[0] : dateString;
     const [year, month, day] = dateOnly.split('-').map(Number);
-    // Crear fecha en mediodía local usando solo la parte de fecha extraída
-    // Esto evita que JavaScript interprete la fecha en UTC
     const date = new Date(year, month - 1, day, 12, 0, 0);
     return new Intl.DateTimeFormat("es-CO", {
       year: "numeric",
