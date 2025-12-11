@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import React from "react"
+import React, { Fragment } from "react"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -335,7 +335,7 @@ export function highlightText(text: string | null | undefined, searchTerm: strin
 
   // Renderizar con resaltado en amarillo
   return (
-    <>
+    <Fragment>
       {parts.map((part, index) => (
         part.isMatch ? (
           <mark key={index} className="bg-yellow-300 dark:bg-yellow-500/50 px-0.5 rounded">
@@ -345,7 +345,7 @@ export function highlightText(text: string | null | undefined, searchTerm: strin
           <span key={index}>{part.text}</span>
         )
       ))}
-    </>
+    </Fragment>
   );
 }
 
