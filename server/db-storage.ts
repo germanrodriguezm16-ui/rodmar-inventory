@@ -1673,7 +1673,8 @@ export class DatabaseStorage implements IStorage {
           // Campos adicionales para compatibilidad
           tipoSocio: transacciones.deQuienTipo,
           createdAt: transacciones.horaInterna,
-          hasVoucher: sql<boolean>`CASE WHEN ${transacciones.voucher} IS NOT NULL AND ${transacciones.voucher} != '' THEN true ELSE false END`
+          // Usar tiene_voucher en lugar de calcular hasVoucher desde voucher (que está excluido)
+          hasVoucher: sql<boolean>`CASE WHEN ${transacciones.tiene_voucher} = true THEN true ELSE false END`
         })
         .from(transacciones)
         .where(and(...conditionsFrom))
@@ -1710,7 +1711,8 @@ export class DatabaseStorage implements IStorage {
           // Campos adicionales para compatibilidad
           tipoSocio: transacciones.paraQuienTipo,
           createdAt: transacciones.horaInterna,
-          hasVoucher: sql<boolean>`CASE WHEN ${transacciones.voucher} IS NOT NULL AND ${transacciones.voucher} != '' THEN true ELSE false END`
+          // Usar tiene_voucher en lugar de calcular hasVoucher desde voucher (que está excluido)
+          hasVoucher: sql<boolean>`CASE WHEN ${transacciones.tiene_voucher} = true THEN true ELSE false END`
         })
         .from(transacciones)
         .where(and(...conditionsTo))
