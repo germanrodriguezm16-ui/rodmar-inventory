@@ -31,7 +31,6 @@ import BottomNavigation from "@/components/layout/bottom-navigation";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { usePagination } from "@/hooks/usePagination";
 import { apiUrl } from "@/lib/api";
-import { highlightText, highlightValue } from "@/lib/highlight-text";
 
 import type { TransaccionWithSocio } from "@shared/schema";
 
