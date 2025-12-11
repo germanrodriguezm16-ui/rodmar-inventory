@@ -150,7 +150,7 @@ export async function notifyPendingTransaction(
 
   const result = await sendPushNotification(
     userId,
-    'Nueva transacción pendiente',
+    'Se creó solicitud',
     `${tipoCapitalizado} ${transaccion.paraQuienNombre} – ${valorFormateado}`,
     {
       type: 'pending-transaction',
@@ -187,7 +187,7 @@ export async function notifyPendingTransactionEdited(
 
   const result = await sendPushNotification(
     userId,
-    'Solicitud se editó',
+    'Se actualizó solicitud',
     `${tipoCapitalizado} ${transaccion.paraQuienNombre} – ${valorFormateado}`,
     {
       type: 'pending-transaction-edited',
@@ -224,7 +224,7 @@ export async function notifyPendingTransactionCompleted(
 
   const result = await sendPushNotification(
     userId,
-    'Solicitud se completó',
+    'Se completó solicitud',
     `${tipoCapitalizado} ${transaccion.paraQuienNombre} – ${valorFormateado}`,
     {
       type: 'pending-transaction-completed',
