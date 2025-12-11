@@ -1613,178 +1613,185 @@ export class DatabaseStorage implements IStorage {
 
   // Nueva función que maneja el filtrado por módulo específico
   async getTransaccionesForModule(tipoSocio: string, socioId: number, userId?: string, includeHidden: boolean = false, modulo: 'general' | 'comprador' | 'mina' | 'volquetero' = 'general'): Promise<TransaccionWithSocio[]> {
-    // Buscar transacciones que VIENEN DESDE el socio O que VAN HACIA el socio
-    const conditionsFrom = [
-      eq(transacciones.deQuienTipo, tipoSocio), 
-      eq(transacciones.deQuienId, socioId.toString())
-    ];
-    const conditionsTo = [
-      eq(transacciones.paraQuienTipo, tipoSocio), 
-      eq(transacciones.paraQuienId, socioId.toString())
-    ];
-    
-    // NOTA: Las transacciones pendientes SÍ aparecen en las listas (para visualización)
-    // pero NO afectan los cálculos de balance (se excluyen en updateRelatedBalances)
-    
-    // Solo agregar filtro de ocultas específico del módulo si no se incluyen las ocultas
-    if (!includeHidden) {
-      switch (modulo) {
-        case 'comprador':
-          conditionsFrom.push(eq(transacciones.ocultaEnComprador, false));
-          conditionsTo.push(eq(transacciones.ocultaEnComprador, false));
-          break;
-        case 'mina':
-          conditionsFrom.push(eq(transacciones.ocultaEnMina, false));
-          conditionsTo.push(eq(transacciones.ocultaEnMina, false));
-          break;
-        case 'volquetero':
-          conditionsFrom.push(eq(transacciones.ocultaEnVolquetero, false));
-          conditionsTo.push(eq(transacciones.ocultaEnVolquetero, false));
-          break;
-        case 'general':
-        default:
-          conditionsFrom.push(eq(transacciones.ocultaEnGeneral, false));
-          conditionsTo.push(eq(transacciones.ocultaEnGeneral, false));
-          break;
-      }
-    }
-    
-    if (userId) {
-      conditionsFrom.push(eq(transacciones.userId, userId));
-      conditionsTo.push(eq(transacciones.userId, userId));
-    }
-
-    // Obtener transacciones que vienen DESDE el socio (sin vouchers para optimización)
-    const resultsFrom = await db
-      .select({
-        id: transacciones.id,
-        deQuienTipo: transacciones.deQuienTipo,
-        deQuienId: transacciones.deQuienId,
-        paraQuienTipo: transacciones.paraQuienTipo,
-        paraQuienId: transacciones.paraQuienId,
-        postobonCuenta: transacciones.postobonCuenta,
-        concepto: transacciones.concepto,
-        valor: transacciones.valor,
-        fecha: transacciones.fecha,
-        horaInterna: transacciones.horaInterna,
-        formaPago: transacciones.formaPago,
-        // voucher: transacciones.voucher, // EXCLUIDO para optimización
-        comentario: transacciones.comentario,
-        tipoTransaccion: transacciones.tipoTransaccion,
-        oculta: transacciones.oculta,
-        ocultaEnComprador: transacciones.ocultaEnComprador,
-        ocultaEnMina: transacciones.ocultaEnMina,
-        ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
-        ocultaEnGeneral: transacciones.ocultaEnGeneral,
-        estado: transacciones.estado,
-        detalle_solicitud: transacciones.detalle_solicitud,
-        codigo_solicitud: transacciones.codigo_solicitud,
-        tiene_voucher: transacciones.tiene_voucher,
-        userId: transacciones.userId,
-        updatedAt: transacciones.updatedAt,
-        // Campos adicionales para compatibilidad
-        tipoSocio: transacciones.deQuienTipo,
-        createdAt: transacciones.horaInterna,
-        hasVoucher: sql<boolean>`CASE WHEN ${transacciones.voucher} IS NOT NULL AND ${transacciones.voucher} != '' THEN true ELSE false END`
-      })
-      .from(transacciones)
-      .where(and(...conditionsFrom))
-      .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna));
-
-    // Obtener transacciones que van HACIA el socio (sin vouchers para optimización)
-    const resultsTo = await db
-      .select({
-        id: transacciones.id,
-        deQuienTipo: transacciones.deQuienTipo,
-        deQuienId: transacciones.deQuienId,
-        paraQuienTipo: transacciones.paraQuienTipo,
-        paraQuienId: transacciones.paraQuienId,
-        postobonCuenta: transacciones.postobonCuenta,
-        concepto: transacciones.concepto,
-        valor: transacciones.valor,
-        fecha: transacciones.fecha,
-        horaInterna: transacciones.horaInterna,
-        formaPago: transacciones.formaPago,
-        // voucher: transacciones.voucher, // EXCLUIDO para optimización
-        comentario: transacciones.comentario,
-        tipoTransaccion: transacciones.tipoTransaccion,
-        oculta: transacciones.oculta,
-        ocultaEnComprador: transacciones.ocultaEnComprador,
-        ocultaEnMina: transacciones.ocultaEnMina,
-        ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
-        ocultaEnGeneral: transacciones.ocultaEnGeneral,
-        estado: transacciones.estado,
-        detalle_solicitud: transacciones.detalle_solicitud,
-        codigo_solicitud: transacciones.codigo_solicitud,
-        tiene_voucher: transacciones.tiene_voucher,
-        userId: transacciones.userId,
-        updatedAt: transacciones.updatedAt,
-        // Campos adicionales para compatibilidad
-        tipoSocio: transacciones.paraQuienTipo,
-        createdAt: transacciones.horaInterna,
-        hasVoucher: sql<boolean>`CASE WHEN ${transacciones.voucher} IS NOT NULL AND ${transacciones.voucher} != '' THEN true ELSE false END`
-      })
-      .from(transacciones)
-      .where(and(...conditionsTo))
-      .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna));
-
-    // Combinar resultados y eliminar duplicados
-    const allResults = [...resultsFrom, ...resultsTo];
-    const uniqueResults = allResults.filter((transaction, index, self) => 
-      index === self.findIndex(t => t.id === transaction.id)
-    );
-
-    // Ordenar transacciones: completadas por fecha de finalización (updatedAt), pendientes por fecha de solicitud (fecha)
-    uniqueResults.sort((a, b) => {
-      // Para transacciones completadas, usar updatedAt (fecha de finalización)
-      // Para transacciones pendientes, usar fecha (fecha de solicitud)
-      const getSortDate = (transaction: any) => {
-        if (transaction.estado === 'completada' && transaction.updatedAt) {
-          return new Date(transaction.updatedAt).getTime();
+    return wrapDbOperation(async () => {
+      // Buscar transacciones que VIENEN DESDE el socio O que VAN HACIA el socio
+      const conditionsFrom = [
+        eq(transacciones.deQuienTipo, tipoSocio), 
+        eq(transacciones.deQuienId, socioId.toString())
+      ];
+      const conditionsTo = [
+        eq(transacciones.paraQuienTipo, tipoSocio), 
+        eq(transacciones.paraQuienId, socioId.toString())
+      ];
+      
+      // NOTA: Las transacciones pendientes SÍ aparecen en las listas (para visualización)
+      // pero NO afectan los cálculos de balance (se excluyen en updateRelatedBalances)
+      
+      // Solo agregar filtro de ocultas específico del módulo si no se incluyen las ocultas
+      // IMPORTANTE: Usar or(isNull(...), eq(..., false)) para incluir transacciones antiguas con null
+      if (!includeHidden) {
+        switch (modulo) {
+          case 'comprador':
+            // Incluir transacciones con ocultaEnComprador = false O null (transacciones antiguas)
+            conditionsFrom.push(or(isNull(transacciones.ocultaEnComprador), eq(transacciones.ocultaEnComprador, false)));
+            conditionsTo.push(or(isNull(transacciones.ocultaEnComprador), eq(transacciones.ocultaEnComprador, false)));
+            break;
+          case 'mina':
+            // Incluir transacciones con ocultaEnMina = false O null (transacciones antiguas)
+            conditionsFrom.push(or(isNull(transacciones.ocultaEnMina), eq(transacciones.ocultaEnMina, false)));
+            conditionsTo.push(or(isNull(transacciones.ocultaEnMina), eq(transacciones.ocultaEnMina, false)));
+            break;
+          case 'volquetero':
+            // Incluir transacciones con ocultaEnVolquetero = false O null (transacciones antiguas)
+            conditionsFrom.push(or(isNull(transacciones.ocultaEnVolquetero), eq(transacciones.ocultaEnVolquetero, false)));
+            conditionsTo.push(or(isNull(transacciones.ocultaEnVolquetero), eq(transacciones.ocultaEnVolquetero, false)));
+            break;
+          case 'general':
+          default:
+            // Incluir transacciones con ocultaEnGeneral = false O null (transacciones antiguas)
+            conditionsFrom.push(or(isNull(transacciones.ocultaEnGeneral), eq(transacciones.ocultaEnGeneral, false)));
+            conditionsTo.push(or(isNull(transacciones.ocultaEnGeneral), eq(transacciones.ocultaEnGeneral, false)));
+            break;
         }
-        return new Date(transaction.fecha || 0).getTime();
-      };
+      }
       
-      const dateA = getSortDate(a);
-      const dateB = getSortDate(b);
+      if (userId) {
+        conditionsFrom.push(eq(transacciones.userId, userId));
+        conditionsTo.push(eq(transacciones.userId, userId));
+      }
+
+      // Obtener transacciones que vienen DESDE el socio (sin vouchers para optimización)
+      const resultsFrom = await db
+        .select({
+          id: transacciones.id,
+          deQuienTipo: transacciones.deQuienTipo,
+          deQuienId: transacciones.deQuienId,
+          paraQuienTipo: transacciones.paraQuienTipo,
+          paraQuienId: transacciones.paraQuienId,
+          postobonCuenta: transacciones.postobonCuenta,
+          concepto: transacciones.concepto,
+          valor: transacciones.valor,
+          fecha: transacciones.fecha,
+          horaInterna: transacciones.horaInterna,
+          formaPago: transacciones.formaPago,
+          // voucher: transacciones.voucher, // EXCLUIDO para optimización
+          comentario: transacciones.comentario,
+          tipoTransaccion: transacciones.tipoTransaccion,
+          oculta: transacciones.oculta,
+          ocultaEnComprador: transacciones.ocultaEnComprador,
+          ocultaEnMina: transacciones.ocultaEnMina,
+          ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
+          ocultaEnGeneral: transacciones.ocultaEnGeneral,
+          estado: transacciones.estado,
+          detalle_solicitud: transacciones.detalle_solicitud,
+          codigo_solicitud: transacciones.codigo_solicitud,
+          tiene_voucher: transacciones.tiene_voucher,
+          userId: transacciones.userId,
+          updatedAt: transacciones.updatedAt,
+          // Campos adicionales para compatibilidad
+          tipoSocio: transacciones.deQuienTipo,
+          createdAt: transacciones.horaInterna,
+          hasVoucher: sql<boolean>`CASE WHEN ${transacciones.voucher} IS NOT NULL AND ${transacciones.voucher} != '' THEN true ELSE false END`
+        })
+        .from(transacciones)
+        .where(and(...conditionsFrom))
+        .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna));
+
+      // Obtener transacciones que van HACIA el socio (sin vouchers para optimización)
+      const resultsTo = await db
+        .select({
+          id: transacciones.id,
+          deQuienTipo: transacciones.deQuienTipo,
+          deQuienId: transacciones.deQuienId,
+          paraQuienTipo: transacciones.paraQuienTipo,
+          paraQuienId: transacciones.paraQuienId,
+          postobonCuenta: transacciones.postobonCuenta,
+          concepto: transacciones.concepto,
+          valor: transacciones.valor,
+          fecha: transacciones.fecha,
+          horaInterna: transacciones.horaInterna,
+          formaPago: transacciones.formaPago,
+          // voucher: transacciones.voucher, // EXCLUIDO para optimización
+          comentario: transacciones.comentario,
+          tipoTransaccion: transacciones.tipoTransaccion,
+          oculta: transacciones.oculta,
+          ocultaEnComprador: transacciones.ocultaEnComprador,
+          ocultaEnMina: transacciones.ocultaEnMina,
+          ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
+          ocultaEnGeneral: transacciones.ocultaEnGeneral,
+          estado: transacciones.estado,
+          detalle_solicitud: transacciones.detalle_solicitud,
+          codigo_solicitud: transacciones.codigo_solicitud,
+          tiene_voucher: transacciones.tiene_voucher,
+          userId: transacciones.userId,
+          updatedAt: transacciones.updatedAt,
+          // Campos adicionales para compatibilidad
+          tipoSocio: transacciones.paraQuienTipo,
+          createdAt: transacciones.horaInterna,
+          hasVoucher: sql<boolean>`CASE WHEN ${transacciones.voucher} IS NOT NULL AND ${transacciones.voucher} != '' THEN true ELSE false END`
+        })
+        .from(transacciones)
+        .where(and(...conditionsTo))
+        .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna));
+
+      // Combinar resultados y eliminar duplicados
+      const allResults = [...resultsFrom, ...resultsTo];
+      const uniqueResults = allResults.filter((transaction, index, self) => 
+        index === self.findIndex(t => t.id === transaction.id)
+      );
+
+      // Ordenar transacciones: completadas por fecha de finalización (updatedAt), pendientes por fecha de solicitud (fecha)
+      uniqueResults.sort((a, b) => {
+        // Para transacciones completadas, usar updatedAt (fecha de finalización)
+        // Para transacciones pendientes, usar fecha (fecha de solicitud)
+        const getSortDate = (transaction: any) => {
+          if (transaction.estado === 'completada' && transaction.updatedAt) {
+            return new Date(transaction.updatedAt).getTime();
+          }
+          return new Date(transaction.fecha || 0).getTime();
+        };
+        
+        const dateA = getSortDate(a);
+        const dateB = getSortDate(b);
+        
+        return dateB - dateA; // Más reciente primero
+      });
+
+      // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 3 queries en lugar de N queries
+      const [allMinas, allCompradores, allVolqueteros] = await Promise.all([
+        db.select({ id: minas.id, nombre: minas.nombre }).from(minas),
+        db.select({ id: compradores.id, nombre: compradores.nombre }).from(compradores),
+        db.select({ id: volqueteros.id, nombre: volqueteros.nombre }).from(volqueteros),
+      ]);
+
+      // Crear Maps para lookup O(1)
+      const minasMap = new Map<number, string>();
+      const compradoresMap = new Map<number, string>();
+      const volqueterosMap = new Map<number, string>();
+
+      allMinas.forEach(m => minasMap.set(m.id, m.nombre));
+      allCompradores.forEach(c => compradoresMap.set(c.id, c.nombre));
+      allVolqueteros.forEach(v => volqueterosMap.set(v.id, v.nombre));
+
+      // Obtener el nombre del socio una vez (usando Map)
+      const socioNombre = this.getSocioNombreFromMap(tipoSocio, socioId, minasMap, compradoresMap, volqueterosMap);
       
-      return dateB - dateA; // Más reciente primero
+      // Aplicar actualización de conceptos y nombres de socios a cada transacción (usando Maps)
+      const updatedResults = uniqueResults.map((t) => {
+        // Actualizar concepto dinámicamente con nombres actuales (versión síncrona)
+        const conceptoActualizado = this.updateConceptoWithCurrentNamesSync(t, minasMap, compradoresMap, volqueterosMap);
+        
+        return {
+          ...t,
+          socioId: socioId,
+          socioNombre: socioNombre,
+          concepto: conceptoActualizado,
+          voucher: null, // Excluir voucher para optimización
+        };
+      });
+
+      return updatedResults;
     });
-
-    // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 3 queries en lugar de N queries
-    const [allMinas, allCompradores, allVolqueteros] = await Promise.all([
-      db.select({ id: minas.id, nombre: minas.nombre }).from(minas),
-      db.select({ id: compradores.id, nombre: compradores.nombre }).from(compradores),
-      db.select({ id: volqueteros.id, nombre: volqueteros.nombre }).from(volqueteros),
-    ]);
-
-    // Crear Maps para lookup O(1)
-    const minasMap = new Map<number, string>();
-    const compradoresMap = new Map<number, string>();
-    const volqueterosMap = new Map<number, string>();
-
-    allMinas.forEach(m => minasMap.set(m.id, m.nombre));
-    allCompradores.forEach(c => compradoresMap.set(c.id, c.nombre));
-    allVolqueteros.forEach(v => volqueterosMap.set(v.id, v.nombre));
-
-    // Obtener el nombre del socio una vez (usando Map)
-    const socioNombre = this.getSocioNombreFromMap(tipoSocio, socioId, minasMap, compradoresMap, volqueterosMap);
-    
-    // Aplicar actualización de conceptos y nombres de socios a cada transacción (usando Maps)
-    const updatedResults = uniqueResults.map((t) => {
-      // Actualizar concepto dinámicamente con nombres actuales (versión síncrona)
-      const conceptoActualizado = this.updateConceptoWithCurrentNamesSync(t, minasMap, compradoresMap, volqueterosMap);
-      
-      return {
-        ...t,
-        socioId: socioId,
-        socioNombre: socioNombre,
-        concepto: conceptoActualizado,
-        voucher: null, // Excluir voucher para optimización
-      };
-    });
-
-    return updatedResults;
   }
 
   // Método auxiliar para obtener el nombre del socio (versión async - mantiene compatibilidad)
