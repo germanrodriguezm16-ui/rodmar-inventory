@@ -72,19 +72,23 @@ export function TransactionReceiptModal({
   const formatDate = (date: string | Date): string => {
     let dateObj: Date;
     
+    // Extraer siempre la parte de fecha (YYYY-MM-DD) sin importar el formato
+    let dateString: string;
     if (typeof date === 'string') {
-      // Si es string, extraer solo la parte de fecha para evitar problemas de zona horaria
-      const dateString = date.includes('T') ? date.split('T')[0] : date;
-      // Crear fecha en mediodía para evitar problemas de zona horaria UTC
-      const [year, month, day] = dateString.split('-').map(Number);
-      dateObj = new Date(year, month - 1, day, 12, 0, 0);
+      // Si es string ISO (ej: "2025-07-02T00:00:00.000Z"), extraer solo la parte de fecha
+      dateString = date.includes('T') ? date.split('T')[0] : date;
     } else {
-      // Si ya es Date, crear nueva fecha con solo la parte de fecha en mediodía
-      const year = date.getFullYear();
-      const month = date.getMonth();
-      const day = date.getDate();
-      dateObj = new Date(year, month, day, 12, 0, 0);
+      // Si ya es Date, extraer componentes usando UTC para evitar problemas de zona horaria
+      // Usar UTC para obtener la fecha correcta sin importar la zona horaria local
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      dateString = `${year}-${month}-${day}`;
     }
+    
+    // Crear fecha en mediodía local usando solo la parte de fecha extraída
+    const [year, month, day] = dateString.split('-').map(Number);
+    dateObj = new Date(year, month - 1, day, 12, 0, 0);
     
     // Días de la semana abreviados
     const diasSemana = ['Dom.', 'Lun.', 'Mar.', 'Mié.', 'Jue.', 'Vie.', 'Sáb.'];

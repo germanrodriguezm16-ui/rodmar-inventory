@@ -55,9 +55,11 @@ export function PendingDetailModal({ open, transaccion, onClose, onEdit, onCompl
 
   const formatDate = (dateString: string) => {
     // Extraer solo la parte de fecha para evitar problemas de zona horaria
+    // Si viene como string ISO (ej: "2025-07-02T00:00:00.000Z"), extraer solo YYYY-MM-DD
     const dateOnly = dateString.includes('T') ? dateString.split('T')[0] : dateString;
     const [year, month, day] = dateOnly.split('-').map(Number);
-    // Crear fecha en mediodía para evitar problemas de zona horaria UTC
+    // Crear fecha en mediodía local usando solo la parte de fecha extraída
+    // Esto evita que JavaScript interprete la fecha en UTC
     const date = new Date(year, month - 1, day, 12, 0, 0);
     return new Intl.DateTimeFormat("es-CO", {
       year: "numeric",
