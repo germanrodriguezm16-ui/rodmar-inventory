@@ -48,7 +48,11 @@ export function PendingListModal({ open, onClose }: PendingListModalProps) {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // Extraer solo la parte de fecha para evitar problemas de zona horaria
+    const dateOnly = dateString.includes('T') ? dateString.split('T')[0] : dateString;
+    const [year, month, day] = dateOnly.split('-').map(Number);
+    // Crear fecha en mediodía para evitar problemas de zona horaria UTC
+    const date = new Date(year, month - 1, day, 12, 0, 0);
     return new Intl.DateTimeFormat("es-CO", {
       year: "numeric",
       month: "short",

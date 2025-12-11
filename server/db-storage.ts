@@ -1681,6 +1681,7 @@ export class DatabaseStorage implements IStorage {
         codigo_solicitud: transacciones.codigo_solicitud,
         tiene_voucher: transacciones.tiene_voucher,
         userId: transacciones.userId,
+        updatedAt: transacciones.updatedAt,
         // Campos adicionales para compatibilidad
         tipoSocio: transacciones.deQuienTipo,
         createdAt: transacciones.horaInterna,
@@ -1717,6 +1718,7 @@ export class DatabaseStorage implements IStorage {
         codigo_solicitud: transacciones.codigo_solicitud,
         tiene_voucher: transacciones.tiene_voucher,
         userId: transacciones.userId,
+        updatedAt: transacciones.updatedAt,
         // Campos adicionales para compatibilidad
         tipoSocio: transacciones.paraQuienTipo,
         createdAt: transacciones.horaInterna,
@@ -1732,8 +1734,22 @@ export class DatabaseStorage implements IStorage {
       index === self.findIndex(t => t.id === transaction.id)
     );
 
-    // Ordenar por fecha de transacción (fecha editada por usuario)
-    uniqueResults.sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
+    // Ordenar transacciones: completadas por fecha de finalización (updatedAt), pendientes por fecha de solicitud (fecha)
+    uniqueResults.sort((a, b) => {
+      // Para transacciones completadas, usar updatedAt (fecha de finalización)
+      // Para transacciones pendientes, usar fecha (fecha de solicitud)
+      const getSortDate = (transaction: any) => {
+        if (transaction.estado === 'completada' && transaction.updatedAt) {
+          return new Date(transaction.updatedAt).getTime();
+        }
+        return new Date(transaction.fecha || 0).getTime();
+      };
+      
+      const dateA = getSortDate(a);
+      const dateB = getSortDate(b);
+      
+      return dateB - dateA; // Más reciente primero
+    });
 
     // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 3 queries en lugar de N queries
     const [allMinas, allCompradores, allVolqueteros] = await Promise.all([

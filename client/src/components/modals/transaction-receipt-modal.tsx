@@ -73,16 +73,17 @@ export function TransactionReceiptModal({
     let dateObj: Date;
     
     if (typeof date === 'string') {
-      // Si es string, puede venir en formato YYYY-MM-DD o ISO
-      if (date.includes('T')) {
-        dateObj = new Date(date);
-      } else {
-        // Formato YYYY-MM-DD - crear fecha en zona horaria local para evitar día anterior
-        const [year, month, day] = date.split('-').map(Number);
-        dateObj = new Date(year, month - 1, day);
-      }
+      // Si es string, extraer solo la parte de fecha para evitar problemas de zona horaria
+      const dateString = date.includes('T') ? date.split('T')[0] : date;
+      // Crear fecha en mediodía para evitar problemas de zona horaria UTC
+      const [year, month, day] = dateString.split('-').map(Number);
+      dateObj = new Date(year, month - 1, day, 12, 0, 0);
     } else {
-      dateObj = date;
+      // Si ya es Date, crear nueva fecha con solo la parte de fecha en mediodía
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      const day = date.getDate();
+      dateObj = new Date(year, month, day, 12, 0, 0);
     }
     
     // Días de la semana abreviados

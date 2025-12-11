@@ -976,8 +976,17 @@ export class MemStorage implements IStorage {
         }
       };
       
-      const fechaStringA = extractDateString(a.fecha);  
-      const fechaStringB = extractDateString(b.fecha);
+      // Para transacciones completadas, usar updatedAt (fecha de finalización)
+      // Para transacciones pendientes, usar fecha (fecha de solicitud)
+      const getSortDate = (transaction: any) => {
+        if (transaction.estado === 'completada' && transaction.updatedAt) {
+          return extractDateString(transaction.updatedAt);
+        }
+        return extractDateString(transaction.fecha);
+      };
+      
+      const fechaStringA = getSortDate(a);  
+      const fechaStringB = getSortDate(b);
       
       // Criterio primario: comparar por día (más reciente primero)
       if (fechaStringA !== fechaStringB) {
@@ -985,6 +994,15 @@ export class MemStorage implements IStorage {
       }
       
       // CRITERIO SECUNDARIO MEJORADO: Si son del mismo día, priorizar por precisión temporal
+      // Para transacciones completadas, usar updatedAt como timestamp
+      if (a.estado === 'completada' && b.estado === 'completada') {
+        const updatedAtA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const updatedAtB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        if (updatedAtA !== updatedAtB) {
+          return updatedAtB - updatedAtA; // Más reciente primero
+        }
+      }
+      
       // 1. Transacciones con horaInterna (más precisas) van primero  
       if (a.horaInterna && b.horaInterna) {
         return new Date(b.horaInterna).getTime() - new Date(a.horaInterna).getTime();

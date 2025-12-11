@@ -1,6 +1,25 @@
 import { format } from "date-fns";
 
 /**
+ * IMPORTANTE: ZONA HORARIA COLOMBIANA (UTC-5)
+ * 
+ * Al crear funciones que trabajen con fechas, SIEMPRE tener en cuenta la zona horaria colombiana (UTC-5).
+ * 
+ * Problemas comunes:
+ * - Al crear `new Date()` desde un string ISO (ej: "2025-12-07T00:00:00.000Z"), JavaScript interpreta en UTC.
+ *   En Colombia (UTC-5), medianoche UTC se muestra como 7pm del día anterior.
+ * 
+ * Soluciones recomendadas:
+ * 1. Extraer solo la parte de fecha (YYYY-MM-DD) y crear fecha en mediodía local:
+ *    const [year, month, day] = dateString.split('-').map(Number);
+ *    const date = new Date(year, month - 1, day, 12, 0, 0);
+ * 
+ * 2. Usar funciones de este archivo que ya manejan correctamente la zona horaria.
+ * 
+ * 3. Para fechas de finalización (updatedAt), usar directamente el timestamp sin conversión.
+ */
+
+/**
  * Formatea una fecha mostrando las iniciales del día de la semana
  * Ejemplo: "Lun. 29/06/2025"
  */
