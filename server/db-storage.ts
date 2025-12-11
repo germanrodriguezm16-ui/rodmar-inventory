@@ -1669,7 +1669,8 @@ export class DatabaseStorage implements IStorage {
           codigo_solicitud: transacciones.codigo_solicitud,
           tiene_voucher: transacciones.tiene_voucher,
           userId: transacciones.userId,
-          updatedAt: transacciones.updatedAt,
+          // updatedAt no existe en el schema, usar horaInterna como alternativa
+          updatedAt: transacciones.horaInterna,
           // Campos adicionales para compatibilidad
           tipoSocio: transacciones.deQuienTipo,
           createdAt: transacciones.horaInterna,
@@ -1707,7 +1708,8 @@ export class DatabaseStorage implements IStorage {
           codigo_solicitud: transacciones.codigo_solicitud,
           tiene_voucher: transacciones.tiene_voucher,
           userId: transacciones.userId,
-          updatedAt: transacciones.updatedAt,
+          // updatedAt no existe en el schema, usar horaInterna como alternativa
+          updatedAt: transacciones.horaInterna,
           // Campos adicionales para compatibilidad
           tipoSocio: transacciones.paraQuienTipo,
           createdAt: transacciones.horaInterna,
