@@ -1628,7 +1628,8 @@ export class DatabaseStorage implements IStorage {
       // pero NO afectan los cálculos de balance (se excluyen en updateRelatedBalances)
       
       // Solo agregar filtro de ocultas específico del módulo si no se incluyen las ocultas
-      // IMPORTANTE: Usar SQL para manejar null correctamente - incluir transacciones con null O false
+      // IMPORTANTE: Usar SQL directo para manejar null correctamente - incluir transacciones con null O false
+      // NOTA: Las transacciones con null en ocultaEn* deben tratarse como no ocultas (visible)
       if (!includeHidden) {
         switch (modulo) {
           case 'comprador':
