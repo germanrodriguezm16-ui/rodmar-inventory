@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import React from "react"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -278,4 +279,102 @@ export function groupByDate<T>(array: T[], dateField: keyof T): Record<string, T
     groups[date].push(item);
     return groups;
   }, {} as Record<string, T[]>);
+}
+
+/**
+ * Resalta el texto encontrado en amarillo dentro de un string
+ * @param text - El texto completo donde buscar
+ * @param searchTerm - El término de búsqueda a resaltar
+ * @returns JSX con el texto resaltado
+ */
+export function highlightText(text: string | null | undefined, searchTerm: string | null | undefined): React.ReactNode {
+  if (!text || !searchTerm || !searchTerm.trim()) {
+    return text || '';
+  }
+
+  const textStr = String(text);
+  const searchLower = searchTerm.toLowerCase();
+  const textLower = textStr.toLowerCase();
+
+  // Si no hay coincidencia, retornar texto sin cambios
+  if (!textLower.includes(searchLower)) {
+    return textStr;
+  }
+
+  // Encontrar todas las coincidencias (case-insensitive)
+  const parts: Array<{ text: string; isMatch: boolean }> = [];
+  let lastIndex = 0;
+  let searchIndex = textLower.indexOf(searchLower, lastIndex);
+
+  while (searchIndex !== -1) {
+    // Agregar texto antes de la coincidencia
+    if (searchIndex > lastIndex) {
+      parts.push({
+        text: textStr.substring(lastIndex, searchIndex),
+        isMatch: false
+      });
+    }
+
+    // Agregar texto coincidente
+    parts.push({
+      text: textStr.substring(searchIndex, searchIndex + searchTerm.length),
+      isMatch: true
+    });
+
+    lastIndex = searchIndex + searchTerm.length;
+    searchIndex = textLower.indexOf(searchLower, lastIndex);
+  }
+
+  // Agregar texto restante
+  if (lastIndex < textStr.length) {
+    parts.push({
+      text: textStr.substring(lastIndex),
+      isMatch: false
+    });
+  }
+
+  // Renderizar con resaltado en amarillo
+  return (
+    <>
+      {parts.map((part, index) => (
+        part.isMatch ? (
+          <mark key={index} className="bg-yellow-300 dark:bg-yellow-500/50 px-0.5 rounded">
+            {part.text}
+          </mark>
+        ) : (
+          <span key={index}>{part.text}</span>
+        )
+      ))}
+    </>
+  );
+}
+
+/**
+ * Resalta el texto encontrado en un valor numérico formateado
+ * @param value - El valor numérico o string formateado
+ * @param searchTerm - El término de búsqueda
+ * @returns JSX con el valor resaltado donde coincida
+ */
+export function highlightValue(value: string | number | null | undefined, searchTerm: string | null | undefined): React.ReactNode {
+  if (value === null || value === undefined || !searchTerm || !searchTerm.trim()) {
+    return value !== null && value !== undefined ? String(value) : '';
+  }
+
+  // Convertir a string y remover formato de moneda para búsqueda
+  const valueStr = String(value);
+  const searchStr = searchTerm.replace(/[^\d]/g, ''); // Solo números del término de búsqueda
+
+  if (!searchStr) {
+    // Si el término de búsqueda no tiene números, buscar en el string completo
+    return highlightText(valueStr, searchTerm);
+  }
+
+  const valueNumeric = valueStr.replace(/[^\d]/g, ''); // Solo números del valor
+
+  if (!valueNumeric.includes(searchStr)) {
+    return valueStr;
+  }
+
+  // Si hay coincidencia numérica, resaltar en el valor formateado original
+  return highlightText(valueStr, searchTerm);
 }

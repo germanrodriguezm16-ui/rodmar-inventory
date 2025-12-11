@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Comprador, TransaccionWithSocio, ViajeWithDetails } from "@shared/schema";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiUrl } from "@/lib/api";
 // Función para obtener día de la semana abreviado
@@ -1503,13 +1503,17 @@ function CompradorTransaccionesTab({
   const transaccionesFiltradas = useMemo(() => {
     let filtered = todasTransacciones;
 
-    // Filtro de búsqueda (concepto, valor)
+    // Filtro de búsqueda (concepto, comentario y monto/valor)
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
+      const searchNumeric = searchTerm.replace(/[^\d]/g, ''); // Solo números para búsqueda en valor
       filtered = filtered.filter(transaccion => {
         const concepto = (transaccion.concepto || '').toLowerCase();
-        const valor = transaccion.valor?.toString() || '';
-        return concepto.includes(searchLower) || valor.includes(searchLower);
+        const comentario = (transaccion.comentario || '').toLowerCase();
+        const valor = String(transaccion.valor || '').replace(/[^\d]/g, ''); // Solo números del valor
+        return concepto.includes(searchLower) || 
+               comentario.includes(searchLower) ||
+               (searchNumeric && valor.includes(searchNumeric));
       });
     }
 
@@ -2064,7 +2068,7 @@ function CompradorTransaccionesTab({
                     </td>
                     <td className="p-3 text-sm">
                       <div className="flex items-center gap-2">
-                        <span>{transaccion.concepto}</span>
+                        <span>{highlightText(transaccion.concepto, searchTerm)}</span>
                         {transaccion.isTemporal ? (
                           <Badge 
                             variant="outline" 
@@ -2149,9 +2153,11 @@ function CompradorTransaccionesTab({
                           if (transaccion.isTemporal) {
                             // Si origen es el comprador actual → negativo
                             if (transaccion.deQuienTipo === 'comprador' && transaccion.deQuienId === compradorId.toString()) {
-                              return '-' + formatCurrency(Math.abs(valor));
+                              const valorText = '-' + formatCurrency(Math.abs(valor));
+                              return highlightValue(valorText, searchTerm);
                             } else {
-                              return '+' + formatCurrency(Math.abs(valor));
+                              const valorText = '+' + formatCurrency(Math.abs(valor));
+                              return highlightValue(valorText, searchTerm);
                             }
                           }
                           
@@ -2162,12 +2168,14 @@ function CompradorTransaccionesTab({
                           // LÓGICA CORREGIDA ESPECÍFICA PARA COMPRADORES:
                           // 1. Transacciones HACIA este comprador = NEGATIVO (rojo)
                           if (realTransaction?.paraQuienTipo === 'comprador' && realTransaction?.paraQuienId === compradorId.toString()) {
-                            return '-' + formatCurrency(Math.abs(valor));
+                            const valorText = '-' + formatCurrency(Math.abs(valor));
+                            return highlightValue(valorText, searchTerm);
                           }
                           
                           // 2. Transacciones DESDE este comprador = POSITIVO (verde)
                           if (realTransaction?.deQuienTipo === 'comprador' && realTransaction?.deQuienId === compradorId.toString()) {
-                            return '+' + formatCurrency(Math.abs(valor));
+                            const valorText = '+' + formatCurrency(Math.abs(valor));
+                            return highlightValue(valorText, searchTerm);
                           }
                           
                           // 3. Otras transacciones (no involucran este comprador específico)
@@ -2176,20 +2184,24 @@ function CompradorTransaccionesTab({
                                                    realTransaction.paraQuienTipo === 'banco';
                             
                             if (isToRodMarOrBank) {
-                              return '+' + formatCurrency(Math.abs(valor));
+                              const valorText = '+' + formatCurrency(Math.abs(valor));
+                              return highlightValue(valorText, searchTerm);
                             } else {
-                              return '-' + formatCurrency(Math.abs(valor));
+                              const valorText = '-' + formatCurrency(Math.abs(valor));
+                              return highlightValue(valorText, searchTerm);
                             }
                           }
                         }
                         
                         // Para transacciones de viajes = NEGATIVAS en compradores
                         if (transaccion.tipo === "Viaje") {
-                          return '-' + formatCurrency(Math.abs(valor));
+                          const valorText = '-' + formatCurrency(Math.abs(valor));
+                          return highlightValue(valorText, searchTerm);
                         }
                         
                         // Fallback
-                        return formatCurrency(valor);
+                        const valorText = formatCurrency(valor);
+                        return highlightValue(valorText, searchTerm);
                       })()
                     }
                     </td>
@@ -2391,15 +2403,17 @@ function CompradorTransaccionesTab({
                   
                   {/* Concepto compacto */}
                   <p className="text-xs text-foreground leading-tight truncate">
-                    {transaccion.concepto}
+                    {highlightText(transaccion.concepto, searchTerm)}
                   </p>
                   {/* Comentario compacto si existe */}
                   {transaccion.comentario && transaccion.comentario.trim() && (
                     <p className="text-xs text-gray-500 leading-tight truncate mt-0.5">
-                      {transaccion.comentario.length > 40 ? 
-                        `${transaccion.comentario.substring(0, 40)}...` : 
-                        transaccion.comentario
-                      }
+                      {(() => {
+                        const comentarioText = transaccion.comentario.length > 40 ? 
+                          `${transaccion.comentario.substring(0, 40)}...` : 
+                          transaccion.comentario;
+                        return highlightText(comentarioText, searchTerm);
+                      })()}
                     </p>
                   )}
                 </div>

@@ -27,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeftRight, Plus, Download, Filter, GripVertical } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, highlightText, highlightValue } from "@/lib/utils";
 import type { TransaccionWithSocio } from "@shared/schema";
 
 // Definir categorías para organizar las transacciones
@@ -41,9 +41,10 @@ const TRANSACTION_CATEGORIES = {
 // Componente de transacción arrastrable
 interface DraggableTransactionProps {
   transaction: TransaccionWithSocio;
+  searchTerm?: string;
 }
 
-function DraggableTransaction({ transaction }: DraggableTransactionProps) {
+function DraggableTransaction({ transaction, searchTerm = "" }: DraggableTransactionProps) {
   const {
     attributes,
     listeners,
@@ -78,17 +79,22 @@ function DraggableTransaction({ transaction }: DraggableTransactionProps) {
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-sm">{transaction.concepto}</p>
+                  <p className="font-medium text-sm">{highlightText(transaction.concepto, searchTerm)}</p>
                   <p className="text-xs text-muted-foreground">
                     {transaction.socioNombre} • {formatDate(transaction.fecha)}
                   </p>
+                  {transaction.comentario && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {highlightText(transaction.comentario, searchTerm)}
+                    </p>
+                  )}
                 </div>
                 
                 <div className="text-right">
                   <p className={`font-semibold text-sm ${
                     parseFloat(transaction.valor) >= 0 ? "text-green-600" : "text-red-600"
                   }`}>
-                    {formatCurrency(transaction.valor)}
+                    {highlightValue(formatCurrency(transaction.valor), searchTerm)}
                   </p>
                   
                   <Badge variant="outline" className="text-xs">
@@ -275,9 +281,14 @@ export default function TransaccionesDND() {
   // Filtrar transacciones según los criterios de búsqueda
   const getFilteredTransactions = (transactions: TransaccionWithSocio[]) => {
     return transactions.filter(transaction => {
+      const searchLower = searchTerm.toLowerCase();
+      const searchNumeric = searchTerm.replace(/[^\d]/g, ''); // Solo números para búsqueda en valor
+      const valor = String(transaction.valor || '').replace(/[^\d]/g, ''); // Solo números del valor
       const matchesSearch = !searchTerm || 
-        transaction.socioNombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.concepto.toLowerCase().includes(searchTerm.toLowerCase());
+        transaction.socioNombre?.toLowerCase().includes(searchLower) ||
+        transaction.concepto.toLowerCase().includes(searchLower) ||
+        (transaction.comentario || '').toLowerCase().includes(searchLower) ||
+        (searchNumeric && valor.includes(searchNumeric));
       
       const matchesTipoSocio = !selectedTipoSocio || selectedTipoSocio === "all" || transaction.tipoSocio === selectedTipoSocio;
       
@@ -340,6 +351,7 @@ export default function TransaccionesDND() {
                 <DraggableTransaction
                   key={transaction.id}
                   transaction={transaction}
+                  searchTerm={searchTerm}
                 />
               ))}
             </DroppableCategory>

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import TripCard from "@/components/trip-card";
 import BottomNavigation from "@/components/layout/bottom-navigation";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
@@ -667,13 +667,18 @@ export default function VolqueteroDetail() {
     );
     
     // Aplicar filtro de búsqueda
+    // Filtro de búsqueda (concepto, comentario y monto/valor)
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(t => 
-        t.concepto?.toLowerCase().includes(searchLower) ||
-        t.comentario?.toLowerCase().includes(searchLower) ||
-        t.valor?.toString().includes(searchLower)
-      );
+      const searchNumeric = searchTerm.replace(/[^\d]/g, ''); // Solo números para búsqueda en valor
+      filtered = filtered.filter(t => {
+        const concepto = (t.concepto || '').toLowerCase();
+        const comentario = (t.comentario || '').toLowerCase();
+        const valor = String(t.valor || '').replace(/[^\d]/g, ''); // Solo números del valor
+        return concepto.includes(searchLower) ||
+               comentario.includes(searchLower) ||
+               (searchNumeric && valor.includes(searchNumeric));
+      });
     }
     
     // Aplicar filtro de balance
@@ -1177,7 +1182,7 @@ export default function VolqueteroDetail() {
                               </TableCell>
                               <TableCell className="p-3 text-sm">
                                 <div className="flex items-center gap-2">
-                                  <span>{transaccion.concepto}</span>
+                                  <span>{highlightText(transaccion.concepto, searchTerm)}</span>
                                   <Badge 
                                     variant="outline" 
                                     className="text-xs px-1.5 py-0.5"
@@ -1185,6 +1190,12 @@ export default function VolqueteroDetail() {
                                     {transaccion.tipo === "Manual" ? "M" : transaccion.tipo === "Temporal" ? "T" : "V"}
                                   </Badge>
                                 </div>
+                                {/* Comentario si existe */}
+                                {transaccion.comentario && transaccion.comentario.trim() && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {highlightText(transaccion.comentario, searchTerm)}
+                                  </div>
+                                )}
                               </TableCell>
                               <TableCell className={`p-3 text-sm text-right font-medium ${
                                 (() => {
@@ -1201,12 +1212,14 @@ export default function VolqueteroDetail() {
                                   }
                                 })()
                               }`}>
-                                {transaccion.tipo === "Viaje" 
-                                  ? `+${formatCurrency(Math.abs(valor))}`
-                                  : valor >= 0 
-                                    ? `+${formatCurrency(valor)}`
-                                    : `-${formatCurrency(Math.abs(valor))}`
-                                }
+                                {(() => {
+                                  const valorText = transaccion.tipo === "Viaje" 
+                                    ? `+${formatCurrency(Math.abs(valor))}`
+                                    : valor >= 0 
+                                      ? `+${formatCurrency(valor)}`
+                                      : `-${formatCurrency(Math.abs(valor))}`;
+                                  return highlightValue(valorText, searchTerm);
+                                })()}
                               </TableCell>
                               <TableCell className="p-3 text-center whitespace-nowrap">
                                 <div className="flex items-center justify-center gap-1">
@@ -1377,15 +1390,17 @@ export default function VolqueteroDetail() {
                                 )}
                               </div>
                               <div className="text-xs sm:text-sm text-gray-900 truncate pr-1">
-                                {transaccion.concepto}
+                                {highlightText(transaccion.concepto, searchTerm)}
                               </div>
                               {/* Comentario compacto si existe */}
                               {transaccion.comentario && transaccion.comentario.trim() && (
                                 <div className="text-xs text-gray-500 mt-0.5 leading-tight">
-                                  {transaccion.comentario.length > 50 ? 
-                                    `${transaccion.comentario.substring(0, 50)}...` : 
-                                    transaccion.comentario
-                                  }
+                                  {(() => {
+                                    const comentarioText = transaccion.comentario.length > 50 ? 
+                                      `${transaccion.comentario.substring(0, 50)}...` : 
+                                      transaccion.comentario;
+                                    return highlightText(comentarioText, searchTerm);
+                                  })()}
                                 </div>
                               )}
                       </div>

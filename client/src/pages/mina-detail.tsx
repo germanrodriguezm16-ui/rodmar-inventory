@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Mina, TransaccionWithSocio, ViajeWithDetails } from "@shared/schema";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -1489,20 +1489,24 @@ export default function MinaDetail() {
                             )}
                           </div>
                           <div className="text-xs sm:text-sm text-gray-900 truncate pr-1">
-                            {transaccion.concepto && transaccion.concepto.includes('data:image') ? 
-                              '[Imagen]' : 
-                              transaccion.tipo === "Temporal" ? 
-                                `${transaccion.concepto} (Temporal)` :
-                                transaccion.concepto
-                            }
+                            {(() => {
+                              const conceptoText = transaccion.concepto && transaccion.concepto.includes('data:image') ? 
+                                '[Imagen]' : 
+                                transaccion.tipo === "Temporal" ? 
+                                  `${transaccion.concepto} (Temporal)` :
+                                  transaccion.concepto;
+                              return highlightText(conceptoText, searchTerm);
+                            })()}
                           </div>
                           {/* Comentario compacto si existe */}
                           {transaccion.comentario && transaccion.comentario.trim() && (
                             <div className="text-xs text-gray-500 mt-0.5 leading-tight">
-                              {transaccion.comentario.length > 50 ? 
-                                `${transaccion.comentario.substring(0, 50)}...` : 
-                                transaccion.comentario
-                              }
+                              {(() => {
+                                const comentarioText = transaccion.comentario.length > 50 ? 
+                                  `${transaccion.comentario.substring(0, 50)}...` : 
+                                  transaccion.comentario;
+                                return highlightText(comentarioText, searchTerm);
+                              })()}
                             </div>
                           )}
                         </div>
@@ -1530,17 +1534,19 @@ export default function MinaDetail() {
                             {(() => {
                               const valor = parseFloat(transaccion.valor || '0');
                               
+                              let valorText = '';
                               if (transaccion.deQuienTipo === 'viaje') {
-                                return `+$ ${valor.toLocaleString()}`;
+                                valorText = `+$ ${valor.toLocaleString()}`;
                               } else if (transaccion.deQuienTipo === 'mina' && transaccion.deQuienId === minaId.toString()) {
-                                return `+$ ${valor.toLocaleString()}`; // DESDE esta mina = ingreso positivo
+                                valorText = `+$ ${valor.toLocaleString()}`; // DESDE esta mina = ingreso positivo
                               } else if (transaccion.paraQuienTipo === 'mina' && transaccion.paraQuienId === minaId.toString()) {
-                                return `-$ ${valor.toLocaleString()}`; // HACIA esta mina = egreso negativo
+                                valorText = `-$ ${valor.toLocaleString()}`; // HACIA esta mina = egreso negativo
                               } else if (transaccion.paraQuienTipo === 'rodmar' || transaccion.paraQuienTipo === 'banco') {
-                                return `+$ ${valor.toLocaleString()}`; // Hacia RodMar/Banco = positivo
+                                valorText = `+$ ${valor.toLocaleString()}`; // Hacia RodMar/Banco = positivo
                               } else {
-                                return `$ ${valor.toLocaleString()}`; // Fallback sin signo
+                                valorText = `$ ${valor.toLocaleString()}`; // Fallback sin signo
                               }
+                              return highlightValue(valorText, searchTerm);
                             })()}
                           </span>
                           

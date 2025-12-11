@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ArrowLeftRight, Plus, Download, Filter, Edit, Trash2, CheckSquare, Square, CalendarDays, DollarSign, ArrowUp, ArrowDown } from "lucide-react";
 // Formateo de fechas se maneja directamente en el componente
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import TransactionModal from "@/components/forms/transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
@@ -31,6 +31,7 @@ import BottomNavigation from "@/components/layout/bottom-navigation";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { usePagination } from "@/hooks/usePagination";
 import { apiUrl } from "@/lib/api";
+import { highlightText, highlightValue } from "@/lib/highlight-text";
 
 import type { TransaccionWithSocio } from "@shared/schema";
 
@@ -382,15 +383,20 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
   const filteredAndSortedTransactions = useMemo(() => {
     let filtered = [...allTransactions];
 
-    // Filtro de búsqueda (texto)
+    // Filtro de búsqueda (texto) - buscar en concepto, comentario y monto (valor)
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
+      const searchNumeric = searchTerm.replace(/[^\d]/g, ''); // Solo números para búsqueda en valor
       filtered = filtered.filter(t => {
         const concepto = cleanConcepto(t.concepto || '').toLowerCase();
+        const comentario = (t.comentario || '').toLowerCase();
+        const valor = String(t.valor || '').replace(/[^\d]/g, ''); // Solo números del valor
         const socioNombre = cleanSocioNombre(t.socioNombre || '').toLowerCase();
         const deQuien = (t.deQuien || '').toLowerCase();
         const paraQuien = (t.paraQuien || '').toLowerCase();
         return concepto.includes(searchLower) || 
+               comentario.includes(searchLower) ||
+               (searchNumeric && valor.includes(searchNumeric)) ||
                socioNombre.includes(searchLower) ||
                deQuien.includes(searchLower) ||
                paraQuien.includes(searchLower);
@@ -999,8 +1005,14 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
                         
                         {/* Concepto */}
                         <p className="text-sm text-muted-foreground mb-1 line-clamp-1">
-                          {cleanConcepto(transaction.concepto)}
+                          {highlightText(cleanConcepto(transaction.concepto), searchTerm)}
                         </p>
+                        {/* Comentario si existe */}
+                        {transaction.comentario && (
+                          <p className="text-xs text-muted-foreground mb-1 line-clamp-1">
+                            {highlightText(transaction.comentario, searchTerm)}
+                          </p>
+                        )}
                         
                         {/* Información inferior compacta */}
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -1097,7 +1109,8 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
                             }
                           }
                           
-                          return formatCurrency(displayValue.toString());
+                          const valorText = formatCurrency(displayValue.toString());
+                          return highlightValue(valorText, searchTerm);
                         })()}
                       </div>
                       

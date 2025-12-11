@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import { ArrowLeft, TrendingUp, TrendingDown, Filter, X, Download, Image, Plus, Edit, Search, Trash2, Eye } from "lucide-react";
 import { TransaccionWithSocio } from "@shared/schema";
 import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subWeeks, subMonths, subYears } from "date-fns";
@@ -375,14 +375,19 @@ export default function RodMarCuentaDetail() {
   const transaccionesReales = useMemo(() => {
     let filtered = [...allTransaccionesReales];
 
-    // Filtro de búsqueda (texto)
+    // Filtro de búsqueda (texto) - buscar en concepto, comentario y monto (valor)
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
+      const searchNumeric = searchTerm.replace(/[^\d]/g, ''); // Solo números para búsqueda en valor
       filtered = filtered.filter(t => {
         const concepto = (t.concepto || '').toLowerCase();
+        const comentario = (t.comentario || '').toLowerCase();
+        const valor = String(t.valor || '').replace(/[^\d]/g, ''); // Solo números del valor
         const deQuien = (t.deQuien || '').toLowerCase();
         const paraQuien = (t.paraQuien || '').toLowerCase();
         return concepto.includes(searchLower) || 
+               comentario.includes(searchLower) ||
+               (searchNumeric && valor.includes(searchNumeric)) ||
                deQuien.includes(searchLower) ||
                paraQuien.includes(searchLower);
       });
@@ -870,20 +875,24 @@ export default function RodMarCuentaDetail() {
                       )}
                     </div>
                     <div className="text-xs sm:text-sm text-gray-900 truncate pr-1">
-                      {transaccion.concepto && transaccion.concepto.includes('data:image') ? 
-                        '[Imagen]' : 
-                        transaccion.esTemporal ? 
-                          `${transaccion.concepto} (Temporal)` :
-                          transaccion.concepto
-                      }
+                      {(() => {
+                        const conceptoText = transaccion.concepto && transaccion.concepto.includes('data:image') ? 
+                          '[Imagen]' : 
+                          transaccion.esTemporal ? 
+                            `${transaccion.concepto} (Temporal)` :
+                            transaccion.concepto;
+                        return highlightText(conceptoText, searchTerm);
+                      })()}
                     </div>
                     {/* Comentario compacto si existe */}
                     {transaccion.comentario && transaccion.comentario.trim() && (
                       <div className="text-xs text-gray-500 mt-0.5 leading-tight">
-                        {transaccion.comentario.length > 50 ? 
-                          `${transaccion.comentario.substring(0, 50)}...` : 
-                          transaccion.comentario
-                        }
+                        {(() => {
+                          const comentarioText = transaccion.comentario.length > 50 ? 
+                            `${transaccion.comentario.substring(0, 50)}...` : 
+                            transaccion.comentario;
+                          return highlightText(comentarioText, searchTerm);
+                        })()}
                       </div>
                     )}
                   </div>

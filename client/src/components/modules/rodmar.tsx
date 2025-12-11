@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { User, Calculator, Building2, ShoppingCart, DollarSign, Banknote, Search, CalendarDays, ArrowUp, ArrowDown, ImageIcon, Plus, X, BarChart3, TrendingUp, ChevronRight, Edit, Trash2, Eye } from "lucide-react";
 
 import { formatDateWithDaySpanish } from "@/lib/date-utils";
+import { highlightText, highlightValue } from "@/lib/utils";
 
 // Tipo para los filtros de fecha (idéntico a Minas)
 type DateFilterType = "todos" | "exactamente" | "entre" | "despues-de" | "antes-de" | "hoy" | "ayer" | "esta-semana" | "semana-pasada" | "este-mes" | "mes-pasado" | "este-año" | "año-pasado";
@@ -960,14 +961,19 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
   const baseFilteredTransactions = useMemo(() => {
     let filtered = [...allBaseFilteredTransactions];
 
-    // Filtro de búsqueda (texto)
+    // Filtro de búsqueda (texto) - buscar en concepto, comentario y monto (valor)
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
+      const searchNumeric = searchTerm.replace(/[^\d]/g, ''); // Solo números para búsqueda en valor
       filtered = filtered.filter(t => {
         const concepto = (t.concepto || '').toLowerCase();
+        const comentario = (t.comentario || '').toLowerCase();
+        const valor = String(t.valor || '').replace(/[^\d]/g, ''); // Solo números del valor
         const deQuien = (t.deQuien || '').toLowerCase();
         const paraQuien = (t.paraQuien || '').toLowerCase();
         return concepto.includes(searchLower) || 
+               comentario.includes(searchLower) ||
+               (searchNumeric && valor.includes(searchNumeric)) ||
                deQuien.includes(searchLower) ||
                paraQuien.includes(searchLower);
       });
@@ -1471,9 +1477,10 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                     }`}>
                       {(() => {
                         const valor = parseFloat(transaccion.valor || '0');
-                        return transaccion.paraQuienTipo === 'postobon' ? 
+                        const valorText = transaccion.paraQuienTipo === 'postobon' ? 
                           `-$ ${valor.toLocaleString()}` : 
                           `+$ ${valor.toLocaleString()}`;
+                        return highlightValue(valorText, searchTerm);
                       })()}
                     </span>
 
@@ -1944,14 +1951,19 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
   const lcdmTransactions = useMemo(() => {
     let filtered = [...allLcdmTransactions];
 
-    // Filtro de búsqueda (texto)
+    // Filtro de búsqueda (texto) - buscar en concepto, comentario y monto (valor)
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
+      const searchNumeric = searchTerm.replace(/[^\d]/g, ''); // Solo números para búsqueda en valor
       filtered = filtered.filter(t => {
         const concepto = (t.concepto || '').toLowerCase();
+        const comentario = (t.comentario || '').toLowerCase();
+        const valor = String(t.valor || '').replace(/[^\d]/g, ''); // Solo números del valor
         const deQuien = (t.deQuien || '').toLowerCase();
         const paraQuien = (t.paraQuien || '').toLowerCase();
         return concepto.includes(searchLower) || 
+               comentario.includes(searchLower) ||
+               (searchNumeric && valor.includes(searchNumeric)) ||
                deQuien.includes(searchLower) ||
                paraQuien.includes(searchLower);
       });
@@ -2437,9 +2449,10 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
                     }`}>
                       {(() => {
                         const valor = parseFloat(transaccion.valor || '0');
-                        return transaccion.paraQuienTipo === 'lcdm' ? 
+                        const valorText = transaccion.paraQuienTipo === 'lcdm' ? 
                           `-$ ${valor.toLocaleString()}` : 
                           `+$ ${valor.toLocaleString()}`;
+                        return highlightValue(valorText, searchTerm);
                       })()}
                     </span>
 
