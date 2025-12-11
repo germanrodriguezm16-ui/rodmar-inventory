@@ -352,6 +352,17 @@ export default function MinaDetail() {
   // Obtener transacciones de la mina (solo visibles)
   const { data: transacciones = [], isLoading: transaccionesLoading } = useQuery<TransaccionWithSocio[]>({
     queryKey: [`/api/transacciones/socio/mina/${minaId}`],
+    queryFn: async () => {
+      const { apiUrl } = await import('@/lib/api');
+      const res = await fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}`));
+      if (!res.ok) {
+        console.error(`Error fetching transacciones for mina ${minaId}:`, res.status, res.statusText);
+        return []; // Devolver array vacío en caso de error
+      }
+      const data = await res.json();
+      // Asegurar que siempre sea un array
+      return Array.isArray(data) ? data : [];
+    },
     enabled: !!minaId,
     staleTime: 300000, // 5 minutos - datos frescos por más tiempo
     refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
@@ -366,9 +377,15 @@ export default function MinaDetail() {
     refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
     queryFn: async () => {
+      const { apiUrl } = await import('@/lib/api');
       const response = await fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}?includeHidden=true`));
-      if (!response.ok) throw new Error('Error al obtener transacciones');
-      return response.json();
+      if (!response.ok) {
+        console.error(`Error fetching todas transacciones for mina ${minaId}:`, response.status, response.statusText);
+        return []; // Devolver array vacío en caso de error
+      }
+      const data = await response.json();
+      // Asegurar que siempre sea un array
+      return Array.isArray(data) ? data : [];
     }
   });
 

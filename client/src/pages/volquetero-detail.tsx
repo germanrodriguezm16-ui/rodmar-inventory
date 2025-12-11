@@ -136,7 +136,16 @@ export default function VolqueteroDetail() {
 
   const { data: transaccionesData = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
-    queryFn: () => fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/transacciones`)).then(res => res.json()),
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/transacciones`));
+      if (!res.ok) {
+        console.error(`Error fetching transacciones for volquetero ${volqueteroIdActual}:`, res.status, res.statusText);
+        return []; // Devolver array vacío en caso de error
+      }
+      const data = await res.json();
+      // Asegurar que siempre sea un array
+      return Array.isArray(data) ? data : [];
+    },
     enabled: volqueteroIdActual > 0,
     staleTime: 300000,
     refetchOnMount: false,
@@ -148,8 +157,13 @@ export default function VolqueteroDetail() {
     queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"],
     queryFn: async () => {
       const response = await fetch(apiUrl(`/api/transacciones/socio/volquetero/${volqueteroIdActual}?includeHidden=true`));
-      if (!response.ok) throw new Error('Error al obtener transacciones');
-      return response.json();
+      if (!response.ok) {
+        console.error(`Error fetching todas transacciones for volquetero ${volqueteroIdActual}:`, response.status, response.statusText);
+        return []; // Devolver array vacío en caso de error
+      }
+      const data = await response.json();
+      // Asegurar que siempre sea un array
+      return Array.isArray(data) ? data : [];
     },
     enabled: volqueteroIdActual > 0,
     staleTime: 300000,

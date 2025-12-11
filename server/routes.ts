@@ -782,13 +782,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user?.id || "main_user";
       const volqueteroId = parseInt(req.params.id);
-      const transacciones = await storage.getTransaccionesBySocio(
+      // Usar getTransaccionesForModule con módulo 'volquetero' para filtrado correcto
+      const transacciones = await storage.getTransaccionesForModule(
         "volquetero",
         volqueteroId,
         userId,
+        false, // includeHidden
+        'volquetero', // módulo correcto
       );
       res.json(transacciones);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error fetching transacciones for volquetero:", error);
+      console.error("Error details:", error.message, error.stack);
       res
         .status(500)
         .json({ error: "Failed to fetch transacciones for volquetero" });
@@ -2111,15 +2116,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .json({ error: "Missing tipoSocio or socioId parameters" });
         }
 
-        const transacciones = await storage.getTransaccionesBySocio(
+        // Determinar el módulo correcto según el tipo de socio
+        let modulo: 'general' | 'comprador' | 'mina' | 'volquetero' = 'general';
+        if (tipoSocio === 'mina') {
+          modulo = 'mina';
+        } else if (tipoSocio === 'comprador') {
+          modulo = 'comprador';
+        } else if (tipoSocio === 'volquetero') {
+          modulo = 'volquetero';
+        }
+
+        // Usar getTransaccionesForModule con el módulo correcto en lugar de getTransaccionesBySocio
+        const transacciones = await storage.getTransaccionesForModule(
           tipoSocio as string,
           parseInt(socioId as string),
           userId,
           includeHidden === "true",
+          modulo,
         );
         res.json(transacciones);
       } catch (error: any) {
         console.error("Error fetching transacciones by socio:", error);
+        console.error("Error details:", error.message, error.stack);
         res.status(500).json({ error: "Failed to fetch transacciones" });
       }
     },
