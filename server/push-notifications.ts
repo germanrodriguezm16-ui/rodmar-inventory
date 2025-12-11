@@ -164,6 +164,80 @@ export async function notifyPendingTransaction(
 }
 
 /**
+ * Envía notificación cuando se edita una transacción pendiente
+ */
+export async function notifyPendingTransactionEdited(
+  userId: string,
+  transaccion: {
+    id: number;
+    paraQuienTipo: string;
+    paraQuienNombre: string;
+    valor: string;
+    codigoSolicitud?: string;
+  }
+): Promise<{ sent: number; failed: number }> {
+  const valorFormateado = new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0
+  }).format(parseFloat(transaccion.valor));
+
+  const tipoCapitalizado = transaccion.paraQuienTipo.charAt(0).toUpperCase() + 
+    transaccion.paraQuienTipo.slice(1);
+
+  const result = await sendPushNotification(
+    userId,
+    'Solicitud se editó',
+    `${tipoCapitalizado} ${transaccion.paraQuienNombre} – ${valorFormateado}`,
+    {
+      type: 'pending-transaction-edited',
+      transaccionId: transaccion.id,
+      codigoSolicitud: transaccion.codigoSolicitud,
+      url: '/transacciones?pending=true'
+    }
+  );
+
+  return result;
+}
+
+/**
+ * Envía notificación cuando se completa una transacción pendiente
+ */
+export async function notifyPendingTransactionCompleted(
+  userId: string,
+  transaccion: {
+    id: number;
+    paraQuienTipo: string;
+    paraQuienNombre: string;
+    valor: string;
+    codigoSolicitud?: string;
+  }
+): Promise<{ sent: number; failed: number }> {
+  const valorFormateado = new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0
+  }).format(parseFloat(transaccion.valor));
+
+  const tipoCapitalizado = transaccion.paraQuienTipo.charAt(0).toUpperCase() + 
+    transaccion.paraQuienTipo.slice(1);
+
+  const result = await sendPushNotification(
+    userId,
+    'Solicitud se completó',
+    `${tipoCapitalizado} ${transaccion.paraQuienNombre} – ${valorFormateado}`,
+    {
+      type: 'pending-transaction-completed',
+      transaccionId: transaccion.id,
+      codigoSolicitud: transaccion.codigoSolicitud,
+      url: '/transacciones'
+    }
+  );
+
+  return result;
+}
+
+/**
  * Obtiene la clave pública VAPID para el frontend
  */
 export function getVapidPublicKey(): string | null {

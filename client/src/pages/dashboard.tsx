@@ -17,6 +17,7 @@ import RegisterDescargueModal from "@/components/forms/register-descargue-modal"
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import { PendingListModal } from "@/components/pending-transactions/pending-list-modal";
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
+import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import { GestionarTransaccionesModal } from "@/components/modals/gestionar-transacciones-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { Plus } from "lucide-react";
@@ -38,6 +39,8 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
   const [selectedPendingTransaction, setSelectedPendingTransaction] = useState<any>(null);
+  const [showTransactionDetailModal, setShowTransactionDetailModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [showGestionarModal, setShowGestionarModal] = useState(false);
   const [showSolicitarModal, setShowSolicitarModal] = useState(false);
   const [location, setLocation] = useLocation();
@@ -204,7 +207,11 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     const transactionIdFromUrl = urlParams.get('id');
     
     // Si hay datos de notificación, usarlos; si no, usar URL params
-    const pendingParam = navData ? (navData.url?.includes('pending=true') || navData.notificationData?.type === 'pending-transaction' ? 'true' : null) : (pendingParamFromUrl || null);
+    const notificationType = navData?.notificationData?.type;
+    const isPendingNotification = notificationType === 'pending-transaction' || 
+                                  notificationType === 'pending-transaction-edited';
+    const isCompletedNotification = notificationType === 'pending-transaction-completed';
+    const pendingParam = navData ? (navData.url?.includes('pending=true') || isPendingNotification ? 'true' : null) : (pendingParamFromUrl || null);
     
     // Extraer ID de múltiples fuentes posibles (en orden de prioridad)
     let transactionIdParam = transactionIdFromUrl ||
@@ -227,8 +234,43 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       pendingParam, 
       transactionId, 
       pendientesCount: pendientes.length, 
-      tieneNavData: !!navData 
+      tieneNavData: !!navData,
+      notificationType
     });
+    
+    // Manejar notificación de transacción completada
+    if (isCompletedNotification && transactionId) {
+      // Cambiar al módulo de transacciones si no está ya ahí
+      if (activeModule !== 'transacciones') {
+        setActiveModule('transacciones');
+      }
+      
+      // Buscar la transacción completada en todas las transacciones
+      const buscarTransaccionCompletada = async () => {
+        try {
+          const response = await fetch(apiUrl(`/api/transacciones/${transactionId}`), {
+            credentials: "include",
+          });
+          if (response.ok) {
+            const transaccion = await response.json();
+            logger.success('NOTIFICATION', `Transacción completada encontrada, abriendo modal de detalle`, { transactionId });
+            setSelectedTransaction(transaccion);
+            setShowTransactionDetailModal(true);
+            return true;
+          }
+        } catch (error) {
+          console.error('Error buscando transacción completada:', error);
+        }
+        return false;
+      };
+      
+      buscarTransaccionCompletada();
+      
+      // Limpiar los query params de la URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      return;
+    }
     
     if (pendingParam === 'true') {
       // Cambiar al módulo de transacciones si no está ya ahí
@@ -299,7 +341,42 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
                          navData.notificationData?.id ||
                          (url.match(/[?&]id=(\d+)/)?.[1]);
     
-    const pendingParam = url.includes('pending=true') || navData.notificationData?.type === 'pending-transaction';
+    const notificationType = navData.notificationData?.type;
+    const isPendingNotification = notificationType === 'pending-transaction' || 
+                                  notificationType === 'pending-transaction-edited';
+    const isCompletedNotification = notificationType === 'pending-transaction-completed';
+    const pendingParam = url.includes('pending=true') || isPendingNotification;
+    
+    // Manejar notificación de transacción completada
+    if (isCompletedNotification && transactionId) {
+      // Cambiar al módulo de transacciones si no está ya ahí
+      if (activeModule !== 'transacciones') {
+        setActiveModule('transacciones');
+      }
+      
+      // Buscar la transacción completada en todas las transacciones
+      const buscarTransaccionCompletada = async () => {
+        try {
+          const transaccionIdNum = typeof transactionId === 'string' ? parseInt(transactionId, 10) : transactionId;
+          const response = await fetch(apiUrl(`/api/transacciones/${transaccionIdNum}`), {
+            credentials: "include",
+          });
+          if (response.ok) {
+            const transaccion = await response.json();
+            logger.success('NOTIFICATION', `Transacción completada encontrada desde datos almacenados, abriendo modal de detalle`, { transactionId: transaccionIdNum });
+            setSelectedTransaction(transaccion);
+            setShowTransactionDetailModal(true);
+            return true;
+          }
+        } catch (error) {
+          console.error('Error buscando transacción completada desde datos almacenados:', error);
+        }
+        return false;
+      };
+      
+      buscarTransaccionCompletada();
+      return;
+    }
     
     if (pendingParam) {
       // Cambiar al módulo de transacciones si no está ya ahí
@@ -421,7 +498,11 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
                          navData.notificationData?.id ||
                          (url.match(/[?&]id=(\d+)/)?.[1]);
     
-    const pendingParam = url.includes('pending=true') || navData.notificationData?.type === 'pending-transaction';
+    const notificationType = navData.notificationData?.type;
+    const isPendingNotification = notificationType === 'pending-transaction' || 
+                                  notificationType === 'pending-transaction-edited';
+    const isCompletedNotification = notificationType === 'pending-transaction-completed';
+    const pendingParam = url.includes('pending=true') || isPendingNotification;
     
     if (pendingParam) {
       // Cambiar al módulo de transacciones si no está ya ahí
@@ -768,6 +849,19 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         open={showSolicitarModal}
         onClose={() => setShowSolicitarModal(false)}
       />
+
+      {selectedTransaction && (
+        <TransactionDetailModal
+          open={showTransactionDetailModal && !!selectedTransaction}
+          transaction={selectedTransaction}
+          onOpenChange={(open) => {
+            setShowTransactionDetailModal(open);
+            if (!open) {
+              setSelectedTransaction(null);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

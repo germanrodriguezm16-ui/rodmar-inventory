@@ -2591,6 +2591,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Obtener transacción original para obtener datos de notificación
+      const originalTransaction = await storage.getTransaccion(id);
+      
       // Completar la transacción
       const transaccion = await storage.completarTransaccionPendiente(id, {
         deQuienTipo: data.deQuienTipo,
@@ -2608,6 +2611,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`✅ Transacción ${id} completada exitosamente`);
+
+      // Enviar notificación de completado
+      if (originalTransaction?.estado === 'pendiente') {
+        try {
+          // Obtener nombre del destino para la notificación
+          let nombreDestino = "Desconocido";
+          if (originalTransaction.paraQuienTipo && originalTransaction.paraQuienId) {
+            try {
+              switch (originalTransaction.paraQuienTipo) {
+                case "mina":
+                  const mina = await storage.getMinaById(parseInt(originalTransaction.paraQuienId), userId);
+                  nombreDestino = mina?.nombre || originalTransaction.paraQuienId;
+                  break;
+                case "comprador":
+                  const comprador = await storage.getCompradorById(parseInt(originalTransaction.paraQuienId), userId);
+                  nombreDestino = comprador?.nombre || originalTransaction.paraQuienId;
+                  break;
+                case "volquetero":
+                  const volqueteros = await storage.getVolqueteros();
+                  const volqueteroIdNum = parseInt(originalTransaction.paraQuienId);
+                  let volquetero = null;
+                  if (!isNaN(volqueteroIdNum)) {
+                    volquetero = volqueteros.find((v) => v.id === volqueteroIdNum);
+                  }
+                  if (!volquetero) {
+                    volquetero = volqueteros.find(
+                      (v) => v.nombre.toLowerCase() === originalTransaction.paraQuienId.toLowerCase()
+                    );
+                  }
+                  nombreDestino = volquetero?.nombre || originalTransaction.paraQuienId;
+                  break;
+                case "rodmar":
+                  const rodmarOptions: Record<string, string> = {
+                    "bemovil": "Bemovil",
+                    "corresponsal": "Corresponsal",
+                    "efectivo": "Efectivo",
+                    "cuentas-german": "Cuentas German",
+                    "cuentas-jhon": "Cuentas Jhon",
+                    "otras": "Otras",
+                  };
+                  nombreDestino = rodmarOptions[originalTransaction.paraQuienId] || originalTransaction.paraQuienId;
+                  break;
+                case "banco":
+                  nombreDestino = "Banco";
+                  break;
+                case "lcdm":
+                  nombreDestino = "La Casa del Motero";
+                  break;
+                case "postobon":
+                  nombreDestino = "Postobón";
+                  break;
+                default:
+                  nombreDestino = originalTransaction.paraQuienId;
+              }
+            } catch (error) {
+              console.error("Error obteniendo nombre de destino para notificación:", error);
+            }
+          }
+
+          const { notifyPendingTransactionCompleted } = await import('./push-notifications');
+          const result = await notifyPendingTransactionCompleted(userId, {
+            id: transaccion.id,
+            paraQuienTipo: originalTransaction.paraQuienTipo || '',
+            paraQuienNombre: nombreDestino,
+            valor: originalTransaction.valor || '0',
+            codigoSolicitud: originalTransaction.codigo_solicitud || undefined
+          });
+          console.log(`📱 Notificación push de completado enviada: ${result.sent} exitosas, ${result.failed} fallidas`);
+        } catch (pushError) {
+          console.error('⚠️  Error al enviar notificación push de completado (no crítico):', pushError);
+        }
+      }
 
       res.json(transaccion);
     } catch (error) {
@@ -3303,6 +3378,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "=== PATCH /api/transacciones/:id - Updated transaction:",
         transaccion,
       );
+
+      // Enviar notificación si se editó una solicitud pendiente
+      if (originalTransaction?.estado === 'pendiente' && transaccion?.estado === 'pendiente') {
+        try {
+          // Obtener nombre del destino para la notificación
+          let nombreDestino = "Desconocido";
+          if (transaccion.paraQuienTipo && transaccion.paraQuienId) {
+            try {
+              switch (transaccion.paraQuienTipo) {
+                case "mina":
+                  const mina = await storage.getMinaById(parseInt(transaccion.paraQuienId), userId);
+                  nombreDestino = mina?.nombre || transaccion.paraQuienId;
+                  break;
+                case "comprador":
+                  const comprador = await storage.getCompradorById(parseInt(transaccion.paraQuienId), userId);
+                  nombreDestino = comprador?.nombre || transaccion.paraQuienId;
+                  break;
+                case "volquetero":
+                  const volqueteros = await storage.getVolqueteros();
+                  const volqueteroIdNum = parseInt(transaccion.paraQuienId);
+                  let volquetero = null;
+                  if (!isNaN(volqueteroIdNum)) {
+                    volquetero = volqueteros.find((v) => v.id === volqueteroIdNum);
+                  }
+                  if (!volquetero) {
+                    volquetero = volqueteros.find(
+                      (v) => v.nombre.toLowerCase() === transaccion.paraQuienId.toLowerCase()
+                    );
+                  }
+                  nombreDestino = volquetero?.nombre || transaccion.paraQuienId;
+                  break;
+                case "rodmar":
+                  const rodmarOptions: Record<string, string> = {
+                    "bemovil": "Bemovil",
+                    "corresponsal": "Corresponsal",
+                    "efectivo": "Efectivo",
+                    "cuentas-german": "Cuentas German",
+                    "cuentas-jhon": "Cuentas Jhon",
+                    "otras": "Otras",
+                  };
+                  nombreDestino = rodmarOptions[transaccion.paraQuienId] || transaccion.paraQuienId;
+                  break;
+                case "banco":
+                  nombreDestino = "Banco";
+                  break;
+                case "lcdm":
+                  nombreDestino = "La Casa del Motero";
+                  break;
+                case "postobon":
+                  nombreDestino = "Postobón";
+                  break;
+                default:
+                  nombreDestino = transaccion.paraQuienId;
+              }
+            } catch (error) {
+              console.error("Error obteniendo nombre de destino para notificación:", error);
+            }
+          }
+
+          const { notifyPendingTransactionEdited } = await import('./push-notifications');
+          const result = await notifyPendingTransactionEdited(userId, {
+            id: transaccion.id,
+            paraQuienTipo: transaccion.paraQuienTipo || '',
+            paraQuienNombre: nombreDestino,
+            valor: transaccion.valor || '0',
+            codigoSolicitud: transaccion.codigo_solicitud || undefined
+          });
+          console.log(`📱 Notificación push de edición enviada: ${result.sent} exitosas, ${result.failed} fallidas`);
+        } catch (pushError) {
+          console.error('⚠️  Error al enviar notificación push de edición (no crítico):', pushError);
+        }
+      }
 
       // Determinar entidades afectadas (original + actualizada)
       const affectedEntityTypes = new Set<string>();
