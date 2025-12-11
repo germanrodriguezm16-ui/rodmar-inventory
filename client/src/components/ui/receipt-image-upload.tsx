@@ -62,12 +62,12 @@ export function ReceiptImageUpload({ value, onChange, placeholder = "Número de 
         
         ctx?.drawImage(img, 0, 0, width, height);
         
-        // Start with quality 0.85 (85%) for better image quality
-        let quality = 0.85;
+        // Start with quality 0.90 (90%) for better image quality
+        let quality = 0.90;
         let result = canvas.toDataURL('image/jpeg', quality);
         
-        // Keep reducing quality in smaller steps until under 500KB
-        while (result.length > 500000 && quality > 0.1) {
+        // Keep reducing quality in smaller steps until under 1MB (aumentado para mejor calidad)
+        while (result.length > 1000000 && quality > 0.1) {
           quality -= 0.05;
           result = canvas.toDataURL('image/jpeg', quality);
         }

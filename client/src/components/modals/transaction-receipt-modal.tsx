@@ -97,28 +97,50 @@ export function TransactionReceiptModal({
       // Usar html2canvas para capturar el div del comprobante
       const html2canvas = (await import('html2canvas')).default;
       
+      // Calcular scale dinámicamente para pantallas Retina y alta resolución
+      // Usar devicePixelRatio para pantallas de alta densidad, mínimo 3 para buena calidad
+      const deviceScale = window.devicePixelRatio || 1;
+      const scale = Math.max(3, deviceScale * 2);
+      
       const canvas = await html2canvas(receiptRef.current, {
         backgroundColor: '#ffffff',
-        scale: 2, // Mayor resolución para mejor calidad
+        scale: scale, // Alta resolución para mejor calidad (3x o más en pantallas Retina)
         logging: false,
         useCORS: true,
+        allowTaint: false,
       });
 
-      // Convertir canvas a blob
+      // Limitar ancho máximo a 2000px para evitar archivos muy grandes
+      // pero mantener alta calidad
+      const maxWidth = 2000;
+      let finalCanvas = canvas;
+      if (canvas.width > maxWidth) {
+        const ratio = maxWidth / canvas.width;
+        const newHeight = canvas.height * ratio;
+        finalCanvas = document.createElement('canvas');
+        finalCanvas.width = maxWidth;
+        finalCanvas.height = newHeight;
+        const ctx = finalCanvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(canvas, 0, 0, maxWidth, newHeight);
+        }
+      }
+
+      // Convertir canvas a blob en formato JPEG para mejor compatibilidad con WhatsApp
       return new Promise((resolve, reject) => {
-        canvas.toBlob(
+        finalCanvas.toBlob(
           (blob) => {
             if (!blob) {
               reject(new Error('Error al generar la imagen'));
               return;
             }
-            const file = new File([blob], `comprobante-${transaction.id}.png`, {
-              type: 'image/png',
+            const file = new File([blob], `comprobante-${transaction.id}.jpg`, {
+              type: 'image/jpeg',
             });
             resolve(file);
           },
-          'image/png',
-          0.95 // Alta calidad
+          'image/jpeg',
+          0.92 // Alta calidad JPEG (92%) - mejor balance calidad/tamaño para WhatsApp
         );
       });
     } finally {
