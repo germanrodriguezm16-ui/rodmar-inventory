@@ -59,6 +59,59 @@ const getNumericValue = (formattedValue: string): string => {
   return formattedValue.replace(/\./g, '');
 };
 
+// Función para limpiar texto pegado de WhatsApp
+// Elimina fecha/hora entre corchetes y nombres de remitentes, pero preserva el símbolo "@"
+const cleanWhatsAppPaste = (text: string): string => {
+  if (!text) return text;
+  
+  let cleaned = text;
+  
+  // Eliminar patrones de fecha/hora entre corchetes
+  // Ejemplos: 
+  // - [09/12/2025 22:10]
+  // - [9/12, 10:10 p.m.]
+  // - [9/12, 10:10 a.m.]
+  // - [9/12, 10:10 p. m.] (con espacio)
+  // - [9/12, 10:10]
+  cleaned = cleaned.replace(/\[\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?:,\s*\d{1,2}:\d{2}(?:\s*[ap]\.?\s*m\.?)?)?\]/gi, '');
+  
+  // Lista de etiquetas comunes de datos bancarios que NO deben eliminarse
+  const preservedLabels = ['banco', 'cuenta', 'titular', 'valor', 'cc', 'cedula', 'nit', 'telefono', 'celular', 'email', 'correo'];
+  
+  // Eliminar nombres de remitentes seguidos de dos puntos al inicio de línea
+  // Ejemplo: "Patito: " o "Nombre Remitente: "
+  // Pero preservar si hay "@" en la línea (importante para llaves de Breve)
+  // Y preservar etiquetas comunes de datos bancarios
+  cleaned = cleaned.split('\n').map(line => {
+    // Si la línea contiene "@", no eliminar nada
+    if (line.includes('@')) {
+      return line;
+    }
+    
+    // Verificar si la línea empieza con una etiqueta preservada
+    const trimmedLine = line.trim().toLowerCase();
+    const startsWithPreservedLabel = preservedLabels.some(label => 
+      trimmedLine.startsWith(label + ':') || trimmedLine.startsWith(label + ' ')
+    );
+    
+    if (startsWithPreservedLabel) {
+      return line; // Preservar etiquetas de datos bancarios
+    }
+    
+    // Eliminar patrón "Nombre: " al inicio de línea (remitente de WhatsApp)
+    // Solo si la línea no parece ser una etiqueta de datos
+    return line.replace(/^[^:]+:\s*/, '');
+  }).join('\n');
+  
+  // Limpiar líneas vacías múltiples (máximo 2 líneas vacías consecutivas)
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+  
+  // Limpiar espacios al inicio y final
+  cleaned = cleaned.trim();
+  
+  return cleaned;
+};
+
 // Función para normalizar el valor inicial (puede venir como número, string con formato, etc.)
 const normalizeInitialValue = (value: string | number | undefined): string => {
   if (!value && value !== 0) return '';
@@ -582,7 +635,13 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
                       placeholder="Pega aquí la información del WhatsApp (cuenta, banco, valor, titular, etc.)&#10;Ejemplo:&#10;Banco: Bancolombia&#10;Cuenta: 1234567890&#10;Titular: Juan Pérez&#10;Valor: $3.200.000" 
                       className="resize-none bg-blue-50 border-2 border-blue-300 min-h-[120px]" 
                       rows={5}
-                      {...field} 
+                      {...field}
+                      onPaste={(e) => {
+                        e.preventDefault();
+                        const pastedText = e.clipboardData.getData('text');
+                        const cleanedText = cleanWhatsAppPaste(pastedText);
+                        field.onChange(cleanedText);
+                      }}
                     />
                   </FormControl>
                   <p className="text-xs text-muted-foreground mt-1">
