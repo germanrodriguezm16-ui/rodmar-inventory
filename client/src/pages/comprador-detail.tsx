@@ -187,7 +187,16 @@ export default function CompradorDetail() {
   // Fetch transacciones usando el endpoint específico para compradores
   const { data: transacciones = [] } = useQuery<TransaccionWithSocio[]>({
     queryKey: ["/api/transacciones/comprador", compradorId],
-    queryFn: () => fetch(apiUrl(`/api/transacciones/comprador/${compradorId}`)).then(res => res.json()),
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/transacciones/comprador/${compradorId}`));
+      if (!res.ok) {
+        console.error(`Error fetching transacciones for comprador ${compradorId}:`, res.status, res.statusText);
+        return []; // Devolver array vacío en caso de error
+      }
+      const data = await res.json();
+      // Asegurar que siempre sea un array
+      return Array.isArray(data) ? data : [];
+    },
     enabled: !!compradorId,
     staleTime: 300000, // 5 minutos - datos frescos por más tiempo
     refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
@@ -197,7 +206,16 @@ export default function CompradorDetail() {
   // Fetch todas las transacciones incluyendo ocultas (para el contador del botón y balance del encabezado)
   const { data: todasTransaccionesIncOcultas = [] } = useQuery<TransaccionWithSocio[]>({
     queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"],
-    queryFn: () => fetch(apiUrl(`/api/transacciones/comprador/${compradorId}?includeHidden=true`)).then(res => res.json()),
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/transacciones/comprador/${compradorId}?includeHidden=true`));
+      if (!res.ok) {
+        console.error(`Error fetching todas transacciones for comprador ${compradorId}:`, res.status, res.statusText);
+        return []; // Devolver array vacío en caso de error
+      }
+      const data = await res.json();
+      // Asegurar que siempre sea un array
+      return Array.isArray(data) ? data : [];
+    },
     enabled: !!compradorId,
     staleTime: 300000, // 5 minutos - datos frescos por más tiempo
     refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
