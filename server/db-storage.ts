@@ -4457,6 +4457,15 @@ export class DatabaseStorage implements IStorage {
           console.log(`⚠️  [getVolqueterosBalances] INCONSISTENCIA: Volquetero ${volquetero.id} (${volquetero.nombre}) tiene ingresos directos de ${ingresosDirectos} pero transaccionesStats.ingresos es 0`);
         }
         
+        // Verificar si el nombre del volquetero no coincide con ningún conductor en viajesStatsMap
+        if (volquetero.id === 169) { // Willian Ruiz
+          console.log(`🔍 [getVolqueterosBalances] DEBUG Willian Ruiz:`);
+          console.log(`   - Nombre del volquetero: "${volquetero.nombre}"`);
+          console.log(`   - Existe en viajesStatsMap: ${viajesStatsMap.has(volquetero.nombre)}`);
+          console.log(`   - viajesStats obtenido:`, viajesStats);
+          console.log(`   - Todos los nombres en viajesStatsMap:`, Array.from(viajesStatsMap.keys()).filter(n => n.toLowerCase().includes('willian') || n.toLowerCase().includes('ruiz')));
+        }
+        
         // SIEMPRE calcular balance dinámicamente para asegurar que se excluyan transacciones pendientes
         // (balanceCalculado podría incluir transacciones pendientes si fue calculado antes de implementar la exclusión)
         // Lógica estandarizada para volqueteros:
