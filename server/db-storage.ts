@@ -4349,6 +4349,22 @@ export class DatabaseStorage implements IStorage {
       console.log(`   - Transacciones mapeadas por nombre: ${transaccionesMapeadasPorNombre}`);
       console.log(`   - Transacciones NO mapeadas: ${transaccionesNoMapeadas}`);
       console.log(`   - Volqueteros únicos con ingresos: ${ingresosMap.size}`);
+      
+      // Mostrar detalles de los volqueteros que recibieron ingresos
+      if (ingresosMap.size > 0) {
+        console.log(`📊 [getVolqueterosBalances] Volqueteros con ingresos por transacciones origen:`);
+        const ingresosArray = Array.from(ingresosMap.entries())
+          .sort((a, b) => b[1] - a[1]) // Ordenar por valor descendente
+          .slice(0, 10); // Mostrar solo los primeros 10
+        ingresosArray.forEach(([id, valor]) => {
+          const volquetero = allVolqueteros.find(v => v.id === id);
+          const nombre = volquetero ? volquetero.nombre : `ID ${id} (no encontrado)`;
+          console.log(`   - ${nombre} (ID: ${id}): $${valor.toLocaleString()}`);
+        });
+        if (ingresosMap.size > 10) {
+          console.log(`   ... y ${ingresosMap.size - 10} volqueteros más`);
+        }
+      }
 
       // Procesar transacciones donde el volquetero es destino (egresos)
       transaccionesHaciaVolqueteros.forEach(t => {
