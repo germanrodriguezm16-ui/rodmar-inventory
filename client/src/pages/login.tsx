@@ -51,7 +51,11 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form 
+            onSubmit={handleSubmit} 
+            className="space-y-4"
+            noValidate
+          >
             <div className="space-y-2">
               <Label htmlFor="phone">Número de Celular</Label>
               <Input
@@ -91,6 +95,9 @@ export default function LoginPage() {
               type="submit"
               className="w-full"
               disabled={isLoggingIn || !phone || !password}
+              onClick={(e) => {
+                console.log("🖱️ [LOGIN] Botón clickeado", { phone: phone.substring(0, 3) + "***", hasPassword: !!password, isLoggingIn });
+              }}
             >
               {isLoggingIn ? (
                 <>
