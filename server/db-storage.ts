@@ -4214,6 +4214,7 @@ export class DatabaseStorage implements IStorage {
       // Esto asegura que las transacciones entre volqueteros se cuenten en ambos volqueteros
       
       // 1. Transacciones donde el volquetero es origen (deQuienTipo = 'volquetero') - ingresos
+      // IMPORTANTE: Incluir todas las transacciones, incluso las ocultas, para el cálculo correcto del balance
       const transaccionesDesdeVolqueteros = await db
         .select({
           volqueteroId: transacciones.deQuienId,
@@ -4227,6 +4228,7 @@ export class DatabaseStorage implements IStorage {
         ));
 
       // 2. Transacciones donde el volquetero es destino (paraQuienTipo = 'volquetero') - egresos
+      // IMPORTANTE: Incluir todas las transacciones, incluso las ocultas, para el cálculo correcto del balance
       const transaccionesHaciaVolqueteros = await db
         .select({
           volqueteroId: transacciones.paraQuienId,
@@ -4238,6 +4240,10 @@ export class DatabaseStorage implements IStorage {
           inArray(transacciones.paraQuienId, volqueteroIds),
           ne(transacciones.estado, 'pendiente')
         ));
+
+      // Logging para debugging
+      console.log(`🔍 [getVolqueterosBalances] Transacciones desde volqueteros (origen): ${transaccionesDesdeVolqueteros.length}`);
+      console.log(`🔍 [getVolqueterosBalances] Transacciones hacia volqueteros (destino): ${transaccionesHaciaVolqueteros.length}`);
 
       // Combinar ambas queries y agrupar por volqueteroId
       const ingresosMap = new Map<number, number>();
