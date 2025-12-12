@@ -59,34 +59,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Login - Iniciar sesión con celular y contraseña
   app.post("/api/auth/login", async (req, res) => {
     try {
+      console.log("🔐 [LOGIN] Intento de login recibido");
       const { phone, password } = req.body;
 
       if (!phone || !password) {
+        console.log("❌ [LOGIN] Faltan credenciales");
         return res.status(400).json({ error: "Celular y contraseña son requeridos" });
       }
 
+      console.log("🔍 [LOGIN] Buscando usuario con celular:", phone.substring(0, 3) + "***");
       // Buscar usuario por celular
       const user = await findUserByPhone(phone);
 
       if (!user) {
+        console.log("❌ [LOGIN] Usuario no encontrado");
         return res.status(401).json({ error: "Credenciales inválidas" });
       }
 
+      console.log("✅ [LOGIN] Usuario encontrado:", user.id);
+
       if (!user.passwordHash) {
+        console.log("❌ [LOGIN] Usuario sin contraseña configurada");
         return res.status(401).json({ error: "Usuario no tiene contraseña configurada" });
       }
 
       // Verificar contraseña
+      console.log("🔐 [LOGIN] Verificando contraseña...");
       const isValidPassword = await verifyPassword(password, user.passwordHash);
 
       if (!isValidPassword) {
+        console.log("❌ [LOGIN] Contraseña inválida");
         return res.status(401).json({ error: "Credenciales inválidas" });
       }
+
+      console.log("✅ [LOGIN] Contraseña válida, creando sesión...");
 
       // Crear sesión
       if (req.session) {
         (req.session as any).userId = user.id;
         (req.session as any).createdAt = new Date();
+        console.log("✅ [LOGIN] Sesión creada para usuario:", user.id);
+      } else {
+        console.warn("⚠️ [LOGIN] req.session no está disponible");
       }
 
       // Actualizar último login
@@ -94,6 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Obtener permisos del usuario
       const permissions = await getUserPermissions(user.id);
+      console.log("✅ [LOGIN] Login exitoso, permisos:", permissions.length);
 
       res.json({
         user: {
@@ -107,7 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         permissions,
       });
     } catch (error) {
-      console.error("Error en login:", error);
+      console.error("❌ [LOGIN] Error en login:", error);
       res.status(500).json({ error: "Error al iniciar sesión" });
     }
   });
