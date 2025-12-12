@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
 import { Bell, Settings, Truck, Bug, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,8 +8,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
-import { useLocation } from "wouter";
 import { NotificationsSettingsModal } from "@/components/modals/notifications-settings-modal";
 import { DebugLogsModal } from "@/components/modals/debug-logs-modal";
 import { usePermissions } from "@/hooks/usePermissions";
