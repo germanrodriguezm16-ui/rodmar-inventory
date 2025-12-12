@@ -4277,6 +4277,7 @@ export class DatabaseStorage implements IStorage {
       const egresosMap = new Map<number, number>();
 
       // Procesar transacciones donde el volquetero es origen (ingresos)
+      let transaccionesNoMapeadas = 0;
       transaccionesDesdeVolqueteros.forEach(t => {
         if (t.volqueteroId) {
           // Manejar tanto IDs numéricos como nombres de volqueteros (para transacciones antiguas)
@@ -4286,6 +4287,10 @@ export class DatabaseStorage implements IStorage {
           const parsedId = typeof t.volqueteroId === 'string' ? parseInt(t.volqueteroId) : Number(t.volqueteroId);
           if (!isNaN(parsedId) && parsedId > 0) {
             volqueteroIdNum = parsedId;
+            // Verificar que el ID existe en la lista de volqueteros
+            if (!allVolqueteros.find(v => v.id === volqueteroIdNum)) {
+              volqueteroIdNum = null;
+            }
           } else {
             // Si no es un número, buscar por nombre
             const nombreLower = String(t.volqueteroId).toLowerCase();
@@ -4298,9 +4303,19 @@ export class DatabaseStorage implements IStorage {
             if (!isNaN(valorNuevo)) {
               ingresosMap.set(volqueteroIdNum, valorActual + valorNuevo);
             }
+          } else {
+            // Logging para transacciones que no se pueden mapear
+            transaccionesNoMapeadas++;
+            if (transaccionesNoMapeadas <= 5) {
+              console.log(`⚠️  [getVolqueterosBalances] Transacción origen no mapeada: volqueteroId="${t.volqueteroId}", valor=${t.valor}`);
+            }
           }
         }
       });
+      
+      if (transaccionesNoMapeadas > 0) {
+        console.log(`⚠️  [getVolqueterosBalances] Total transacciones origen no mapeadas: ${transaccionesNoMapeadas} de ${transaccionesDesdeVolqueteros.length}`);
+      }
 
       // Procesar transacciones donde el volquetero es destino (egresos)
       transaccionesHaciaVolqueteros.forEach(t => {
