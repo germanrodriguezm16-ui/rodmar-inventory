@@ -4249,27 +4249,39 @@ export class DatabaseStorage implements IStorage {
       const ingresosMap = new Map<number, number>();
       const egresosMap = new Map<number, number>();
 
+      // Procesar transacciones donde el volquetero es origen (ingresos)
       transaccionesDesdeVolqueteros.forEach(t => {
         if (t.volqueteroId) {
-          const volqueteroIdNum = parseInt(t.volqueteroId);
-          if (!isNaN(volqueteroIdNum)) {
+          // Manejar tanto strings como números
+          const volqueteroIdNum = typeof t.volqueteroId === 'string' ? parseInt(t.volqueteroId) : Number(t.volqueteroId);
+          if (!isNaN(volqueteroIdNum) && volqueteroIdNum > 0) {
             const valorActual = ingresosMap.get(volqueteroIdNum) || 0;
             const valorNuevo = typeof t.valor === 'number' ? t.valor : parseFloat(String(t.valor || 0));
-            ingresosMap.set(volqueteroIdNum, valorActual + (isNaN(valorNuevo) ? 0 : valorNuevo));
+            if (!isNaN(valorNuevo)) {
+              ingresosMap.set(volqueteroIdNum, valorActual + valorNuevo);
+            }
           }
         }
       });
 
+      // Procesar transacciones donde el volquetero es destino (egresos)
       transaccionesHaciaVolqueteros.forEach(t => {
         if (t.volqueteroId) {
-          const volqueteroIdNum = parseInt(t.volqueteroId);
-          if (!isNaN(volqueteroIdNum)) {
+          // Manejar tanto strings como números
+          const volqueteroIdNum = typeof t.volqueteroId === 'string' ? parseInt(t.volqueteroId) : Number(t.volqueteroId);
+          if (!isNaN(volqueteroIdNum) && volqueteroIdNum > 0) {
             const valorActual = egresosMap.get(volqueteroIdNum) || 0;
             const valorNuevo = typeof t.valor === 'number' ? t.valor : parseFloat(String(t.valor || 0));
-            egresosMap.set(volqueteroIdNum, valorActual + (isNaN(valorNuevo) ? 0 : valorNuevo));
+            if (!isNaN(valorNuevo)) {
+              egresosMap.set(volqueteroIdNum, valorActual + valorNuevo);
+            }
           }
         }
       });
+
+      // Logging para debugging
+      console.log(`🔍 [getVolqueterosBalances] Ingresos procesados: ${Array.from(ingresosMap.entries()).length} volqueteros`);
+      console.log(`🔍 [getVolqueterosBalances] Egresos procesados: ${Array.from(egresosMap.entries()).length} volqueteros`);
 
       // Convertir a formato esperado
       const transaccionesStats = Array.from(new Set([
@@ -4308,8 +4320,20 @@ export class DatabaseStorage implements IStorage {
         
         // SIEMPRE calcular balance dinámicamente para asegurar que se excluyan transacciones pendientes
         // (balanceCalculado podría incluir transacciones pendientes si fue calculado antes de implementar la exclusión)
-        // Lógica estandarizada: Positivos (viajes + desde volquetero) - Negativos (hacia volquetero)
+        // Lógica estandarizada para volqueteros:
+        // - Ingresos: viajes (fletes) + transacciones donde el volquetero es origen (deQuienTipo = 'volquetero')
+        // - Egresos: transacciones donde el volquetero es destino (paraQuienTipo = 'volquetero')
+        // Balance = Ingresos - Egresos
         const balance = viajesStats.ingresosFletes + transaccionesStats.ingresos - transaccionesStats.egresos;
+
+        // Logging detallado para debugging (solo para primeros 3 volqueteros para no saturar logs)
+        if (Object.keys(balances).length < 3) {
+          console.log(`🔍 [getVolqueterosBalances] Volquetero ${volquetero.id} (${volquetero.nombre}):`);
+          console.log(`   - Ingresos fletes: ${viajesStats.ingresosFletes}`);
+          console.log(`   - Ingresos transacciones (origen): ${transaccionesStats.ingresos}`);
+          console.log(`   - Egresos transacciones (destino): ${transaccionesStats.egresos}`);
+          console.log(`   - Balance final: ${balance}`);
+        }
 
         balances[volquetero.id] = {
           balance,
