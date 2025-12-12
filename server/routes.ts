@@ -179,10 +179,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/balances/volqueteros", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
+      console.log(`🔍 [ROUTE] /api/balances/volqueteros - INICIANDO (userId: ${userId})`);
       const balances = await storage.getVolqueterosBalances(userId);
+      console.log(`🔍 [ROUTE] /api/balances/volqueteros - COMPLETADO (${Object.keys(balances).length} volqueteros con balance)`);
       res.json(balances);
     } catch (error: any) {
-      console.error("Error fetching volqueteros balances:", error.message);
+      console.error("❌ [ROUTE] Error fetching volqueteros balances:", error.message);
+      console.error("❌ [ROUTE] Error stack:", error.stack);
       if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || 
           error.code === 'ETIMEDOUT' || error.code === 'DB_CONNECTION_ERROR' ||
           error.code === 'XX000' || error.code === 'NO_DATABASE_URL' || 
