@@ -47,6 +47,7 @@ export function useAuth() {
   // Mutación para login
   const loginMutation = useMutation({
     mutationFn: async ({ phone, password }: { phone: string; password: string }) => {
+      console.log("🔐 Intentando login con:", { phone: phone.substring(0, 3) + "***" });
       const response = await fetch(apiUrl("/api/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -54,19 +55,35 @@ export function useAuth() {
         body: JSON.stringify({ phone, password }),
       });
 
+      console.log("📡 Respuesta del login:", response.status, response.statusText);
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Error al iniciar sesión");
+        let errorMessage = "Error al iniciar sesión";
+        try {
+          const error = await response.json();
+          errorMessage = error.error || errorMessage;
+          console.error("❌ Error del servidor:", errorMessage);
+        } catch (e) {
+          console.error("❌ Error parseando respuesta:", e);
+          errorMessage = `Error ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
-      return response.json() as Promise<AuthResponse>;
+      const data = await response.json();
+      console.log("✅ Login exitoso:", data.user?.id);
+      return data as AuthResponse;
     },
     onSuccess: (data) => {
+      console.log("✅ Login completado, actualizando caché");
       // Invalidar y actualizar caché
       queryClient.setQueryData(["auth", "me"], data);
       queryClient.setQueryData(["userPermissions", data.user.id], { permissions: data.permissions });
       queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
       setLocation("/");
+    },
+    onError: (error) => {
+      console.error("❌ Error en login mutation:", error);
     },
   });
 

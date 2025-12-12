@@ -14,15 +14,25 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone || !password) return;
+    if (!phone || !password) {
+      console.warn("⚠️ Formulario incompleto");
+      return;
+    }
 
+    console.log("📝 Enviando formulario de login");
     try {
       await login(phone, password);
     } catch (error) {
-      // El error ya se maneja en useAuth
-      console.error("Error en login:", error);
+      // El error ya se maneja en useAuth, pero lo logueamos para debug
+      console.error("❌ Error capturado en handleSubmit:", error);
+      // No necesitamos hacer nada más, el error se muestra en loginError
     }
   };
+
+  // Debug: mostrar estado del error
+  if (loginError) {
+    console.log("🔴 loginError detectado:", loginError);
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
