@@ -4208,6 +4208,10 @@ export class DatabaseStorage implements IStorage {
       console.log(`🔍 [getVolqueterosBalances] Total volqueteros: ${allVolqueteros.length}`);
       console.log(`🔍 [getVolqueterosBalances] IDs de volqueteros: ${volqueteroIds.slice(0, 5).join(', ')}${volqueteroIds.length > 5 ? '...' : ''}`);
       
+      // Crear un Set de IDs válidos para verificación rápida
+      const volqueteroIdsSet = new Set(allVolqueteros.map(v => v.id));
+      console.log(`🔍 [getVolqueterosBalances] IDs válidos (primeros 10): ${Array.from(volqueteroIdsSet).slice(0, 10).join(', ')}`);
+      
       // Construir condiciones OR para cada volquetero (buscar tanto por ID como por nombre)
       // Esto maneja tanto transacciones nuevas (con ID) como antiguas (con nombre)
       const condicionesOrigen = allVolqueteros.map(v => 
@@ -4286,10 +4290,16 @@ export class DatabaseStorage implements IStorage {
           // Intentar parsear como número primero
           const parsedId = typeof t.volqueteroId === 'string' ? parseInt(t.volqueteroId) : Number(t.volqueteroId);
           if (!isNaN(parsedId) && parsedId > 0) {
-            volqueteroIdNum = parsedId;
             // Verificar que el ID existe en la lista de volqueteros
-            if (!allVolqueteros.find(v => v.id === volqueteroIdNum)) {
-              volqueteroIdNum = null;
+            if (volqueteroIdsSet.has(parsedId)) {
+              volqueteroIdNum = parsedId;
+            } else {
+              // ID no existe, intentar buscar por nombre
+              const nombreLower = String(t.volqueteroId).toLowerCase();
+              volqueteroIdNum = volqueteroNombresMap.get(nombreLower) || null;
+              if (!volqueteroIdNum && transaccionesNoMapeadas < 5) {
+                console.log(`⚠️  [getVolqueterosBalances] ID ${parsedId} no existe en volqueteros, intentando por nombre: "${t.volqueteroId}"`);
+              }
             }
           } else {
             // Si no es un número, buscar por nombre
@@ -4307,7 +4317,8 @@ export class DatabaseStorage implements IStorage {
             // Logging para transacciones que no se pueden mapear
             transaccionesNoMapeadas++;
             if (transaccionesNoMapeadas <= 5) {
-              console.log(`⚠️  [getVolqueterosBalances] Transacción origen no mapeada: volqueteroId="${t.volqueteroId}", valor=${t.valor}`);
+              console.log(`⚠️  [getVolqueterosBalances] Transacción origen no mapeada: volqueteroId="${t.volqueteroId}" (tipo: ${typeof t.volqueteroId}), valor=${t.valor}`);
+              console.log(`   - parsedId: ${parsedId}, existe en Set: ${!isNaN(parsedId) && parsedId > 0 ? volqueteroIdsSet.has(parsedId) : 'N/A'}`);
             }
           }
         }
