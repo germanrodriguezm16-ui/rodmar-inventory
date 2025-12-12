@@ -781,26 +781,7 @@ export default function CompradorDetail() {
             )}
           </TabsList>
 
-              {has("module.COMPRADORES.tab.TRANSACCIONES.view") && (
-              <TabsContent value="transacciones" className="mt-6">
-                <CompradorViajesTab 
-                  viajes={viajesFiltrados}
-                  viajesOriginal={viajes || []}
-                  dateFilter={dateFilter}
-                  setDateFilter={setDateFilter}
-                  startDate={startDate}
-                  setStartDate={setStartDate}
-                  endDate={endDate}
-                  setEndDate={setEndDate}
-                  getFilterText={getFilterText}
-                  handleClearFilter={handleClearFilter}
-                  setShowImagePreview={setShowImagePreview}
-                  setExcelPreviewData={setExcelPreviewData}
-                  setShowExcelPreview={setShowExcelPreview}
-                  comprador={comprador}
-                />
-              </TabsContent>
-
+            {has("module.COMPRADORES.tab.TRANSACCIONES.view") && (
               <TabsContent value="transacciones" className="mt-6">
                 <CompradorTransaccionesTab 
                   transacciones={transacciones}
@@ -836,7 +817,9 @@ export default function CompradorDetail() {
                   setShowDeletePendingConfirm={setShowDeletePendingConfirm}
                 />
               </TabsContent>
+            )}
 
+            {has("module.COMPRADORES.tab.BALANCES.view") && (
               <TabsContent value="balance" className="mt-6">
                 <CompradorBalanceTab 
                   comprador={comprador} 
@@ -847,6 +830,7 @@ export default function CompradorDetail() {
                   filterValueEnd={transaccionesFechaFilterValueEnd}
                 />
               </TabsContent>
+            )}
         </Tabs>
       </div>
 
