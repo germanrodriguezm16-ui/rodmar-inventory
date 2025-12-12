@@ -30,6 +30,11 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     console.log("🍪 [AUTH] Session ID:", req.sessionID);
     console.log("🍪 [AUTH] Session exists:", !!req.session);
     console.log("🍪 [AUTH] Cookies recibidas:", req.headers.cookie ? "Sí" : "No");
+    if (req.headers.cookie) {
+      console.log("🍪 [AUTH] Cookie header:", req.headers.cookie.substring(0, 100));
+    }
+    console.log("🌐 [AUTH] Origin:", req.headers.origin);
+    console.log("🌐 [AUTH] Referer:", req.headers.referer);
     
     // Verificar si hay sesión
     if (!req.session || !(req.session as any).userId) {

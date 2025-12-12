@@ -124,10 +124,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             reject(err);
           } else {
             console.log("✅ [LOGIN] Sesión guardada correctamente");
+            // Log de los headers de la cookie que se enviarán
+            const cookieHeader = res.getHeader("Set-Cookie");
+            console.log("🍪 [LOGIN] Set-Cookie header:", cookieHeader);
+            console.log("🍪 [LOGIN] Response headers:", {
+              "Access-Control-Allow-Origin": res.getHeader("Access-Control-Allow-Origin"),
+              "Access-Control-Allow-Credentials": res.getHeader("Access-Control-Allow-Credentials"),
+              "Set-Cookie": cookieHeader ? (Array.isArray(cookieHeader) ? cookieHeader[0] : cookieHeader).toString().substring(0, 100) : "No cookie",
+            });
             resolve();
           }
         });
       });
+
+      // Asegurar que los headers CORS estén configurados antes de enviar la respuesta
+      const origin = req.headers.origin;
+      if (origin) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Access-Control-Allow-Credentials", "true");
+        console.log("🌐 [LOGIN] CORS headers configurados para origin:", origin);
+      }
 
       res.json({
         user: {

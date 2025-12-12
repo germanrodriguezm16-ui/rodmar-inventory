@@ -58,6 +58,18 @@ if (process.env.NODE_ENV === "production") {
       ],
     }));
   }
+  
+  // Middleware adicional para asegurar headers CORS en todas las respuestas
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && (process.env.CORS_ORIGIN === "*" || !process.env.CORS_ORIGIN || origin === process.env.CORS_ORIGIN)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Expires, Pragma, If-Modified-Since, If-None-Match");
+    }
+    next();
+  });
 } else if (process.env.NODE_ENV === "development") {
   app.use(cors({ origin: true, credentials: true }));
 }
