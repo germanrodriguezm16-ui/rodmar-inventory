@@ -1,9 +1,8 @@
-import { Home, Mountain, Building2, Truck, ArrowUpDown, User, Settings } from "lucide-react";
+import { Home, Mountain, Building2, Truck, ArrowUpDown, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGlobalNavigation } from "@/hooks/use-global-navigation";
 import { useNavigationVisibility } from "@/hooks/use-navigation-visibility";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useLocation } from "wouter";
 
 interface BottomNavigationProps {
   activeModule?: string;
@@ -32,7 +31,6 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
     volqueteros: "module.VOLQUETEROS.view",
     transacciones: "module.TRANSACCIONES.view",
     rodmar: "module.RODMAR.view",
-    admin: "module.ADMIN.view",
   };
   
   const allNavItems = [
@@ -42,10 +40,9 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
     { id: "volqueteros", icon: Truck, label: "Volqueteros" },
     { id: "transacciones", icon: ArrowUpDown, label: "Transacc" },
     { id: "rodmar", icon: User, label: "RodMar" },
-    { id: "admin", icon: Settings, label: "Admin" },
   ];
   
-  // Filtrar módulos según permisos
+  // Filtrar módulos según permisos (admin se maneja desde Settings)
   const navItems = allNavItems.filter((item) => {
     const permission = modulePermissions[item.id];
     // Si no hay permiso requerido (principal) o el usuario tiene el permiso
@@ -60,7 +57,7 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
       <div className="flex items-stretch min-h-[56px] max-h-[64px]">
           {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = item.id === "admin" ? location === "/admin" : currentModule === item.id;
+          const isActive = currentModule === item.id;
           
           return (
             <Button
@@ -70,11 +67,6 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
                 isActive ? "text-primary" : "text-muted-foreground"
               }`}
               onClick={() => {
-                // Si es admin, usar navegación directa
-                if (item.id === "admin") {
-                  setLocation("/admin");
-                  return;
-                }
                 // Si se proporciona onModuleChange, usarla (Dashboard)
                 if (onModuleChange) {
                   onModuleChange(item.id as any);

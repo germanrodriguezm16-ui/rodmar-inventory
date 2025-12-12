@@ -162,7 +162,16 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
   };
 
   const handleSubmit = () => {
-    const roleId = selectedRoleId ? parseInt(selectedRoleId) : null;
+    const roleId = selectedRoleId && selectedRoleId !== "none" ? parseInt(selectedRoleId) : null;
+    if (!user) {
+      // Por ahora, crear usuarios no está implementado en el backend
+      toast({
+        title: "Funcionalidad pendiente",
+        description: "La creación de usuarios estará disponible próximamente",
+        variant: "default",
+      });
+      return;
+    }
     updateMutation.mutate({ roleId, overrides });
   };
 
@@ -173,9 +182,9 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
       <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>
-            Editar Usuario: {user?.firstName && user?.lastName
+            {user ? `Editar Usuario: ${user.firstName && user.lastName
               ? `${user.firstName} ${user.lastName}`
-              : user?.email || user?.id}
+              : user.email || user.id}` : "Crear Nuevo Usuario"}
           </DialogTitle>
         </DialogHeader>
 
@@ -188,12 +197,12 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
 
             <div className="space-y-2">
               <Label htmlFor="role">Rol Principal *</Label>
-              <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+              <Select value={selectedRoleId || "none"} onValueChange={(v) => setSelectedRoleId(v === "none" ? "" : v)}>
                 <SelectTrigger id="role">
                   <SelectValue placeholder="Seleccionar rol" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sin rol</SelectItem>
+                  <SelectItem value="none">Sin rol</SelectItem>
                   {roles.map((role) => (
                     <SelectItem key={role.id} value={role.id.toString()}>
                       {role.nombre} {role.descripcion && `- ${role.descripcion}`}

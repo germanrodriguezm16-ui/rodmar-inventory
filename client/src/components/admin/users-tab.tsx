@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Users as UsersIcon } from "lucide-react";
+import { Edit, Users as UsersIcon, Plus } from "lucide-react";
 import { apiUrl } from "@/lib/api";
 import UserModal from "./user-modal";
 
@@ -51,10 +51,19 @@ export default function UsersTab() {
     return <div className="text-center py-8">Cargando usuarios...</div>;
   }
 
+  const handleCreate = () => {
+    setEditingUser(null);
+    setShowModal(true);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Usuarios del Sistema</h3>
+        <Button onClick={handleCreate}>
+          <Plus className="h-4 w-4 mr-2" />
+          Crear Usuario
+        </Button>
       </div>
 
       <div className="relative">

@@ -1,4 +1,4 @@
-import { Bell, Settings, Truck, Bug } from "lucide-react";
+import { Bell, Settings, Truck, Bug, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,8 +7,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { NotificationsSettingsModal } from "@/components/modals/notifications-settings-modal";
 import { DebugLogsModal } from "@/components/modals/debug-logs-modal";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface AppHeaderProps {
   currentModule: string;
@@ -26,6 +28,8 @@ const moduleNames = {
 export default function AppHeader({ currentModule }: AppHeaderProps) {
   const [showNotificationsSettings, setShowNotificationsSettings] = useState(false);
   const [showDebugLogs, setShowDebugLogs] = useState(false);
+  const [, setLocation] = useLocation();
+  const { has } = usePermissions();
 
   return (
     <>
@@ -54,6 +58,15 @@ export default function AppHeader({ currentModule }: AppHeaderProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
+                  {has("module.ADMIN.view") && (
+                    <DropdownMenuItem 
+                      onClick={() => setLocation("/admin")}
+                      className="cursor-pointer"
+                    >
+                      <Shield className="mr-2 h-4 w-4" />
+                      Administración
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem 
                     onClick={() => setShowNotificationsSettings(true)}
                     className="cursor-pointer"
