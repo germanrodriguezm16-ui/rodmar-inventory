@@ -13,7 +13,6 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
   const { navigateToModule, getCurrentModule } = useGlobalNavigation();
   const { isNavigationHidden } = useNavigationVisibility();
   const { has } = usePermissions();
-  const [location, setLocation] = useLocation();
   
   // Si la navegación está oculta, no renderizar nada
   if (isNavigationHidden) {
