@@ -4198,20 +4198,31 @@ export class DatabaseStorage implements IStorage {
       // QUERY 2: Transacciones agregadas por volquetero (1 query para todos los volqueteros)
       const transaccionesStart = Date.now();
       const volqueteroIds = allVolqueteros.map(v => v.id.toString());
+      // También crear un mapa de nombres a IDs para manejar transacciones antiguas que puedan tener nombres
+      const volqueteroNombresMap = new Map<string, number>();
+      allVolqueteros.forEach(v => {
+        volqueteroNombresMap.set(v.nombre.toLowerCase(), v.id);
+      });
       
       // Logging para debugging
       console.log(`🔍 [getVolqueterosBalances] Total volqueteros: ${allVolqueteros.length}`);
       console.log(`🔍 [getVolqueterosBalances] IDs de volqueteros: ${volqueteroIds.slice(0, 5).join(', ')}${volqueteroIds.length > 5 ? '...' : ''}`);
       
-      // Construir condiciones OR para cada volquetero (INCLUIR OCULTOS para balance real)
-      // EXCLUIR transacciones pendientes (no afectan balances)
-      const transaccionesConditions = [
+      // Construir condiciones OR para cada volquetero (buscar tanto por ID como por nombre)
+      // Esto maneja tanto transacciones nuevas (con ID) como antiguas (con nombre)
+      const condicionesOrigen = allVolqueteros.map(v => 
         or(
-          and(eq(transacciones.deQuienTipo, 'volquetero'), inArray(transacciones.deQuienId, volqueteroIds)),
-          and(eq(transacciones.paraQuienTipo, 'volquetero'), inArray(transacciones.paraQuienId, volqueteroIds))
-        ),
-        ne(transacciones.estado, 'pendiente') // Excluir transacciones pendientes
-      ];
+          eq(transacciones.deQuienId, v.id.toString()),
+          eq(transacciones.deQuienId, v.nombre)
+        )
+      );
+      
+      const condicionesDestino = allVolqueteros.map(v => 
+        or(
+          eq(transacciones.paraQuienId, v.id.toString()),
+          eq(transacciones.paraQuienId, v.nombre)
+        )
+      );
       
       // Query mejorada para manejar transacciones entre volqueteros correctamente
       // Hace dos queries separadas: una para volqueteros como origen (ingresos), otra para volqueteros como destino (egresos)
@@ -4220,6 +4231,7 @@ export class DatabaseStorage implements IStorage {
       // 1. Transacciones donde el volquetero es origen (deQuienTipo = 'volquetero') - ingresos
       // IMPORTANTE: Incluir todas las transacciones, incluso las ocultas, para el cálculo correcto del balance
       // NO filtrar por ocultaEnVolquetero porque el balance debe incluir TODAS las transacciones
+      // Buscar tanto por ID como por nombre para manejar transacciones antiguas
       const transaccionesDesdeVolqueteros = await db
         .select({
           volqueteroId: transacciones.deQuienId,
@@ -4229,7 +4241,7 @@ export class DatabaseStorage implements IStorage {
         .where(and(
           eq(transacciones.deQuienTipo, 'volquetero'),
           sql`${transacciones.deQuienId} IS NOT NULL`, // Asegurar que deQuienId no sea NULL
-          inArray(transacciones.deQuienId, volqueteroIds),
+          or(...condicionesOrigen), // Buscar por ID o nombre
           ne(transacciones.estado, 'pendiente')
         ));
 
