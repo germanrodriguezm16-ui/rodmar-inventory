@@ -4431,19 +4431,29 @@ export class DatabaseStorage implements IStorage {
         const viajesStats = viajesStatsMap.get(volquetero.nombre) || { viajesCount: 0, viajesUltimoMes: 0, ingresosFletes: 0 };
         const transaccionesStats = transaccionesStatsMap.get(volquetero.id) || { ingresos: 0, egresos: 0 };
         
+        // Verificar si hay ingresos en ingresosMap que no se están reflejando en transaccionesStats
+        const ingresosDirectos = ingresosMap.get(volquetero.id) || 0;
+        if (ingresosDirectos > 0 && transaccionesStats.ingresos === 0) {
+          console.log(`⚠️  [getVolqueterosBalances] INCONSISTENCIA: Volquetero ${volquetero.id} (${volquetero.nombre}) tiene ingresos directos de ${ingresosDirectos} pero transaccionesStats.ingresos es 0`);
+        }
+        
         // SIEMPRE calcular balance dinámicamente para asegurar que se excluyan transacciones pendientes
         // (balanceCalculado podría incluir transacciones pendientes si fue calculado antes de implementar la exclusión)
         // Lógica estandarizada para volqueteros:
         // - Ingresos: viajes (fletes) + transacciones donde el volquetero es origen (deQuienTipo = 'volquetero')
         // - Egresos: transacciones donde el volquetero es destino (paraQuienTipo = 'volquetero')
         // Balance = Ingresos - Egresos
-        const balance = viajesStats.ingresosFletes + transaccionesStats.ingresos - transaccionesStats.egresos;
+        // IMPORTANTE: Usar ingresosDirectos si transaccionesStats.ingresos es 0 pero hay ingresos directos
+        const ingresosTransacciones = transaccionesStats.ingresos > 0 ? transaccionesStats.ingresos : ingresosDirectos;
+        const balance = viajesStats.ingresosFletes + ingresosTransacciones - transaccionesStats.egresos;
 
         // Logging detallado para debugging (solo para primeros 3 volqueteros para no saturar logs)
         if (Object.keys(balances).length < 3) {
           console.log(`🔍 [getVolqueterosBalances] Volquetero ${volquetero.id} (${volquetero.nombre}):`);
           console.log(`   - Ingresos fletes: ${viajesStats.ingresosFletes}`);
-          console.log(`   - Ingresos transacciones (origen): ${transaccionesStats.ingresos}`);
+          console.log(`   - Ingresos transacciones (origen) - transaccionesStats: ${transaccionesStats.ingresos}`);
+          console.log(`   - Ingresos transacciones (origen) - ingresosMap directo: ${ingresosDirectos}`);
+          console.log(`   - Ingresos transacciones (origen) - usado en balance: ${ingresosTransacciones}`);
           console.log(`   - Egresos transacciones (destino): ${transaccionesStats.egresos}`);
           console.log(`   - Balance final: ${balance}`);
         }
