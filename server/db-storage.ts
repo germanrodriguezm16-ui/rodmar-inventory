@@ -4468,7 +4468,12 @@ export class DatabaseStorage implements IStorage {
         const balance = viajesStats.ingresosFletes + ingresosTransacciones - transaccionesStats.egresos;
 
         // Logging detallado para debugging (solo para primeros 3 volqueteros para no saturar logs)
-        if (Object.keys(balances).length < 3) {
+        // También loggear volqueteros específicos que sabemos que tienen problemas
+        const volqueterosEspeciales = [169, 100, 47, 230, 229]; // IDs conocidos con problemas o importantes
+        const esVolqueteroEspecial = volqueterosEspeciales.includes(volquetero.id);
+        const esPrimero = Object.keys(balances).length < 3;
+        
+        if (esPrimero || esVolqueteroEspecial) {
           console.log(`🔍 [getVolqueterosBalances] Volquetero ${volquetero.id} (${volquetero.nombre}):`);
           console.log(`   - Ingresos fletes: ${viajesStats.ingresosFletes}`);
           console.log(`   - Ingresos transacciones (origen) - transaccionesStats: ${transaccionesStats.ingresos}`);
