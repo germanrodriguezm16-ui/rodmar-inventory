@@ -4492,6 +4492,21 @@ export class DatabaseStorage implements IStorage {
 
       const endTime = Date.now();
       console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getVolqueterosBalances: ${endTime - startTime}ms (${allVolqueteros.length} volqueteros)`);
+      
+      // Verificar balance específico de Willian Ruiz (ID: 169) para debugging
+      const willianRuiz = allVolqueteros.find(v => v.id === 169);
+      if (willianRuiz) {
+        const balanceWillian = balances[169];
+        console.log(`🔍 [getVolqueterosBalances] VERIFICACIÓN Willian Ruiz (ID: 169):`);
+        console.log(`   - Balance en resultado: ${balanceWillian?.balance || 'NO ENCONTRADO'}`);
+        console.log(`   - Ingresos en ingresosMap: ${ingresosMap.get(169) || 0}`);
+        console.log(`   - Egresos en egresosMap: ${egresosMap.get(169) || 0}`);
+        const statsWillian = transaccionesStatsMap.get(169);
+        console.log(`   - transaccionesStatsMap: ingresos=${statsWillian?.ingresos || 0}, egresos=${statsWillian?.egresos || 0}`);
+        const viajesStatsWillian = viajesStatsMap.get(willianRuiz.nombre);
+        console.log(`   - viajesStatsMap: ingresosFletes=${viajesStatsWillian?.ingresosFletes || 0}`);
+      }
+      
       return balances;
     });
   }
