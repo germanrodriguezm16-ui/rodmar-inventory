@@ -4204,13 +4204,8 @@ export class DatabaseStorage implements IStorage {
         volqueteroNombresMap.set(v.nombre.toLowerCase(), v.id);
       });
       
-      // Logging para debugging
-      console.log(`🔍 [getVolqueterosBalances] Total volqueteros: ${allVolqueteros.length}`);
-      console.log(`🔍 [getVolqueterosBalances] IDs de volqueteros: ${volqueteroIds.slice(0, 5).join(', ')}${volqueteroIds.length > 5 ? '...' : ''}`);
-      
       // Crear un Set de IDs válidos para verificación rápida
       const volqueteroIdsSet = new Set(allVolqueteros.map(v => v.id));
-      console.log(`🔍 [getVolqueterosBalances] IDs válidos (primeros 10): ${Array.from(volqueteroIdsSet).slice(0, 10).join(', ')}`);
       
       // Construir condiciones OR para cada volquetero (buscar tanto por ID como por nombre)
       // Esto maneja tanto transacciones nuevas (con ID) como antiguas (con nombre)
@@ -4266,15 +4261,9 @@ export class DatabaseStorage implements IStorage {
           ne(transacciones.estado, 'pendiente')
         ));
 
-      // Logging detallado para debugging
-      console.log(`🔍 [getVolqueterosBalances] Transacciones desde volqueteros (origen): ${transaccionesDesdeVolqueteros.length}`);
-      if (transaccionesDesdeVolqueteros.length > 0) {
-        console.log(`🔍 [getVolqueterosBalances] Ejemplo transacción origen: volqueteroId=${transaccionesDesdeVolqueteros[0].volqueteroId}, valor=${transaccionesDesdeVolqueteros[0].valor}`);
-      }
-      console.log(`🔍 [getVolqueterosBalances] Transacciones hacia volqueteros (destino): ${transaccionesHaciaVolqueteros.length}`);
-      if (transaccionesHaciaVolqueteros.length > 0) {
-        console.log(`🔍 [getVolqueterosBalances] Ejemplo transacción destino: volqueteroId=${transaccionesHaciaVolqueteros[0].volqueteroId}, valor=${transaccionesHaciaVolqueteros[0].valor}`);
-      }
+      // Logging básico (comentado para reducir ruido, descomentar si se necesita debugging)
+      // console.log(`🔍 [getVolqueterosBalances] Transacciones desde volqueteros (origen): ${transaccionesDesdeVolqueteros.length}`);
+      // console.log(`🔍 [getVolqueterosBalances] Transacciones hacia volqueteros (destino): ${transaccionesHaciaVolqueteros.length}`);
 
       // Combinar ambas queries y agrupar por volqueteroId
       const ingresosMap = new Map<number, number>();
@@ -4342,29 +4331,10 @@ export class DatabaseStorage implements IStorage {
         }
       });
       
-      // Resumen de mapeo
-      console.log(`📊 [getVolqueterosBalances] Resumen de mapeo de transacciones origen:`);
-      console.log(`   - Total transacciones: ${transaccionesDesdeVolqueteros.length}`);
-      console.log(`   - Transacciones con ID no existente: ${transaccionesConIdNoExistente}`);
-      console.log(`   - Transacciones mapeadas por nombre: ${transaccionesMapeadasPorNombre}`);
-      console.log(`   - Transacciones NO mapeadas: ${transaccionesNoMapeadas}`);
-      console.log(`   - Volqueteros únicos con ingresos: ${ingresosMap.size}`);
-      
-      // Mostrar detalles de los volqueteros que recibieron ingresos
-      if (ingresosMap.size > 0) {
-        console.log(`📊 [getVolqueterosBalances] Volqueteros con ingresos por transacciones origen:`);
-        const ingresosArray = Array.from(ingresosMap.entries())
-          .sort((a, b) => b[1] - a[1]) // Ordenar por valor descendente
-          .slice(0, 10); // Mostrar solo los primeros 10
-        ingresosArray.forEach(([id, valor]) => {
-          const volquetero = allVolqueteros.find(v => v.id === id);
-          const nombre = volquetero ? volquetero.nombre : `ID ${id} (no encontrado)`;
-          console.log(`   - ${nombre} (ID: ${id}): $${valor.toLocaleString()}`);
-        });
-        if (ingresosMap.size > 10) {
-          console.log(`   ... y ${ingresosMap.size - 10} volqueteros más`);
-        }
-      }
+      // Resumen de mapeo (comentado para reducir ruido, descomentar si se necesita debugging)
+      // if (transaccionesNoMapeadas > 0) {
+      //   console.log(`⚠️  [getVolqueterosBalances] ${transaccionesNoMapeadas} transacciones origen no mapeadas de ${transaccionesDesdeVolqueteros.length}`);
+      // }
 
       // Procesar transacciones donde el volquetero es destino (egresos)
       transaccionesHaciaVolqueteros.forEach(t => {
@@ -4392,9 +4362,9 @@ export class DatabaseStorage implements IStorage {
         }
       });
 
-      // Logging para debugging
-      console.log(`🔍 [getVolqueterosBalances] Ingresos procesados: ${Array.from(ingresosMap.entries()).length} volqueteros`);
-      console.log(`🔍 [getVolqueterosBalances] Egresos procesados: ${Array.from(egresosMap.entries()).length} volqueteros`);
+      // Logging básico (comentado para reducir ruido)
+      // console.log(`🔍 [getVolqueterosBalances] Ingresos procesados: ${Array.from(ingresosMap.entries()).length} volqueteros`);
+      // console.log(`🔍 [getVolqueterosBalances] Egresos procesados: ${Array.from(egresosMap.entries()).length} volqueteros`);
 
       // Convertir a formato esperado
       // IMPORTANTE: Incluir TODOS los volqueteros, incluso si no tienen transacciones, para asegurar que todos tengan entrada en el map
@@ -4430,14 +4400,9 @@ export class DatabaseStorage implements IStorage {
         return !stats || stats.ingresos === 0;
       });
       
+      // Verificación de consistencia (solo loggear si hay problemas)
       if (volqueterosConIngresosNoEnStats.length > 0) {
-        console.log(`⚠️  [getVolqueterosBalances] ${volqueterosConIngresosNoEnStats.length} volqueteros con ingresos en ingresosMap pero no en transaccionesStatsMap:`);
-        volqueterosConIngresosNoEnStats.slice(0, 5).forEach(id => {
-          const volquetero = allVolqueteros.find(v => v.id === id);
-          const nombre = volquetero ? volquetero.nombre : `ID ${id}`;
-          const ingresos = ingresosMap.get(id) || 0;
-          console.log(`   - ${nombre} (ID: ${id}): $${ingresos.toLocaleString()}`);
-        });
+        console.warn(`⚠️  [getVolqueterosBalances] ${volqueterosConIngresosNoEnStats.length} volqueteros con ingresos en ingresosMap pero no en transaccionesStatsMap`);
       }
 
       const transaccionesTime = Date.now() - transaccionesStart;
@@ -4457,14 +4422,13 @@ export class DatabaseStorage implements IStorage {
           console.log(`⚠️  [getVolqueterosBalances] INCONSISTENCIA: Volquetero ${volquetero.id} (${volquetero.nombre}) tiene ingresos directos de ${ingresosDirectos} pero transaccionesStats.ingresos es 0`);
         }
         
-        // Verificar si el nombre del volquetero no coincide con ningún conductor en viajesStatsMap
-        if (volquetero.id === 169) { // Willian Ruiz
-          console.log(`🔍 [getVolqueterosBalances] DEBUG Willian Ruiz:`);
-          console.log(`   - Nombre del volquetero: "${volquetero.nombre}"`);
-          console.log(`   - Existe en viajesStatsMap: ${viajesStatsMap.has(volquetero.nombre)}`);
-          console.log(`   - viajesStats obtenido:`, viajesStats);
-          console.log(`   - Todos los nombres en viajesStatsMap:`, Array.from(viajesStatsMap.keys()).filter(n => n.toLowerCase().includes('willian') || n.toLowerCase().includes('ruiz')));
-        }
+        // Verificación de coincidencia de nombres (logging comentado, descomentar si se necesita debugging)
+        // if (volquetero.id === 169) {
+        //   console.log(`🔍 [getVolqueterosBalances] DEBUG Willian Ruiz:`);
+        //   console.log(`   - Nombre del volquetero: "${volquetero.nombre}"`);
+        //   console.log(`   - Existe en viajesStatsMap: ${viajesStatsMap.has(volquetero.nombre)}`);
+        //   console.log(`   - viajesStats obtenido:`, viajesStats);
+        // }
         
         // SIEMPRE calcular balance dinámicamente para asegurar que se excluyan transacciones pendientes
         // (balanceCalculado podría incluir transacciones pendientes si fue calculado antes de implementar la exclusión)
@@ -4488,21 +4452,15 @@ export class DatabaseStorage implements IStorage {
         
         const balance = ingresosFletesNum + ingresosTransaccionesNum - egresosNum;
 
-        // Logging detallado para debugging (solo para primeros 3 volqueteros para no saturar logs)
-        // También loggear volqueteros específicos que sabemos que tienen problemas
-        const volqueterosEspeciales = [169, 100, 47, 230, 229]; // IDs conocidos con problemas o importantes
-        const esVolqueteroEspecial = volqueterosEspeciales.includes(volquetero.id);
-        const esPrimero = Object.keys(balances).length < 3;
-        
-        if (esPrimero || esVolqueteroEspecial) {
-          console.log(`🔍 [getVolqueterosBalances] Volquetero ${volquetero.id} (${volquetero.nombre}):`);
-          console.log(`   - Ingresos fletes: ${viajesStats.ingresosFletes}`);
-          console.log(`   - Ingresos transacciones (origen) - transaccionesStats: ${transaccionesStats.ingresos}`);
-          console.log(`   - Ingresos transacciones (origen) - ingresosMap directo: ${ingresosDirectos}`);
-          console.log(`   - Ingresos transacciones (origen) - usado en balance: ${ingresosTransacciones}`);
-          console.log(`   - Egresos transacciones (destino): ${transaccionesStats.egresos}`);
-          console.log(`   - Balance final: ${balance}`);
-        }
+        // Logging detallado solo para debugging cuando sea necesario (comentado por defecto)
+        // Descomentar si se necesita debugging específico
+        // if (volquetero.id === 169) {
+        //   console.log(`🔍 [getVolqueterosBalances] Volquetero ${volquetero.id} (${volquetero.nombre}):`);
+        //   console.log(`   - Ingresos fletes: ${ingresosFletesNum}`);
+        //   console.log(`   - Ingresos transacciones (origen): ${ingresosTransaccionesNum}`);
+        //   console.log(`   - Egresos transacciones (destino): ${egresosNum}`);
+        //   console.log(`   - Balance final: ${balance}`);
+        // }
 
         balances[volquetero.id] = {
           balance,
@@ -4514,19 +4472,13 @@ export class DatabaseStorage implements IStorage {
       const endTime = Date.now();
       console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getVolqueterosBalances: ${endTime - startTime}ms (${allVolqueteros.length} volqueteros)`);
       
-      // Verificar balance específico de Willian Ruiz (ID: 169) para debugging
-      const willianRuiz = allVolqueteros.find(v => v.id === 169);
-      if (willianRuiz) {
-        const balanceWillian = balances[169];
-        console.log(`🔍 [getVolqueterosBalances] VERIFICACIÓN Willian Ruiz (ID: 169):`);
-        console.log(`   - Balance en resultado: ${balanceWillian?.balance || 'NO ENCONTRADO'}`);
-        console.log(`   - Ingresos en ingresosMap: ${ingresosMap.get(169) || 0}`);
-        console.log(`   - Egresos en egresosMap: ${egresosMap.get(169) || 0}`);
-        const statsWillian = transaccionesStatsMap.get(169);
-        console.log(`   - transaccionesStatsMap: ingresos=${statsWillian?.ingresos || 0}, egresos=${statsWillian?.egresos || 0}`);
-        const viajesStatsWillian = viajesStatsMap.get(willianRuiz.nombre);
-        console.log(`   - viajesStatsMap: ingresosFletes=${viajesStatsWillian?.ingresosFletes || 0}`);
-      }
+      // Verificación específica comentada (descomentar si se necesita debugging)
+      // const willianRuiz = allVolqueteros.find(v => v.id === 169);
+      // if (willianRuiz) {
+      //   const balanceWillian = balances[169];
+      //   console.log(`🔍 [getVolqueterosBalances] VERIFICACIÓN Willian Ruiz (ID: 169):`);
+      //   console.log(`   - Balance en resultado: ${balanceWillian?.balance || 'NO ENCONTRADO'}`);
+      // }
       
       return balances;
     });
