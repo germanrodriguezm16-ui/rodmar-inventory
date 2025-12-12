@@ -6,7 +6,8 @@ import { requireAuth } from "./middleware/auth";
 import { getUserPermissions, requirePermission } from "./middleware/permissions";
 import { emitTransactionUpdate } from "./socket";
 import { db } from "./db";
-import { roles, permissions, rolePermissions, users, userPermissionsOverride, eq, and, inArray } from "../shared/schema";
+import { roles, permissions, rolePermissions, users, userPermissionsOverride } from "../shared/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import {
   insertMinaSchema,
   insertCompradorSchema,
