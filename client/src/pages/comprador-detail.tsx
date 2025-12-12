@@ -16,6 +16,7 @@ import type { Comprador, TransaccionWithSocio, ViajeWithDetails } from "@shared/
 import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiUrl } from "@/lib/api";
+import { usePermissions } from "@/hooks/usePermissions";
 // Función para obtener día de la semana abreviado
 const getDayOfWeek = (dateInput: string | Date): string => {
   const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -78,6 +79,7 @@ import {
 export default function CompradorDetail() {
   const [, params] = useRoute("/compradores/:id");
   const [, setLocation] = useLocation();
+  const { has } = usePermissions();
   const [showNewTransaction, setShowNewTransaction] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<TransaccionWithSocio | null>(null);
@@ -753,35 +755,34 @@ export default function CompradorDetail() {
 
       {/* Contenido principal compacto */}
       <div className="max-w-7xl mx-auto px-4 py-3">
-        <Tabs defaultValue="viajes" className="w-full">
-          <TabsList className="rodmar-tabs grid w-full grid-cols-3 gap-1 p-1">
-            <TabsTrigger 
-              value="viajes" 
-              className="text-sm px-3 py-2"
-            >
-              Viajes
-              <Badge variant="secondary" className="ml-1">
-                {viajesFiltrados.length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="transacciones"
-              className="text-sm px-3 py-2"
-            >
-              Transacciones
-              <Badge variant="secondary" className="ml-1">
-                {transaccionesFiltradas.length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="balance"
-              className="text-sm px-3 py-2"
-            >
-              Balance
-            </TabsTrigger>
+        <Tabs defaultValue={has("module.COMPRADORES.tab.TRANSACCIONES.view") ? "transacciones" : "balance"} className="w-full">
+          <TabsList className={`rodmar-tabs grid w-full gap-1 p-1 ${
+            [has("module.COMPRADORES.tab.TRANSACCIONES.view"), has("module.COMPRADORES.tab.BALANCES.view")]
+              .filter(Boolean).length === 2 ? "grid-cols-2" : "grid-cols-1"
+          }`}>
+            {has("module.COMPRADORES.tab.TRANSACCIONES.view") && (
+              <TabsTrigger 
+                value="transacciones"
+                className="text-sm px-3 py-2"
+              >
+                Transacciones
+                <Badge variant="secondary" className="ml-1">
+                  {transaccionesFiltradas.length}
+                </Badge>
+              </TabsTrigger>
+            )}
+            {has("module.COMPRADORES.tab.BALANCES.view") && (
+              <TabsTrigger 
+                value="balance"
+                className="text-sm px-3 py-2"
+              >
+                Balance
+              </TabsTrigger>
+            )}
           </TabsList>
 
-              <TabsContent value="viajes" className="mt-6">
+              {has("module.COMPRADORES.tab.TRANSACCIONES.view") && (
+              <TabsContent value="transacciones" className="mt-6">
                 <CompradorViajesTab 
                   viajes={viajesFiltrados}
                   viajesOriginal={viajes || []}

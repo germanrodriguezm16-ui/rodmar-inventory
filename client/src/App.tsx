@@ -12,6 +12,7 @@ import MinaDetail from "@/pages/mina-detail";
 import CompradorDetail from "@/pages/comprador-detail";
 import VolqueteroDetail from "@/pages/volquetero-detail";
 import RodMarCuentaDetail from "@/pages/rodmar-cuenta-detail";
+import Admin from "@/pages/admin";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
@@ -46,6 +47,7 @@ function Router() {
         <Dashboard initialModule="rodmar" />
       </Route>
       <Route path="/rodmar/cuenta/:cuentaSlug" component={RodMarCuentaDetail} />
+      <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>
   );

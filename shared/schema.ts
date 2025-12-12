@@ -13,6 +13,15 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// Roles table - Roles base del sistema (definido antes de users para la referencia)
+export const roles = pgTable("roles", {
+  id: serial("id").primaryKey(),
+  nombre: varchar("nombre", { length: 100 }).notNull().unique(),
+  descripcion: text("descripcion"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Users table for authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),
@@ -20,9 +29,46 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  roleId: integer("role_id").references(() => roles.id, { onDelete: "set null" }), // Referencia al rol del usuario
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Permissions table - Catálogo de permisos del sistema
+export const permissions = pgTable("permissions", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(), // "module.MINAS.view", "action.TRANSACCIONES.create"
+  descripcion: text("descripcion").notNull(), // Descripción legible para humanos
+  categoria: varchar("categoria", { length: 50 }), // "module", "action", "tab"
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_permission_categoria").on(table.categoria),
+]);
+
+// Role Permissions - Relación muchos-a-muchos: roles tienen permisos
+export const rolePermissions = pgTable("role_permissions", {
+  id: serial("id").primaryKey(),
+  roleId: integer("role_id").references(() => roles.id, { onDelete: "cascade" }).notNull(),
+  permissionId: integer("permission_id").references(() => permissions.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("unique_role_permission").on(table.roleId, table.permissionId),
+  index("idx_role_permissions_role").on(table.roleId),
+  index("idx_role_permissions_permission").on(table.permissionId),
+]);
+
+// User Permissions Override - Overrides individuales de permisos por usuario
+export const userPermissionsOverride = pgTable("user_permissions_override", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  permissionId: integer("permission_id").references(() => permissions.id, { onDelete: "cascade" }).notNull(),
+  overrideType: varchar("override_type", { length: 10 }).notNull(), // "allow" o "deny"
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("unique_user_permission").on(table.userId, table.permissionId),
+  index("idx_user_permissions_user").on(table.userId),
+  index("idx_user_permissions_permission").on(table.permissionId),
+]);
 
 // Minas (Mines)
 export const minas = pgTable("minas", {
@@ -409,6 +455,19 @@ export const revertFusionSchema = z.object({
 // User types
 export type User = typeof users.$inferSelect;
 export type UpsertUser = typeof users.$inferInsert;
+
+// Role and Permission types
+export type Role = typeof roles.$inferSelect;
+export type InsertRole = typeof roles.$inferInsert;
+
+export type Permission = typeof permissions.$inferSelect;
+export type InsertPermission = typeof permissions.$inferInsert;
+
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type InsertRolePermission = typeof rolePermissions.$inferInsert;
+
+export type UserPermissionOverride = typeof userPermissionsOverride.$inferSelect;
+export type InsertUserPermissionOverride = typeof userPermissionsOverride.$inferInsert;
 
 // Types
 export type Mina = typeof minas.$inferSelect;

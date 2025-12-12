@@ -16,6 +16,7 @@ import { User, Calculator, Building2, ShoppingCart, DollarSign, Banknote, Search
 
 import { formatDateWithDaySpanish } from "@/lib/date-utils";
 import { highlightText, highlightValue } from "@/lib/utils";
+import { usePermissions } from "@/hooks/usePermissions";
 
 // Tipo para los filtros de fecha (idéntico a Minas)
 type DateFilterType = "todos" | "exactamente" | "entre" | "despues-de" | "antes-de" | "hoy" | "ayer" | "esta-semana" | "semana-pasada" | "este-mes" | "mes-pasado" | "este-año" | "año-pasado";
@@ -63,6 +64,7 @@ const formatCurrency = (value: string | number) => {
 
 export default function RodMar() {
   const [, setLocation] = useLocation();
+  const { has } = usePermissions();
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
   const [selectedSubAccount, setSelectedSubAccount] = useState<string>("");
 
@@ -310,25 +312,51 @@ export default function RodMar() {
       <Card>
         <CardContent className="p-6">
           <Tabs defaultValue="cuentas" className="w-full">
-            <TabsList className="rodmar-tabs grid w-full grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-0 p-1">
-              <TabsTrigger value="cuentas" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
-                Cuentas
-              </TabsTrigger>
-              <TabsTrigger value="balances" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
-                Balances
-              </TabsTrigger>
-              <TabsTrigger value="financiero" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
-                Estado
-              </TabsTrigger>
-              <TabsTrigger value="lcdm" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
-                LCDM
-              </TabsTrigger>
-              <TabsTrigger value="postobon" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
-                Postobón
-              </TabsTrigger>
-              <TabsTrigger value="ganancias" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
-                Ganancias
-              </TabsTrigger>
+            <TabsList className={`rodmar-tabs grid w-full gap-1 sm:gap-0 p-1 ${
+              (() => {
+                const visibleTabs = [
+                  has("module.RODMAR.accounts.view"),
+                  has("module.RODMAR.balances.view"),
+                  has("module.RODMAR.balances.view"), // financiero usa balances
+                  has("module.RODMAR.LCDM.view"),
+                  has("module.RODMAR.Postobon.view"),
+                  has("module.RODMAR.balances.view"), // ganancias usa balances
+                ].filter(Boolean).length;
+                return visibleTabs === 1 ? "grid-cols-1" :
+                       visibleTabs === 2 ? "grid-cols-2" :
+                       visibleTabs === 3 ? "grid-cols-3" :
+                       visibleTabs === 4 ? "grid-cols-4" :
+                       visibleTabs === 5 ? "grid-cols-5" : "grid-cols-6";
+              })()
+            }`}>
+              {has("module.RODMAR.accounts.view") && (
+                <TabsTrigger value="cuentas" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
+                  Cuentas
+                </TabsTrigger>
+              )}
+              {has("module.RODMAR.balances.view") && (
+                <>
+                  <TabsTrigger value="balances" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
+                    Balances
+                  </TabsTrigger>
+                  <TabsTrigger value="financiero" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
+                    Estado
+                  </TabsTrigger>
+                  <TabsTrigger value="ganancias" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
+                    Ganancias
+                  </TabsTrigger>
+                </>
+              )}
+              {has("module.RODMAR.LCDM.view") && (
+                <TabsTrigger value="lcdm" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
+                  LCDM
+                </TabsTrigger>
+              )}
+              {has("module.RODMAR.Postobon.view") && (
+                <TabsTrigger value="postobon" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
+                  Postobón
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* Tab: Cuentas */}

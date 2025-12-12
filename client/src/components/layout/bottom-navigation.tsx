@@ -1,7 +1,9 @@
-import { Home, Mountain, Building2, Truck, ArrowUpDown, User } from "lucide-react";
+import { Home, Mountain, Building2, Truck, ArrowUpDown, User, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGlobalNavigation } from "@/hooks/use-global-navigation";
 import { useNavigationVisibility } from "@/hooks/use-navigation-visibility";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useLocation } from "wouter";
 
 interface BottomNavigationProps {
   activeModule?: string;
@@ -11,6 +13,8 @@ interface BottomNavigationProps {
 export default function BottomNavigation({ activeModule, onModuleChange }: BottomNavigationProps) {
   const { navigateToModule, getCurrentModule } = useGlobalNavigation();
   const { isNavigationHidden } = useNavigationVisibility();
+  const { has } = usePermissions();
+  const [location, setLocation] = useLocation();
   
   // Si la navegación está oculta, no renderizar nada
   if (isNavigationHidden) {
@@ -19,14 +23,34 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
   
   // Si no se proporciona activeModule, detectarlo automáticamente
   const currentModule = activeModule || getCurrentModule();
-  const navItems = [
+  
+  // Mapeo de módulos a permisos
+  const modulePermissions: Record<string, string> = {
+    principal: "", // Principal siempre visible
+    minas: "module.MINAS.view",
+    compradores: "module.COMPRADORES.view",
+    volqueteros: "module.VOLQUETEROS.view",
+    transacciones: "module.TRANSACCIONES.view",
+    rodmar: "module.RODMAR.view",
+    admin: "module.ADMIN.view",
+  };
+  
+  const allNavItems = [
     { id: "principal", icon: Home, label: "Principal" },
     { id: "minas", icon: Mountain, label: "Minas" },
     { id: "compradores", icon: Building2, label: "Compradores" },
     { id: "volqueteros", icon: Truck, label: "Volqueteros" },
     { id: "transacciones", icon: ArrowUpDown, label: "Transacc" },
     { id: "rodmar", icon: User, label: "RodMar" },
+    { id: "admin", icon: Settings, label: "Admin" },
   ];
+  
+  // Filtrar módulos según permisos
+  const navItems = allNavItems.filter((item) => {
+    const permission = modulePermissions[item.id];
+    // Si no hay permiso requerido (principal) o el usuario tiene el permiso
+    return !permission || has(permission);
+  });
 
   return (
     <nav 
@@ -34,9 +58,9 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
       style={{ zIndex: 9999, position: 'fixed' }}
     >
       <div className="flex items-stretch min-h-[56px] max-h-[64px]">
-        {navItems.map((item) => {
+          {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = currentModule === item.id;
+          const isActive = item.id === "admin" ? location === "/admin" : currentModule === item.id;
           
           return (
             <Button
@@ -46,6 +70,11 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
                 isActive ? "text-primary" : "text-muted-foreground"
               }`}
               onClick={() => {
+                // Si es admin, usar navegación directa
+                if (item.id === "admin") {
+                  setLocation("/admin");
+                  return;
+                }
                 // Si se proporciona onModuleChange, usarla (Dashboard)
                 if (onModuleChange) {
                   onModuleChange(item.id as any);

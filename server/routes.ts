@@ -3,7 +3,10 @@ import { Router } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth } from "./middleware/auth";
+import { getUserPermissions, requirePermission } from "./middleware/permissions";
 import { emitTransactionUpdate } from "./socket";
+import { db } from "./db";
+import { roles, permissions, rolePermissions, users, userPermissionsOverride, eq, and, inArray } from "../shared/schema";
 import {
   insertMinaSchema,
   insertCompradorSchema,
@@ -86,6 +89,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Endpoint para obtener permisos del usuario actual
+  app.get("/api/user/permissions", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const permissions = await getUserPermissions(userId);
+      res.json({ permissions });
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+      res.status(500).json({ error: "Failed to fetch permissions" });
     }
   });
 
@@ -2182,7 +2197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.post("/api/transacciones", async (req, res) => {
+  app.post("/api/transacciones", requireAuth, requirePermission("action.TRANSACCIONES.create"), async (req, res) => {
     try {
       const userId = req.user?.id || "main_user";
 
@@ -2607,7 +2622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Completar transacción pendiente
-  app.put("/api/transacciones/:id/completar", requireAuth, async (req, res) => {
+  app.put("/api/transacciones/:id/completar", requireAuth, requirePermission("action.TRANSACCIONES.completePending"), async (req, res) => {
     try {
       const userId = req.user!.id;
       const id = parseInt(req.params.id);
@@ -3179,7 +3194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/transacciones/hide", hideRouter);
   
   // Mantener ruta antigua por compatibilidad - DEBE estar ANTES de /api/transacciones/:id
-  app.patch("/api/transacciones/:id/hide", async (req, res) => {
+  app.patch("/api/transacciones/:id/hide", requireAuth, requirePermission("action.TRANSACCIONES.hide"), async (req, res) => {
     try {
       console.log("✅ [HIDE-OLD] ===== RUTA /api/transacciones/:id/hide ALCANZADA =====");
       console.log("✅ [HIDE-OLD] Method:", req.method);
@@ -3220,7 +3235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoints específicos por módulo para ocultar transacciones
-  app.patch("/api/transacciones/:id/hide-comprador", requireAuth, async (req, res) => {
+  app.patch("/api/transacciones/:id/hide-comprador", requireAuth, requirePermission("action.TRANSACCIONES.hide"), async (req, res) => {
     try {
       const userId = req.user?.id || "main_user";
       const transactionId = parseInt(req.params.id);
@@ -3250,7 +3265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/transacciones/:id/hide-mina", requireAuth, async (req, res) => {
+  app.patch("/api/transacciones/:id/hide-mina", requireAuth, requirePermission("action.TRANSACCIONES.hide"), async (req, res) => {
     try {
       const userId = req.user?.id || "main_user";
       const transactionId = parseInt(req.params.id);
@@ -3280,7 +3295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/transacciones/:id/hide-volquetero", requireAuth, async (req, res) => {
+  app.patch("/api/transacciones/:id/hide-volquetero", requireAuth, requirePermission("action.TRANSACCIONES.hide"), async (req, res) => {
     try {
       const userId = req.user?.id || "main_user";
       const transactionId = parseInt(req.params.id);
@@ -3310,7 +3325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/transacciones/:id/hide-general", requireAuth, async (req, res) => {
+  app.patch("/api/transacciones/:id/hide-general", requireAuth, requirePermission("action.TRANSACCIONES.hide"), async (req, res) => {
     try {
       const userId = req.user?.id || "main_user";
       const transactionId = parseInt(req.params.id);
@@ -3341,7 +3356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // RUTA GENÉRICA - DEBE IR DESPUÉS de todas las rutas específicas
-  app.patch("/api/transacciones/:id", async (req, res) => {
+  app.patch("/api/transacciones/:id", requireAuth, requirePermission("action.TRANSACCIONES.edit"), async (req, res) => {
     try {
       // Verificar si la petición es para /hide (no debería llegar aquí si las rutas específicas están bien)
       if (req.originalUrl.includes('/hide')) {
@@ -3531,7 +3546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk delete transactions - MUST BE BEFORE SINGLE DELETE
-  app.delete("/api/transacciones/bulk-delete", async (req, res) => {
+  app.delete("/api/transacciones/bulk-delete", requireAuth, requirePermission("action.TRANSACCIONES.delete"), async (req, res) => {
     try {
       const userId = req.user?.sub || req.user?.id || "main_user";
 
@@ -3573,7 +3588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete single transaction - MUST BE AFTER BULK DELETE
-  app.delete("/api/transacciones/:id", async (req, res) => {
+  app.delete("/api/transacciones/:id", requireAuth, requirePermission("action.TRANSACCIONES.delete"), async (req, res) => {
     try {
       const userId = req.user?.sub || req.user?.id || "main_user";
 
@@ -3637,7 +3652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Ocultar transacciones en lote
-  app.patch("/api/transacciones/bulk-hide", async (req, res) => {
+  app.patch("/api/transacciones/bulk-hide", requireAuth, requirePermission("action.TRANSACCIONES.hide"), async (req, res) => {
     try {
       const userId = req.user?.id || "main_user";
       const { ids } = req.body;
@@ -4644,6 +4659,260 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  // ============================================
+  // ADMIN ENDPOINTS - Gestión de Roles y Permisos
+  // ============================================
+
+  // Listar todos los roles con sus permisos
+  app.get("/api/admin/roles", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const allRoles = await db.select().from(roles).orderBy(roles.nombre);
+      
+      // Para cada rol, obtener sus permisos
+      const rolesWithPermissions = await Promise.all(
+        allRoles.map(async (role) => {
+          const rolePerms = await db
+            .select({
+              permissionId: permissions.id,
+              permissionKey: permissions.key,
+              descripcion: permissions.descripcion,
+              categoria: permissions.categoria,
+            })
+            .from(rolePermissions)
+            .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+            .where(eq(rolePermissions.roleId, role.id));
+
+          return {
+            ...role,
+            permissions: rolePerms,
+          };
+        })
+      );
+
+      res.json(rolesWithPermissions);
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+      res.status(500).json({ error: "Error al obtener roles" });
+    }
+  });
+
+  // Crear nuevo rol
+  app.post("/api/admin/roles", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const { nombre, descripcion, permissionIds } = req.body;
+
+      if (!nombre) {
+        return res.status(400).json({ error: "El nombre del rol es requerido" });
+      }
+
+      // Crear el rol
+      const [newRole] = await db
+        .insert(roles)
+        .values({
+          nombre: nombre.toUpperCase(),
+          descripcion: descripcion || null,
+        })
+        .returning();
+
+      // Asignar permisos si se proporcionaron
+      if (Array.isArray(permissionIds) && permissionIds.length > 0) {
+        const rolePerms = permissionIds.map((permissionId: number) => ({
+          roleId: newRole.id,
+          permissionId,
+        }));
+
+        await db.insert(rolePermissions).values(rolePerms);
+      }
+
+      res.json(newRole);
+    } catch (error: any) {
+      console.error("Error creating role:", error);
+      if (error.code === "23505") {
+        // Unique violation
+        res.status(400).json({ error: "Ya existe un rol con ese nombre" });
+      } else {
+        res.status(500).json({ error: "Error al crear rol" });
+      }
+    }
+  });
+
+  // Actualizar rol y sus permisos
+  app.put("/api/admin/roles/:id", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const roleId = parseInt(req.params.id);
+      const { nombre, descripcion, permissionIds } = req.body;
+
+      if (!nombre) {
+        return res.status(400).json({ error: "El nombre del rol es requerido" });
+      }
+
+      // Actualizar el rol
+      const [updatedRole] = await db
+        .update(roles)
+        .set({
+          nombre: nombre.toUpperCase(),
+          descripcion: descripcion || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(roles.id, roleId))
+        .returning();
+
+      if (!updatedRole) {
+        return res.status(404).json({ error: "Rol no encontrado" });
+      }
+
+      // Actualizar permisos: eliminar todos y crear los nuevos
+      await db.delete(rolePermissions).where(eq(rolePermissions.roleId, roleId));
+
+      if (Array.isArray(permissionIds) && permissionIds.length > 0) {
+        const rolePerms = permissionIds.map((permissionId: number) => ({
+          roleId: roleId,
+          permissionId,
+        }));
+
+        await db.insert(rolePermissions).values(rolePerms);
+      }
+
+      res.json(updatedRole);
+    } catch (error: any) {
+      console.error("Error updating role:", error);
+      if (error.code === "23505") {
+        res.status(400).json({ error: "Ya existe un rol con ese nombre" });
+      } else {
+        res.status(500).json({ error: "Error al actualizar rol" });
+      }
+    }
+  });
+
+  // Eliminar rol
+  app.delete("/api/admin/roles/:id", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const roleId = parseInt(req.params.id);
+
+      // Verificar si hay usuarios con este rol
+      const usersWithRole = await db
+        .select()
+        .from(users)
+        .where(eq(users.roleId, roleId))
+        .limit(1);
+
+      if (usersWithRole.length > 0) {
+        return res.status(400).json({
+          error: "No se puede eliminar el rol porque hay usuarios asignados",
+        });
+      }
+
+      // Eliminar el rol (los permisos se eliminan en cascade)
+      await db.delete(roles).where(eq(roles.id, roleId));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting role:", error);
+      res.status(500).json({ error: "Error al eliminar rol" });
+    }
+  });
+
+  // Listar todos los usuarios con sus roles
+  app.get("/api/admin/users", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const allUsers = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          roleId: users.roleId,
+          roleNombre: roles.nombre,
+          roleDescripcion: roles.descripcion,
+        })
+        .from(users)
+        .leftJoin(roles, eq(users.roleId, roles.id))
+        .orderBy(users.email);
+
+      res.json(allUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ error: "Error al obtener usuarios" });
+    }
+  });
+
+  // Actualizar usuario (rol y overrides)
+  app.put("/api/admin/users/:id", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const { roleId, overrides } = req.body;
+
+      // Actualizar rol del usuario
+      if (roleId !== undefined) {
+        await db
+          .update(users)
+          .set({
+            roleId: roleId ? parseInt(roleId) : null,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, userId));
+      }
+
+      // Actualizar overrides: eliminar todos y crear los nuevos
+      await db.delete(userPermissionsOverride).where(eq(userPermissionsOverride.userId, userId));
+
+      if (Array.isArray(overrides) && overrides.length > 0) {
+        const overrideValues = overrides.map((override: { permissionId: number; overrideType: string }) => ({
+          userId,
+          permissionId: override.permissionId,
+          overrideType: override.overrideType, // "allow" o "deny"
+        }));
+
+        await db.insert(userPermissionsOverride).values(overrideValues);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ error: "Error al actualizar usuario" });
+    }
+  });
+
+  // Listar todos los permisos del sistema
+  app.get("/api/admin/permissions", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const allPermissions = await db
+        .select()
+        .from(permissions)
+        .orderBy(permissions.categoria, permissions.key);
+
+      // Agrupar por categoría
+      const grouped = allPermissions.reduce((acc, perm) => {
+        const categoria = perm.categoria || "other";
+        if (!acc[categoria]) {
+          acc[categoria] = [];
+        }
+        acc[categoria].push(perm);
+        return acc;
+      }, {} as Record<string, typeof allPermissions>);
+
+      res.json({
+        all: allPermissions,
+        grouped,
+      });
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ error: "Error al obtener permisos" });
+    }
+  });
+
+  // Ver permisos efectivos de un usuario
+  app.get("/api/admin/users/:id/permissions", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const effectivePermissions = await getUserPermissions(userId);
+      res.json({ permissions: effectivePermissions });
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+      res.status(500).json({ error: "Error al obtener permisos del usuario" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

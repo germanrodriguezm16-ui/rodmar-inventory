@@ -24,6 +24,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiUrl } from "@/lib/api";
+import { usePermissions } from "@/hooks/usePermissions";
 
 type Module = "principal" | "minas" | "compradores" | "volqueteros" | "transacciones" | "rodmar";
 
@@ -762,6 +763,8 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     }
   };
 
+  const { has } = usePermissions();
+
   const handleQuickAction = () => {
     // El botón flotante ahora abre el modal de gestionar transacciones
     setShowGestionarModal(true);
@@ -796,22 +799,25 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
           animation: blink 1.5s ease-in-out infinite;
         }
       `}</style>
-      <Button
-        size="icon"
-        className={`fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-[100] ${
-          hasPending 
-            ? "bg-orange-500 hover:bg-orange-600 text-white blinking" 
-            : ""
-        }`}
-        onClick={handleQuickAction}
-        aria-label={hasPending ? `Gestionar transacciones (${pendingCount} pendiente${pendingCount > 1 ? 's' : ''})` : "Gestionar transacciones"}
-      >
-        {hasPending ? (
-          <span className="text-lg sm:text-xl font-bold">P</span>
-        ) : (
-          <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
-        )}
-      </Button>
+      {/* Botón flotante solo visible si tiene permiso para crear transacciones o ver pendientes */}
+      {(has("action.TRANSACCIONES.create") || has("action.TRANSACCIONES.viewPending") || hasPending) && (
+        <Button
+          size="icon"
+          className={`fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-[100] ${
+            hasPending 
+              ? "bg-orange-500 hover:bg-orange-600 text-white blinking" 
+              : ""
+          }`}
+          onClick={handleQuickAction}
+          aria-label={hasPending ? `Gestionar transacciones (${pendingCount} pendiente${pendingCount > 1 ? 's' : ''})` : "Gestionar transacciones"}
+        >
+          {hasPending ? (
+            <span className="text-lg sm:text-xl font-bold">P</span>
+          ) : (
+            <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
+          )}
+        </Button>
+      )}
 
       {/* Modals */}
       <RegisterCargueModal 

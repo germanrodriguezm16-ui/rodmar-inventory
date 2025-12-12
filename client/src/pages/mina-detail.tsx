@@ -20,6 +20,7 @@ import type { Mina, TransaccionWithSocio, ViajeWithDetails } from "@shared/schem
 import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 
 // Components
 import BottomNavigation from "@/components/layout/bottom-navigation";
@@ -52,6 +53,7 @@ export default function MinaDetail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { has } = usePermissions();
   
   const minaId = parseInt(params?.id || "0");
   
@@ -59,7 +61,14 @@ export default function MinaDetail() {
   const [transaccionesTemporales, setTransaccionesTemporales] = useState<TransaccionWithSocio[]>([]);
 
   // Estado para rastrear pestaña activa y ejecutar limpieza al cambiar
-  const [activeTab, setActiveTab] = useState<string>("viajes");
+  // Estado inicial de activeTab basado en permisos
+  const getInitialTab = () => {
+    if (has("module.MINAS.tab.VIAJES.view")) return "viajes";
+    if (has("module.MINAS.tab.TRANSACCIONES.view")) return "transacciones";
+    if (has("module.MINAS.tab.BALANCES.view")) return "balance";
+    return "viajes"; // fallback
+  };
+  const [activeTab, setActiveTab] = useState<string>(getInitialTab());
 
   // Función para ejecutar limpieza de transacciones ocultas
   const ejecutarLimpiezaTransaccionesOcultas = useCallback(async () => {
@@ -915,31 +924,42 @@ export default function MinaDetail() {
       {/* Contenido principal compacto */}
       <div className="max-w-7xl mx-auto px-4 py-3">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="rodmar-tabs grid w-full grid-cols-3 gap-1 p-1">
-            <TabsTrigger 
-              value="viajes" 
-              className="text-sm px-3 py-2"
-            >
-              Viajes
-              <Badge variant="secondary" className="ml-1">
-                {viajesFiltrados.length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="transacciones"
-              className="text-sm px-3 py-2"
-            >
-              Transacciones
-              <Badge variant="secondary" className="ml-1">
-                {transaccionesFiltradas.length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="balance"
-              className="text-sm px-3 py-2"
-            >
-              Balance
-            </TabsTrigger>
+          <TabsList className={`rodmar-tabs grid w-full gap-1 p-1 ${
+            [has("module.MINAS.tab.VIAJES.view"), has("module.MINAS.tab.TRANSACCIONES.view"), has("module.MINAS.tab.BALANCES.view")]
+              .filter(Boolean).length === 3 ? "grid-cols-3" :
+            [has("module.MINAS.tab.VIAJES.view"), has("module.MINAS.tab.TRANSACCIONES.view"), has("module.MINAS.tab.BALANCES.view")]
+              .filter(Boolean).length === 2 ? "grid-cols-2" : "grid-cols-1"
+          }`}>
+            {has("module.MINAS.tab.VIAJES.view") && (
+              <TabsTrigger 
+                value="viajes" 
+                className="text-sm px-3 py-2"
+              >
+                Viajes
+                <Badge variant="secondary" className="ml-1">
+                  {viajesFiltrados.length}
+                </Badge>
+              </TabsTrigger>
+            )}
+            {has("module.MINAS.tab.TRANSACCIONES.view") && (
+              <TabsTrigger 
+                value="transacciones"
+                className="text-sm px-3 py-2"
+              >
+                Transacciones
+                <Badge variant="secondary" className="ml-1">
+                  {transaccionesFiltradas.length}
+                </Badge>
+              </TabsTrigger>
+            )}
+            {has("module.MINAS.tab.BALANCES.view") && (
+              <TabsTrigger 
+                value="balance"
+                className="text-sm px-3 py-2"
+              >
+                Balance
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Tab de Viajes */}

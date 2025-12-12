@@ -14,6 +14,7 @@ import TripCard from "@/components/trip-card";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
+import { usePermissions } from "@/hooks/usePermissions";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
@@ -84,6 +85,14 @@ interface VolqueteroTransaccion {
 
 export default function VolqueteroDetail() {
   const { id } = useParams();
+  const { has } = usePermissions();
+  
+  // Estado inicial de activeTab basado en permisos
+  const getInitialTab = () => {
+    if (has("module.VOLQUETEROS.tab.TRANSACCIONES.view")) return "transacciones";
+    if (has("module.VOLQUETEROS.tab.BALANCES.view")) return "balance";
+    return "transacciones"; // fallback
+  };
   
   const [showNewTransactionModal, setShowNewTransactionModal] = useState(false);
   const [showTemporalTransaction, setShowTemporalTransaction] = useState(false);
@@ -100,7 +109,7 @@ export default function VolqueteroDetail() {
   const [transaccionesTemporales, setTransaccionesTemporales] = useState<TransaccionWithSocio[]>([]);
   
   // Estado para rastrear pestaña activa y ejecutar limpieza al cambiar
-  const [activeTab, setActiveTab] = useState<string>("viajes");
+  const [activeTab, setActiveTab] = useState<string>(getInitialTab());
   
   // Estados de filtros de fecha para transacciones
   const [transaccionesFechaFilterType, setTransaccionesFechaFilterType] = useState<DateFilterType>("todos");
@@ -878,16 +887,20 @@ export default function VolqueteroDetail() {
       {/* Content */}
       <div className="p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="viajes" className="text-xs">
-              Viajes ({viajesVolquetero.length})
-            </TabsTrigger>
-            <TabsTrigger value="transacciones" className="text-xs">
-              Transacciones ({transaccionesFormateadas.filter(t => !t.oculta).length})
-            </TabsTrigger>
-            <TabsTrigger value="balance" className="text-xs">
-              Balance
-            </TabsTrigger>
+          <TabsList className={`grid w-full ${
+            [has("module.VOLQUETEROS.tab.TRANSACCIONES.view"), has("module.VOLQUETEROS.tab.BALANCES.view")]
+              .filter(Boolean).length === 2 ? "grid-cols-2" : "grid-cols-1"
+          }`}>
+            {has("module.VOLQUETEROS.tab.TRANSACCIONES.view") && (
+              <TabsTrigger value="transacciones" className="text-xs">
+                Transacciones ({transaccionesFormateadas.filter(t => !t.oculta).length})
+              </TabsTrigger>
+            )}
+            {has("module.VOLQUETEROS.tab.BALANCES.view") && (
+              <TabsTrigger value="balance" className="text-xs">
+                Balance
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="viajes" className="space-y-4">
