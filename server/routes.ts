@@ -8,7 +8,7 @@ import { emitTransactionUpdate } from "./socket";
 import { db } from "./db";
 import { roles, permissions, rolePermissions, users, userPermissionsOverride } from "../shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
-import { findUserByPhone, verifyPassword, updateLastLogin, hashPassword } from "./middleware/auth-helpers";
+import { findUserByPhone, verifyPassword, updateLastLogin, hashPassword, generateToken, verifyToken } from "./middleware/auth-helpers";
 import {
   insertMinaSchema,
   insertCompradorSchema,
@@ -92,50 +92,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Credenciales inválidas" });
       }
 
-      console.log("✅ [LOGIN] Contraseña válida, creando sesión...");
-
-      // Crear sesión
-      if (req.session) {
-        (req.session as any).userId = user.id;
-        (req.session as any).createdAt = new Date();
-        console.log("✅ [LOGIN] Sesión creada para usuario:", user.id);
-        console.log("🍪 [LOGIN] Session ID:", req.sessionID);
-        console.log("🍪 [LOGIN] Cookie config:", {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production" && !!process.env.CORS_ORIGIN,
-          sameSite: process.env.NODE_ENV === "production" && !!process.env.CORS_ORIGIN ? "none" : "lax",
-        });
-      } else {
-        console.warn("⚠️ [LOGIN] req.session no está disponible");
-      }
+      console.log("✅ [LOGIN] Contraseña válida, generando token JWT...");
 
       // Actualizar último login
       await updateLastLogin(user.id);
 
+      // Generar token JWT
+      const token = generateToken(user.id);
+      console.log("✅ [LOGIN] Token JWT generado para usuario:", user.id);
+
       // Obtener permisos del usuario
       const permissions = await getUserPermissions(user.id);
       console.log("✅ [LOGIN] Login exitoso, permisos:", permissions.length);
-
-      // Guardar la sesión explícitamente antes de enviar la respuesta
-      await new Promise<void>((resolve, reject) => {
-        req.session?.save((err) => {
-          if (err) {
-            console.error("❌ [LOGIN] Error guardando sesión:", err);
-            reject(err);
-          } else {
-            console.log("✅ [LOGIN] Sesión guardada correctamente");
-            // Log de los headers de la cookie que se enviarán
-            const cookieHeader = res.getHeader("Set-Cookie");
-            console.log("🍪 [LOGIN] Set-Cookie header:", cookieHeader);
-            console.log("🍪 [LOGIN] Response headers:", {
-              "Access-Control-Allow-Origin": res.getHeader("Access-Control-Allow-Origin"),
-              "Access-Control-Allow-Credentials": res.getHeader("Access-Control-Allow-Credentials"),
-              "Set-Cookie": cookieHeader ? (Array.isArray(cookieHeader) ? cookieHeader[0] : cookieHeader).toString().substring(0, 100) : "No cookie",
-            });
-            resolve();
-          }
-        });
-      });
 
       // Asegurar que los headers CORS estén configurados antes de enviar la respuesta
       const origin = req.headers.origin;
@@ -146,6 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({
+        token,
         user: {
           id: user.id,
           phone: user.phone,
@@ -163,14 +132,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Logout - Cerrar sesión
-  app.post("/api/auth/logout", (req, res) => {
-    req.session?.destroy((err) => {
-      if (err) {
-        console.error("Error destruyendo sesión:", err);
-        return res.status(500).json({ error: "Error al cerrar sesión" });
-      }
-      res.json({ success: true });
-    });
+  app.post("/api/auth/logout", requireAuth, (req, res) => {
+    // Con JWT, el logout es principalmente del lado del cliente
+    // El token se elimina del localStorage en el frontend
+    console.log("🔓 [LOGOUT] Usuario cerrando sesión:", req.user?.id);
+    res.json({ success: true });
   });
 
   // Obtener usuario actual con permisos

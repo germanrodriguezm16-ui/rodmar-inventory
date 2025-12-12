@@ -14,13 +14,25 @@ export async function apiRequest(
 ): Promise<Response> {
   // Usar apiUrl para construir la URL completa
   const { apiUrl: getApiUrl } = await import('@/lib/api');
+  const { getAuthToken } = await import('@/hooks/useAuth');
   const fullUrl = getApiUrl(url);
   
   console.log(`Making ${method} request to ${fullUrl}`, data);
   
+  const token = getAuthToken();
+  const headers: Record<string, string> = {};
+  
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  
   const res = await fetch(fullUrl, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -62,6 +74,7 @@ export const getQueryFn: <T>(options: {
     const url = queryKey[0] as string;
     // Usar la función helper para obtener la URL base
     const { apiUrl } = await import('@/lib/api');
+    const { getAuthToken, removeAuthToken } = await import('@/hooks/useAuth');
     const fullUrl = apiUrl(url);
     
     const cacheBuster = `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
@@ -75,16 +88,25 @@ export const getQueryFn: <T>(options: {
       });
     }
     
+    const token = getAuthToken();
+    const headers: Record<string, string> = {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const res = await fetch(cacheBuster, {
       credentials: "include",
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      },
+      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      // Token inválido o expirado, limpiar
+      removeAuthToken();
       return null;
     }
 

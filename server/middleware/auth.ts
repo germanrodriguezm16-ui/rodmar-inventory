@@ -2,7 +2,7 @@ import type { RequestHandler } from "express";
 import { db } from "../db";
 import { users } from "../../shared/schema";
 import { eq } from "drizzle-orm";
-import { shouldExpireSession } from "./auth-helpers";
+import { verifyToken } from "./auth-helpers";
 
 // Extender el tipo Request para incluir user
 declare global {
@@ -21,38 +21,32 @@ declare global {
 }
 
 /**
- * Middleware de autenticación - verifica sesión real
+ * Middleware de autenticación - verifica JWT token
  */
 export const requireAuth: RequestHandler = async (req, res, next) => {
   try {
     // Logging para diagnóstico
     console.log("🔐 [AUTH] Verificando autenticación para:", req.path);
-    console.log("🍪 [AUTH] Session ID:", req.sessionID);
-    console.log("🍪 [AUTH] Session exists:", !!req.session);
-    console.log("🍪 [AUTH] Cookies recibidas:", req.headers.cookie ? "Sí" : "No");
-    if (req.headers.cookie) {
-      console.log("🍪 [AUTH] Cookie header:", req.headers.cookie.substring(0, 100));
-    }
-    console.log("🌐 [AUTH] Origin:", req.headers.origin);
-    console.log("🌐 [AUTH] Referer:", req.headers.referer);
     
-    // Verificar si hay sesión
-    if (!req.session || !(req.session as any).userId) {
-      console.log("❌ [AUTH] No hay sesión o userId no encontrado");
+    // Obtener token del header Authorization
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("❌ [AUTH] No hay token en el header Authorization");
       return res.status(401).json({ error: "No autenticado" });
     }
 
-    const userId = (req.session as any).userId;
-    const sessionCreatedAt = (req.session as any).createdAt || new Date();
-    console.log("✅ [AUTH] Sesión válida para usuario:", userId);
+    const token = authHeader.substring(7); // Remover "Bearer "
+    console.log("🔑 [AUTH] Token recibido:", token.substring(0, 20) + "...");
 
-    // Verificar si la sesión debe expirar (cierre automático a las 2:00 AM)
-    if (shouldExpireSession(sessionCreatedAt)) {
-      req.session.destroy((err) => {
-        if (err) console.error("Error destruyendo sesión:", err);
-      });
-      return res.status(401).json({ error: "Sesión expirada" });
+    // Verificar token
+    const tokenData = verifyToken(token);
+    if (!tokenData) {
+      console.log("❌ [AUTH] Token inválido o expirado");
+      return res.status(401).json({ error: "Token inválido o expirado" });
     }
+
+    const userId = tokenData.userId;
+    console.log("✅ [AUTH] Token válido para usuario:", userId);
 
     // Obtener usuario de la base de datos
     const user = await db
@@ -62,9 +56,6 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
       .limit(1);
 
     if (user.length === 0) {
-      req.session.destroy((err) => {
-        if (err) console.error("Error destruyendo sesión:", err);
-      });
       return res.status(401).json({ error: "Usuario no encontrado" });
     }
 
@@ -89,23 +80,29 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
  */
 export const optionalAuth: RequestHandler = async (req, res, next) => {
   try {
-    if (req.session && (req.session as any).userId) {
-      const userId = (req.session as any).userId;
-      const user = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      const tokenData = verifyToken(token);
+      
+      if (tokenData) {
+        const userId = tokenData.userId;
+        const user = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
 
-      if (user.length > 0) {
-        req.user = {
-          id: user[0].id,
-          phone: user[0].phone || undefined,
-          email: user[0].email || undefined,
-          firstName: user[0].firstName || undefined,
-          lastName: user[0].lastName || undefined,
-          roleId: user[0].roleId || undefined,
-        };
+        if (user.length > 0) {
+          req.user = {
+            id: user[0].id,
+            phone: user[0].phone || undefined,
+            email: user[0].email || undefined,
+            firstName: user[0].firstName || undefined,
+            lastName: user[0].lastName || undefined,
+            roleId: user[0].roleId || undefined,
+          };
+        }
       }
     }
     next();

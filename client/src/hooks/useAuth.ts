@@ -13,8 +13,29 @@ interface User {
 }
 
 interface AuthResponse {
+  token: string;
   user: User;
   permissions: string[];
+}
+
+const TOKEN_KEY = "rodmar_auth_token";
+
+// Helper para obtener el token del localStorage
+export function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+// Helper para guardar el token en localStorage
+export function setAuthToken(token: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+// Helper para eliminar el token del localStorage
+export function removeAuthToken(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(TOKEN_KEY);
 }
 
 export function useAuth() {
@@ -22,15 +43,24 @@ export function useAuth() {
   const queryClient = useQueryClient();
 
   // Obtener usuario actual y permisos
-  const { data, isLoading, error } = useQuery<AuthResponse>({
+  const { data, isLoading, error } = useQuery<AuthResponse | null>({
     queryKey: ["auth", "me"],
     queryFn: async () => {
+      const token = getAuthToken();
+      if (!token) {
+        return null;
+      }
+
       const response = await fetch(apiUrl("/api/auth/me"), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         credentials: "include",
       });
 
       if (response.status === 401) {
-        // No autenticado
+        // Token inválido o expirado, limpiar
+        removeAuthToken();
         return null;
       }
 
@@ -72,6 +102,13 @@ export function useAuth() {
 
       const data = await response.json();
       console.log("✅ Login exitoso:", data.user?.id);
+      
+      // Guardar token en localStorage
+      if (data.token) {
+        setAuthToken(data.token);
+        console.log("🔑 Token guardado en localStorage");
+      }
+      
       return data as AuthResponse;
     },
     onSuccess: (data) => {
@@ -90,8 +127,12 @@ export function useAuth() {
   // Mutación para logout
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      const token = getAuthToken();
       const response = await fetch(apiUrl("/api/auth/logout"), {
         method: "POST",
+        headers: token ? {
+          Authorization: `Bearer ${token}`,
+        } : {},
         credentials: "include",
       });
 
@@ -102,6 +143,8 @@ export function useAuth() {
       return response.json();
     },
     onSuccess: () => {
+      // Eliminar token del localStorage
+      removeAuthToken();
       // Limpiar caché
       queryClient.clear();
       setLocation("/login");

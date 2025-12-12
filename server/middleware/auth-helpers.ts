@@ -1,7 +1,10 @@
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { db } from "../db";
 import { users } from "../../shared/schema";
 import { eq } from "drizzle-orm";
+
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "rodmar-secret-key-change-in-production";
 
 /**
  * Verifica si una sesión debe expirar (cierre automático a las 2:00 AM hora Colombia)
@@ -80,5 +83,50 @@ export async function updateLastLogin(userId: string) {
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));
+}
+
+/**
+ * Genera un JWT token para un usuario
+ */
+export function generateToken(userId: string): string {
+  const now = new Date();
+  const payload = {
+    userId,
+    iat: Math.floor(now.getTime() / 1000),
+    createdAt: now.toISOString(),
+  };
+  
+  // El token expira en 24 horas, pero verificaremos manualmente la expiración a las 2:00 AM
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn: "24h",
+  });
+}
+
+/**
+ * Verifica y decodifica un JWT token
+ */
+export function verifyToken(token: string): { userId: string; createdAt: Date } | null {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      userId: string;
+      iat: number;
+      createdAt: string;
+    };
+    
+    const createdAt = new Date(decoded.createdAt);
+    
+    // Verificar si el token debe expirar (cierre automático a las 2:00 AM)
+    if (shouldExpireSession(createdAt)) {
+      return null;
+    }
+    
+    return {
+      userId: decoded.userId,
+      createdAt,
+    };
+  } catch (error) {
+    console.error("Error verificando token:", error);
+    return null;
+  }
 }
 
