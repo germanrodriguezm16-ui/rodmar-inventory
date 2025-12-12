@@ -117,3 +117,21 @@ export function requirePermission(permissionKey: string): RequestHandler {
   };
 }
 
+/**
+ * Invalidar caché de permisos de un usuario específico
+ * (Por ahora no hay caché, pero se mantiene para compatibilidad futura)
+ */
+export function invalidateUserPermissionsCache(userId: string): void {
+  // Por ahora no hay caché implementado, pero se mantiene la función para compatibilidad
+  console.log(`🗑️ Caché de permisos invalidado para el usuario: ${userId}`);
+}
+
+/**
+ * Invalidar todo el caché de permisos
+ * (Por ahora no hay caché, pero se mantiene para compatibilidad futura)
+ */
+export function invalidateAllPermissionsCache(): void {
+  // Por ahora no hay caché implementado, pero se mantiene la función para compatibilidad
+  console.log('🗑️ Caché de todos los permisos invalidado.');
+}
+
