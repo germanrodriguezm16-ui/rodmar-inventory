@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,25 +14,32 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log("📝 [LOGIN] handleSubmit llamado", { phone: phone.substring(0, 3) + "***", hasPassword: !!password });
+    
     if (!phone || !password) {
-      console.warn("⚠️ Formulario incompleto");
+      console.warn("⚠️ [LOGIN] Formulario incompleto", { phone: !!phone, password: !!password });
       return;
     }
 
-    console.log("📝 Enviando formulario de login");
+    console.log("📝 [LOGIN] Enviando formulario de login");
     try {
-      await login(phone, password);
+      const result = await login(phone, password);
+      console.log("✅ [LOGIN] Login exitoso en handleSubmit:", result);
     } catch (error) {
       // El error ya se maneja en useAuth, pero lo logueamos para debug
-      console.error("❌ Error capturado en handleSubmit:", error);
+      console.error("❌ [LOGIN] Error capturado en handleSubmit:", error);
       // No necesitamos hacer nada más, el error se muestra en loginError
     }
   };
 
   // Debug: mostrar estado del error
-  if (loginError) {
-    console.log("🔴 loginError detectado:", loginError);
-  }
+  useEffect(() => {
+    if (loginError) {
+      console.log("🔴 [LOGIN] loginError detectado:", loginError);
+    }
+  }, [loginError]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">

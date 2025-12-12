@@ -108,8 +108,16 @@ export function useAuth() {
     },
   });
 
-  const login = (phone: string, password: string) => {
-    return loginMutation.mutateAsync({ phone, password });
+  const login = async (phone: string, password: string) => {
+    console.log("🔐 [useAuth] login() llamado");
+    try {
+      const result = await loginMutation.mutateAsync({ phone, password });
+      console.log("✅ [useAuth] login() completado exitosamente");
+      return result;
+    } catch (error) {
+      console.error("❌ [useAuth] login() falló:", error);
+      throw error;
+    }
   };
 
   const logout = () => {
