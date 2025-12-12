@@ -14,6 +14,7 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
+    "create-admin": "tsx create-admin-user.ts",
     "migrate:replit": "tsx migrate-from-replit.ts",
     "clean:test-data": "tsx clean-test-data.ts",
     "cap:sync": "npx cap sync android",

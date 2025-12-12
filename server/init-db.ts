@@ -1,6 +1,7 @@
 import { db } from './db';
 import { minas, compradores, volqueteros, viajes, transacciones, roles, permissions, rolePermissions, users } from '../shared/schema';
 import { sql, eq } from 'drizzle-orm';
+import { hashPassword } from './middleware/auth-helpers';
 
 // Inicializar roles y permisos base
 export async function initializeRolesAndPermissions() {
@@ -96,12 +97,73 @@ export async function initializeRolesAndPermissions() {
   }
 }
 
+// Inicializar usuario admin por defecto
+export async function initializeAdminUser() {
+  console.log('=== VERIFICANDO USUARIO ADMIN ===');
+  
+  try {
+    // Buscar si existe algún usuario con rol ADMIN
+    const adminUsers = await db
+      .select()
+      .from(users)
+      .innerJoin(roles, eq(users.roleId, roles.id))
+      .where(eq(roles.nombre, 'ADMIN'))
+      .limit(1);
+
+    if (adminUsers.length > 0) {
+      console.log('=== Ya existe un usuario ADMIN, omitiendo creación ===');
+      return;
+    }
+
+    // Buscar el rol ADMIN
+    const adminRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.nombre, 'ADMIN'))
+      .limit(1);
+
+    if (adminRole.length === 0) {
+      console.log('⚠️  No se encontró el rol ADMIN, debe ejecutarse initializeRolesAndPermissions primero');
+      return;
+    }
+
+    // Crear usuario admin por defecto
+    const defaultPhone = process.env.ADMIN_PHONE || '3000000000';
+    const defaultPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const passwordHash = await hashPassword(defaultPassword);
+
+    const [adminUser] = await db
+      .insert(users)
+      .values({
+        id: `admin_${Date.now()}`,
+        phone: defaultPhone,
+        firstName: 'Administrador',
+        lastName: 'Sistema',
+        passwordHash,
+        roleId: adminRole[0].id,
+      })
+      .returning();
+
+    console.log('✅ Usuario ADMIN creado por defecto');
+    console.log(`   📱 Celular: ${defaultPhone}`);
+    console.log(`   🔑 Contraseña: ${defaultPassword}`);
+    console.log(`   ⚠️  IMPORTANTE: Cambia la contraseña después del primer inicio de sesión`);
+    
+  } catch (error) {
+    console.error('=== ERROR CREANDO USUARIO ADMIN ===', error);
+    // No lanzar error para no bloquear la inicialización
+  }
+}
+
 export async function initializeDatabase() {
   console.log('=== INICIALIZANDO BASE DE DATOS POSTGRESQL ===');
   
   try {
     // Primero inicializar roles y permisos
     await initializeRolesAndPermissions();
+    
+    // Luego crear usuario admin por defecto si no existe
+    await initializeAdminUser();
     
     // Verificar si ya hay datos
     const existingMinas = await db.select().from(minas);
