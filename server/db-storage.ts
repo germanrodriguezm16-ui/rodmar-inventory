@@ -4199,6 +4199,10 @@ export class DatabaseStorage implements IStorage {
       const transaccionesStart = Date.now();
       const volqueteroIds = allVolqueteros.map(v => v.id.toString());
       
+      // Logging para debugging
+      console.log(`🔍 [getVolqueterosBalances] Total volqueteros: ${allVolqueteros.length}`);
+      console.log(`🔍 [getVolqueterosBalances] IDs de volqueteros: ${volqueteroIds.slice(0, 5).join(', ')}${volqueteroIds.length > 5 ? '...' : ''}`);
+      
       // Construir condiciones OR para cada volquetero (INCLUIR OCULTOS para balance real)
       // EXCLUIR transacciones pendientes (no afectan balances)
       const transaccionesConditions = [
@@ -4215,6 +4219,7 @@ export class DatabaseStorage implements IStorage {
       
       // 1. Transacciones donde el volquetero es origen (deQuienTipo = 'volquetero') - ingresos
       // IMPORTANTE: Incluir todas las transacciones, incluso las ocultas, para el cálculo correcto del balance
+      // NO filtrar por ocultaEnVolquetero porque el balance debe incluir TODAS las transacciones
       const transaccionesDesdeVolqueteros = await db
         .select({
           volqueteroId: transacciones.deQuienId,
@@ -4223,12 +4228,14 @@ export class DatabaseStorage implements IStorage {
         .from(transacciones)
         .where(and(
           eq(transacciones.deQuienTipo, 'volquetero'),
+          sql`${transacciones.deQuienId} IS NOT NULL`, // Asegurar que deQuienId no sea NULL
           inArray(transacciones.deQuienId, volqueteroIds),
           ne(transacciones.estado, 'pendiente')
         ));
 
       // 2. Transacciones donde el volquetero es destino (paraQuienTipo = 'volquetero') - egresos
       // IMPORTANTE: Incluir todas las transacciones, incluso las ocultas, para el cálculo correcto del balance
+      // NO filtrar por ocultaEnVolquetero porque el balance debe incluir TODAS las transacciones
       const transaccionesHaciaVolqueteros = await db
         .select({
           volqueteroId: transacciones.paraQuienId,
@@ -4237,13 +4244,20 @@ export class DatabaseStorage implements IStorage {
         .from(transacciones)
         .where(and(
           eq(transacciones.paraQuienTipo, 'volquetero'),
+          sql`${transacciones.paraQuienId} IS NOT NULL`, // Asegurar que paraQuienId no sea NULL
           inArray(transacciones.paraQuienId, volqueteroIds),
           ne(transacciones.estado, 'pendiente')
         ));
 
-      // Logging para debugging
+      // Logging detallado para debugging
       console.log(`🔍 [getVolqueterosBalances] Transacciones desde volqueteros (origen): ${transaccionesDesdeVolqueteros.length}`);
+      if (transaccionesDesdeVolqueteros.length > 0) {
+        console.log(`🔍 [getVolqueterosBalances] Ejemplo transacción origen: volqueteroId=${transaccionesDesdeVolqueteros[0].volqueteroId}, valor=${transaccionesDesdeVolqueteros[0].valor}`);
+      }
       console.log(`🔍 [getVolqueterosBalances] Transacciones hacia volqueteros (destino): ${transaccionesHaciaVolqueteros.length}`);
+      if (transaccionesHaciaVolqueteros.length > 0) {
+        console.log(`🔍 [getVolqueterosBalances] Ejemplo transacción destino: volqueteroId=${transaccionesHaciaVolqueteros[0].volqueteroId}, valor=${transaccionesHaciaVolqueteros[0].valor}`);
+      }
 
       // Combinar ambas queries y agrupar por volqueteroId
       const ingresosMap = new Map<number, number>();
