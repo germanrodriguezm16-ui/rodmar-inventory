@@ -4397,10 +4397,14 @@ export class DatabaseStorage implements IStorage {
       console.log(`🔍 [getVolqueterosBalances] Egresos procesados: ${Array.from(egresosMap.entries()).length} volqueteros`);
 
       // Convertir a formato esperado
-      const transaccionesStats = Array.from(new Set([
+      // IMPORTANTE: Incluir TODOS los volqueteros, incluso si no tienen transacciones, para asegurar que todos tengan entrada en el map
+      const todosLosIds = new Set([
         ...Array.from(ingresosMap.keys()),
-        ...Array.from(egresosMap.keys())
-      ])).map(volqueteroId => ({
+        ...Array.from(egresosMap.keys()),
+        ...allVolqueteros.map(v => v.id) // Incluir todos los IDs de volqueteros para asegurar que todos tengan entrada
+      ]);
+      
+      const transaccionesStats = Array.from(todosLosIds).map(volqueteroId => ({
         volqueteroId: volqueteroId.toString(),
         ingresos: ingresosMap.get(volqueteroId) || 0,
         egresos: egresosMap.get(volqueteroId) || 0
@@ -4419,6 +4423,22 @@ export class DatabaseStorage implements IStorage {
           }
         }
       });
+      
+      // Verificar que todos los volqueteros con ingresos en ingresosMap estén en transaccionesStatsMap
+      const volqueterosConIngresosNoEnStats = Array.from(ingresosMap.keys()).filter(id => {
+        const stats = transaccionesStatsMap.get(id);
+        return !stats || stats.ingresos === 0;
+      });
+      
+      if (volqueterosConIngresosNoEnStats.length > 0) {
+        console.log(`⚠️  [getVolqueterosBalances] ${volqueterosConIngresosNoEnStats.length} volqueteros con ingresos en ingresosMap pero no en transaccionesStatsMap:`);
+        volqueterosConIngresosNoEnStats.slice(0, 5).forEach(id => {
+          const volquetero = allVolqueteros.find(v => v.id === id);
+          const nombre = volquetero ? volquetero.nombre : `ID ${id}`;
+          const ingresos = ingresosMap.get(id) || 0;
+          console.log(`   - ${nombre} (ID: ${id}): $${ingresos.toLocaleString()}`);
+        });
+      }
 
       const transaccionesTime = Date.now() - transaccionesStart;
       console.log(`⏱️  [PERF] Query agregada de transacciones: ${transaccionesTime}ms (${allVolqueteros.length} volqueteros)`);
