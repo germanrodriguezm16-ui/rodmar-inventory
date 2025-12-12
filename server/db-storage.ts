@@ -4465,7 +4465,19 @@ export class DatabaseStorage implements IStorage {
         // Balance = Ingresos - Egresos
         // IMPORTANTE: Usar ingresosDirectos si transaccionesStats.ingresos es 0 pero hay ingresos directos
         const ingresosTransacciones = transaccionesStats.ingresos > 0 ? transaccionesStats.ingresos : ingresosDirectos;
-        const balance = viajesStats.ingresosFletes + ingresosTransacciones - transaccionesStats.egresos;
+        
+        // Asegurar que todos los valores sean números
+        const ingresosFletesNum = typeof viajesStats.ingresosFletes === 'number' 
+          ? viajesStats.ingresosFletes 
+          : parseFloat(String(viajesStats.ingresosFletes || 0));
+        const ingresosTransaccionesNum = typeof ingresosTransacciones === 'number'
+          ? ingresosTransacciones
+          : parseFloat(String(ingresosTransacciones || 0));
+        const egresosNum = typeof transaccionesStats.egresos === 'number'
+          ? transaccionesStats.egresos
+          : parseFloat(String(transaccionesStats.egresos || 0));
+        
+        const balance = ingresosFletesNum + ingresosTransaccionesNum - egresosNum;
 
         // Logging detallado para debugging (solo para primeros 3 volqueteros para no saturar logs)
         // También loggear volqueteros específicos que sabemos que tienen problemas
