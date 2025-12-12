@@ -1,0 +1,164 @@
+import "dotenv/config";
+import postgres from "postgres";
+import { hashPassword } from "./server/middleware/auth-helpers";
+
+async function createAdminComplete() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    console.error("❌ DATABASE_URL no está configurada");
+    process.exit(1);
+  }
+
+  const sql = postgres(connectionString, {
+    ssl: { rejectUnauthorized: false },
+  });
+
+  try {
+    console.log("=== VERIFICANDO Y AGREGANDO COLUMNAS DE AUTENTICACIÓN ===");
+
+    // Agregar columnas directamente (ignorar error si ya existen)
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);`;
+      console.log("✅ Columna 'phone' verificada");
+    } catch (error: any) {
+      if (error.code !== '42701') { // 42701 = duplicate_column
+        console.log("⚠️  Nota sobre phone:", error.message);
+      }
+    }
+
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;`;
+      console.log("✅ Columna 'password_hash' verificada");
+    } catch (error: any) {
+      if (error.code !== '42701') {
+        console.log("⚠️  Nota sobre password_hash:", error.message);
+      }
+    }
+
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;`;
+      console.log("✅ Columna 'last_login' verificada");
+    } catch (error: any) {
+      if (error.code !== '42701') {
+        console.log("⚠️  Nota sobre last_login:", error.message);
+      }
+    }
+
+    console.log("\n=== CREANDO USUARIO ADMIN ===");
+
+    // Obtener el rol ADMIN
+    const adminRoleResult = await sql`
+      SELECT id, nombre, descripcion
+      FROM roles
+      WHERE nombre = 'ADMIN'
+      LIMIT 1
+    `;
+
+    if (adminRoleResult.length === 0) {
+      console.error("❌ Error: No se encontró el rol ADMIN. Ejecuta primero la inicialización de la base de datos.");
+      await sql.end();
+      process.exit(1);
+    }
+
+    const adminRole = adminRoleResult[0] as any;
+
+    // Verificar si ya existe un usuario admin
+    const existingAdminResult = await sql`
+      SELECT id, phone, first_name, last_name
+      FROM users
+      WHERE role_id = ${adminRole.id}
+      LIMIT 1
+    `;
+
+    if (existingAdminResult.length > 0) {
+      const existingAdmin = existingAdminResult[0] as any;
+      
+      // Si el admin existe pero no tiene phone, actualizarlo
+      if (!existingAdmin.phone) {
+        const phone = process.argv[2] || process.env.ADMIN_PHONE || "3000000000";
+        const password = process.argv[3] || process.env.ADMIN_PASSWORD || "admin123";
+        const firstName = process.argv[4] || "Administrador";
+        const lastName = process.argv[5] || "Sistema";
+        
+        const passwordHash = await hashPassword(password);
+        
+        await sql`
+          UPDATE users 
+          SET phone = ${phone}, 
+              password_hash = ${passwordHash},
+              first_name = ${firstName || null},
+              last_name = ${lastName || null},
+              updated_at = NOW()
+          WHERE id = ${existingAdmin.id}
+        `;
+        
+        console.log("\n✅ Usuario ADMIN actualizado exitosamente!");
+        console.log(`   📱 Celular: ${phone}`);
+        console.log(`   🔑 Contraseña: ${password}`);
+        console.log(`   👤 Nombre: ${firstName} ${lastName}`);
+        console.log(`   🆔 ID: ${existingAdmin.id}`);
+        console.log("\n⚠️  IMPORTANTE: Cambia la contraseña después del primer inicio de sesión.");
+        await sql.end();
+        process.exit(0);
+      }
+      
+      console.log("⚠️  Ya existe un usuario con rol ADMIN:");
+      console.log(`   ID: ${existingAdmin.id}`);
+      console.log(`   Celular: ${existingAdmin.phone || "N/A"}`);
+      console.log("\n   Si necesitas crear otro admin, elimina primero el existente o usa el panel de administración.");
+      await sql.end();
+      process.exit(0);
+    }
+
+    // Datos del admin
+    const phone = process.argv[2] || process.env.ADMIN_PHONE || "3000000000";
+    const password = process.argv[3] || process.env.ADMIN_PASSWORD || "admin123";
+    const firstName = process.argv[4] || "Administrador";
+    const lastName = process.argv[5] || "Sistema";
+
+    // Verificar que el celular no esté en uso
+    const existingUserResult = await sql`
+      SELECT id
+      FROM users
+      WHERE phone = ${phone}
+      LIMIT 1
+    `;
+
+    if (existingUserResult.length > 0) {
+      console.error(`❌ Error: El celular ${phone} ya está registrado por otro usuario.`);
+      await sql.end();
+      process.exit(1);
+    }
+
+    // Hashear contraseña
+    const passwordHash = await hashPassword(password);
+    const userId = `admin_${Date.now()}`;
+
+    // Crear usuario admin
+    await sql`
+      INSERT INTO users (id, phone, first_name, last_name, password_hash, role_id, created_at, updated_at)
+      VALUES (${userId}, ${phone}, ${firstName || null}, ${lastName || null}, ${passwordHash}, ${adminRole.id}, NOW(), NOW())
+    `;
+
+    console.log("\n✅ Usuario ADMIN creado exitosamente!");
+    console.log(`   📱 Celular: ${phone}`);
+    console.log(`   🔑 Contraseña: ${password}`);
+    console.log(`   👤 Nombre: ${firstName} ${lastName}`);
+    console.log(`   🆔 ID: ${userId}`);
+    console.log("\n⚠️  IMPORTANTE: Cambia la contraseña después del primer inicio de sesión.");
+
+    await sql.end();
+    process.exit(0);
+  } catch (error: any) {
+    console.error("❌ Error:", error.message);
+    if (error.code === '42703') {
+      console.error("\n💡 La columna no existe. Intenta ejecutar primero:");
+      console.error("   npm run fix-db-auth");
+    }
+    await sql.end();
+    process.exit(1);
+  }
+}
+
+createAdminComplete();
+
