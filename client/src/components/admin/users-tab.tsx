@@ -8,6 +8,7 @@ import UserModal from "./user-modal";
 
 interface User {
   id: string;
+  phone: string | null;
   email: string | null;
   firstName: string | null;
   lastName: string | null;
@@ -40,6 +41,7 @@ export default function UsersTab() {
   const filteredUsers = users.filter((user) => {
     const search = searchTerm.toLowerCase();
     return (
+      user.phone?.toLowerCase().includes(search) ||
       user.email?.toLowerCase().includes(search) ||
       user.firstName?.toLowerCase().includes(search) ||
       user.lastName?.toLowerCase().includes(search) ||
@@ -89,8 +91,13 @@ export default function UsersTab() {
                     <CardTitle className="text-lg">
                       {user.firstName && user.lastName
                         ? `${user.firstName} ${user.lastName}`
-                        : user.email || user.id}
+                        : user.phone || user.email || user.id}
                     </CardTitle>
+                    {user.phone && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        📱 {user.phone}
+                      </p>
+                    )}
                     {user.email && (
                       <p className="text-sm text-muted-foreground mt-1">
                         {user.email}

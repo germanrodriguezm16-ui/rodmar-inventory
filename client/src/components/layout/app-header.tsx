@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Bell, Settings, Truck, Bug, Shield } from "lucide-react";
+import { Bell, Settings, Truck, Bug, Shield, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { NotificationsSettingsModal } from "@/components/modals/notifications-settings-modal";
 import { DebugLogsModal } from "@/components/modals/debug-logs-modal";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AppHeaderProps {
   currentModule: string;
@@ -30,6 +32,15 @@ export default function AppHeader({ currentModule }: AppHeaderProps) {
   const [showDebugLogs, setShowDebugLogs] = useState(false);
   const [, setLocation] = useLocation();
   const { has } = usePermissions();
+  const { logout, isLoggingOut } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    }
+  };
 
   return (
     <>
@@ -80,6 +91,15 @@ export default function AppHeader({ currentModule }: AppHeaderProps) {
                   >
                     <Bug className="mr-2 h-4 w-4" />
                     Logs de Depuración
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={handleLogout}
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                    disabled={isLoggingOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    {isLoggingOut ? "Cerrando sesión..." : "Cerrar Sesión"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

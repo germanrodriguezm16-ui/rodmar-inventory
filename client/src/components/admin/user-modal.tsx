@@ -9,15 +9,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface User {
   id: string;
+  phone: string | null;
   email: string | null;
   firstName: string | null;
   lastName: string | null;
@@ -50,6 +53,10 @@ interface UserModalProps {
 }
 
 export default function UserModal({ open, onClose, user }: UserModalProps) {
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
   const [overrides, setOverrides] = useState<Override[]>([]);
   const [showAddOverride, setShowAddOverride] = useState(false);
@@ -96,16 +103,62 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
 
   useEffect(() => {
     if (user) {
-      setSelectedRoleId(user.roleId?.toString() || "");
+      setPhone(user.phone || "");
+      setPassword(""); // No mostrar contraseña existente
+      setFirstName(user.firstName || "");
+      setLastName(user.lastName || "");
+      setSelectedRoleId(user.roleId?.toString() || "none");
       setOverrides([]); // Los overrides se cargarían desde el backend si los guardamos
+      setShowAddOverride(false);
+      setNewOverridePermissionId("");
+      setNewOverrideType("deny");
+    } else {
+      // Reset para crear nuevo usuario
+      setPhone("");
+      setPassword("");
+      setFirstName("");
+      setLastName("");
+      setSelectedRoleId("none");
+      setOverrides([]);
       setShowAddOverride(false);
       setNewOverridePermissionId("");
       setNewOverrideType("deny");
     }
   }, [user, open]);
 
+  const createMutation = useMutation({
+    mutationFn: async (data: { phone: string; password: string; firstName?: string; lastName?: string; roleId: number | null }) => {
+      const response = await fetch(apiUrl("/api/admin/users"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Error al crear usuario");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Usuario creado",
+        description: "El usuario ha sido creado correctamente",
+      });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateMutation = useMutation({
-    mutationFn: async (data: { roleId: number | null; overrides: Override[] }) => {
+    mutationFn: async (data: { roleId: number | null; overrides: Override[]; phone?: string; password?: string; firstName?: string; lastName?: string }) => {
       const response = await fetch(apiUrl(`/api/admin/users/${user!.id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -163,16 +216,41 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
 
   const handleSubmit = () => {
     const roleId = selectedRoleId && selectedRoleId !== "none" ? parseInt(selectedRoleId) : null;
+    
     if (!user) {
-      // Por ahora, crear usuarios no está implementado en el backend
-      toast({
-        title: "Funcionalidad pendiente",
-        description: "La creación de usuarios estará disponible próximamente",
-        variant: "default",
+      // Crear nuevo usuario
+      if (!phone || !password) {
+        toast({
+          title: "Error",
+          description: "Celular y contraseña son requeridos",
+          variant: "destructive",
+        });
+        return;
+      }
+      createMutation.mutate({
+        phone,
+        password,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        roleId,
       });
-      return;
+    } else {
+      // Actualizar usuario existente
+      const updateData: any = { roleId, overrides };
+      if (phone && phone !== user.phone) {
+        updateData.phone = phone;
+      }
+      if (password) {
+        updateData.password = password;
+      }
+      if (firstName !== user.firstName) {
+        updateData.firstName = firstName || null;
+      }
+      if (lastName !== user.lastName) {
+        updateData.lastName = lastName || null;
+      }
+      updateMutation.mutate(updateData);
     }
-    updateMutation.mutate({ roleId, overrides });
   };
 
   const allPermissions = permissionsData?.all || [];
@@ -190,10 +268,68 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
 
         <ScrollArea className="max-h-[60vh] pr-4">
           <div className="space-y-4">
+            {/* Campos para crear/editar usuario */}
             <div className="space-y-2">
-              <Label>Email</Label>
-              <div className="text-sm text-muted-foreground">{user?.email || "N/A"}</div>
+              <Label htmlFor="phone">Número de Celular *</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="Ej: 3001234567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required={!user} // Requerido solo al crear
+                disabled={!!user} // No editable al editar (por seguridad)
+              />
+              {user && (
+                <p className="text-xs text-muted-foreground">
+                  El celular no se puede cambiar por seguridad
+                </p>
+              )}
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">
+                {user ? "Nueva Contraseña (dejar vacío para no cambiar)" : "Contraseña *"}
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder={user ? "Dejar vacío para mantener la actual" : "Ingresa la contraseña"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required={!user} // Requerido solo al crear
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Nombre</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="Nombre"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Apellido</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Apellido"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {user?.email && (
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <div className="text-sm text-muted-foreground">{user.email}</div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="role">Rol Principal *</Label>
@@ -332,9 +468,13 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={updateMutation.isPending}
+            disabled={createMutation.isPending || updateMutation.isPending}
           >
-            {updateMutation.isPending ? "Guardando..." : "Guardar"}
+            {createMutation.isPending || updateMutation.isPending
+              ? "Guardando..."
+              : user
+                ? "Guardar Cambios"
+                : "Crear Usuario"}
           </Button>
         </DialogFooter>
       </DialogContent>

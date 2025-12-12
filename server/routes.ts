@@ -2,12 +2,13 @@ import type { Express } from "express";
 import { Router } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { requireAuth } from "./middleware/auth";
-import { getUserPermissions, requirePermission } from "./middleware/permissions";
+import { requireAuth, optionalAuth } from "./middleware/auth";
+import { getUserPermissions, requirePermission, invalidateUserPermissionsCache } from "./middleware/permissions";
 import { emitTransactionUpdate } from "./socket";
 import { db } from "./db";
 import { roles, permissions, rolePermissions, users, userPermissionsOverride } from "../shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
+import { findUserByPhone, verifyPassword, updateLastLogin, hashPassword } from "./middleware/auth-helpers";
 import {
   insertMinaSchema,
   insertCompradorSchema,
@@ -51,42 +52,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Auth routes
-  app.get("/api/login", async (req, res) => {
-    try {
-      // En desarrollo o si REQUIRE_AUTH no está configurado, crear/obtener usuario principal
-      if (process.env.NODE_ENV === "development" || !process.env.REQUIRE_AUTH) {
-        const mainUser = await storage.upsertUser({
-          id: "main_user",
-          email: "usuario@rodmar.com",
-          firstName: "Usuario",
-          lastName: "Principal",
-        });
+  // ============================================
+  // AUTH ENDPOINTS - Autenticación con celular y contraseña
+  // ============================================
 
-        // Establecer sesión
-        if (req.session) {
-          (req.session as any).user = {
-            id: mainUser.id,
-            email: mainUser.email,
-            firstName: mainUser.firstName,
-            lastName: mainUser.lastName,
-          };
-        }
+  // Login - Iniciar sesión con celular y contraseña
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { phone, password } = req.body;
+
+      if (!phone || !password) {
+        return res.status(400).json({ error: "Celular y contraseña son requeridos" });
       }
-      
-      // Redirigir a la página principal
-      res.redirect("/");
+
+      // Buscar usuario por celular
+      const user = await findUserByPhone(phone);
+
+      if (!user) {
+        return res.status(401).json({ error: "Credenciales inválidas" });
+      }
+
+      if (!user.passwordHash) {
+        return res.status(401).json({ error: "Usuario no tiene contraseña configurada" });
+      }
+
+      // Verificar contraseña
+      const isValidPassword = await verifyPassword(password, user.passwordHash);
+
+      if (!isValidPassword) {
+        return res.status(401).json({ error: "Credenciales inválidas" });
+      }
+
+      // Crear sesión
+      if (req.session) {
+        (req.session as any).userId = user.id;
+        (req.session as any).createdAt = new Date();
+      }
+
+      // Actualizar último login
+      await updateLastLogin(user.id);
+
+      // Obtener permisos del usuario
+      const permissions = await getUserPermissions(user.id);
+
+      res.json({
+        user: {
+          id: user.id,
+          phone: user.phone,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          roleId: user.roleId,
+        },
+        permissions,
+      });
     } catch (error) {
       console.error("Error en login:", error);
       res.status(500).json({ error: "Error al iniciar sesión" });
     }
   });
 
+  // Logout - Cerrar sesión
+  app.post("/api/auth/logout", (req, res) => {
+    req.session?.destroy((err) => {
+      if (err) {
+        console.error("Error destruyendo sesión:", err);
+        return res.status(500).json({ error: "Error al cerrar sesión" });
+      }
+      res.json({ success: true });
+    });
+  });
+
+  // Obtener usuario actual con permisos
+  app.get("/api/auth/me", optionalAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "No autenticado" });
+      }
+
+      const userId = req.user.id;
+      const user = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (user.length === 0) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      const permissions = await getUserPermissions(userId);
+
+      res.json({
+        user: {
+          id: user[0].id,
+          phone: user[0].phone,
+          email: user[0].email,
+          firstName: user[0].firstName,
+          lastName: user[0].lastName,
+          roleId: user[0].roleId,
+        },
+        permissions,
+      });
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+      res.status(500).json({ error: "Error al obtener usuario" });
+    }
+  });
+
+  // Endpoint legacy para compatibilidad
   app.get("/api/auth/user", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      const user = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (user.length === 0) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      res.json({
+        id: user[0].id,
+        phone: user[0].phone,
+        email: user[0].email,
+        firstName: user[0].firstName,
+        lastName: user[0].lastName,
+        roleId: user[0].roleId,
+      });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -4820,6 +4915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allUsers = await db
         .select({
           id: users.id,
+          phone: users.phone,
           email: users.email,
           firstName: users.firstName,
           lastName: users.lastName,
@@ -4829,7 +4925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(users)
         .leftJoin(roles, eq(users.roleId, roles.id))
-        .orderBy(users.email);
+        .orderBy(users.phone, users.email);
 
       res.json(allUsers);
     } catch (error) {
@@ -4838,22 +4934,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Actualizar usuario (rol y overrides)
+  // Crear nuevo usuario (solo ADMIN)
+  app.post("/api/admin/users", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const { phone, password, firstName, lastName, roleId } = req.body;
+
+      if (!phone || !password) {
+        return res.status(400).json({ error: "Celular y contraseña son requeridos" });
+      }
+
+      // Verificar que el celular no esté en uso
+      const existingUser = await findUserByPhone(phone);
+      if (existingUser) {
+        return res.status(400).json({ error: "El celular ya está registrado" });
+      }
+
+      // Hashear contraseña
+      const passwordHash = await hashPassword(password);
+
+      // Generar ID único
+      const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Crear usuario
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          id: userId,
+          phone,
+          passwordHash,
+          firstName: firstName || null,
+          lastName: lastName || null,
+          roleId: roleId ? parseInt(roleId) : null,
+        })
+        .returning();
+
+      res.status(201).json({
+        id: newUser.id,
+        phone: newUser.phone,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        roleId: newUser.roleId,
+      });
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ error: "Error al crear usuario" });
+    }
+  });
+
+  // Actualizar usuario (rol, overrides, password opcional)
   app.put("/api/admin/users/:id", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
     try {
       const userId = req.params.id;
-      const { roleId, overrides } = req.body;
+      const { roleId, overrides, password, phone, firstName, lastName } = req.body;
+
+      const updateData: any = {
+        updatedAt: new Date(),
+      };
 
       // Actualizar rol del usuario
       if (roleId !== undefined) {
-        await db
-          .update(users)
-          .set({
-            roleId: roleId ? parseInt(roleId) : null,
-            updatedAt: new Date(),
-          })
-          .where(eq(users.id, userId));
+        updateData.roleId = roleId ? parseInt(roleId) : null;
       }
+
+      // Actualizar contraseña si se proporciona
+      if (password) {
+        updateData.passwordHash = await hashPassword(password);
+      }
+
+      // Actualizar phone si se proporciona
+      if (phone) {
+        // Verificar que el celular no esté en uso por otro usuario
+        const existingUser = await findUserByPhone(phone);
+        if (existingUser && existingUser.id !== userId) {
+          return res.status(400).json({ error: "El celular ya está registrado por otro usuario" });
+        }
+        updateData.phone = phone;
+      }
+
+      // Actualizar nombre si se proporciona
+      if (firstName !== undefined) {
+        updateData.firstName = firstName || null;
+      }
+
+      if (lastName !== undefined) {
+        updateData.lastName = lastName || null;
+      }
+
+      // Actualizar usuario
+      await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, userId));
 
       // Actualizar overrides: eliminar todos y crear los nuevos
       await db.delete(userPermissionsOverride).where(eq(userPermissionsOverride.userId, userId));
@@ -4867,6 +5039,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         await db.insert(userPermissionsOverride).values(overrideValues);
       }
+
+      // Invalidar caché de permisos del usuario
+      invalidateUserPermissionsCache(userId);
 
       res.json({ success: true });
     } catch (error) {

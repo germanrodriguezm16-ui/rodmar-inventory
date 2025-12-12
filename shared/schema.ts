@@ -25,11 +25,14 @@ export const roles = pgTable("roles", {
 // Users table for authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),
-  email: varchar("email").unique(),
+  phone: varchar("phone", { length: 20 }).unique(), // Número de celular para login
+  email: varchar("email").unique(), // Opcional, no se usa para login
+  passwordHash: text("password_hash"), // Hash de la contraseña (bcrypt)
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   roleId: integer("role_id").references(() => roles.id, { onDelete: "set null" }), // Referencia al rol del usuario
+  lastLogin: timestamp("last_login"), // Último inicio de sesión
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

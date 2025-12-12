@@ -1,5 +1,8 @@
 import type { RequestHandler } from "express";
-import { storage } from "../storage";
+import { db } from "../db";
+import { users } from "../../shared/schema";
+import { eq } from "drizzle-orm";
+import { shouldExpireSession } from "./auth-helpers";
 
 // Extender el tipo Request para incluir user
 declare global {
@@ -7,46 +10,64 @@ declare global {
     interface Request {
       user?: {
         id: string;
+        phone?: string;
         email?: string;
         firstName?: string;
         lastName?: string;
+        roleId?: number | null;
       };
     }
   }
 }
 
 /**
- * Middleware de autenticación simple
- * AUTENTICACIÓN DESHABILITADA - siempre permite acceso
+ * Middleware de autenticación - verifica sesión real
  */
 export const requireAuth: RequestHandler = async (req, res, next) => {
   try {
-    // Siempre crear/obtener usuario principal sin verificar autenticación
-    const mainUser = await storage.upsertUser({
-      id: "main_user",
-      email: "usuario@rodmar.com",
-      firstName: "Usuario",
-      lastName: "Principal",
-    });
+    // Verificar si hay sesión
+    if (!req.session || !(req.session as any).userId) {
+      return res.status(401).json({ error: "No autenticado" });
+    }
+
+    const userId = (req.session as any).userId;
+    const sessionCreatedAt = (req.session as any).createdAt || new Date();
+
+    // Verificar si la sesión debe expirar (cierre automático a las 2:00 AM)
+    if (shouldExpireSession(sessionCreatedAt)) {
+      req.session.destroy((err) => {
+        if (err) console.error("Error destruyendo sesión:", err);
+      });
+      return res.status(401).json({ error: "Sesión expirada" });
+    }
+
+    // Obtener usuario de la base de datos
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (user.length === 0) {
+      req.session.destroy((err) => {
+        if (err) console.error("Error destruyendo sesión:", err);
+      });
+      return res.status(401).json({ error: "Usuario no encontrado" });
+    }
 
     req.user = {
-      id: mainUser.id,
-      email: mainUser.email || undefined,
-      firstName: mainUser.firstName || undefined,
-      lastName: mainUser.lastName || undefined,
+      id: user[0].id,
+      phone: user[0].phone || undefined,
+      email: user[0].email || undefined,
+      firstName: user[0].firstName || undefined,
+      lastName: user[0].lastName || undefined,
+      roleId: user[0].roleId || undefined,
     };
 
     return next();
   } catch (error) {
     console.error("Error en autenticación:", error);
-    // Continuar de todas formas - autenticación deshabilitada
-    req.user = {
-      id: "main_user",
-      email: "usuario@rodmar.com",
-      firstName: "Usuario",
-      lastName: "Principal",
-    };
-    return next();
+    return res.status(500).json({ error: "Error interno del servidor" });
   }
 };
 
@@ -55,20 +76,25 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
  */
 export const optionalAuth: RequestHandler = async (req, res, next) => {
   try {
-    const mainUser = await storage.upsertUser({
-      id: "main_user",
-      email: "usuario@rodmar.com",
-      firstName: "Usuario",
-      lastName: "Principal",
-    });
+    if (req.session && (req.session as any).userId) {
+      const userId = (req.session as any).userId;
+      const user = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
 
-    req.user = {
-      id: mainUser.id,
-      email: mainUser.email || undefined,
-      firstName: mainUser.firstName || undefined,
-      lastName: mainUser.lastName || undefined,
-    };
-
+      if (user.length > 0) {
+        req.user = {
+          id: user[0].id,
+          phone: user[0].phone || undefined,
+          email: user[0].email || undefined,
+          firstName: user[0].firstName || undefined,
+          lastName: user[0].lastName || undefined,
+          roleId: user[0].roleId || undefined,
+        };
+      }
+    }
     next();
   } catch (error) {
     // Continuar sin autenticación en caso de error
