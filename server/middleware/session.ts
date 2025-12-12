@@ -39,6 +39,9 @@ export function setupSession(app: Express) {
     console.log("✅ Usando memoria para sesiones");
   }
 
+  // Determinar si estamos en un entorno cross-origin (frontend y backend en diferentes dominios)
+  const isCrossOrigin = !!process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "false";
+  
   app.use(
     session({
       store,
@@ -48,10 +51,14 @@ export function setupSession(app: Express) {
       name: "rodmar.sid",
       cookie: {
         httpOnly: true,
-        secure: isProduction, // Solo HTTPS en producción
-        sameSite: isProduction ? "strict" : "lax",
+        // En producción cross-origin, necesitamos secure: true y sameSite: "none"
+        // En desarrollo o mismo origen, podemos usar sameSite: "lax"
+        secure: isProduction && isCrossOrigin ? true : isProduction,
+        sameSite: isProduction && isCrossOrigin ? "none" : isProduction ? "lax" : "lax",
         maxAge: 24 * 60 * 60 * 1000, // 24 horas
         path: "/",
+        // Agregar dominio explícito si es necesario (normalmente no es necesario)
+        // domain: isProduction && isCrossOrigin ? undefined : undefined,
       },
     })
   );

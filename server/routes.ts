@@ -99,6 +99,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (req.session as any).userId = user.id;
         (req.session as any).createdAt = new Date();
         console.log("✅ [LOGIN] Sesión creada para usuario:", user.id);
+        console.log("🍪 [LOGIN] Session ID:", req.sessionID);
+        console.log("🍪 [LOGIN] Cookie config:", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production" && !!process.env.CORS_ORIGIN,
+          sameSite: process.env.NODE_ENV === "production" && !!process.env.CORS_ORIGIN ? "none" : "lax",
+        });
       } else {
         console.warn("⚠️ [LOGIN] req.session no está disponible");
       }
@@ -109,6 +115,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Obtener permisos del usuario
       const permissions = await getUserPermissions(user.id);
       console.log("✅ [LOGIN] Login exitoso, permisos:", permissions.length);
+
+      // Guardar la sesión explícitamente antes de enviar la respuesta
+      await new Promise<void>((resolve, reject) => {
+        req.session?.save((err) => {
+          if (err) {
+            console.error("❌ [LOGIN] Error guardando sesión:", err);
+            reject(err);
+          } else {
+            console.log("✅ [LOGIN] Sesión guardada correctamente");
+            resolve();
+          }
+        });
+      });
 
       res.json({
         user: {

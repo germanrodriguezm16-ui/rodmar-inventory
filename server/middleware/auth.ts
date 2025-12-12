@@ -25,13 +25,21 @@ declare global {
  */
 export const requireAuth: RequestHandler = async (req, res, next) => {
   try {
+    // Logging para diagnóstico
+    console.log("🔐 [AUTH] Verificando autenticación para:", req.path);
+    console.log("🍪 [AUTH] Session ID:", req.sessionID);
+    console.log("🍪 [AUTH] Session exists:", !!req.session);
+    console.log("🍪 [AUTH] Cookies recibidas:", req.headers.cookie ? "Sí" : "No");
+    
     // Verificar si hay sesión
     if (!req.session || !(req.session as any).userId) {
+      console.log("❌ [AUTH] No hay sesión o userId no encontrado");
       return res.status(401).json({ error: "No autenticado" });
     }
 
     const userId = (req.session as any).userId;
     const sessionCreatedAt = (req.session as any).createdAt || new Date();
+    console.log("✅ [AUTH] Sesión válida para usuario:", userId);
 
     // Verificar si la sesión debe expirar (cierre automático a las 2:00 AM)
     if (shouldExpireSession(sessionCreatedAt)) {
