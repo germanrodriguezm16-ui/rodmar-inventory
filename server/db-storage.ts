@@ -4236,6 +4236,7 @@ export class DatabaseStorage implements IStorage {
       // 2. Transacciones donde el volquetero es destino (paraQuienTipo = 'volquetero') - egresos
       // IMPORTANTE: Incluir todas las transacciones, incluso las ocultas, para el cálculo correcto del balance
       // NO filtrar por ocultaEnVolquetero porque el balance debe incluir TODAS las transacciones
+      // Buscar tanto por ID como por nombre para manejar transacciones antiguas
       const transaccionesHaciaVolqueteros = await db
         .select({
           volqueteroId: transacciones.paraQuienId,
@@ -4245,7 +4246,7 @@ export class DatabaseStorage implements IStorage {
         .where(and(
           eq(transacciones.paraQuienTipo, 'volquetero'),
           sql`${transacciones.paraQuienId} IS NOT NULL`, // Asegurar que paraQuienId no sea NULL
-          inArray(transacciones.paraQuienId, volqueteroIds),
+          or(...condicionesDestino), // Buscar por ID o nombre
           ne(transacciones.estado, 'pendiente')
         ));
 
@@ -4266,9 +4267,20 @@ export class DatabaseStorage implements IStorage {
       // Procesar transacciones donde el volquetero es origen (ingresos)
       transaccionesDesdeVolqueteros.forEach(t => {
         if (t.volqueteroId) {
-          // Manejar tanto strings como números
-          const volqueteroIdNum = typeof t.volqueteroId === 'string' ? parseInt(t.volqueteroId) : Number(t.volqueteroId);
-          if (!isNaN(volqueteroIdNum) && volqueteroIdNum > 0) {
+          // Manejar tanto IDs numéricos como nombres de volqueteros (para transacciones antiguas)
+          let volqueteroIdNum: number | null = null;
+          
+          // Intentar parsear como número primero
+          const parsedId = typeof t.volqueteroId === 'string' ? parseInt(t.volqueteroId) : Number(t.volqueteroId);
+          if (!isNaN(parsedId) && parsedId > 0) {
+            volqueteroIdNum = parsedId;
+          } else {
+            // Si no es un número, buscar por nombre
+            const nombreLower = String(t.volqueteroId).toLowerCase();
+            volqueteroIdNum = volqueteroNombresMap.get(nombreLower) || null;
+          }
+          
+          if (volqueteroIdNum && volqueteroIdNum > 0) {
             const valorActual = ingresosMap.get(volqueteroIdNum) || 0;
             const valorNuevo = typeof t.valor === 'number' ? t.valor : parseFloat(String(t.valor || 0));
             if (!isNaN(valorNuevo)) {
@@ -4281,9 +4293,20 @@ export class DatabaseStorage implements IStorage {
       // Procesar transacciones donde el volquetero es destino (egresos)
       transaccionesHaciaVolqueteros.forEach(t => {
         if (t.volqueteroId) {
-          // Manejar tanto strings como números
-          const volqueteroIdNum = typeof t.volqueteroId === 'string' ? parseInt(t.volqueteroId) : Number(t.volqueteroId);
-          if (!isNaN(volqueteroIdNum) && volqueteroIdNum > 0) {
+          // Manejar tanto IDs numéricos como nombres de volqueteros (para transacciones antiguas)
+          let volqueteroIdNum: number | null = null;
+          
+          // Intentar parsear como número primero
+          const parsedId = typeof t.volqueteroId === 'string' ? parseInt(t.volqueteroId) : Number(t.volqueteroId);
+          if (!isNaN(parsedId) && parsedId > 0) {
+            volqueteroIdNum = parsedId;
+          } else {
+            // Si no es un número, buscar por nombre
+            const nombreLower = String(t.volqueteroId).toLowerCase();
+            volqueteroIdNum = volqueteroNombresMap.get(nombreLower) || null;
+          }
+          
+          if (volqueteroIdNum && volqueteroIdNum > 0) {
             const valorActual = egresosMap.get(volqueteroIdNum) || 0;
             const valorNuevo = typeof t.valor === 'number' ? t.valor : parseFloat(String(t.valor || 0));
             if (!isNaN(valorNuevo)) {
