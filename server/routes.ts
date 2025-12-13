@@ -4954,6 +4954,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           roleId: users.roleId,
           roleNombre: roles.nombre,
           roleDescripcion: roles.descripcion,
+          passwordPlain: users.passwordPlain, // Incluir contraseña en texto plano para ADMIN
         })
         .from(users)
         .leftJoin(roles, eq(users.roleId, roles.id))
@@ -4994,6 +4995,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: userId,
           phone,
           passwordHash,
+          passwordPlain: password, // Guardar también en texto plano para recuperación
           firstName: firstName || null,
           lastName: lastName || null,
           roleId: roleId ? parseInt(roleId) : null,
@@ -5032,6 +5034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Actualizar contraseña si se proporciona
       if (password) {
         updateData.passwordHash = await hashPassword(password);
+        updateData.passwordPlain = password; // Guardar también en texto plano para recuperación
       }
 
       // Actualizar phone si se proporciona

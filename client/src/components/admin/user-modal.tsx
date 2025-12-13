@@ -27,6 +27,7 @@ interface User {
   lastName: string | null;
   roleId: number | null;
   roleNombre: string | null;
+  passwordPlain?: string | null; // Contraseña en texto plano (solo para ADMIN)
 }
 
 interface Role {
@@ -133,7 +134,7 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
     if (user) {
       setPhone(user.phone || "");
       setPassword(""); // No mostrar contraseña existente
-      setCurrentPassword(""); // Campo para contraseña actual (no se puede obtener del backend por seguridad)
+      setCurrentPassword(user.passwordPlain || ""); // Cargar contraseña actual desde el backend
       setShowCurrentPassword(false);
       setShowNewPassword(false);
       setFirstName(user.firstName || "");
