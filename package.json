@@ -19,6 +19,7 @@
     "add-auth-columns": "tsx add-auth-columns.ts",
     "add-auth-columns-direct": "tsx add-auth-columns-direct.ts",
     "fix-db-auth": "tsx fix-db-auth.ts",
+    "add-missing-permissions": "tsx server/add-missing-permissions.ts",
     "migrate:replit": "tsx migrate-from-replit.ts",
     "clean:test-data": "tsx clean-test-data.ts",
     "cap:sync": "npx cap sync android",

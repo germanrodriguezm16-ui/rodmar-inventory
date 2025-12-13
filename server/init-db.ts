@@ -1,6 +1,6 @@
 import { db } from './db';
 import { minas, compradores, volqueteros, viajes, transacciones, roles, permissions, rolePermissions, users } from '../shared/schema';
-import { sql, eq } from 'drizzle-orm';
+import { sql, eq, and } from 'drizzle-orm';
 import { hashPassword } from './middleware/auth-helpers';
 
 // Inicializar roles y permisos base
@@ -30,8 +30,10 @@ export async function initializeRolesAndPermissions() {
       { key: 'module.MINAS.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Minas', categoria: 'tab' },
       { key: 'module.MINAS.tab.TRANSACCIONES.view', descripcion: 'Ver pestaña Transacciones en Minas', categoria: 'tab' },
       { key: 'module.MINAS.tab.BALANCES.view', descripcion: 'Ver pestaña Balances en Minas', categoria: 'tab' },
+      { key: 'module.COMPRADORES.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Compradores', categoria: 'tab' },
       { key: 'module.COMPRADORES.tab.TRANSACCIONES.view', descripcion: 'Ver pestaña Transacciones en Compradores', categoria: 'tab' },
       { key: 'module.COMPRADORES.tab.BALANCES.view', descripcion: 'Ver pestaña Balances en Compradores', categoria: 'tab' },
+      { key: 'module.VOLQUETEROS.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Volqueteros', categoria: 'tab' },
       { key: 'module.VOLQUETEROS.tab.TRANSACCIONES.view', descripcion: 'Ver pestaña Transacciones en Volqueteros', categoria: 'tab' },
       { key: 'module.VOLQUETEROS.tab.BALANCES.view', descripcion: 'Ver pestaña Balances en Volqueteros', categoria: 'tab' },
       { key: 'module.RODMAR.accounts.view', descripcion: 'Ver cuentas RodMar', categoria: 'tab' },
@@ -155,12 +157,86 @@ export async function initializeAdminUser() {
   }
 }
 
+// Agregar permisos faltantes a la base de datos existente
+export async function addMissingPermissions() {
+  console.log('=== VERIFICANDO PERMISOS FALTANTES ===');
+  
+  try {
+    // Permisos a agregar
+    const missingPermissions = [
+      { key: 'module.COMPRADORES.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Compradores', categoria: 'tab' },
+      { key: 'module.VOLQUETEROS.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Volqueteros', categoria: 'tab' },
+    ];
+
+    // Verificar y agregar cada permiso
+    for (const perm of missingPermissions) {
+      // Verificar si el permiso ya existe
+      const existing = await db
+        .select()
+        .from(permissions)
+        .where(eq(permissions.key, perm.key))
+        .limit(1);
+
+      if (existing.length > 0) {
+        console.log(`✅ Permiso ${perm.key} ya existe`);
+        continue;
+      }
+
+      // Crear el permiso
+      const [newPermission] = await db
+        .insert(permissions)
+        .values(perm)
+        .returning();
+
+      console.log(`✅ Permiso creado: ${perm.key} (ID: ${newPermission.id})`);
+
+      // Asignar el permiso al rol ADMIN
+      const adminRole = await db
+        .select()
+        .from(roles)
+        .where(eq(roles.nombre, 'ADMIN'))
+        .limit(1);
+
+      if (adminRole.length > 0) {
+        // Verificar si ya está asignado
+        const existingAssignment = await db
+          .select()
+          .from(rolePermissions)
+          .where(
+            and(
+              eq(rolePermissions.roleId, adminRole[0].id),
+              eq(rolePermissions.permissionId, newPermission.id)
+            )
+          )
+          .limit(1);
+
+        if (existingAssignment.length === 0) {
+          await db.insert(rolePermissions).values({
+            roleId: adminRole[0].id,
+            permissionId: newPermission.id,
+          });
+          console.log(`✅ Permiso ${perm.key} asignado al rol ADMIN`);
+        }
+      }
+    }
+
+    console.log('=== VERIFICACIÓN DE PERMISOS COMPLETADA ===');
+    
+  } catch (error) {
+    console.error('=== ERROR VERIFICANDO PERMISOS FALTANTES ===', error);
+    // No lanzar error para no bloquear la inicialización
+  }
+}
+
 export async function initializeDatabase() {
   console.log('=== INICIALIZANDO BASE DE DATOS POSTGRESQL ===');
   
   try {
     // Primero inicializar roles y permisos
     await initializeRolesAndPermissions();
+    
+    // Agregar permisos faltantes (para bases de datos existentes)
+    await addMissingPermissions();
     
     // Luego crear usuario admin por defecto si no existe
     await initializeAdminUser();
