@@ -1038,7 +1038,20 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
       const url = apiUrl(`/api/transacciones/postobon?${params.toString()}`);
       console.log('[Postobón] Fetching transactions from:', url);
       
-      const response = await fetch(url);
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(url, {
+        credentials: "include",
+        headers,
+      });
       console.log('[Postobón] Response status:', response.status, response.statusText);
       
       if (!response.ok) {
@@ -2064,7 +2077,20 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
       const url = apiUrl(`/api/transacciones/lcdm?${params.toString()}`);
       console.log('[LCDM] Fetching transactions from:', url);
       
-      const response = await fetch(url);
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(url, {
+        credentials: "include",
+        headers,
+      });
       console.log('[LCDM] Response status:', response.status, response.statusText);
       
       if (!response.ok) {
