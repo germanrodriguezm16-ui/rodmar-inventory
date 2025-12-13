@@ -2937,11 +2937,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint paginado para transacciones de LCDM (DEBE IR ANTES de /api/transacciones/:id)
   app.get("/api/transacciones/lcdm", requireAuth, async (req, res) => {
     try {
-      const userId = req.user?.id || "main_user";
+      // Verificar si el usuario es ADMIN - si lo es, no filtrar por userId
+      let userId: string | undefined = req.user?.id || "main_user";
+      const isAdmin = req.user?.roleId ? await db.select().from(roles).where(eq(roles.id, req.user.roleId)).then(r => r[0]?.nombre === 'ADMIN') : false;
+      
+      // Si es admin, no filtrar por userId (ver todas las transacciones)
+      if (isAdmin) {
+        userId = undefined;
+      }
+      
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       
-      console.log(`[LCDM] Request recibido - userId: ${userId}, page: ${page}, limit: ${limit}`);
+      console.log(`[LCDM] Request recibido - userId: ${userId || 'ALL (ADMIN)'}, page: ${page}, limit: ${limit}, isAdmin: ${isAdmin}`);
       
       // Leer parámetros de filtro
       const search = req.query.search as string || '';
@@ -2949,7 +2957,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fechaHasta = req.query.fechaHasta as string || '';
       const includeHidden = req.query.includeHidden === 'true';
       
-      console.log(`[LCDM] Obteniendo transacciones para userId: ${userId}, includeHidden: ${includeHidden}`);
+      console.log(`[LCDM] Obteniendo transacciones para userId: ${userId || 'ALL (ADMIN)'}, includeHidden: ${includeHidden}`);
       
       // Si includeHidden=true, devolver todas las transacciones sin paginación
       if (includeHidden) {
@@ -3060,19 +3068,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint paginado para transacciones de Postobón (DEBE IR ANTES de /api/transacciones/:id)
   app.get("/api/transacciones/postobon", requireAuth, async (req, res) => {
     try {
-      const userId = req.user?.id || "main_user";
+      // Verificar si el usuario es ADMIN - si lo es, no filtrar por userId
+      let userId: string | undefined = req.user?.id || "main_user";
+      const isAdmin = req.user?.roleId ? await db.select().from(roles).where(eq(roles.id, req.user.roleId)).then(r => r[0]?.nombre === 'ADMIN') : false;
+      
+      // Si es admin, no filtrar por userId (ver todas las transacciones)
+      if (isAdmin) {
+        userId = undefined;
+      }
+      
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       const filterType = req.query.filterType as string || 'todas'; // todas, santa-rosa, cimitarra
       
-      console.log(`[Postobón] Request recibido - userId: ${userId}, page: ${page}, limit: ${limit}, filterType: ${filterType}`);
+      console.log(`[Postobón] Request recibido - userId: ${userId || 'ALL (ADMIN)'}, page: ${page}, limit: ${limit}, filterType: ${filterType}, isAdmin: ${isAdmin}`);
       
       // Leer parámetros de filtro
       const search = req.query.search as string || '';
       const fechaDesde = req.query.fechaDesde as string || '';
       const fechaHasta = req.query.fechaHasta as string || '';
       
-      console.log(`[Postobón] Obteniendo transacciones para userId: ${userId}`);
+      console.log(`[Postobón] Obteniendo transacciones para userId: ${userId || 'ALL (ADMIN)'}`);
       const allTransacciones = await storage.getTransacciones(userId);
       console.log(`[Postobón] Total transacciones obtenidas: ${allTransacciones.length}`);
       
