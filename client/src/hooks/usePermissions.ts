@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiUrl } from "../lib/api";
+import { getAuthToken } from "./useAuth";
 
 interface PermissionsResponse {
   permissions: string[];
@@ -12,8 +13,16 @@ export function usePermissions() {
   const { data, isLoading, error } = useQuery<PermissionsResponse>({
     queryKey: ["user-permissions"],
     queryFn: async () => {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(apiUrl("/api/user/permissions"), {
         credentials: "include",
+        headers,
       });
 
       if (!response.ok) {

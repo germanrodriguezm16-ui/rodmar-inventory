@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { apiUrl } from '@/lib/api';
+import { getAuthToken } from './useAuth';
 
 interface PushSubscriptionData {
   endpoint: string;
@@ -36,8 +37,16 @@ export function usePushNotifications() {
       
       // Obtener VAPID public key del servidor
       try {
+        const token = getAuthToken();
+        const headers: Record<string, string> = {};
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
         const response = await fetch(apiUrl('/api/push/vapid-public-key'), {
-          credentials: 'include'
+          credentials: 'include',
+          headers,
         });
         
         if (response.ok) {

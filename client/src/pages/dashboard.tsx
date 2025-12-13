@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiUrl } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
+import { getAuthToken } from "@/hooks/useAuth";
 
 type Module = "principal" | "minas" | "compradores" | "volqueteros" | "transacciones" | "rodmar";
 
@@ -57,8 +58,16 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   const { data: pendingCount = 0 } = useQuery<number>({
     queryKey: ["/api/transacciones/pendientes/count"],
     queryFn: async () => {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(apiUrl("/api/transacciones/pendientes/count"), {
         credentials: "include",
+        headers,
       });
       if (!response.ok) return 0;
       const data = await response.json();
@@ -75,8 +84,16 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   const { data: pendientes = [] } = useQuery<any[]>({
     queryKey: ["/api/transacciones/pendientes"],
     queryFn: async () => {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(apiUrl("/api/transacciones/pendientes"), {
         credentials: "include",
+        headers,
       });
       if (!response.ok) return [];
       return response.json();
@@ -251,8 +268,14 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       // Buscar la transacción completada en todas las transacciones
       const buscarTransaccionCompletada = async () => {
         try {
+          const token = getAuthToken();
+          const headers: Record<string, string> = {};
+          if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+          }
           const response = await fetch(apiUrl(`/api/transacciones/${transactionId}`), {
             credentials: "include",
+            headers,
           });
           if (response.ok) {
             const transaccion = await response.json();
@@ -316,8 +339,14 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
           const buscarEnServidor = async () => {
             try {
               // Intentar buscar como transacción pendiente primero
+              const token = getAuthToken();
+              const headers: Record<string, string> = {};
+              if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+              }
               const response = await fetch(apiUrl(`/api/transacciones/pendientes`), {
                 credentials: "include",
+                headers,
               });
               
               if (response.ok) {
@@ -450,8 +479,14 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
           const buscarEnServidor = async () => {
             try {
               // Intentar buscar como transacción pendiente primero
+              const token = getAuthToken();
+              const headers: Record<string, string> = {};
+              if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+              }
               const response = await fetch(apiUrl(`/api/transacciones/pendientes`), {
                 credentials: "include",
+                headers,
               });
               
               if (response.ok) {
@@ -548,8 +583,14 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
           const buscarEnServidor = async () => {
             try {
               // Intentar buscar como transacción pendiente primero
+              const token = getAuthToken();
+              const headers: Record<string, string> = {};
+              if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+              }
               const response = await fetch(apiUrl(`/api/transacciones/pendientes`), {
                 credentials: "include",
+                headers,
               });
               
               if (response.ok) {
