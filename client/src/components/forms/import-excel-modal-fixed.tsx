@@ -243,17 +243,29 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
         console.log("Checking conflicts for IDs:", tripIds);
         
         // Force refresh of server data to avoid cache issues
+        const { getAuthToken } = await import('@/hooks/useAuth');
+        const token = getAuthToken();
+        const headers: Record<string, string> = { 'Cache-Control': 'no-cache' };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
         const serverViajesResponse = await fetch(apiUrl("/api/viajes"), {
           cache: 'no-cache',
-          headers: { 'Cache-Control': 'no-cache' },
+          headers,
           credentials: 'include',
         });
         const serverViajes = await serverViajesResponse.json();
         console.log("Current server viajes:", serverViajes.map((v: any) => v.id));
         
+        const { getAuthToken } = await import('@/hooks/useAuth');
+        const token = getAuthToken();
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
         const conflictResponse = await fetch(apiUrl("/api/check-conflicts"), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({ ids: tripIds }),
           credentials: 'include',
         });
