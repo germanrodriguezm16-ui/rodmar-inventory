@@ -106,7 +106,16 @@ export function useAuth() {
       // Guardar token en localStorage
       if (data.token) {
         setAuthToken(data.token);
-        console.log("🔑 Token guardado en localStorage");
+        console.log("🔑 Token guardado en localStorage:", data.token.substring(0, 20) + "...");
+        // Verificar que se guardó correctamente
+        const savedToken = getAuthToken();
+        if (savedToken) {
+          console.log("✅ Token verificado en localStorage:", savedToken.substring(0, 20) + "...");
+        } else {
+          console.error("❌ Error: Token no se guardó correctamente en localStorage");
+        }
+      } else {
+        console.error("❌ Error: No se recibió token en la respuesta del login");
       }
       
       return data as AuthResponse;

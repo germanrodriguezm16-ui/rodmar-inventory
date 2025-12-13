@@ -28,6 +28,9 @@ export async function apiRequest(
   
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+    console.log('🔑 [API] Token incluido en petición:', method, url.substring(0, 50));
+  } else {
+    console.warn('⚠️ [API] No hay token disponible para:', method, url.substring(0, 50));
   }
   
   const res = await fetch(fullUrl, {
@@ -97,6 +100,9 @@ export const getQueryFn: <T>(options: {
     
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 [QUERY] Token incluido en petición:', url.substring(0, 50));
+    } else {
+      console.warn('⚠️ [QUERY] No hay token disponible para:', url.substring(0, 50));
     }
     
     const res = await fetch(cacheBuster, {
