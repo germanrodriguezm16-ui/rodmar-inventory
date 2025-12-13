@@ -146,7 +146,16 @@ export default function VolqueteroDetail() {
   const { data: transaccionesData = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
     queryFn: async () => {
-      const res = await fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/transacciones`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/transacciones`), {
+        credentials: "include",
+        headers,
+      });
       if (!res.ok) {
         console.error(`Error fetching transacciones for volquetero ${volqueteroIdActual}:`, res.status, res.statusText);
         return []; // Devolver array vacío en caso de error
@@ -165,7 +174,16 @@ export default function VolqueteroDetail() {
   const { data: todasTransaccionesIncOcultas = [] } = useQuery({
     queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`/api/transacciones/socio/volquetero/${volqueteroIdActual}?includeHidden=true`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/api/transacciones/socio/volquetero/${volqueteroIdActual}?includeHidden=true`), {
+        credentials: "include",
+        headers,
+      });
       if (!response.ok) {
         console.error(`Error fetching todas transacciones for volquetero ${volqueteroIdActual}:`, response.status, response.statusText);
         return []; // Devolver array vacío en caso de error
@@ -184,7 +202,16 @@ export default function VolqueteroDetail() {
   const { data: viajesVolquetero = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "viajes"],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/viajes`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/viajes`), {
+        credentials: "include",
+        headers,
+      });
       if (!response.ok) {
         throw new Error('Error al obtener viajes');
       }
@@ -202,7 +229,16 @@ export default function VolqueteroDetail() {
   const { data: todosViajesIncOcultos = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "viajes", "includeHidden"],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/viajes?includeHidden=true`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/viajes?includeHidden=true`), {
+        credentials: "include",
+        headers,
+      });
       if (!response.ok) {
         throw new Error('Error al obtener viajes');
       }
@@ -484,9 +520,16 @@ export default function VolqueteroDetail() {
   // Mutación para ocultar transacciones individuales
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide-volquetero`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       if (!response.ok) throw new Error('Error al ocultar transacción');
       return await response.json();
@@ -512,9 +555,16 @@ export default function VolqueteroDetail() {
   // Mutación para ocultar viajes individuales
   const hideViajeMutation = useMutation({
     mutationFn: async (viajeId: string) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/viajes/${viajeId}/hide`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       if (!response.ok) throw new Error('Error al ocultar viaje');
       return await response.json();
@@ -543,9 +593,16 @@ export default function VolqueteroDetail() {
   // Mutación para eliminar transacciones pendientes
   const deletePendingTransactionMutation = useMutation({
     mutationFn: async (id: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/${id}`), {
         method: "DELETE",
         credentials: "include",
+        headers,
       });
       if (!response.ok) {
         const errorText = await response.text().catch(() => response.statusText);
@@ -612,15 +669,24 @@ export default function VolqueteroDetail() {
       }
       
       // Mostrar transacciones ocultas específicas de este volquetero
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const transaccionesResponse = await fetch(apiUrl(`/api/transacciones/socio/volquetero/${volqueteroIdActual}/show-all`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       
       // Mostrar viajes ocultos específicos de este volquetero (por nombre del conductor)
       const viajesResponse = await fetch(apiUrl(`/api/viajes/volquetero/${encodeURIComponent(volquetero.nombre)}/show-all`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       
       if (!transaccionesResponse.ok && !viajesResponse.ok) {
