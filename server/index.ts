@@ -15,13 +15,31 @@ const app = express();
 
 // CORS DEBE SER EL PRIMER MIDDLEWARE - Antes de cualquier otra cosa
 // Manejar peticiones OPTIONS explícitamente (preflight) - PRIMERO
-// Este handler DEBE estar antes de cualquier otro middleware
+// Este handler DEBE estar antes de cualquier otro middleware, incluso antes de express.json()
+app.use((req, res, next) => {
+  // Si es una petición OPTIONS (preflight), responder inmediatamente
+  if (req.method === "OPTIONS") {
+    const origin = req.headers.origin;
+    console.log("🔵 [CORS] OPTIONS request recibida desde:", origin);
+    console.log("🔵 [CORS] Path:", req.path);
+    
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Expires, Pragma, If-Modified-Since, If-None-Match");
+      res.setHeader("Access-Control-Max-Age", "86400");
+    }
+    
+    console.log("✅ [CORS] OPTIONS response enviada");
+    return res.status(200).end();
+  }
+  next();
+});
+
+// Handler adicional para OPTIONS usando app.options (por si acaso)
 app.options("*", (req, res) => {
   const origin = req.headers.origin;
-  console.log("🔵 [CORS] OPTIONS request recibida desde:", origin);
-  console.log("🔵 [CORS] Method:", req.method);
-  console.log("🔵 [CORS] Path:", req.path);
-  
   if (origin) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -29,12 +47,6 @@ app.options("*", (req, res) => {
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Expires, Pragma, If-Modified-Since, If-None-Match");
     res.setHeader("Access-Control-Max-Age", "86400");
   }
-  
-  console.log("✅ [CORS] OPTIONS response enviada con headers:", {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Credentials": "true"
-  });
-  
   res.status(200).end();
 });
 
