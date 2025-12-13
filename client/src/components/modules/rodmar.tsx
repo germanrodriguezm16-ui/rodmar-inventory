@@ -6,7 +6,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { usePagination } from "@/hooks/usePagination";
 import { apiUrl } from "@/lib/api";
 import { getAuthToken, removeAuthToken } from "@/hooks/useAuth";
-import { parseJsonWithDateInterception, getQueryFn } from "@/lib/queryClient";
+import { parseJsonWithDateInterception } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -116,13 +116,43 @@ export default function RodMar() {
   });
 
   // Obtener transacciones específicas de LCDM
-  const lcdmQueryFn = getQueryFn({ on401: "throw" });
   const { data: lcdmTransactionsData } = useQuery({
     queryKey: ["/api/transacciones/lcdm?includeHidden=true"],
     queryFn: async ({ queryKey }) => {
-      const result = await lcdmQueryFn({ queryKey } as any);
+      const url = queryKey[0] as string;
+      const fullUrl = apiUrl(url);
+      
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      };
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        console.warn('[LCDM] ⚠️ No token available!');
+        removeAuthToken();
+        throw new Error('No autenticado');
+      }
+      
+      const response = await fetch(fullUrl, {
+        credentials: "include",
+        headers,
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          removeAuthToken();
+          throw new Error('No autenticado');
+        }
+        throw new Error(`Error: ${response.status}`);
+      }
+      
+      const data = await parseJsonWithDateInterception(response);
       // El backend devuelve { data: [...], pagination: {...} } o directamente un array si includeHidden=true
-      return Array.isArray(result) ? result : (result?.data || []);
+      return Array.isArray(data) ? data : (data.data || []);
     },
     staleTime: 300000,
     refetchOnMount: false,
@@ -132,13 +162,43 @@ export default function RodMar() {
   const lcdmTransactions = lcdmTransactionsData || [];
 
   // Obtener transacciones específicas de Postobón
-  const postobonQueryFn = getQueryFn({ on401: "throw" });
   const { data: postobonTransactionsData } = useQuery({
     queryKey: ["/api/transacciones/postobon?filterType=todas&includeHidden=true"],
     queryFn: async ({ queryKey }) => {
-      const result = await postobonQueryFn({ queryKey } as any);
+      const url = queryKey[0] as string;
+      const fullUrl = apiUrl(url);
+      
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      };
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        console.warn('[Postobón] ⚠️ No token available!');
+        removeAuthToken();
+        throw new Error('No autenticado');
+      }
+      
+      const response = await fetch(fullUrl, {
+        credentials: "include",
+        headers,
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          removeAuthToken();
+          throw new Error('No autenticado');
+        }
+        throw new Error(`Error: ${response.status}`);
+      }
+      
+      const data = await parseJsonWithDateInterception(response);
       // El backend devuelve { data: [...], pagination: {...} } o directamente un array si includeHidden=true
-      return Array.isArray(result) ? result : (result?.data || []);
+      return Array.isArray(data) ? data : (data.data || []);
     },
     staleTime: 300000,
     refetchOnMount: false,
