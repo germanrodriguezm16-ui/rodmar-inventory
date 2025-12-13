@@ -73,7 +73,16 @@ export default function VolqueteroDetail() {
     queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
     queryFn: async () => {
       const { apiUrl } = await import('@/lib/api');
-      const response = await fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/transacciones`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/api/volqueteros/${volqueteroIdActual}/transacciones`), {
+        credentials: "include",
+        headers,
+      });
       if (!response.ok) throw new Error('Error al obtener transacciones');
       return response.json();
     },
