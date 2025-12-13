@@ -13,29 +13,24 @@ import { initializeSocket } from "./socket";
 
 const app = express();
 
-// Configure CORS for production
-const corsOptions = {
-  origin: process.env.CORS_ORIGIN || (process.env.NODE_ENV === "production" ? false : "http://localhost:5000"),
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type", 
-    "Authorization", 
-    "X-Requested-With",
-    "Accept",
-    "Origin",
-    "Cache-Control",
-    "Expires",
-    "Pragma",
-    "If-Modified-Since",
-    "If-None-Match"
-  ],
-  exposedHeaders: ["Content-Length", "Content-Type"],
-  maxAge: 86400, // 24 hours
-};
+// CORS DEBE SER EL PRIMER MIDDLEWARE - Antes de cualquier otra cosa
+// Manejar peticiones OPTIONS explícitamente (preflight) - PRIMERO
+app.options("*", (req, res) => {
+  const origin = req.headers.origin;
+  console.log("🔵 [CORS] OPTIONS request recibida desde:", origin);
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Expires, Pragma, If-Modified-Since, If-None-Match");
+    res.setHeader("Access-Control-Max-Age", "86400");
+  }
+  console.log("✅ [CORS] OPTIONS response enviada");
+  res.status(200).end();
+});
 
 // Enable CORS - Configuración simplificada y robusta
-// Permitir todos los orígenes en producción (necesario para Vercel -> Railway)
+// Permitir todos los orígenes (necesario para Vercel -> Railway)
 app.use(cors({ 
   origin: true, // Permitir cualquier origen
   credentials: true,
@@ -57,19 +52,6 @@ app.use(cors({
   optionsSuccessStatus: 200,
   maxAge: 86400 // 24 horas
 }));
-
-// Manejar peticiones OPTIONS explícitamente (preflight)
-app.options("*", (req, res) => {
-  const origin = req.headers.origin;
-  if (origin) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Expires, Pragma, If-Modified-Since, If-None-Match");
-    res.setHeader("Access-Control-Max-Age", "86400");
-  }
-  res.status(200).end();
-});
 
 // Middleware adicional para asegurar headers CORS en todas las respuestas
 app.use((req, res, next) => {
