@@ -852,11 +852,24 @@ export default function CompradorDetail() {
 
       {/* Contenido principal compacto */}
       <div className="max-w-7xl mx-auto px-4 py-3">
-        <Tabs defaultValue={has("module.COMPRADORES.tab.TRANSACCIONES.view") ? "transacciones" : "balance"} className="w-full">
+        <Tabs defaultValue={has("module.COMPRADORES.tab.VIAJES.view") ? "viajes" : has("module.COMPRADORES.tab.TRANSACCIONES.view") ? "transacciones" : "balance"} className="w-full">
           <TabsList className={`rodmar-tabs grid w-full gap-1 p-1 ${
-            [has("module.COMPRADORES.tab.TRANSACCIONES.view"), has("module.COMPRADORES.tab.BALANCES.view")]
+            [has("module.COMPRADORES.tab.VIAJES.view"), has("module.COMPRADORES.tab.TRANSACCIONES.view"), has("module.COMPRADORES.tab.BALANCES.view")]
+              .filter(Boolean).length === 3 ? "grid-cols-3" :
+            [has("module.COMPRADORES.tab.VIAJES.view"), has("module.COMPRADORES.tab.TRANSACCIONES.view"), has("module.COMPRADORES.tab.BALANCES.view")]
               .filter(Boolean).length === 2 ? "grid-cols-2" : "grid-cols-1"
           }`}>
+            {has("module.COMPRADORES.tab.VIAJES.view") && (
+              <TabsTrigger 
+                value="viajes"
+                className="text-sm px-3 py-2"
+              >
+                Viajes
+                <Badge variant="secondary" className="ml-1">
+                  {viajesFiltrados.length}
+                </Badge>
+              </TabsTrigger>
+            )}
             {has("module.COMPRADORES.tab.TRANSACCIONES.view") && (
               <TabsTrigger 
                 value="transacciones"
@@ -877,6 +890,27 @@ export default function CompradorDetail() {
               </TabsTrigger>
             )}
           </TabsList>
+
+            {has("module.COMPRADORES.tab.VIAJES.view") && (
+              <TabsContent value="viajes" className="mt-6">
+                <CompradorViajesTab 
+                  viajes={viajesFiltrados}
+                  viajesOriginal={viajes}
+                  dateFilter={dateFilter}
+                  setDateFilter={setDateFilter}
+                  startDate={startDate}
+                  setStartDate={setStartDate}
+                  endDate={endDate}
+                  setEndDate={setEndDate}
+                  getFilterText={getFilterText}
+                  handleClearFilter={handleClearFilter}
+                  setShowImagePreview={setShowTransaccionesImagePreview}
+                  setExcelPreviewData={setExcelPreviewData}
+                  setShowExcelPreview={setShowExcelPreview}
+                  comprador={comprador}
+                />
+              </TabsContent>
+            )}
 
             {has("module.COMPRADORES.tab.TRANSACCIONES.view") && (
               <TabsContent value="transacciones" className="mt-6">

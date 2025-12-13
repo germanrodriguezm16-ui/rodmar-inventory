@@ -954,9 +954,16 @@ export default function VolqueteroDetail() {
       <div className="p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className={`grid w-full ${
-            [has("module.VOLQUETEROS.tab.TRANSACCIONES.view"), has("module.VOLQUETEROS.tab.BALANCES.view")]
+            [has("module.VOLQUETEROS.tab.VIAJES.view"), has("module.VOLQUETEROS.tab.TRANSACCIONES.view"), has("module.VOLQUETEROS.tab.BALANCES.view")]
+              .filter(Boolean).length === 3 ? "grid-cols-3" :
+            [has("module.VOLQUETEROS.tab.VIAJES.view"), has("module.VOLQUETEROS.tab.TRANSACCIONES.view"), has("module.VOLQUETEROS.tab.BALANCES.view")]
               .filter(Boolean).length === 2 ? "grid-cols-2" : "grid-cols-1"
           }`}>
+            {has("module.VOLQUETEROS.tab.VIAJES.view") && (
+              <TabsTrigger value="viajes" className="text-xs">
+                Viajes ({viajesVolquetero.length})
+              </TabsTrigger>
+            )}
             {has("module.VOLQUETEROS.tab.TRANSACCIONES.view") && (
               <TabsTrigger value="transacciones" className="text-xs">
                 Transacciones ({transaccionesFormateadas.filter(t => !t.oculta).length})
@@ -969,7 +976,8 @@ export default function VolqueteroDetail() {
             )}
           </TabsList>
 
-          <TabsContent value="viajes" className="space-y-4">
+          {has("module.VOLQUETEROS.tab.VIAJES.view") && (
+            <TabsContent value="viajes" className="space-y-4">
             {viajesVolquetero.length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center">
