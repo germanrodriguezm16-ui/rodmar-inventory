@@ -125,8 +125,12 @@ export function useAuth() {
       // Invalidar y actualizar caché
       queryClient.setQueryData(["auth", "me"], data);
       queryClient.setQueryData(["userPermissions", data.user.id], { permissions: data.permissions });
-      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-      setLocation("/");
+      
+      // Esperar un momento para asegurar que el token esté disponible antes de invalidar queries
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+        setLocation("/");
+      }, 100);
     },
     onError: (error) => {
       console.error("❌ Error en login mutation:", error);
