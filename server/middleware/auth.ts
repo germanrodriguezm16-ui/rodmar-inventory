@@ -20,33 +20,45 @@ declare global {
   }
 }
 
+const isDev = process.env.NODE_ENV !== "production";
+
 /**
  * Middleware de autenticación - verifica JWT token
  */
 export const requireAuth: RequestHandler = async (req, res, next) => {
   try {
-    // Logging para diagnóstico
-    console.log("🔐 [AUTH] Verificando autenticación para:", req.path);
+    // Logging solo en desarrollo
+    if (isDev) {
+      console.log("🔐 [AUTH] Verificando autenticación para:", req.path);
+    }
     
     // Obtener token del header Authorization
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.log("❌ [AUTH] No hay token en el header Authorization");
+      if (isDev) {
+        console.log("❌ [AUTH] No hay token en el header Authorization");
+      }
       return res.status(401).json({ error: "No autenticado" });
     }
 
     const token = authHeader.substring(7); // Remover "Bearer "
-    console.log("🔑 [AUTH] Token recibido:", token.substring(0, 20) + "...");
+    if (isDev) {
+      console.log("🔑 [AUTH] Token recibido:", token.substring(0, 20) + "...");
+    }
 
     // Verificar token
     const tokenData = verifyToken(token);
     if (!tokenData) {
-      console.log("❌ [AUTH] Token inválido o expirado");
+      if (isDev) {
+        console.log("❌ [AUTH] Token inválido o expirado");
+      }
       return res.status(401).json({ error: "Token inválido o expirado" });
     }
 
     const userId = tokenData.userId;
-    console.log("✅ [AUTH] Token válido para usuario:", userId);
+    if (isDev) {
+      console.log("✅ [AUTH] Token válido para usuario:", userId);
+    }
 
     // Obtener usuario de la base de datos
     const user = await db
