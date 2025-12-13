@@ -342,18 +342,20 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
             {user && (
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">
-                  Contraseña Actual (opcional, para verificar)
+                  Contraseña Actual
                 </Label>
                 <PasswordInput
                   id="currentPassword"
-                  placeholder="Ingresa la contraseña actual para verificar"
+                  placeholder="Contraseña actual del usuario"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   showPassword={showCurrentPassword}
                   onToggleShowPassword={() => setShowCurrentPassword(!showCurrentPassword)}
+                  readOnly
+                  className="bg-muted"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Este campo es opcional y solo se usa para verificar la identidad antes de cambiar la contraseña
+                  Contraseña actual del usuario. Usa el ojito para verla. Este campo es solo lectura.
                 </p>
               </div>
             )}
