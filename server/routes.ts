@@ -5229,6 +5229,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  // NO crear un nuevo servidor aquí - el servidor ya fue creado en index.ts
+  // El servidor HTTP se crea en index.ts antes de llamar a registerRoutes
 }

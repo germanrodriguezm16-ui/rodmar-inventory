@@ -233,8 +233,11 @@ app.use((req, res, next) => {
     });
   });
   
-  // Register all API routes
-  const server = await registerRoutes(app);
+  // Create HTTP server BEFORE registering routes
+  const server = createServer(app);
+  
+  // Register all API routes (this should NOT create a new server)
+  await registerRoutes(app);
   
   // Initialize Socket.io
   initializeSocket(server);
