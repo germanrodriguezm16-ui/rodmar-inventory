@@ -126,9 +126,18 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
   // Mutación para eliminar transacciones pendientes
   const deletePendingTransactionMutation = useMutation({
     mutationFn: async (id: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(apiUrl(`/api/transacciones/${id}`), {
         method: "DELETE",
         credentials: "include",
+        headers,
       });
       if (!response.ok) {
         const errorText = await response.text().catch(() => response.statusText);
@@ -242,11 +251,19 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
 
   const confirmBulkDelete = async () => {
     try {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(apiUrl('/api/transacciones/bulk-delete'), {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           ids: Array.from(selectedTransactions)
         }),
@@ -365,7 +382,18 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
       // Ordenamiento por defecto (solo fecha desc)
       params.append('sortByFecha', 'desc');
       
-      const response = await fetch(apiUrl(`/api/transacciones?${params.toString()}`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(apiUrl(`/api/transacciones?${params.toString()}`), {
+        credentials: "include",
+        headers,
+      });
       if (!response.ok) throw new Error('Error al obtener transacciones');
       return response.json();
     },

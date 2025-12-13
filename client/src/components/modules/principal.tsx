@@ -155,8 +155,19 @@ export default function Principal({ onOpenCargue, onOpenDescargue }: PrincipalPr
     queryKey: ["/api/viajes", currentPage, pageSize],
     queryFn: async () => {
       const { apiUrl } = await import('@/lib/api');
+      const { getAuthToken } = await import('@/hooks/useAuth');
       const limit = getLimitForServer();
-      const response = await fetch(apiUrl(`/api/viajes?page=${currentPage}&limit=${limit}`));
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(apiUrl(`/api/viajes?page=${currentPage}&limit=${limit}`), {
+        credentials: "include",
+        headers,
+      });
       if (!response.ok) throw new Error('Error al obtener viajes');
       return response.json();
     },
