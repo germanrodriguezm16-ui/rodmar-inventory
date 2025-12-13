@@ -257,15 +257,14 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
         const serverViajes = await serverViajesResponse.json();
         console.log("Current server viajes:", serverViajes.map((v: any) => v.id));
         
-        const { getAuthToken } = await import('@/hooks/useAuth');
-        const token = getAuthToken();
-        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        // Reutilizar token y headers, solo agregar Content-Type para la segunda petición
+        const conflictHeaders: Record<string, string> = { "Content-Type": "application/json" };
         if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
+          conflictHeaders['Authorization'] = `Bearer ${token}`;
         }
         const conflictResponse = await fetch(apiUrl("/api/check-conflicts"), {
           method: "POST",
-          headers,
+          headers: conflictHeaders,
           body: JSON.stringify({ ids: tripIds }),
           credentials: 'include',
         });
