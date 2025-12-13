@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +56,9 @@ interface UserModalProps {
 export default function UserModal({ open, onClose, user }: UserModalProps) {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
@@ -64,6 +68,9 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
   const [newOverrideType, setNewOverrideType] = useState<"allow" | "deny">("deny");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Verificar si el usuario es ADMIN
+  const isAdminUser = user?.roleNombre === "ADMIN";
 
   const { data: roles = [] } = useQuery<Role[]>({
     queryKey: ["/api/admin/roles"],
@@ -126,6 +133,9 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
     if (user) {
       setPhone(user.phone || "");
       setPassword(""); // No mostrar contraseña existente
+      setCurrentPassword(""); // Campo para contraseña actual (no se puede obtener del backend por seguridad)
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
       setFirstName(user.firstName || "");
       setLastName(user.lastName || "");
       setSelectedRoleId(user.roleId?.toString() || "none");
@@ -137,6 +147,9 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
       // Reset para crear nuevo usuario
       setPhone("");
       setPassword("");
+      setCurrentPassword("");
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
       setFirstName("");
       setLastName("");
       setSelectedRoleId("none");
@@ -311,26 +324,51 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required={!user} // Requerido solo al crear
-                disabled={!!user} // No editable al editar (por seguridad)
+                disabled={!!user && !isAdminUser} // Editable solo si es ADMIN o al crear
               />
-              {user && (
+              {user && !isAdminUser && (
                 <p className="text-xs text-muted-foreground">
                   El celular no se puede cambiar por seguridad
                 </p>
               )}
+              {user && isAdminUser && (
+                <p className="text-xs text-muted-foreground">
+                  Como administrador, puedes editar el número de celular
+                </p>
+              )}
             </div>
+
+            {user && (
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">
+                  Contraseña Actual (opcional, para verificar)
+                </Label>
+                <PasswordInput
+                  id="currentPassword"
+                  placeholder="Ingresa la contraseña actual para verificar"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  showPassword={showCurrentPassword}
+                  onToggleShowPassword={() => setShowCurrentPassword(!showCurrentPassword)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Este campo es opcional y solo se usa para verificar la identidad antes de cambiar la contraseña
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="password">
                 {user ? "Nueva Contraseña (dejar vacío para no cambiar)" : "Contraseña *"}
               </Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 placeholder={user ? "Dejar vacío para mantener la actual" : "Ingresa la contraseña"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required={!user} // Requerido solo al crear
+                showPassword={showNewPassword}
+                onToggleShowPassword={() => setShowNewPassword(!showNewPassword)}
               />
             </div>
 
