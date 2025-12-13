@@ -10,13 +10,52 @@ async function addMissingPermissions() {
   console.log('=== AGREGANDO PERMISOS FALTANTES ===');
   
   try {
-    // Permisos a agregar
+    // Obtener rol ADMIN
+    const adminRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.nombre, 'ADMIN'))
+      .limit(1);
+
+    if (adminRole.length === 0) {
+      console.log('❌ No se encontró el rol ADMIN');
+      return;
+    }
+
+    // Permisos a agregar/verificar
     const missingPermissions = [
       { key: 'module.COMPRADORES.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Compradores', categoria: 'tab' },
       { key: 'module.VOLQUETEROS.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Volqueteros', categoria: 'tab' },
       { key: 'module.RODMAR.LCDM.view', descripcion: 'Ver sección LCDM en RodMar', categoria: 'tab' },
       { key: 'module.RODMAR.Postobon.view', descripcion: 'Ver sección Postobón en RodMar', categoria: 'tab' },
     ];
+
+    // Obtener todos los permisos del sistema para verificar si faltan asignaciones
+    const allPermissions = await db.select().from(permissions);
+    
+    // Obtener permisos ya asignados al ADMIN
+    const adminPermissions = await db
+      .select({ permissionId: rolePermissions.permissionId })
+      .from(rolePermissions)
+      .where(eq(rolePermissions.roleId, adminRole[0].id));
+
+    const assignedPermissionIds = new Set(adminPermissions.map(p => p.permissionId));
+    
+    console.log(`📊 Total permisos en sistema: ${allPermissions.length}`);
+    console.log(`📊 Permisos asignados al ADMIN: ${assignedPermissionIds.size}`);
+    
+    // Verificar si hay permisos del sistema que no están asignados al ADMIN
+    const unassignedSystemPermissions = allPermissions.filter(
+      p => !assignedPermissionIds.has(p.id)
+    );
+
+    if (unassignedSystemPermissions.length > 0) {
+      console.log(`\n⚠️  Encontrados ${unassignedSystemPermissions.length} permisos del sistema NO asignados al ADMIN:`);
+      unassignedSystemPermissions.forEach(perm => {
+        console.log(`   - ${perm.key} (${perm.categoria})`);
+      });
+      console.log('\n📝 Asignando permisos faltantes al ADMIN...\n');
+    }
 
     // Obtener rol ADMIN
     const adminRole = await db
@@ -30,7 +69,35 @@ async function addMissingPermissions() {
       return;
     }
 
-    // Verificar y agregar cada permiso
+    // Primero, asignar todos los permisos del sistema que no están asignados
+    let assignedCount = 0;
+    for (const perm of unassignedSystemPermissions) {
+      const existingAssignment = await db
+        .select()
+        .from(rolePermissions)
+        .where(
+          and(
+            eq(rolePermissions.roleId, adminRole[0].id),
+            eq(rolePermissions.permissionId, perm.id)
+          )
+        )
+        .limit(1);
+
+      if (existingAssignment.length === 0) {
+        await db.insert(rolePermissions).values({
+          roleId: adminRole[0].id,
+          permissionId: perm.id,
+        });
+        assignedCount++;
+        console.log(`✅ Permiso ${perm.key} asignado al rol ADMIN`);
+      }
+    }
+
+    if (assignedCount > 0) {
+      console.log(`\n✅ ${assignedCount} permisos del sistema asignados al ADMIN\n`);
+    }
+
+    // Luego, verificar y agregar los permisos específicos de la lista
     for (const perm of missingPermissions) {
       // Verificar si el permiso ya existe
       const existing = await db
@@ -42,7 +109,6 @@ async function addMissingPermissions() {
       let permissionId: number;
 
       if (existing.length > 0) {
-        console.log(`⚠️  Permiso ${perm.key} ya existe, verificando asignación...`);
         permissionId = existing[0].id;
       } else {
         // Crear el permiso
