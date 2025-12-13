@@ -13,10 +13,14 @@ import { initializeSocket } from "./socket";
 
 const app = express();
 
-// LOGGING DE TODAS LAS PETICIONES - Incluso antes de CORS para ver si llegan al servidor
+// LOGGING DE TODAS LAS PETICIONES - PRIMERO, antes de cualquier otro middleware
+// Esto nos permite ver si las peticiones están llegando al servidor
 app.use((req, res, next) => {
   console.log(`🌐 [REQUEST] ${req.method} ${req.path} desde origin: ${req.headers.origin || 'sin origin'}`);
-  console.log(`🌐 [REQUEST] Headers:`, JSON.stringify(req.headers, null, 2));
+  console.log(`🌐 [REQUEST] Host: ${req.headers.host}`);
+  console.log(`🌐 [REQUEST] X-Forwarded-Host: ${req.headers['x-forwarded-host']}`);
+  console.log(`🌐 [REQUEST] X-Forwarded-Proto: ${req.headers['x-forwarded-proto']}`);
+  console.log(`🌐 [REQUEST] User-Agent: ${req.headers['user-agent']}`);
   next();
 });
 
