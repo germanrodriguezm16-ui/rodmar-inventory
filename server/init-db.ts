@@ -84,7 +84,19 @@ export async function initializeRolesAndPermissions() {
     console.log(`✅ Rol ADMIN creado con ${adminPermissions.length} permisos`);
 
     // Asignar rol ADMIN al usuario principal si existe
-    const mainUser = await db.select().from(users).where(eq(users.id, 'main_user')).limit(1);
+    const mainUser = await db
+      .select({
+        id: users.id,
+        phone: users.phone,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        roleId: users.roleId,
+        passwordHash: users.passwordHash,
+      })
+      .from(users)
+      .where(eq(users.id, 'main_user'))
+      .limit(1);
     if (mainUser.length > 0 && !mainUser[0].roleId) {
       await db.update(users)
         .set({ roleId: adminRole.id })

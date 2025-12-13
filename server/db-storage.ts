@@ -58,7 +58,19 @@ async function wrapDbOperation<T>(operation: () => Promise<T>): Promise<T> {
 export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await db
+      .select({
+        id: users.id,
+        phone: users.phone,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        roleId: users.roleId,
+        passwordHash: users.passwordHash,
+        passwordPlain: users.passwordPlain,
+      })
+      .from(users)
+      .where(eq(users.id, id));
     return user;
   }
 
