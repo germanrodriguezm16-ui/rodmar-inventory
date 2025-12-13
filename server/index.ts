@@ -34,15 +34,30 @@ const corsOptions = {
   maxAge: 86400, // 24 hours
 };
 
+// Enable CORS - Manejar preflight requests primero
+app.options("*", (req, res) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Expires, Pragma, If-Modified-Since, If-None-Match");
+    res.setHeader("Access-Control-Max-Age", "86400");
+  }
+  res.status(200).end();
+});
+
 // Enable CORS
 if (process.env.NODE_ENV === "production") {
-  // En producción, usar CORS_ORIGIN si está configurado, sino permitir todos (temporal)
+  // En producción, permitir todos los orígenes si CORS_ORIGIN no está configurado o es "*"
+  // Esto es necesario porque el frontend está en Vercel y el backend en Railway
   if (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*") {
+    // Si hay un origen específico configurado, usarlo
     app.use(cors(corsOptions));
   } else {
-    // Si CORS_ORIGIN es "*" o no está configurado, permitir todos (solo para desarrollo)
+    // Permitir todos los orígenes (necesario para Vercel -> Railway)
     app.use(cors({ 
-      origin: true, 
+      origin: true, // Permitir cualquier origen
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       allowedHeaders: [
@@ -57,17 +72,20 @@ if (process.env.NODE_ENV === "production") {
         "If-Modified-Since",
         "If-None-Match"
       ],
+      preflightContinue: false,
+      optionsSuccessStatus: 200
     }));
   }
   
   // Middleware adicional para asegurar headers CORS en todas las respuestas
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin && (process.env.CORS_ORIGIN === "*" || !process.env.CORS_ORIGIN || origin === process.env.CORS_ORIGIN)) {
+    if (origin) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
       res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
       res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Expires, Pragma, If-Modified-Since, If-None-Match");
+      res.setHeader("Access-Control-Max-Age", "86400");
     }
     next();
   });
