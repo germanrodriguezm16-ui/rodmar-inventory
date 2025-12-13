@@ -214,9 +214,16 @@ export default function RodMarCuentaDetail() {
   // Mutación para ocultar transacciones individuales
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       if (!response.ok) throw new Error('Error al ocultar transacción');
       return await response.json();
@@ -259,9 +266,16 @@ export default function RodMarCuentaDetail() {
   // Mutación para mostrar todas las transacciones ocultas
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/show-all-hidden`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       if (!response.ok) throw new Error('Error al mostrar transacciones ocultas');
       return await response.json();
@@ -342,7 +356,16 @@ export default function RodMarCuentaDetail() {
         limit: limit.toString(),
       });
       
-      const response = await fetch(apiUrl(`/api/transacciones/cuenta/${cuentaNombre}?${params.toString()}`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/api/transacciones/cuenta/${cuentaNombre}?${params.toString()}`), {
+        credentials: "include",
+        headers,
+      });
       if (!response.ok) throw new Error('Error al obtener transacciones');
       return response.json();
     },
@@ -359,7 +382,16 @@ export default function RodMarCuentaDetail() {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     queryFn: async () => {
-      const response = await fetch(apiUrl(`/api/transacciones/cuenta/${cuentaNombre}?includeHidden=true`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/api/transacciones/cuenta/${cuentaNombre}?includeHidden=true`), {
+        credentials: "include",
+        headers,
+      });
       if (!response.ok) throw new Error('Error al obtener transacciones');
       const data = await response.json();
       // Cuando includeHidden=true, el servidor devuelve un array directo
