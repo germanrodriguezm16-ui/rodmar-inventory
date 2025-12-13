@@ -25,7 +25,16 @@ export function useVouchers() {
     setLoadingVouchers(prev => new Set(prev).add(transactionId));
 
     try {
-      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/voucher`));
+      const { getAuthToken } = await import('./useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/voucher`), {
+        credentials: "include",
+        headers,
+      });
       if (!response.ok) {
         throw new Error('Failed to load voucher');
       }
