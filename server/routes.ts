@@ -127,7 +127,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("❌ [LOGIN] Error en login:", error);
-      res.status(500).json({ error: "Error al iniciar sesión" });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error("❌ [LOGIN] Error details:", errorMessage);
+      if (errorStack) {
+        console.error("❌ [LOGIN] Error stack:", errorStack);
+      }
+      res.status(500).json({ 
+        error: "Error al iniciar sesión",
+        details: process.env.NODE_ENV === "development" ? errorMessage : undefined
+      });
     }
   });
 
