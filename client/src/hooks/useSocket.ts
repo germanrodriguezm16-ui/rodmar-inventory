@@ -9,8 +9,17 @@ export function useSocket() {
 
   useEffect(() => {
     // Conectar al servidor Socket.io
-    // En producción usa VITE_API_URL, en desarrollo usa window.location.origin
-    const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    // En Vercel (producción), usar ruta relativa para que el proxy funcione
+    const isVercel = window.location.hostname.includes('vercel.app');
+    let apiUrl: string;
+    
+    if (isVercel && import.meta.env.PROD) {
+      // En Vercel, usar ruta relativa (el proxy manejará el routing)
+      apiUrl = window.location.origin;
+    } else {
+      // En desarrollo o si VITE_API_URL está configurada, usarla
+      apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    }
     
     // Solo conectar si tenemos una URL válida
     if (!apiUrl) {
