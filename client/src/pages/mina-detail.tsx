@@ -77,17 +77,29 @@ export default function MinaDetail() {
       const { apiUrl } = await import('@/lib/api');
       
       // Llamar a la API para mostrar todas las transacciones ocultas de la mina
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}/show-all`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers
       }).catch(error => {
         console.error('Error al limpiar transacciones ocultas de mina:', error);
       });
       
       // También mostrar viajes ocultos de la mina
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       fetch(apiUrl(`/api/viajes/mina/${minaId}/show-all`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers
       }).catch(error => {
         console.error('Error al limpiar viajes ocultos de mina:', error);
       });
@@ -122,9 +134,15 @@ export default function MinaDetail() {
   // Mutación para ocultar transacciones individuales
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Error al ocultar transacción');
@@ -151,9 +169,15 @@ export default function MinaDetail() {
   // Mutación para ocultar viajes individuales
   const hideViajeMutation = useMutation({
     mutationFn: async (viajeId: string) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/viajes/${viajeId}/hide`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Error al ocultar viaje');
@@ -184,9 +208,16 @@ export default function MinaDetail() {
   // Mutación para eliminar transacciones pendientes
   const deletePendingTransactionMutation = useMutation({
     mutationFn: async (id: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/${id}`), {
         method: "DELETE",
         credentials: "include",
+        headers,
       });
       if (!response.ok) {
         const errorText = await response.text().catch(() => response.statusText);

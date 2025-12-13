@@ -135,17 +135,25 @@ export default function CompradorDetail() {
         console.log('🔄 LIMPIEZA: Mostrando transacciones ocultas al salir de la página del comprador', compradorId);
         
         // Llamar a la API para mostrar todas las transacciones ocultas
+        const { getAuthToken } = await import('@/hooks/useAuth');
+        const token = getAuthToken();
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
         fetch(apiUrl(`/api/transacciones/socio/comprador/${compradorId}/show-all`), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
+          headers,
+          credentials: "include",
         }).catch(error => {
           console.error('Error al limpiar transacciones ocultas:', error);
         });
         
-        // También mostrar viajes ocultos 
+        // También mostrar viajes ocultos (reutilizar headers y token)
         fetch(apiUrl(`/api/viajes/comprador/${compradorId}/show-all`), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
+          headers,
+          credentials: "include",
         }).catch(error => {
           console.error('Error al limpiar viajes ocultos:', error);
         });
@@ -166,14 +174,38 @@ export default function CompradorDetail() {
   // Fetch comprador data
   const { data: comprador, isLoading: isLoadingComprador, error: compradorError } = useQuery<Comprador>({
     queryKey: ["/api/compradores", compradorId],
-    queryFn: () => fetch(apiUrl(`/api/compradores/${compradorId}`)).then(res => res.json()),
+    queryFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(apiUrl(`/api/compradores/${compradorId}`), {
+        credentials: "include",
+        headers,
+      });
+      return res.json();
+    },
     enabled: !!compradorId,
   });
 
   // Fetch viajes del comprador
   const { data: viajes = [] } = useQuery<ViajeWithDetails[]>({
     queryKey: ["/api/viajes/comprador", compradorId],
-    queryFn: () => fetch(apiUrl(`/api/viajes/comprador/${compradorId}`)).then(res => res.json()),
+    queryFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(apiUrl(`/api/viajes/comprador/${compradorId}`), {
+        credentials: "include",
+        headers,
+      });
+      return res.json();
+    },
     enabled: !!compradorId,
     staleTime: 300000, // 5 minutos - datos frescos por más tiempo
     refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
@@ -190,7 +222,16 @@ export default function CompradorDetail() {
   const { data: transacciones = [] } = useQuery<TransaccionWithSocio[]>({
     queryKey: ["/api/transacciones/comprador", compradorId],
     queryFn: async () => {
-      const res = await fetch(apiUrl(`/api/transacciones/comprador/${compradorId}`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(apiUrl(`/api/transacciones/comprador/${compradorId}`), {
+        credentials: "include",
+        headers,
+      });
       if (!res.ok) {
         console.error(`Error fetching transacciones for comprador ${compradorId}:`, res.status, res.statusText);
         return []; // Devolver array vacío en caso de error
@@ -209,7 +250,16 @@ export default function CompradorDetail() {
   const { data: todasTransaccionesIncOcultas = [] } = useQuery<TransaccionWithSocio[]>({
     queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"],
     queryFn: async () => {
-      const res = await fetch(apiUrl(`/api/transacciones/comprador/${compradorId}?includeHidden=true`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(apiUrl(`/api/transacciones/comprador/${compradorId}?includeHidden=true`), {
+        credentials: "include",
+        headers,
+      });
       if (!res.ok) {
         console.error(`Error fetching todas transacciones for comprador ${compradorId}:`, res.status, res.statusText);
         return []; // Devolver array vacío en caso de error
@@ -227,7 +277,19 @@ export default function CompradorDetail() {
   // Fetch todos los viajes incluyendo ocultos (solo para el balance del encabezado)
   const { data: todosViajesIncOcultos = [] } = useQuery<ViajeWithDetails[]>({
     queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"],
-    queryFn: () => fetch(apiUrl(`/api/viajes/comprador/${compradorId}?includeHidden=true`)).then(res => res.json()),
+    queryFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(apiUrl(`/api/viajes/comprador/${compradorId}?includeHidden=true`), {
+        credentials: "include",
+        headers,
+      });
+      return res.json();
+    },
     enabled: !!compradorId,
     staleTime: 300000,
     refetchOnMount: false,
@@ -499,9 +561,16 @@ export default function CompradorDetail() {
   // Mutaciones para ocultar transacciones usando endpoint específico de compradores
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide-comprador`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       if (!response.ok) throw new Error('Error al ocultar transacción en módulo compradores');
       return response.json();
@@ -534,9 +603,15 @@ export default function CompradorDetail() {
   // Mutación para ocultar viajes
   const hideViajesMutation = useMutation({
     mutationFn: async (viajeId: string) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/viajes/${viajeId}/hide`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Error al ocultar viaje');
@@ -595,9 +670,16 @@ export default function CompradorDetail() {
   // Mutación para eliminar transacciones pendientes
   const deletePendingTransactionMutation = useMutation({
     mutationFn: async (id: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/${id}`), {
         method: "DELETE",
         credentials: "include",
+        headers,
       });
       if (!response.ok) {
         const errorText = await response.text().catch(() => response.statusText);
@@ -644,15 +726,23 @@ export default function CompradorDetail() {
     mutationFn: async () => {
       const { apiUrl } = await import('@/lib/api');
       // Mostrar transacciones ocultas
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const transaccionesResponse = await fetch(apiUrl(`/api/transacciones/socio/comprador/${compradorId}/show-all`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       
       // Mostrar viajes ocultos
       const viajesResponse = await fetch(apiUrl(`/api/viajes/comprador/${compradorId}/show-all`), {
         method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       
       if (!transaccionesResponse.ok || !viajesResponse.ok) {
