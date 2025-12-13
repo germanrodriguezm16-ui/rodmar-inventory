@@ -14,7 +14,21 @@ async function addMissingPermissions() {
     const missingPermissions = [
       { key: 'module.COMPRADORES.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Compradores', categoria: 'tab' },
       { key: 'module.VOLQUETEROS.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Volqueteros', categoria: 'tab' },
+      { key: 'module.RODMAR.LCDM.view', descripcion: 'Ver sección LCDM en RodMar', categoria: 'tab' },
+      { key: 'module.RODMAR.Postobon.view', descripcion: 'Ver sección Postobón en RodMar', categoria: 'tab' },
     ];
+
+    // Obtener rol ADMIN
+    const adminRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.nombre, 'ADMIN'))
+      .limit(1);
+
+    if (adminRole.length === 0) {
+      console.log('⚠️  No se encontró el rol ADMIN, no se pueden asignar permisos');
+      return;
+    }
 
     // Verificar y agregar cada permiso
     for (const perm of missingPermissions) {
@@ -25,50 +39,41 @@ async function addMissingPermissions() {
         .where(eq(permissions.key, perm.key))
         .limit(1);
 
+      let permissionId: number;
+
       if (existing.length > 0) {
-        console.log(`⚠️  Permiso ${perm.key} ya existe, omitiendo...`);
-        continue;
+        console.log(`⚠️  Permiso ${perm.key} ya existe, verificando asignación...`);
+        permissionId = existing[0].id;
+      } else {
+        // Crear el permiso
+        const [newPermission] = await db
+          .insert(permissions)
+          .values(perm)
+          .returning();
+        permissionId = newPermission.id;
+        console.log(`✅ Permiso creado: ${perm.key} (ID: ${permissionId})`);
       }
 
-      // Crear el permiso
-      const [newPermission] = await db
-        .insert(permissions)
-        .values(perm)
-        .returning();
-
-      console.log(`✅ Permiso creado: ${perm.key} (ID: ${newPermission.id})`);
-
-      // Asignar el permiso al rol ADMIN
-      const adminRole = await db
+      // Verificar si ya está asignado al ADMIN
+      const existingAssignment = await db
         .select()
-        .from(roles)
-        .where(eq(roles.nombre, 'ADMIN'))
+        .from(rolePermissions)
+        .where(
+          and(
+            eq(rolePermissions.roleId, adminRole[0].id),
+            eq(rolePermissions.permissionId, permissionId)
+          )
+        )
         .limit(1);
 
-      if (adminRole.length > 0) {
-        // Verificar si ya está asignado
-        const existingAssignment = await db
-          .select()
-          .from(rolePermissions)
-          .where(
-            and(
-              eq(rolePermissions.roleId, adminRole[0].id),
-              eq(rolePermissions.permissionId, newPermission.id)
-            )
-          )
-          .limit(1);
-
-        if (existingAssignment.length === 0) {
-          await db.insert(rolePermissions).values({
-            roleId: adminRole[0].id,
-            permissionId: newPermission.id,
-          });
-          console.log(`✅ Permiso ${perm.key} asignado al rol ADMIN`);
-        } else {
-          console.log(`⚠️  Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
-        }
+      if (existingAssignment.length === 0) {
+        await db.insert(rolePermissions).values({
+          roleId: adminRole[0].id,
+          permissionId: permissionId,
+        });
+        console.log(`✅ Permiso ${perm.key} asignado al rol ADMIN`);
       } else {
-        console.log(`⚠️  No se encontró el rol ADMIN, no se puede asignar el permiso`);
+        console.log(`✅ Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
       }
     }
 
@@ -81,7 +86,7 @@ async function addMissingPermissions() {
 }
 
 // Ejecutar si se llama directamente
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.includes('add-missing-permissions.ts')) {
   addMissingPermissions()
     .then(() => {
       console.log('✅ Script completado');
