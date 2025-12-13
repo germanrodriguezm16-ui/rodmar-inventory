@@ -109,7 +109,16 @@ export const optionalAuth: RequestHandler = async (req, res, next) => {
       if (tokenData) {
         const userId = tokenData.userId;
         const user = await db
-          .select()
+          .select({
+            id: users.id,
+            phone: users.phone,
+            email: users.email,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            roleId: users.roleId,
+            passwordHash: users.passwordHash,
+            // No incluir password_plain en el middleware de autenticación por seguridad
+          })
           .from(users)
           .where(eq(users.id, userId))
           .limit(1);
