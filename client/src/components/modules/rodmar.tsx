@@ -120,6 +120,13 @@ export default function RodMar() {
     queryKey: ["/api/transacciones/lcdm?includeHidden=true"],
     queryFn: async () => {
       const token = getAuthToken();
+      const url = apiUrl("/api/transacciones/lcdm?includeHidden=true");
+      
+      if (import.meta.env.DEV) {
+        console.log('[LCDM] Fetching transactions from:', url);
+        console.log('[LCDM] Token available:', !!token);
+      }
+      
       const headers: Record<string, string> = {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
@@ -127,13 +134,25 @@ export default function RodMar() {
       };
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        console.warn('[LCDM] ⚠️ No token available!');
       }
-      const response = await fetch(apiUrl("/api/transacciones/lcdm?includeHidden=true"), {
+      
+      const response = await fetch(url, {
         credentials: "include",
         headers,
       });
+      
+      if (import.meta.env.DEV) {
+        console.log('[LCDM] Response status:', response.status);
+      }
+      
       if (!response.ok) {
         if (response.status === 401) {
+          const errorText = await response.text();
+          if (import.meta.env.DEV) {
+            console.log('[LCDM] Error response:', errorText);
+          }
           removeAuthToken();
         }
         throw new Error(`Error: ${response.status}`);
@@ -154,6 +173,13 @@ export default function RodMar() {
     queryKey: ["/api/transacciones/postobon?filterType=todas&includeHidden=true"],
     queryFn: async () => {
       const token = getAuthToken();
+      const url = apiUrl("/api/transacciones/postobon?filterType=todas&includeHidden=true");
+      
+      if (import.meta.env.DEV) {
+        console.log('[Postobón] Fetching transactions from:', url);
+        console.log('[Postobón] Token available:', !!token);
+      }
+      
       const headers: Record<string, string> = {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
@@ -161,13 +187,25 @@ export default function RodMar() {
       };
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        console.warn('[Postobón] ⚠️ No token available!');
       }
-      const response = await fetch(apiUrl("/api/transacciones/postobon?filterType=todas&includeHidden=true"), {
+      
+      const response = await fetch(url, {
         credentials: "include",
         headers,
       });
+      
+      if (import.meta.env.DEV) {
+        console.log('[Postobón] Response status:', response.status);
+      }
+      
       if (!response.ok) {
         if (response.status === 401) {
+          const errorText = await response.text();
+          if (import.meta.env.DEV) {
+            console.log('[Postobón] Error response:', errorText);
+          }
           removeAuthToken();
         }
         throw new Error(`Error: ${response.status}`);
