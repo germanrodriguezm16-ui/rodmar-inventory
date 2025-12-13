@@ -5188,6 +5188,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint temporal para ejecutar migración de password_plain SIN autenticación
+  // ⚠️ ELIMINAR ESTE ENDPOINT DESPUÉS DE EJECUTAR LA MIGRACIÓN
+  // Solo funciona si DATABASE_URL está configurada y la columna no existe
+  app.post("/api/admin/migrate/add-password-plain-column", async (req, res) => {
+    try {
+      console.log("🔄 [MIGRATION] Ejecutando migración para agregar columna password_plain...");
+      const result = await addPasswordPlainColumn();
+      res.json({ 
+        success: true, 
+        message: result.message || "Columna password_plain agregada exitosamente" 
+      });
+    } catch (error: any) {
+      console.error("❌ [MIGRATION] Error ejecutando migración:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Si la columna ya existe, no es un error
+      if (errorMessage.includes('ya existe') || errorMessage.includes('already exists') || error.code === '42701') {
+        res.json({ 
+          success: true,
+          message: "La columna password_plain ya existe" 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false,
+          error: "Error ejecutando migración",
+          details: errorMessage
+        });
+      }
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
