@@ -15,6 +15,7 @@ interface User {
   roleId: number | null;
   roleNombre: string | null;
   roleDescripcion: string | null;
+  passwordPlain?: string | null; // Contraseña en texto plano (solo para ADMIN)
 }
 
 export default function UsersTab() {
