@@ -970,7 +970,16 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
         includeHidden: 'true',
         filterType: filterType,
       });
-      const response = await fetch(apiUrl(`/api/transacciones/postobon?${params.toString()}`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/api/transacciones/postobon?${params.toString()}`), {
+        credentials: "include",
+        headers,
+      });
       if (!response.ok) throw new Error('Error al obtener transacciones');
       const data = await response.json();
       // Cuando includeHidden=true, el servidor devuelve un array directo
@@ -1058,7 +1067,16 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
               filterType
             ],
             queryFn: async () => {
-              const response = await fetch(apiUrl(`/api/transacciones/postobon?${params.toString()}`));
+              const { getAuthToken } = await import('@/hooks/useAuth');
+              const token = getAuthToken();
+              const headers: Record<string, string> = {};
+              if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+              }
+              const response = await fetch(apiUrl(`/api/transacciones/postobon?${params.toString()}`), {
+                credentials: "include",
+                headers,
+              });
               if (!response.ok) throw new Error('Error al obtener transacciones');
               return response.json();
             },
@@ -1112,9 +1130,16 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
   // Mutation para ocultar transacciones
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide`), {
         method: 'PATCH',
         credentials: 'include',
+        headers,
       });
       if (!response.ok) {
         const errorText = await response.text().catch(() => response.statusText);
@@ -1150,9 +1175,16 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
   // Mutación para mostrar todas las transacciones ocultas - Postobón
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/show-all-hidden`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       if (!response.ok) throw new Error('Error al mostrar transacciones ocultas');
       return response.json();
@@ -1960,7 +1992,16 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
   const { data: todasLcdmTransactionsIncOcultas = [] } = useQuery<any[]>({
     queryKey: ["/api/transacciones/lcdm/all"],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`/api/transacciones/lcdm?includeHidden=true`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/api/transacciones/lcdm?includeHidden=true`), {
+        credentials: "include",
+        headers,
+      });
       if (!response.ok) throw new Error('Error al obtener transacciones');
       const data = await response.json();
       // Cuando includeHidden=true, el servidor devuelve un array directo
@@ -2046,7 +2087,16 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
               typeof pageSize === "number" ? pageSize : 999999
             ],
             queryFn: async () => {
-              const response = await fetch(apiUrl(`/api/transacciones/lcdm?${params.toString()}`));
+              const { getAuthToken } = await import('@/hooks/useAuth');
+              const token = getAuthToken();
+              const headers: Record<string, string> = {};
+              if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+              }
+              const response = await fetch(apiUrl(`/api/transacciones/lcdm?${params.toString()}`), {
+                credentials: "include",
+                headers,
+              });
               if (!response.ok) throw new Error('Error al obtener transacciones');
               return response.json();
             },
@@ -2104,9 +2154,16 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
   // Mutation para ocultar transacciones
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide`), {
         method: 'PATCH',
         credentials: 'include',
+        headers,
       });
       if (!response.ok) {
         const errorText = await response.text().catch(() => response.statusText);
@@ -2142,9 +2199,16 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
   // Mutación para mostrar todas las transacciones ocultas
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/show-all-hidden`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       if (!response.ok) throw new Error('Error al mostrar transacciones ocultas');
       return response.json();
