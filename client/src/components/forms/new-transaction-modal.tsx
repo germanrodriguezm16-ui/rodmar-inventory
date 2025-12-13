@@ -209,11 +209,17 @@ function NewTransactionModal({
         return dataWithConcepto;
       }
       
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl("/api/transacciones"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(dataWithConcepto),
         credentials: "include",
       });

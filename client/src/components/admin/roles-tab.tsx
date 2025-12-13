@@ -39,8 +39,15 @@ export default function RolesTab() {
   const { data: roles = [], isLoading } = useQuery<Role[]>({
     queryKey: ["/api/admin/roles"],
     queryFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl("/api/admin/roles"), {
         credentials: "include",
+        headers,
       });
       if (!response.ok) throw new Error("Error al cargar roles");
       return response.json();
@@ -49,9 +56,16 @@ export default function RolesTab() {
 
   const deleteMutation = useMutation({
     mutationFn: async (roleId: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/admin/roles/${roleId}`), {
         method: "DELETE",
         credentials: "include",
+        headers,
       });
       if (!response.ok) {
         const error = await response.json();

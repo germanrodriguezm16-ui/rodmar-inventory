@@ -289,11 +289,17 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
       if (initialData?.id) {
         const concepto = generateConcepto(data);
         
+        const { getAuthToken } = await import('@/hooks/useAuth');
+        const token = getAuthToken();
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
         const response = await fetch(apiUrl(`/api/transacciones/${initialData.id}`), {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({
             paraQuienTipo: data.paraQuienTipo,
             paraQuienId: data.paraQuienId,
@@ -317,11 +323,17 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
       }
 
       // Si no hay ID, crear nueva solicitud
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl("/api/transacciones/solicitar"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           paraQuienTipo: data.paraQuienTipo,
           paraQuienId: data.paraQuienId,

@@ -25,8 +25,15 @@ export default function UsersTab() {
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl("/api/admin/users"), {
         credentials: "include",
+        headers,
       });
       if (!response.ok) throw new Error("Error al cargar usuarios");
       return response.json();

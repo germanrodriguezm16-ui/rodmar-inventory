@@ -137,11 +137,16 @@ export function usePushNotifications() {
         }
       };
 
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl('/api/push/subscribe'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify({ subscription: subscriptionData })
       });
@@ -182,11 +187,16 @@ export function usePushNotifications() {
 
       if (subscription) {
         // Eliminar del servidor
+        const token = getAuthToken();
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
         await fetch(apiUrl('/api/push/unsubscribe'), {
           method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers,
           credentials: 'include',
           body: JSON.stringify({ endpoint: subscription.endpoint })
         });

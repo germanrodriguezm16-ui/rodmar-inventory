@@ -68,8 +68,15 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
   const { data: roles = [] } = useQuery<Role[]>({
     queryKey: ["/api/admin/roles"],
     queryFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl("/api/admin/roles"), {
         credentials: "include",
+        headers,
       });
       if (!response.ok) throw new Error("Error al cargar roles");
       return response.json();
@@ -79,8 +86,15 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
   const { data: permissionsData } = useQuery<{ all: Permission[] }>({
     queryKey: ["/api/admin/permissions"],
     queryFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl("/api/admin/permissions"), {
         credentials: "include",
+        headers,
       });
       if (!response.ok) throw new Error("Error al cargar permisos");
       return response.json();
@@ -91,8 +105,15 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
     queryKey: ["/api/admin/users", user?.id, "permissions"],
     queryFn: async () => {
       if (!user?.id) return [];
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/admin/users/${user.id}/permissions`), {
         credentials: "include",
+        headers,
       });
       if (!response.ok) throw new Error("Error al cargar permisos");
       const data = await response.json();
@@ -128,9 +149,15 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
 
   const createMutation = useMutation({
     mutationFn: async (data: { phone: string; password: string; firstName?: string; lastName?: string; roleId: number | null }) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl("/api/admin/users"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify(data),
       });
@@ -159,9 +186,15 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
 
   const updateMutation = useMutation({
     mutationFn: async (data: { roleId: number | null; overrides: Override[]; phone?: string; password?: string; firstName?: string; lastName?: string }) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/admin/users/${user!.id}`), {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify(data),
       });

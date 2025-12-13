@@ -148,11 +148,17 @@ export function CompleteTransactionModal({
 
   const completeMutation = useMutation({
     mutationFn: async (data: z.infer<typeof completeSchema>) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/${transaccionId}/completar`), {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           deQuienTipo: data.deQuienTipo,
           deQuienId: data.deQuienId,

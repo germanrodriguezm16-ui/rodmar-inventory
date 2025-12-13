@@ -98,9 +98,16 @@ export function PendingDetailModal({ open, transaccion, onClose, onEdit, onCompl
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/${id}`), {
         method: "DELETE",
         credentials: "include",
+        headers,
       });
 
       if (!response.ok) {

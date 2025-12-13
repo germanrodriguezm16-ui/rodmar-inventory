@@ -55,8 +55,15 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
   const { data: permissionsData } = useQuery<{ all: Permission[]; grouped: Record<string, Permission[]> }>({
     queryKey: ["/api/admin/permissions"],
     queryFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl("/api/admin/permissions"), {
         credentials: "include",
+        headers,
       });
       if (!response.ok) throw new Error("Error al cargar permisos");
       return response.json();
@@ -79,9 +86,15 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
 
   const createMutation = useMutation({
     mutationFn: async (data: { nombre: string; descripcion: string; permissionIds: number[] }) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl("/api/admin/roles"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify(data),
       });
@@ -110,9 +123,15 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
 
   const updateMutation = useMutation({
     mutationFn: async (data: { nombre: string; descripcion: string; permissionIds: number[] }) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/admin/roles/${role!.id}`), {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify(data),
       });

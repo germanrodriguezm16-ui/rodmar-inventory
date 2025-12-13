@@ -72,7 +72,16 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
     queryKey: ["/api/transacciones", transaction?.id], // Stable key without timestamp
     queryFn: async () => {
       if (!transaction?.id) return null;
-      const response = await fetch(apiUrl(`/api/transacciones/${transaction.id}?t=${Date.now()}`)); // Bust cache in URL only
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/api/transacciones/${transaction.id}?t=${Date.now()}`), {
+        credentials: "include",
+        headers,
+      }); // Bust cache in URL only
       if (!response.ok) {
         if (response.status === 404) {
           console.warn(`Transaction ${transaction.id} not found`);
@@ -323,12 +332,20 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       console.log("=== Making PATCH request to:", `/api/transacciones/${currentTransaction?.id}`);
       console.log("=== Request body:", JSON.stringify(dataWithConcepto, null, 2));
       
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(apiUrl(`/api/transacciones/${currentTransaction?.id}`), {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(dataWithConcepto),
+        credentials: "include",
       });
 
       console.log("=== Response status:", response.status);
