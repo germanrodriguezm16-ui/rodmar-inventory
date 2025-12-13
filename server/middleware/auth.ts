@@ -60,12 +60,21 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
       console.log("✅ [AUTH] Token válido para usuario:", userId);
     }
 
-    // Obtener usuario de la base de datos
-    const user = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
+        // Obtener usuario de la base de datos (sin password_plain por seguridad)
+        const user = await db
+          .select({
+            id: users.id,
+            phone: users.phone,
+            email: users.email,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            roleId: users.roleId,
+            passwordHash: users.passwordHash,
+            // No incluir password_plain en el middleware de autenticación por seguridad
+          })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
 
     if (user.length === 0) {
       return res.status(401).json({ error: "Usuario no encontrado" });

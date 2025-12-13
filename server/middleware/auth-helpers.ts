@@ -65,7 +65,16 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 export async function findUserByPhone(phone: string) {
   try {
     const result = await db
-      .select()
+      .select({
+        id: users.id,
+        phone: users.phone,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        roleId: users.roleId,
+        passwordHash: users.passwordHash,
+        passwordPlain: users.passwordPlain, // Incluir para uso en admin
+      })
       .from(users)
       .where(eq(users.phone, phone))
       .limit(1);
