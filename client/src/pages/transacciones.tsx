@@ -31,6 +31,7 @@ import BottomNavigation from "@/components/layout/bottom-navigation";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { usePagination } from "@/hooks/usePagination";
 import { apiUrl } from "@/lib/api";
+import { getAuthToken } from "@/hooks/useAuth";
 
 import type { TransaccionWithSocio } from "@shared/schema";
 
@@ -126,7 +127,6 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
   // Mutación para eliminar transacciones pendientes
   const deletePendingTransactionMutation = useMutation({
     mutationFn: async (id: number) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       
@@ -251,7 +251,6 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
 
   const confirmBulkDelete = async () => {
     try {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -382,7 +381,6 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
       // Ordenamiento por defecto (solo fecha desc)
       params.append('sortByFecha', 'desc');
       
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       
@@ -507,7 +505,6 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
               typeof pageSize === "number" ? pageSize : 999999
             ],
             queryFn: async () => {
-              const { getAuthToken } = await import('@/hooks/useAuth');
               const token = getAuthToken();
               const headers: Record<string, string> = {};
               

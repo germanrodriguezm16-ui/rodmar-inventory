@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TripCard from "@/components/trip-card";
 import BottomNavigation from "@/components/bottom-navigation";
 import { formatCurrency } from "@/lib/utils";
+import { apiUrl } from "@/lib/api";
+import { getAuthToken } from "@/hooks/useAuth";
 // Formateo de fechas se maneja directamente en el componente
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
@@ -65,8 +67,6 @@ export default function VolqueteroDetail() {
   const { data: transaccionesData = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
     queryFn: async () => {
-      const { apiUrl } = await import('@/lib/api');
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {

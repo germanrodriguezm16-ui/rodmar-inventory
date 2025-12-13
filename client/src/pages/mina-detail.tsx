@@ -21,6 +21,7 @@ import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import { getAuthToken } from "@/hooks/useAuth";
 
 // Components
 import BottomNavigation from "@/components/layout/bottom-navigation";
@@ -77,7 +78,6 @@ export default function MinaDetail() {
       const { apiUrl } = await import('@/lib/api');
       
       // Llamar a la API para mostrar todas las transacciones ocultas de la mina
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
@@ -130,7 +130,6 @@ export default function MinaDetail() {
   // Mutación para ocultar transacciones individuales
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
@@ -165,7 +164,6 @@ export default function MinaDetail() {
   // Mutación para ocultar viajes individuales
   const hideViajeMutation = useMutation({
     mutationFn: async (viajeId: string) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
@@ -204,7 +202,6 @@ export default function MinaDetail() {
   // Mutación para eliminar transacciones pendientes
   const deletePendingTransactionMutation = useMutation({
     mutationFn: async (id: number) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
@@ -265,7 +262,6 @@ export default function MinaDetail() {
       }
       
       // Mostrar transacciones ocultas específicas de esta mina (similar a volqueteros)
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
@@ -388,7 +384,6 @@ export default function MinaDetail() {
   const { data: todosViajesIncOcultos = [] } = useQuery<ViajeWithDetails[]>({
     queryKey: [`/api/minas/${minaId}/viajes`, "includeHidden"],
     queryFn: async () => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
@@ -411,7 +406,6 @@ export default function MinaDetail() {
     queryKey: [`/api/transacciones/socio/mina/${minaId}`],
     queryFn: async () => {
       const { apiUrl } = await import('@/lib/api');
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
@@ -444,7 +438,6 @@ export default function MinaDetail() {
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
     queryFn: async () => {
       const { apiUrl } = await import('@/lib/api');
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
@@ -825,7 +818,6 @@ export default function MinaDetail() {
   // Mutations para eliminar transacciones
   const deleteTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {

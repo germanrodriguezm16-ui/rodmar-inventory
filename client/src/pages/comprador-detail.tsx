@@ -17,6 +17,7 @@ import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiUrl } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
+import { getAuthToken } from "@/hooks/useAuth";
 // Función para obtener día de la semana abreviado
 const getDayOfWeek = (dateInput: string | Date): string => {
   const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -138,7 +139,6 @@ export default function CompradorDetail() {
         (async () => {
           try {
             // Llamar a la API para mostrar todas las transacciones ocultas
-            const { getAuthToken } = await import('@/hooks/useAuth');
             const token = getAuthToken();
             const headers: Record<string, string> = { 'Content-Type': 'application/json' };
             if (token) {

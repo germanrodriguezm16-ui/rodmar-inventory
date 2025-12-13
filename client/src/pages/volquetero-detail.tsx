@@ -15,6 +15,7 @@ import BottomNavigation from "@/components/layout/bottom-navigation";
 import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
+import { getAuthToken } from "@/hooks/useAuth";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
@@ -146,7 +147,6 @@ export default function VolqueteroDetail() {
   const { data: transaccionesData = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
     queryFn: async () => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
@@ -174,7 +174,6 @@ export default function VolqueteroDetail() {
   const { data: todasTransaccionesIncOcultas = [] } = useQuery({
     queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"],
     queryFn: async () => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
@@ -202,7 +201,6 @@ export default function VolqueteroDetail() {
   const { data: viajesVolquetero = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "viajes"],
     queryFn: async () => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
@@ -229,7 +227,6 @@ export default function VolqueteroDetail() {
   const { data: todosViajesIncOcultos = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "viajes", "includeHidden"],
     queryFn: async () => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
@@ -520,7 +517,6 @@ export default function VolqueteroDetail() {
   // Mutación para ocultar transacciones individuales
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
@@ -555,7 +551,6 @@ export default function VolqueteroDetail() {
   // Mutación para ocultar viajes individuales
   const hideViajeMutation = useMutation({
     mutationFn: async (viajeId: string) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
@@ -593,7 +588,6 @@ export default function VolqueteroDetail() {
   // Mutación para eliminar transacciones pendientes
   const deletePendingTransactionMutation = useMutation({
     mutationFn: async (id: number) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
@@ -669,7 +663,6 @@ export default function VolqueteroDetail() {
       }
       
       // Mostrar transacciones ocultas específicas de este volquetero
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {

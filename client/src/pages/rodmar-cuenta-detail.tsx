@@ -5,6 +5,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/hooks/use-toast";
 import { apiUrl } from "@/lib/api";
+import { getAuthToken } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -214,7 +215,6 @@ export default function RodMarCuentaDetail() {
   // Mutación para ocultar transacciones individuales
   const hideTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
@@ -266,7 +266,6 @@ export default function RodMarCuentaDetail() {
   // Mutación para mostrar todas las transacciones ocultas
   const showAllHiddenMutation = useMutation({
     mutationFn: async () => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
@@ -356,7 +355,6 @@ export default function RodMarCuentaDetail() {
         limit: limit.toString(),
       });
       
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
@@ -382,7 +380,6 @@ export default function RodMarCuentaDetail() {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     queryFn: async () => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {

@@ -11,6 +11,8 @@ import TripCard from "@/components/trip-card";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import { formatCurrency } from "@/lib/utils";
+import { apiUrl } from "@/lib/api";
+import { getAuthToken } from "@/hooks/useAuth";
 // Formateo de fechas se maneja directamente en el componente
 import { 
   startOfDay, 
@@ -72,8 +74,6 @@ export default function VolqueteroDetail() {
   const { data: transaccionesData = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
     queryFn: async () => {
-      const { apiUrl } = await import('@/lib/api');
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
