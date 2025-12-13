@@ -6,7 +6,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { usePagination } from "@/hooks/usePagination";
 import { apiUrl } from "@/lib/api";
 import { getAuthToken, removeAuthToken } from "@/hooks/useAuth";
-import { parseJsonWithDateInterception } from "@/lib/queryClient";
+import { parseJsonWithDateInterception, getQueryFn } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -116,50 +116,13 @@ export default function RodMar() {
   });
 
   // Obtener transacciones específicas de LCDM
+  const lcdmQueryFn = getQueryFn({ on401: "throw" });
   const { data: lcdmTransactionsData } = useQuery({
     queryKey: ["/api/transacciones/lcdm?includeHidden=true"],
-    queryFn: async () => {
-      const token = getAuthToken();
-      const url = apiUrl("/api/transacciones/lcdm?includeHidden=true");
-      
-      if (import.meta.env.DEV) {
-        console.log('[LCDM] Fetching transactions from:', url);
-        console.log('[LCDM] Token available:', !!token);
-      }
-      
-      const headers: Record<string, string> = {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      } else {
-        console.warn('[LCDM] ⚠️ No token available!');
-      }
-      
-      const response = await fetch(url, {
-        credentials: "include",
-        headers,
-      });
-      
-      if (import.meta.env.DEV) {
-        console.log('[LCDM] Response status:', response.status);
-      }
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          const errorText = await response.text();
-          if (import.meta.env.DEV) {
-            console.log('[LCDM] Error response:', errorText);
-          }
-          removeAuthToken();
-        }
-        throw new Error(`Error: ${response.status}`);
-      }
-      const data = await parseJsonWithDateInterception(response);
+    queryFn: async ({ queryKey }) => {
+      const result = await lcdmQueryFn({ queryKey } as any);
       // El backend devuelve { data: [...], pagination: {...} } o directamente un array si includeHidden=true
-      return Array.isArray(data) ? data : (data.data || []);
+      return Array.isArray(result) ? result : (result?.data || []);
     },
     staleTime: 300000,
     refetchOnMount: false,
@@ -169,50 +132,13 @@ export default function RodMar() {
   const lcdmTransactions = lcdmTransactionsData || [];
 
   // Obtener transacciones específicas de Postobón
+  const postobonQueryFn = getQueryFn({ on401: "throw" });
   const { data: postobonTransactionsData } = useQuery({
     queryKey: ["/api/transacciones/postobon?filterType=todas&includeHidden=true"],
-    queryFn: async () => {
-      const token = getAuthToken();
-      const url = apiUrl("/api/transacciones/postobon?filterType=todas&includeHidden=true");
-      
-      if (import.meta.env.DEV) {
-        console.log('[Postobón] Fetching transactions from:', url);
-        console.log('[Postobón] Token available:', !!token);
-      }
-      
-      const headers: Record<string, string> = {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      } else {
-        console.warn('[Postobón] ⚠️ No token available!');
-      }
-      
-      const response = await fetch(url, {
-        credentials: "include",
-        headers,
-      });
-      
-      if (import.meta.env.DEV) {
-        console.log('[Postobón] Response status:', response.status);
-      }
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          const errorText = await response.text();
-          if (import.meta.env.DEV) {
-            console.log('[Postobón] Error response:', errorText);
-          }
-          removeAuthToken();
-        }
-        throw new Error(`Error: ${response.status}`);
-      }
-      const data = await parseJsonWithDateInterception(response);
+    queryFn: async ({ queryKey }) => {
+      const result = await postobonQueryFn({ queryKey } as any);
       // El backend devuelve { data: [...], pagination: {...} } o directamente un array si includeHidden=true
-      return Array.isArray(data) ? data : (data.data || []);
+      return Array.isArray(result) ? result : (result?.data || []);
     },
     staleTime: 300000,
     refetchOnMount: false,
