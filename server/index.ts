@@ -13,6 +13,13 @@ import { initializeSocket } from "./socket";
 
 const app = express();
 
+// LOGGING DE TODAS LAS PETICIONES - Incluso antes de CORS para ver si llegan al servidor
+app.use((req, res, next) => {
+  console.log(`🌐 [REQUEST] ${req.method} ${req.path} desde origin: ${req.headers.origin || 'sin origin'}`);
+  console.log(`🌐 [REQUEST] Headers:`, JSON.stringify(req.headers, null, 2));
+  next();
+});
+
 // CORS DEBE SER EL PRIMER MIDDLEWARE - Antes de cualquier otra cosa
 // Enable CORS PRIMERO - La librería cors maneja automáticamente las peticiones OPTIONS
 // Permitir todos los orígenes (necesario para Vercel -> Railway)
