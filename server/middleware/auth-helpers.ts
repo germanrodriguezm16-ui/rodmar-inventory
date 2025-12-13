@@ -63,13 +63,31 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
  * Busca un usuario por número de celular
  */
 export async function findUserByPhone(phone: string) {
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.phone, phone))
-    .limit(1);
-  
-  return result[0] || null;
+  try {
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.phone, phone))
+      .limit(1);
+    
+    return result[0] || null;
+  } catch (error: any) {
+    console.error("❌ [findUserByPhone] Error de base de datos:", error.message);
+    console.error("   Código:", error.code);
+    
+    // Si es un error de conexión, marcarlo con un código específico
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || 
+        error.code === 'ETIMEDOUT' || error.code === 'XX000' ||
+        error.message?.includes('getaddrinfo') || error.message?.includes('Connection') ||
+        error.message?.includes('DATABASE_URL')) {
+      const dbError = new Error('Error de conexión a la base de datos');
+      (dbError as any).code = 'DB_CONNECTION_ERROR';
+      throw dbError;
+    }
+    
+    // Re-lanzar otros errores
+    throw error;
+  }
 }
 
 /**

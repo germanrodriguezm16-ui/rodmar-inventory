@@ -69,15 +69,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("🔍 [LOGIN] Buscando usuario con celular:", phone.substring(0, 3) + "***");
       
+      // Verificar que DATABASE_URL esté configurada
+      if (!process.env.DATABASE_URL) {
+        console.error("❌ [LOGIN] DATABASE_URL no está configurada");
+        return res.status(500).json({ 
+          error: "Error de conexión a la base de datos",
+          details: process.env.NODE_ENV === "development" ? "DATABASE_URL no está configurada en las variables de entorno" : undefined
+        });
+      }
+      
       // Buscar usuario por celular
       let user;
       try {
         user = await findUserByPhone(phone);
-      } catch (dbError) {
+      } catch (dbError: any) {
         console.error("❌ [LOGIN] Error de base de datos al buscar usuario:", dbError);
         const errorMsg = dbError instanceof Error ? dbError.message : String(dbError);
+        const errorCode = dbError?.code || 'UNKNOWN';
+        
+        // Mensaje más específico según el tipo de error
+        let errorMessage = "Error de conexión a la base de datos";
+        if (errorCode === 'NO_DATABASE_URL') {
+          errorMessage = "DATABASE_URL no está configurada";
+        } else if (errorCode === 'DB_CONNECTION_ERROR' || errorCode === 'ECONNREFUSED') {
+          errorMessage = "No se pudo conectar a la base de datos. Verifica que la base de datos esté activa y accesible.";
+        }
+        
         return res.status(500).json({ 
-          error: "Error de conexión a la base de datos",
+          error: errorMessage,
           details: process.env.NODE_ENV === "development" ? errorMsg : undefined
         });
       }
