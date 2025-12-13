@@ -28,8 +28,30 @@ import {
 import { ViajeIdGenerator } from "./id-generator";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Manejar peticiones OPTIONS (preflight) ANTES de cualquier otro middleware
+  app.options("*", (req, res) => {
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Expires, Pragma, If-Modified-Since, If-None-Match");
+      res.setHeader("Access-Control-Max-Age", "86400");
+    }
+    res.status(200).end();
+  });
+
   // Middleware global para prevenir caché del navegador
   app.use((req, res, next) => {
+    // Agregar headers CORS a todas las respuestas
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Expires, Pragma, If-Modified-Since, If-None-Match");
+    }
+    
     res.set({
       "Cache-Control": "no-cache, no-store, must-revalidate",
       Pragma: "no-cache",

@@ -34,7 +34,31 @@ const corsOptions = {
   maxAge: 86400, // 24 hours
 };
 
-// Enable CORS - Manejar preflight requests primero
+// Enable CORS - Configuración simplificada y robusta
+// Permitir todos los orígenes en producción (necesario para Vercel -> Railway)
+app.use(cors({ 
+  origin: true, // Permitir cualquier origen
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type", 
+    "Authorization", 
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+    "Cache-Control",
+    "Expires",
+    "Pragma",
+    "If-Modified-Since",
+    "If-None-Match"
+  ],
+  exposedHeaders: ["Content-Length", "Content-Type"],
+  preflightContinue: false,
+  optionsSuccessStatus: 200,
+  maxAge: 86400 // 24 horas
+}));
+
+// Manejar peticiones OPTIONS explícitamente (preflight)
 app.options("*", (req, res) => {
   const origin = req.headers.origin;
   if (origin) {
@@ -47,51 +71,18 @@ app.options("*", (req, res) => {
   res.status(200).end();
 });
 
-// Enable CORS
-if (process.env.NODE_ENV === "production") {
-  // En producción, permitir todos los orígenes si CORS_ORIGIN no está configurado o es "*"
-  // Esto es necesario porque el frontend está en Vercel y el backend en Railway
-  if (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*") {
-    // Si hay un origen específico configurado, usarlo
-    app.use(cors(corsOptions));
-  } else {
-    // Permitir todos los orígenes (necesario para Vercel -> Railway)
-    app.use(cors({ 
-      origin: true, // Permitir cualquier origen
-      credentials: true,
-      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-      allowedHeaders: [
-        "Content-Type", 
-        "Authorization", 
-        "X-Requested-With",
-        "Accept",
-        "Origin",
-        "Cache-Control",
-        "Expires",
-        "Pragma",
-        "If-Modified-Since",
-        "If-None-Match"
-      ],
-      preflightContinue: false,
-      optionsSuccessStatus: 200
-    }));
+// Middleware adicional para asegurar headers CORS en todas las respuestas
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Expires, Pragma, If-Modified-Since, If-None-Match");
+    res.setHeader("Access-Control-Max-Age", "86400");
   }
-  
-  // Middleware adicional para asegurar headers CORS en todas las respuestas
-  app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin) {
-      res.setHeader("Access-Control-Allow-Origin", origin);
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Expires, Pragma, If-Modified-Since, If-None-Match");
-      res.setHeader("Access-Control-Max-Age", "86400");
-    }
-    next();
-  });
-} else if (process.env.NODE_ENV === "development") {
-  app.use(cors({ origin: true, credentials: true }));
-}
+  next();
+});
 
 // Increase payload limit to handle base64 images (50MB limit)
 app.use(express.json({ limit: "50mb" }));
