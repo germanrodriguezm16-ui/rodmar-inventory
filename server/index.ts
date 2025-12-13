@@ -6,6 +6,7 @@ import fs from "fs";
 import cors from "cors";
 import { setupSession } from "./middleware/session";
 import { initializeDatabase } from "./init-db";
+import { addPasswordPlainColumn } from "./add-password-plain-column";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeSocket } from "./socket";
@@ -160,6 +161,18 @@ app.use((req, res, next) => {
   // Initialize database on startup (con manejo de errores)
   try {
     await initializeDatabase();
+    
+    // Ejecutar migración de password_plain si es necesario
+    try {
+      await addPasswordPlainColumn();
+    } catch (migrationError: any) {
+      // Si la columna ya existe o hay otro error, solo loguear pero no fallar
+      if (migrationError.message?.includes('ya existe') || migrationError.message?.includes('already exists')) {
+        console.log('ℹ️  Columna password_plain ya existe, omitiendo migración');
+      } else {
+        console.error('⚠️  Error ejecutando migración de password_plain (continuando):', migrationError.message);
+      }
+    }
   } catch (error: any) {
     if (error.code === 'ECONNREFUSED' || error.message?.includes('ECONNREFUSED')) {
       console.error('⚠️  No se pudo conectar a PostgreSQL');

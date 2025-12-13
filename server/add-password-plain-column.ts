@@ -25,7 +25,7 @@ async function addPasswordPlainColumn() {
 
     if (checkColumn.length > 0) {
       console.log('✅ La columna password_plain ya existe en la tabla users');
-      return;
+      return { success: true, message: 'Columna ya existe' };
     }
 
     // Agregar la columna password_plain
@@ -40,6 +40,8 @@ async function addPasswordPlainColumn() {
     console.log('ℹ️  Las contraseñas existentes no se pueden recuperar. Se actualizarán cuando se cambien las contraseñas.');
 
     console.log('=== COLUMNA password_plain AGREGADA EXITOSAMENTE ===');
+    
+    return { success: true, message: 'Columna agregada exitosamente' };
 
   } catch (error) {
     console.error('=== ERROR AGREGANDO COLUMNA password_plain ===', error);
