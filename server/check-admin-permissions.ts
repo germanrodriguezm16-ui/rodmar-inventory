@@ -103,6 +103,14 @@ async function checkAdminPermissions() {
 
 // Ejecutar si se llama directamente
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.includes('check-admin-permissions.ts')) {
+  // Verificar DATABASE_URL antes de ejecutar
+  if (!process.env.DATABASE_URL) {
+    console.error('\n❌ DATABASE_URL no está configurada');
+    console.error('💡 Este script debe ejecutarse en el entorno de producción (Railway/Vercel)');
+    console.error('💡 O configura DATABASE_URL en tu archivo .env local\n');
+    process.exit(1);
+  }
+  
   checkAdminPermissions()
     .then(() => {
       console.log('\n✅ Script completado');
@@ -110,6 +118,10 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.includes
     })
     .catch((error) => {
       console.error('\n❌ Error ejecutando script:', error);
+      if (error.code === 'NO_DATABASE_URL') {
+        console.error('\n💡 Este script requiere DATABASE_URL configurada');
+        console.error('💡 Ejecútalo en Railway/Vercel o configura DATABASE_URL localmente\n');
+      }
       process.exit(1);
     });
 }
