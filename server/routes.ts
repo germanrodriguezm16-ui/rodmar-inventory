@@ -68,8 +68,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log("🔍 [LOGIN] Buscando usuario con celular:", phone.substring(0, 3) + "***");
+      
       // Buscar usuario por celular
-      const user = await findUserByPhone(phone);
+      let user;
+      try {
+        user = await findUserByPhone(phone);
+      } catch (dbError) {
+        console.error("❌ [LOGIN] Error de base de datos al buscar usuario:", dbError);
+        const errorMsg = dbError instanceof Error ? dbError.message : String(dbError);
+        return res.status(500).json({ 
+          error: "Error de conexión a la base de datos",
+          details: process.env.NODE_ENV === "development" ? errorMsg : undefined
+        });
+      }
 
       if (!user) {
         console.log("❌ [LOGIN] Usuario no encontrado");
@@ -85,7 +96,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verificar contraseña
       console.log("🔐 [LOGIN] Verificando contraseña...");
-      const isValidPassword = await verifyPassword(password, user.passwordHash);
+      let isValidPassword;
+      try {
+        isValidPassword = await verifyPassword(password, user.passwordHash);
+      } catch (verifyError) {
+        console.error("❌ [LOGIN] Error al verificar contraseña:", verifyError);
+        return res.status(500).json({ error: "Error al verificar contraseña" });
+      }
 
       if (!isValidPassword) {
         console.log("❌ [LOGIN] Contraseña inválida");
@@ -95,15 +112,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("✅ [LOGIN] Contraseña válida, generando token JWT...");
 
       // Actualizar último login
-      await updateLastLogin(user.id);
+      try {
+        await updateLastLogin(user.id);
+      } catch (updateError) {
+        console.error("⚠️ [LOGIN] Error al actualizar último login (continuando):", updateError);
+        // No fallar el login por esto, solo loguear el error
+      }
 
       // Generar token JWT
-      const token = generateToken(user.id);
-      console.log("✅ [LOGIN] Token JWT generado para usuario:", user.id);
+      let token;
+      try {
+        token = generateToken(user.id);
+        console.log("✅ [LOGIN] Token JWT generado para usuario:", user.id);
+      } catch (tokenError) {
+        console.error("❌ [LOGIN] Error al generar token:", tokenError);
+        return res.status(500).json({ error: "Error al generar token de autenticación" });
+      }
 
       // Obtener permisos del usuario
-      const permissions = await getUserPermissions(user.id);
-      console.log("✅ [LOGIN] Login exitoso, permisos:", permissions.length);
+      let permissions;
+      try {
+        permissions = await getUserPermissions(user.id);
+        console.log("✅ [LOGIN] Login exitoso, permisos:", permissions.length);
+      } catch (permError) {
+        console.error("⚠️ [LOGIN] Error al obtener permisos (continuando con array vacío):", permError);
+        permissions = []; // Continuar con permisos vacíos en lugar de fallar
+      }
 
       // Asegurar que los headers CORS estén configurados antes de enviar la respuesta
       const origin = req.headers.origin;
