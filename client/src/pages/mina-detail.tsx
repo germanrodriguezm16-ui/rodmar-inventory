@@ -85,21 +85,17 @@ export default function MinaDetail() {
       }
       fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}/show-all`), {
         method: 'POST',
-        headers
+        headers,
+        credentials: "include",
       }).catch(error => {
         console.error('Error al limpiar transacciones ocultas de mina:', error);
       });
       
-      // También mostrar viajes ocultos de la mina
-      const { getAuthToken } = await import('@/hooks/useAuth');
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      // También mostrar viajes ocultos de la mina (reutilizar headers y token)
       fetch(apiUrl(`/api/viajes/mina/${minaId}/show-all`), {
         method: 'POST',
-        headers
+        headers,
+        credentials: "include",
       }).catch(error => {
         console.error('Error al limpiar viajes ocultos de mina:', error);
       });
@@ -269,15 +265,24 @@ export default function MinaDetail() {
       }
       
       // Mostrar transacciones ocultas específicas de esta mina (similar a volqueteros)
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const transaccionesResponse = await fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}/show-all`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       
       // Mostrar viajes ocultos específicos de esta mina
       const viajesResponse = await fetch(apiUrl(`/api/viajes/mina/${minaId}/show-all`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers,
+        credentials: "include",
       });
       
       if (!transaccionesResponse.ok && !viajesResponse.ok) {
@@ -382,7 +387,19 @@ export default function MinaDetail() {
   // Obtener TODOS los viajes de la mina (incluyendo ocultos) solo para el balance del encabezado
   const { data: todosViajesIncOcultos = [] } = useQuery<ViajeWithDetails[]>({
     queryKey: [`/api/minas/${minaId}/viajes`, "includeHidden"],
-    queryFn: () => fetch(apiUrl(`/api/minas/${minaId}/viajes?includeHidden=true`)).then(res => res.json()),
+    queryFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(apiUrl(`/api/minas/${minaId}/viajes?includeHidden=true`), {
+        credentials: "include",
+        headers,
+      });
+      return res.json();
+    },
     enabled: !!minaId,
     staleTime: 300000,
     refetchOnMount: false,
@@ -394,7 +411,16 @@ export default function MinaDetail() {
     queryKey: [`/api/transacciones/socio/mina/${minaId}`],
     queryFn: async () => {
       const { apiUrl } = await import('@/lib/api');
-      const res = await fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}`), {
+        credentials: "include",
+        headers,
+      });
       if (!res.ok) {
         console.error(`Error fetching transacciones for mina ${minaId}:`, res.status, res.statusText);
         return []; // Devolver array vacío en caso de error
@@ -418,7 +444,16 @@ export default function MinaDetail() {
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
     queryFn: async () => {
       const { apiUrl } = await import('@/lib/api');
-      const response = await fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}?includeHidden=true`));
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}?includeHidden=true`), {
+        credentials: "include",
+        headers,
+      });
       if (!response.ok) {
         console.error(`Error fetching todas transacciones for mina ${minaId}:`, response.status, response.statusText);
         return []; // Devolver array vacío en caso de error
@@ -790,9 +825,16 @@ export default function MinaDetail() {
   // Mutations para eliminar transacciones
   const deleteTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(apiUrl(`/api/transacciones/${transactionId}`), {
         method: 'DELETE',
         credentials: 'include',
+        headers,
       });
       if (!response.ok) {
         const errorText = await response.text().catch(() => response.statusText);
