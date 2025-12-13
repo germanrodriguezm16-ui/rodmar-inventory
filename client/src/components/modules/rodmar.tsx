@@ -113,6 +113,64 @@ export default function RodMar() {
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
   });
 
+  // Obtener transacciones específicas de LCDM
+  const { data: lcdmTransactionsData } = useQuery({
+    queryKey: ["/api/transacciones/lcdm", { includeHidden: true }],
+    queryFn: async () => {
+      const { apiUrl } = await import('@/lib/api');
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl("/api/transacciones/lcdm?includeHidden=true"), {
+        credentials: "include",
+        headers,
+      });
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+      const data = await response.json();
+      // El backend devuelve { data: [...], pagination: {...} } o directamente un array si includeHidden=true
+      return Array.isArray(data) ? data : (data.data || []);
+    },
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    enabled: has("module.RODMAR.LCDM.view"), // Solo cargar si tiene permiso
+  });
+  const lcdmTransactions = lcdmTransactionsData || [];
+
+  // Obtener transacciones específicas de Postobón
+  const { data: postobonTransactionsData } = useQuery({
+    queryKey: ["/api/transacciones/postobon", { filterType: 'todas', includeHidden: true }],
+    queryFn: async () => {
+      const { apiUrl } = await import('@/lib/api');
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl("/api/transacciones/postobon?filterType=todas&includeHidden=true"), {
+        credentials: "include",
+        headers,
+      });
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+      const data = await response.json();
+      // El backend devuelve { data: [...], pagination: {...} } o directamente un array si includeHidden=true
+      return Array.isArray(data) ? data : (data.data || []);
+    },
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    enabled: has("module.RODMAR.Postobon.view"), // Solo cargar si tiene permiso
+  });
+  const postobonTransactions = postobonTransactionsData || [];
+
   const { data: cuentasRodMar = [] } = useQuery({
     queryKey: ["/api/rodmar-accounts"],
     staleTime: 30000,
@@ -623,12 +681,12 @@ export default function RodMar() {
 
                   {/* Subpestaña: Transacciones LCDM */}
                   <TabsContent value="transacciones" className="mt-4">
-                    <LcdmTransactionsTab transactions={transacciones || []} />
+                    <LcdmTransactionsTab transactions={lcdmTransactions || []} />
                   </TabsContent>
 
                   {/* Subpestaña: Balance LCDM */}
                   <TabsContent value="balance" className="mt-4">
-                    <LcdmBalanceTab transactions={transacciones || []} />
+                    <LcdmBalanceTab transactions={lcdmTransactions || []} />
                   </TabsContent>
                 </Tabs>
               </div>
@@ -656,7 +714,7 @@ export default function RodMar() {
                     <PostobonTransactionsTab 
                       title="Todas las Cuentas Postobón"
                       filterType="todas"
-                      transactions={transacciones || []}
+                      transactions={postobonTransactions || []}
                     />
                   </TabsContent>
 
@@ -665,7 +723,7 @@ export default function RodMar() {
                     <PostobonTransactionsTab 
                       title="Santa Rosa"
                       filterType="santa-rosa"
-                      transactions={transacciones || []}
+                      transactions={postobonTransactions || []}
                       onOpenInvestmentModal={(subpestana) => {
                         setSelectedSubAccount(subpestana);
                         setShowInvestmentModal(true);
@@ -678,7 +736,7 @@ export default function RodMar() {
                     <PostobonTransactionsTab 
                       title="Cimitarra"
                       filterType="cimitarra"
-                      transactions={transacciones || []}
+                      transactions={postobonTransactions || []}
                       onOpenInvestmentModal={(subpestana) => {
                         setSelectedSubAccount(subpestana);
                         setShowInvestmentModal(true);
@@ -688,7 +746,7 @@ export default function RodMar() {
 
                   {/* Subpestaña: Balance General */}
                   <TabsContent value="balance" className="mt-4">
-                    <PostobonBalanceTab transactions={transacciones || []} />
+                    <PostobonBalanceTab transactions={postobonTransactions || []} />
                   </TabsContent>
                 </Tabs>
               </div>
