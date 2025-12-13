@@ -9,6 +9,7 @@ import { db } from "./db";
 import { roles, permissions, rolePermissions, users, userPermissionsOverride } from "../shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { findUserByPhone, verifyPassword, updateLastLogin, hashPassword, generateToken, verifyToken } from "./middleware/auth-helpers";
+import { addPasswordPlainColumn } from "./add-password-plain-column";
 import {
   insertMinaSchema,
   insertCompradorSchema,
