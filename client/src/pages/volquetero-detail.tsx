@@ -996,8 +996,10 @@ export default function VolqueteroDetail() {
               </div>
             )}
           </TabsContent>
+          )}
 
-          <TabsContent value="transacciones" className="space-y-4">
+          {has("module.VOLQUETEROS.tab.TRANSACCIONES.view") && (
+            <TabsContent value="transacciones" className="space-y-4">
             {/* Card de filtros - SIEMPRE visible */}
             <Card className="border-gray-200">
                   <CardContent className="p-2">
@@ -1613,8 +1615,10 @@ export default function VolqueteroDetail() {
               </>
             )}
           </TabsContent>
+          )}
 
-          <TabsContent value="balance" className="space-y-4">
+          {has("module.VOLQUETEROS.tab.BALANCES.view") && (
+            <TabsContent value="balance" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Balance General</CardTitle>
@@ -1684,6 +1688,7 @@ export default function VolqueteroDetail() {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
         </Tabs>
       </div>
 
