@@ -5,6 +5,8 @@ import { useState, useMemo, useCallback, memo, lazy, Suspense, useEffect } from 
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { usePagination } from "@/hooks/usePagination";
 import { apiUrl } from "@/lib/api";
+import { getAuthToken, removeAuthToken } from "@/hooks/useAuth";
+import { parseJsonWithDateInterception } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -115,12 +117,14 @@ export default function RodMar() {
 
   // Obtener transacciones específicas de LCDM
   const { data: lcdmTransactionsData } = useQuery({
-    queryKey: ["/api/transacciones/lcdm", { includeHidden: true }],
+    queryKey: ["/api/transacciones/lcdm?includeHidden=true"],
     queryFn: async () => {
-      const { apiUrl } = await import('@/lib/api');
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      };
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
@@ -129,9 +133,12 @@ export default function RodMar() {
         headers,
       });
       if (!response.ok) {
+        if (response.status === 401) {
+          removeAuthToken();
+        }
         throw new Error(`Error: ${response.status}`);
       }
-      const data = await response.json();
+      const data = await parseJsonWithDateInterception(response);
       // El backend devuelve { data: [...], pagination: {...} } o directamente un array si includeHidden=true
       return Array.isArray(data) ? data : (data.data || []);
     },
@@ -144,12 +151,14 @@ export default function RodMar() {
 
   // Obtener transacciones específicas de Postobón
   const { data: postobonTransactionsData } = useQuery({
-    queryKey: ["/api/transacciones/postobon", { filterType: 'todas', includeHidden: true }],
+    queryKey: ["/api/transacciones/postobon?filterType=todas&includeHidden=true"],
     queryFn: async () => {
-      const { apiUrl } = await import('@/lib/api');
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      };
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
@@ -158,9 +167,12 @@ export default function RodMar() {
         headers,
       });
       if (!response.ok) {
+        if (response.status === 401) {
+          removeAuthToken();
+        }
         throw new Error(`Error: ${response.status}`);
       }
-      const data = await response.json();
+      const data = await parseJsonWithDateInterception(response);
       // El backend devuelve { data: [...], pagination: {...} } o directamente un array si includeHidden=true
       return Array.isArray(data) ? data : (data.data || []);
     },
