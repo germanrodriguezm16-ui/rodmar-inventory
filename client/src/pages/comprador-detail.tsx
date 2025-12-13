@@ -134,29 +134,36 @@ export default function CompradorDetail() {
       if (compradorId) {
         console.log('🔄 LIMPIEZA: Mostrando transacciones ocultas al salir de la página del comprador', compradorId);
         
-        // Llamar a la API para mostrar todas las transacciones ocultas
-        const { getAuthToken } = await import('@/hooks/useAuth');
-        const token = getAuthToken();
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-        fetch(apiUrl(`/api/transacciones/socio/comprador/${compradorId}/show-all`), {
-          method: 'POST',
-          headers,
-          credentials: "include",
-        }).catch(error => {
-          console.error('Error al limpiar transacciones ocultas:', error);
-        });
-        
-        // También mostrar viajes ocultos (reutilizar headers y token)
-        fetch(apiUrl(`/api/viajes/comprador/${compradorId}/show-all`), {
-          method: 'POST',
-          headers,
-          credentials: "include",
-        }).catch(error => {
-          console.error('Error al limpiar viajes ocultos:', error);
-        });
+        // Función async para manejar la limpieza
+        (async () => {
+          try {
+            // Llamar a la API para mostrar todas las transacciones ocultas
+            const { getAuthToken } = await import('@/hooks/useAuth');
+            const token = getAuthToken();
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (token) {
+              headers['Authorization'] = `Bearer ${token}`;
+            }
+            fetch(apiUrl(`/api/transacciones/socio/comprador/${compradorId}/show-all`), {
+              method: 'POST',
+              headers,
+              credentials: "include",
+            }).catch(error => {
+              console.error('Error al limpiar transacciones ocultas:', error);
+            });
+            
+            // También mostrar viajes ocultos (reutilizar headers y token)
+            fetch(apiUrl(`/api/viajes/comprador/${compradorId}/show-all`), {
+              method: 'POST',
+              headers,
+              credentials: "include",
+            }).catch(error => {
+              console.error('Error al limpiar viajes ocultos:', error);
+            });
+          } catch (error) {
+            console.error('Error en cleanup:', error);
+          }
+        })();
         
         // Limpiar transacciones temporales
         setTransaccionesTemporales([]);
