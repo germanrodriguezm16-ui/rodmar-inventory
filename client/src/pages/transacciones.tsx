@@ -507,7 +507,18 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
               typeof pageSize === "number" ? pageSize : 999999
             ],
             queryFn: async () => {
-              const response = await fetch(apiUrl(`/api/transacciones?${params.toString()}`));
+              const { getAuthToken } = await import('@/hooks/useAuth');
+              const token = getAuthToken();
+              const headers: Record<string, string> = {};
+              
+              if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+              }
+              
+              const response = await fetch(apiUrl(`/api/transacciones?${params.toString()}`), {
+                credentials: "include",
+                headers,
+              });
               if (!response.ok) throw new Error('Error al obtener transacciones');
               return response.json();
             },
