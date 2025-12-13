@@ -1,4 +1,8 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { apiUrl } from "@/lib/api";
+import { getAuthToken, removeAuthToken } from "@/hooks/useAuth";
+
+const isDev = import.meta.env.DEV;
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -12,12 +16,11 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Usar apiUrl para construir la URL completa
-  const { apiUrl: getApiUrl } = await import('@/lib/api');
-  const { getAuthToken } = await import('@/hooks/useAuth');
-  const fullUrl = getApiUrl(url);
+  const fullUrl = apiUrl(url);
   
-  console.log(`Making ${method} request to ${fullUrl}`, data);
+  if (isDev) {
+    console.log(`Making ${method} request to ${fullUrl}`, data);
+  }
   
   const token = getAuthToken();
   const headers: Record<string, string> = {};
@@ -28,8 +31,10 @@ export async function apiRequest(
   
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
-    console.log('🔑 [API] Token incluido en petición:', method, url.substring(0, 50));
-  } else {
+    if (isDev) {
+      console.log('🔑 [API] Token incluido en petición:', method, url.substring(0, 50));
+    }
+  } else if (isDev) {
     console.warn('⚠️ [API] No hay token disponible para:', method, url.substring(0, 50));
   }
   
@@ -40,7 +45,9 @@ export async function apiRequest(
     credentials: "include",
   });
 
-  console.log(`Response: ${res.status} ${res.statusText}`);
+  if (isDev) {
+    console.log(`Response: ${res.status} ${res.statusText}`);
+  }
   
   await throwIfResNotOk(res);
   return res;
@@ -50,43 +57,37 @@ export async function apiRequest(
 export async function parseJsonWithDateInterception(res: Response) {
   const text = await res.text();
   
-  // Debug temporal para verificar que está funcionando
-  console.log('JSON INTERCEPTOR (apiRequest) - Raw response:', text.substring(0, 200));
+  // Regex pre-compilado para mejor rendimiento
+  const dateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
   
   const result = JSON.parse(text, (key, value) => {
     // Si el valor es un string que parece una fecha UTC, mantenerlo como string
-    if (typeof value === 'string' && 
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/.test(value)) {
-      console.log('JSON INTERCEPTOR (apiRequest) - Preserving date string:', key, value);
+    if (typeof value === 'string' && dateRegex.test(value)) {
       return value; // Mantener como string para evitar conversión UTC automática
     }
     return value;
   });
   
-  console.log('JSON INTERCEPTOR (apiRequest) - Final result sample:', JSON.stringify(result).substring(0, 300));
   return result;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
+// Regex pre-compilado para mejor rendimiento en parsing de fechas
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
+
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Agregar timestamp para evitar caché del navegador
     const url = queryKey[0] as string;
-    // Usar la función helper para obtener la URL base
-    const { apiUrl } = await import('@/lib/api');
-    const { getAuthToken, removeAuthToken } = await import('@/hooks/useAuth');
     const fullUrl = apiUrl(url);
     
-    const cacheBuster = `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
-    
-    // Debug solo para las primeras peticiones
-    if (queryKey[0] === '/api/transacciones' || queryKey[0] === '/api/minas' || queryKey[0] === '/api/compradores') {
+    // Debug solo en desarrollo y solo para algunas peticiones
+    if (isDev && (queryKey[0] === '/api/transacciones' || queryKey[0] === '/api/minas' || queryKey[0] === '/api/compradores')) {
       console.log('🌐 API Request:', {
         originalUrl: url,
-        fullUrl: cacheBuster,
+        fullUrl,
         VITE_API_URL: import.meta.env.VITE_API_URL
       });
     }
@@ -100,12 +101,14 @@ export const getQueryFn: <T>(options: {
     
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-      console.log('🔑 [QUERY] Token incluido en petición:', url.substring(0, 50));
-    } else {
+      if (isDev) {
+        console.log('🔑 [QUERY] Token incluido en petición:', url.substring(0, 50));
+      }
+    } else if (isDev) {
       console.warn('⚠️ [QUERY] No hay token disponible para:', url.substring(0, 50));
     }
     
-    const res = await fetch(cacheBuster, {
+    const res = await fetch(fullUrl, {
       credentials: "include",
       headers,
     });
@@ -123,8 +126,7 @@ export const getQueryFn: <T>(options: {
     
     const result = JSON.parse(text, (key, value) => {
       // Si el valor es un string que parece una fecha UTC, mantenerlo como string
-      if (typeof value === 'string' && 
-          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/.test(value)) {
+      if (typeof value === 'string' && DATE_REGEX.test(value)) {
         return value; // Mantener como string para evitar conversión UTC automática
       }
       return value;
@@ -155,5 +157,7 @@ export const queryClient = new QueryClient({
 // Función para limpiar completamente el caché
 export const clearCache = () => {
   queryClient.clear();
-  console.log("🗑️ Cache completamente limpiado");
+  if (isDev) {
+    console.log("🗑️ Cache completamente limpiado");
+  }
 };

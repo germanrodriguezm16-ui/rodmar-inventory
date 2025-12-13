@@ -1,3 +1,5 @@
+const isDev = import.meta.env.DEV;
+
 /**
  * Helper para obtener la URL base del API
  * En producción usa VITE_API_URL, en desarrollo usa URL relativa
@@ -5,16 +7,18 @@
 export function getApiUrl(): string {
   const baseUrl = import.meta.env.VITE_API_URL || '';
   
-  // Debug siempre para ver qué está pasando
-  console.log('🔍 DEBUG getApiUrl:', {
-    VITE_API_URL: import.meta.env.VITE_API_URL,
-    baseUrl,
-    PROD: import.meta.env.PROD,
-    MODE: import.meta.env.MODE,
-    windowOrigin: window.location.origin
-  });
+  // Debug solo en desarrollo
+  if (isDev) {
+    console.log('🔍 DEBUG getApiUrl:', {
+      VITE_API_URL: import.meta.env.VITE_API_URL,
+      baseUrl,
+      PROD: import.meta.env.PROD,
+      MODE: import.meta.env.MODE,
+      windowOrigin: window.location.origin
+    });
+  }
   
-  // Debug en producción si no está configurada
+  // Debug en producción si no está configurada (siempre mostrar error crítico)
   if (!baseUrl && import.meta.env.PROD) {
     console.error('❌ VITE_API_URL no está configurada en producción!');
     console.error('   Las peticiones irán a:', window.location.origin, '(incorrecto)');
