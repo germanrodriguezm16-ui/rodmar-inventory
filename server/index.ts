@@ -235,8 +235,11 @@ app.use((req, res, next) => {
     });
   });
   
+  console.log('✅ [INIT] Endpoints de health check configurados');
+  console.log('🔧 [INIT] Creando servidor HTTP...');
   // Create HTTP server BEFORE registering routes
   const server = createServer(app);
+  console.log('✅ [INIT] Servidor HTTP creado');
   
   // Register all API routes (this should NOT create a new server)
   console.log('🔧 [INDEX] Llamando a registerRoutes...');
