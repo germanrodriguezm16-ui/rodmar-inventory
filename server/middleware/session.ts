@@ -42,25 +42,31 @@ export function setupSession(app: Express) {
   // Determinar si estamos en un entorno cross-origin (frontend y backend en diferentes dominios)
   const isCrossOrigin = !!process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "false";
   
-  app.use(
-    session({
-      store,
-      secret: sessionSecret,
-      resave: false,
-      saveUninitialized: false,
-      name: "rodmar.sid",
-      cookie: {
-        httpOnly: true,
-        // En producción cross-origin, necesitamos secure: true y sameSite: "none"
-        // En desarrollo o mismo origen, podemos usar sameSite: "lax"
-        secure: isProduction && isCrossOrigin ? true : isProduction,
-        sameSite: isProduction && isCrossOrigin ? "none" : isProduction ? "lax" : "lax",
-        maxAge: 24 * 60 * 60 * 1000, // 24 horas
-        path: "/",
-        // Agregar dominio explícito si es necesario (normalmente no es necesario)
-        // domain: isProduction && isCrossOrigin ? undefined : undefined,
-      },
-    })
-  );
+  // Configurar sesión con manejo de errores
+  try {
+    app.use(
+      session({
+        store,
+        secret: sessionSecret,
+        resave: false,
+        saveUninitialized: false,
+        name: "rodmar.sid",
+        cookie: {
+          httpOnly: true,
+          // En producción cross-origin, necesitamos secure: true y sameSite: "none"
+          // En desarrollo o mismo origen, podemos usar sameSite: "lax"
+          secure: isProduction && isCrossOrigin ? true : isProduction,
+          sameSite: isProduction && isCrossOrigin ? "none" : isProduction ? "lax" : "lax",
+          maxAge: 24 * 60 * 60 * 1000, // 24 horas
+          path: "/",
+        },
+      })
+    );
+    console.log("✔ Middleware de sesión configurado correctamente");
+  } catch (error: any) {
+    console.error("❌ Error configurando middleware de sesión:", error?.message || error);
+    // Continuar sin sesiones si hay error (para JWT auth)
+    console.warn("⚠️  Continuando sin middleware de sesión (usando solo JWT)");
+  }
 }
 
