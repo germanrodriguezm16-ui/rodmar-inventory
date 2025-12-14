@@ -188,11 +188,15 @@ app.use((req, res, next) => {
 (async () => {
   // Initialize database on startup (con manejo de errores)
   try {
+    console.log('🔧 [INDEX] Llamando a initializeDatabase()...');
     await initializeDatabase();
+    console.log('✅ [INDEX] initializeDatabase() completado');
     
     // Ejecutar migración de password_plain si es necesario
     try {
+      console.log('🔧 [INDEX] Llamando a addPasswordPlainColumn()...');
       await addPasswordPlainColumn();
+      console.log('✅ [INDEX] addPasswordPlainColumn() completado');
     } catch (migrationError: any) {
       // Si la columna ya existe o hay otro error, solo loguear pero no fallar
       if (migrationError.message?.includes('ya existe') || migrationError.message?.includes('already exists')) {
