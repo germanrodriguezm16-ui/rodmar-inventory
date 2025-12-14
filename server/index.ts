@@ -5,8 +5,8 @@ import path from "path";
 import fs from "fs";
 import cors from "cors";
 import { setupSession } from "./middleware/session";
-import { initializeDatabase } from "./init-db";
-import { addPasswordPlainColumn } from "./add-password-plain-column";
+// NOTA: La inicialización de la base de datos se hace en un script separado (run-init.ts)
+// El servidor principal solo se encarga de servir peticiones HTTP
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeSocket } from "./socket";
@@ -186,38 +186,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize database on startup (con manejo de errores)
-  try {
-    console.log('🔧 [INDEX] Llamando a initializeDatabase()...');
-    await initializeDatabase();
-    console.log('✅ [INDEX] initializeDatabase() completado');
-    
-    // Ejecutar migración de password_plain si es necesario
-    try {
-      console.log('🔧 [INDEX] Llamando a addPasswordPlainColumn()...');
-      await addPasswordPlainColumn();
-      console.log('✅ [INDEX] addPasswordPlainColumn() completado');
-    } catch (migrationError: any) {
-      // Si la columna ya existe o hay otro error, solo loguear pero no fallar
-      if (migrationError.message?.includes('ya existe') || migrationError.message?.includes('already exists')) {
-        console.log('ℹ️  Columna password_plain ya existe, omitiendo migración');
-      } else {
-        console.error('⚠️  Error ejecutando migración de password_plain (continuando):', migrationError.message);
-      }
-    }
-  } catch (error: any) {
-    if (error.code === 'ECONNREFUSED' || error.message?.includes('ECONNREFUSED')) {
-      console.error('⚠️  No se pudo conectar a PostgreSQL');
-      console.error('💡 Asegúrate de que PostgreSQL esté corriendo o configura DATABASE_URL en .env');
-      console.error('💡 Puedes usar una base de datos remota gratuita en https://neon.tech');
-      console.error('');
-      console.error('🔄 El servidor iniciará pero algunas funcionalidades no estarán disponibles');
-    } else {
-      console.error('❌ Error inicializando base de datos:', error.message);
-    }
-  }
-  
-  console.log('✅ [INDEX] Inicialización de base de datos completada, continuando con configuración del servidor...');
+  console.log('🚀 [SERVER] Iniciando servidor RodMar Inventory...');
   
   // Health check endpoints
   app.get("/health", (req, res) => {

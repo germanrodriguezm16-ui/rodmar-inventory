@@ -22,6 +22,7 @@
         "add-missing-permissions": "tsx server/add-missing-permissions.ts",
         "check-admin-permissions": "tsx server/check-admin-permissions.ts",
         "add-password-plain-column": "tsx server/add-password-plain-column.ts",
+        "init-db": "tsx server/run-init.ts",
     "migrate:replit": "tsx migrate-from-replit.ts",
     "clean:test-data": "tsx clean-test-data.ts",
     "cap:sync": "npx cap sync android",
