@@ -248,13 +248,19 @@ export async function initializeDatabase() {
   
   try {
     // Primero inicializar roles y permisos
+    console.log('🔧 [INIT-DB] Llamando a initializeRolesAndPermissions()...');
     await initializeRolesAndPermissions();
+    console.log('✅ [INIT-DB] initializeRolesAndPermissions() completado');
     
     // Agregar permisos faltantes (para bases de datos existentes)
+    console.log('🔧 [INIT-DB] Llamando a addMissingPermissions()...');
     await addMissingPermissions();
+    console.log('✅ [INIT-DB] addMissingPermissions() completado');
     
     // Luego crear usuario admin por defecto si no existe
+    console.log('🔧 [INIT-DB] Llamando a initializeAdminUser()...');
     await initializeAdminUser();
+    console.log('✅ [INIT-DB] initializeAdminUser() completado');
     
     // Verificar si ya hay datos
     const existingMinas = await db.select().from(minas);
