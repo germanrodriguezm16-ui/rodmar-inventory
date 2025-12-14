@@ -153,20 +153,24 @@ async function addMissingPermissions() {
   }
 }
 
-// Ejecutar si se llama directamente
-// NOTA: Esta verificación debe ser más estricta para evitar que se ejecute cuando se importa como módulo
-const isDirectExecution = import.meta.url === `file://${process.argv[1]}` || 
-                         (process.argv[1]?.includes('add-missing-permissions.ts') && 
-                          !import.meta.url.includes('init-db.ts'));
+// Ejecutar si se llama directamente (NO cuando se importa como módulo)
+// Usar una verificación más estricta para evitar ejecución accidental
+const isMainModule = process.argv[1]?.endsWith('add-missing-permissions.ts') || 
+                     process.argv[1]?.endsWith('add-missing-permissions.js') ||
+                     (process.argv[1]?.includes('add-missing-permissions') && 
+                      !import.meta.url.includes('init-db') &&
+                      !import.meta.url.includes('run-init') &&
+                      !import.meta.url.includes('index'));
 
-if (isDirectExecution) {
+if (isMainModule) {
+  console.log('🔧 [ADD-MISSING] Ejecutando como script directo...');
   addMissingPermissions()
     .then(() => {
-      console.log('✅ Script completado');
+      console.log('✅ [ADD-MISSING] Script completado (ejecución directa)');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('❌ Error ejecutando script:', error);
+      console.error('❌ [ADD-MISSING] Error ejecutando script:', error);
       process.exit(1);
     });
 }
