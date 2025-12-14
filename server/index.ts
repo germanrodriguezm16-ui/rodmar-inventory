@@ -213,6 +213,8 @@ app.use((req, res, next) => {
     }
   }
   
+  console.log('✅ [INDEX] Inicialización de base de datos completada, continuando con configuración del servidor...');
+  
   // Health check endpoints
   app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
@@ -302,6 +304,13 @@ app.use((req, res, next) => {
     if (error.code === 'ECONNREFUSED' && error.address?.includes('5432')) {
       log(`⚠️  PostgreSQL no está disponible en ${error.address}:${error.port}`);
       log(`💡 Instala PostgreSQL o configura una base de datos remota`);
+      log(`💡 Puedes usar Neon (gratis): https://neon.tech`);
+    } else {
+      console.error('Unhandled rejection:', error);
+    }
+  });
+})();
+
       log(`💡 Puedes usar Neon (gratis): https://neon.tech`);
     } else {
       console.error('Unhandled rejection:', error);
