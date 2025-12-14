@@ -262,16 +262,32 @@ app.use((req, res, next) => {
 
   // Start server
   const port = process.env.PORT || 5000;
+  console.log(`🔧 [SERVER] Preparando para iniciar servidor en puerto ${port}...`);
+  console.log(`🔧 [SERVER] NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`🔧 [SERVER] PORT: ${port}`);
+  
   server.listen(port, "0.0.0.0", () => {
-    log(`🚀 RodMar Inventory v2.0.0 serving on http://0.0.0.0:${port}`);
-    log(`🔗 Health check: http://0.0.0.0:${port}/health`);
-    log(`📊 API status: http://0.0.0.0:${port}/api/status`);
-    log(`🌐 Abre en tu navegador: http://localhost:${port}`);
+    console.log(`🚀 [SERVER] RodMar Inventory v2.0.0 serving on http://0.0.0.0:${port}`);
+    console.log(`🔗 [SERVER] Health check: http://0.0.0.0:${port}/health`);
+    console.log(`📊 [SERVER] API status: http://0.0.0.0:${port}/api/status`);
+    console.log(`✅ [SERVER] Servidor HTTP escuchando correctamente`);
     
     if (!process.env.DATABASE_URL) {
-      log(`⚠️  ADVERTENCIA: DATABASE_URL no configurada`);
-      log(`💡 Configura DATABASE_URL en .env para usar la base de datos`);
+      console.log(`⚠️  [SERVER] ADVERTENCIA: DATABASE_URL no configurada`);
+      console.log(`💡 [SERVER] Configura DATABASE_URL en .env para usar la base de datos`);
     }
+  });
+  
+  server.on('error', (error: any) => {
+    console.error(`❌ [SERVER] Error al iniciar servidor:`, error);
+    if (error.code === 'EADDRINUSE') {
+      console.error(`❌ [SERVER] Puerto ${port} ya está en uso`);
+    }
+  });
+  
+  server.on('listening', () => {
+    const address = server.address();
+    console.log(`✅ [SERVER] Servidor escuchando en:`, address);
   });
   
   // Manejar errores no capturados
