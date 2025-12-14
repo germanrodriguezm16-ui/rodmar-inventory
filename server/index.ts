@@ -313,10 +313,3 @@ app.use((req, res, next) => {
     }
   });
 })();
-
-      log(`💡 Puedes usar Neon (gratis): https://neon.tech`);
-    } else {
-      console.error('Unhandled rejection:', error);
-    }
-  });
-})();
