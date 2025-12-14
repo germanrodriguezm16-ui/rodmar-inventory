@@ -256,14 +256,44 @@ app.use((req, res, next) => {
   // Initialize Socket.io
   initializeSocket(server);
 
-  // Error handler
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  // Error handler global - DEBE estar después de todas las rutas
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    // Si la respuesta ya fue enviada, no hacer nada
+    if (res.headersSent) {
+      console.error("⚠️ [ERROR-HANDLER] Error después de enviar respuesta:", err.message);
+      return;
+    }
+
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    if (status === 500) {
-      console.error("Server error:", err);
+    console.error("❌ [ERROR-HANDLER] Error capturado:", {
+      status,
+      message,
+      path: req.path,
+      method: req.method,
+      stack: err.stack?.substring(0, 500),
+    });
+
+    // Asegurar headers CORS antes de enviar error
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+
+    res.status(status).json({ 
+      error: message,
+      detail: process.env.NODE_ENV === "development" ? err.stack : undefined
+    });
+  });
+
+  // Middleware para capturar errores no manejados en rutas
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // Si llegamos aquí, la ruta no existe
+    if (!res.headersSent) {
+      console.log("⚠️ [ROUTE] Ruta no encontrada:", req.method, req.path);
+      res.status(404).json({ error: "Ruta no encontrada" });
     }
   });
 

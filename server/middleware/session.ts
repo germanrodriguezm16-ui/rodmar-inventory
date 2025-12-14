@@ -24,9 +24,9 @@ export function setupSession(app: Express) {
         tableName: "sessions",
         createTableIfMissing: true,
       });
-      console.log("✅ Usando PostgreSQL para sesiones");
-    } catch (error) {
-      console.warn("⚠️  No se pudo usar PostgreSQL para sesiones, usando memoria:", error);
+      console.log("✔ Usando PostgreSQL para sesiones");
+    } catch (error: any) {
+      console.warn("⚠️  No se pudo usar PostgreSQL para sesiones, usando memoria:", error?.message || error);
       store = new MemoryStoreSession({
         checkPeriod: 86400000, // 24 horas
       });
@@ -36,7 +36,7 @@ export function setupSession(app: Express) {
     store = new MemoryStoreSession({
       checkPeriod: 86400000, // 24 horas
     });
-    console.log("✅ Usando memoria para sesiones");
+    console.log("✔ Usando memoria para sesiones");
   }
 
   // Determinar si estamos en un entorno cross-origin (frontend y backend en diferentes dominios)
