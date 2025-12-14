@@ -27,7 +27,7 @@ import {
 } from "@shared/schema";
 import { ViajeIdGenerator } from "./id-generator";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
   // Middleware global para prevenir caché del navegador
   // NOTA: El handler de OPTIONS ya está configurado en index.ts antes de llamar a registerRoutes
   app.use((req, res, next) => {
