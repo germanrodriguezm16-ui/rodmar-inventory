@@ -144,9 +144,11 @@ async function addMissingPermissions() {
     }
 
     console.log('=== PERMISOS FALTANTES AGREGADOS EXITOSAMENTE ===');
+    console.log('✅ [ADD-MISSING] addMissingPermissions() completado exitosamente');
     
   } catch (error) {
     console.error('=== ERROR AGREGANDO PERMISOS FALTANTES ===', error);
+    console.error('❌ [ADD-MISSING] Error en addMissingPermissions():', error);
     throw error;
   }
 }
