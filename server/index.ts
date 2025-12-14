@@ -237,7 +237,14 @@ app.use((req, res, next) => {
   const server = createServer(app);
   
   // Register all API routes (this should NOT create a new server)
-  await registerRoutes(app);
+  console.log('🔧 [INDEX] Llamando a registerRoutes...');
+  try {
+    await registerRoutes(app);
+    console.log('✅ [INDEX] registerRoutes completado');
+  } catch (error: any) {
+    console.error('❌ [INDEX] Error en registerRoutes:', error);
+    throw error;
+  }
   
   // Initialize Socket.io
   initializeSocket(server);
