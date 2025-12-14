@@ -152,7 +152,12 @@ async function addMissingPermissions() {
 }
 
 // Ejecutar si se llama directamente
-if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.includes('add-missing-permissions.ts')) {
+// NOTA: Esta verificación debe ser más estricta para evitar que se ejecute cuando se importa como módulo
+const isDirectExecution = import.meta.url === `file://${process.argv[1]}` || 
+                         (process.argv[1]?.includes('add-missing-permissions.ts') && 
+                          !import.meta.url.includes('init-db.ts'));
+
+if (isDirectExecution) {
   addMissingPermissions()
     .then(() => {
       console.log('✅ Script completado');
