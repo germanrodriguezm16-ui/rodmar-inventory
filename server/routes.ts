@@ -69,32 +69,64 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // Login - Iniciar sesión con celular y contraseña
   app.post("/api/auth/login", async (req, res) => {
-    try {
-      console.log("🔐 [LOGIN] Intento de login recibido");
-      const { phone, password } = req.body;
+    // Timeout handler para asegurar que siempre se envíe una respuesta
+    const timeout = setTimeout(() => {
+      if (!res.headersSent) {
+        console.error("⏱️ [LOGIN] Timeout: La petición tardó más de 30 segundos");
+        res.status(500).json({ error: "Error interno en login: timeout" });
+      }
+    }, 30000); // 30 segundos timeout
 
+    // Flag para asegurar que solo se envíe una respuesta
+    let responseSent = false;
+    const sendResponse = (status: number, data: any) => {
+      if (!responseSent && !res.headersSent) {
+        responseSent = true;
+        clearTimeout(timeout);
+        res.status(status).json(data);
+      }
+    };
+
+    try {
+      console.log("🔐 [AUTH] Login request recibida");
+      console.log("🔐 [AUTH] Headers:", {
+        origin: req.headers.origin,
+        'content-type': req.headers['content-type'],
+        'user-agent': req.headers['user-agent']?.substring(0, 50),
+      });
+
+      const { phone, password } = req.body;
+      const maskedPhone = phone ? phone.substring(0, 3) + "***" : "N/A";
+      console.log("🔐 [AUTH] Login request con phone:", maskedPhone);
+
+      // Validar entrada
       if (!phone || !password) {
-        console.log("❌ [LOGIN] Faltan credenciales");
-        return res.status(400).json({ error: "Celular y contraseña son requeridos" });
+        console.log("❌ [AUTH] Faltan credenciales - phone:", !!phone, "password:", !!password);
+        return sendResponse(400, { error: "Celular y contraseña son requeridos" });
       }
 
-      console.log("🔍 [LOGIN] Buscando usuario con celular:", phone.substring(0, 3) + "***");
-      
       // Verificar que DATABASE_URL esté configurada
       if (!process.env.DATABASE_URL) {
-        console.error("❌ [LOGIN] DATABASE_URL no está configurada");
-        return res.status(500).json({ 
+        console.error("❌ [AUTH] DATABASE_URL no está configurada");
+        return sendResponse(500, { 
           error: "Error de conexión a la base de datos",
-          details: process.env.NODE_ENV === "development" ? "DATABASE_URL no está configurada en las variables de entorno" : undefined
+          detail: process.env.NODE_ENV === "development" ? "DATABASE_URL no está configurada en las variables de entorno" : undefined
         });
       }
+
+      console.log("🔍 [AUTH] Consultando usuario en DB con phone:", maskedPhone);
       
       // Buscar usuario por celular
       let user;
       try {
         user = await findUserByPhone(phone);
+        console.log("🔍 [AUTH] Usuario encontrado:", user ? `ID: ${user.id}` : "no encontrado");
       } catch (dbError: any) {
-        console.error("❌ [LOGIN] Error de base de datos al buscar usuario:", dbError);
+        console.error("❌ [AUTH] Error de base de datos al buscar usuario:", {
+          message: dbError?.message,
+          code: dbError?.code,
+          name: dbError?.name,
+        });
         const errorMsg = dbError instanceof Error ? dbError.message : String(dbError);
         const errorCode = dbError?.code || 'UNKNOWN';
         
@@ -106,46 +138,58 @@ export async function registerRoutes(app: Express): Promise<void> {
           errorMessage = "No se pudo conectar a la base de datos. Verifica que la base de datos esté activa y accesible.";
         }
         
-        return res.status(500).json({ 
+        return sendResponse(500, { 
           error: errorMessage,
-          details: process.env.NODE_ENV === "development" ? errorMsg : undefined
+          detail: process.env.NODE_ENV === "development" ? errorMsg : undefined
         });
       }
 
       if (!user) {
-        console.log("❌ [LOGIN] Usuario no encontrado");
-        return res.status(401).json({ error: "Credenciales inválidas" });
+        console.log("❌ [AUTH] Usuario no encontrado para phone:", maskedPhone);
+        return sendResponse(401, { error: "Credenciales inválidas" });
       }
 
-      console.log("✅ [LOGIN] Usuario encontrado:", user.id);
+      console.log("✅ [AUTH] Usuario encontrado:", {
+        id: user.id,
+        phone: maskedPhone,
+        hasPasswordHash: !!user.passwordHash,
+      });
 
       if (!user.passwordHash) {
-        console.log("❌ [LOGIN] Usuario sin contraseña configurada");
-        return res.status(401).json({ error: "Usuario no tiene contraseña configurada" });
+        console.log("❌ [AUTH] Usuario sin contraseña configurada:", user.id);
+        return sendResponse(401, { error: "Usuario no tiene contraseña configurada" });
       }
 
       // Verificar contraseña
-      console.log("🔐 [LOGIN] Verificando contraseña...");
+      console.log("🔐 [AUTH] Verificando contraseña...");
       let isValidPassword;
       try {
         isValidPassword = await verifyPassword(password, user.passwordHash);
-      } catch (verifyError) {
-        console.error("❌ [LOGIN] Error al verificar contraseña:", verifyError);
-        return res.status(500).json({ error: "Error al verificar contraseña" });
+        console.log("🔐 [AUTH] Resultado de verificación de contraseña:", isValidPassword);
+      } catch (verifyError: any) {
+        console.error("❌ [AUTH] Error al verificar contraseña:", {
+          message: verifyError?.message,
+          stack: verifyError?.stack?.substring(0, 200),
+        });
+        return sendResponse(500, { 
+          error: "Error interno en login",
+          detail: "Error al verificar contraseña"
+        });
       }
 
       if (!isValidPassword) {
-        console.log("❌ [LOGIN] Contraseña inválida");
-        return res.status(401).json({ error: "Credenciales inválidas" });
+        console.log("❌ [AUTH] Contraseña inválida para usuario:", user.id);
+        return sendResponse(401, { error: "Credenciales inválidas" });
       }
 
-      console.log("✅ [LOGIN] Contraseña válida, generando token JWT...");
+      console.log("✅ [AUTH] Contraseña válida, generando token JWT...");
 
-      // Actualizar último login
+      // Actualizar último login (no crítico, continuar si falla)
       try {
         await updateLastLogin(user.id);
-      } catch (updateError) {
-        console.error("⚠️ [LOGIN] Error al actualizar último login (continuando):", updateError);
+        console.log("✅ [AUTH] Último login actualizado");
+      } catch (updateError: any) {
+        console.error("⚠️ [AUTH] Error al actualizar último login (continuando):", updateError?.message);
         // No fallar el login por esto, solo loguear el error
       }
 
@@ -153,19 +197,25 @@ export async function registerRoutes(app: Express): Promise<void> {
       let token;
       try {
         token = generateToken(user.id);
-        console.log("✅ [LOGIN] Token JWT generado para usuario:", user.id);
-      } catch (tokenError) {
-        console.error("❌ [LOGIN] Error al generar token:", tokenError);
-        return res.status(500).json({ error: "Error al generar token de autenticación" });
+        console.log("✅ [AUTH] Token JWT generado para usuario:", user.id);
+      } catch (tokenError: any) {
+        console.error("❌ [AUTH] Error al generar token:", {
+          message: tokenError?.message,
+          stack: tokenError?.stack?.substring(0, 200),
+        });
+        return sendResponse(500, { 
+          error: "Error interno en login",
+          detail: "Error al generar token de autenticación"
+        });
       }
 
-      // Obtener permisos del usuario
+      // Obtener permisos del usuario (no crítico, continuar si falla)
       let permissions;
       try {
         permissions = await getUserPermissions(user.id);
-        console.log("✅ [LOGIN] Login exitoso, permisos:", permissions.length);
-      } catch (permError) {
-        console.error("⚠️ [LOGIN] Error al obtener permisos (continuando con array vacío):", permError);
+        console.log("✅ [AUTH] Permisos obtenidos:", permissions.length);
+      } catch (permError: any) {
+        console.error("⚠️ [AUTH] Error al obtener permisos (continuando con array vacío):", permError?.message);
         permissions = []; // Continuar con permisos vacíos en lugar de fallar
       }
 
@@ -174,10 +224,12 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (origin) {
         res.setHeader("Access-Control-Allow-Origin", origin);
         res.setHeader("Access-Control-Allow-Credentials", "true");
-        console.log("🌐 [LOGIN] CORS headers configurados para origin:", origin);
+        console.log("🌐 [AUTH] CORS headers configurados para origin:", origin);
       }
 
-      res.json({
+      console.log("✅ [AUTH] Login exitoso, enviando respuesta para usuario:", user.id);
+      
+      const responseData = {
         token,
         user: {
           id: user.id,
@@ -188,18 +240,20 @@ export async function registerRoutes(app: Express): Promise<void> {
           roleId: user.roleId,
         },
         permissions,
+      };
+
+      return sendResponse(200, responseData);
+    } catch (error: any) {
+      console.error("❌ [AUTH] Error inesperado en login:", {
+        message: error?.message,
+        name: error?.name,
+        code: error?.code,
+        stack: error?.stack?.substring(0, 500),
       });
-    } catch (error) {
-      console.error("❌ [LOGIN] Error en login:", error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      console.error("❌ [LOGIN] Error details:", errorMessage);
-      if (errorStack) {
-        console.error("❌ [LOGIN] Error stack:", errorStack);
-      }
-      res.status(500).json({ 
-        error: "Error al iniciar sesión",
-        details: process.env.NODE_ENV === "development" ? errorMessage : undefined
+      
+      return sendResponse(500, { 
+        error: "Error interno en login",
+        detail: process.env.NODE_ENV === "development" ? error?.message : undefined
       });
     }
   });
