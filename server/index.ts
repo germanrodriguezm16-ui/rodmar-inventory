@@ -5,8 +5,8 @@ import path from "path";
 import fs from "fs";
 import cors from "cors";
 import { setupSession } from "./middleware/session";
-// NOTA: La inicialización de la base de datos se hace en un script separado (run-init.ts)
-// El servidor principal solo se encarga de servir peticiones HTTP
+import { initializeDatabase } from "./init-db";
+import { addPasswordPlainColumn } from "./add-password-plain-column";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeSocket } from "./socket";
@@ -187,6 +187,35 @@ app.use((req, res, next) => {
 
 (async () => {
   console.log('🚀 [SERVER] Iniciando servidor RodMar Inventory...');
+  
+  // Inicializar base de datos en segundo plano (no bloquea el arranque del servidor)
+  // Esto permite que el servidor arranque incluso si hay problemas con la BD
+  (async () => {
+    try {
+      console.log('🔧 [INDEX] Iniciando inicialización de BD en segundo plano...');
+      await initializeDatabase();
+      console.log('✅ [INDEX] initializeDatabase() completado');
+      
+      try {
+        await addPasswordPlainColumn();
+        console.log('✅ [INDEX] addPasswordPlainColumn() completado');
+      } catch (migrationError: any) {
+        if (migrationError.message?.includes('ya existe') || migrationError.message?.includes('already exists')) {
+          console.log('ℹ️  Columna password_plain ya existe, omitiendo migración');
+        } else {
+          console.error('⚠️  Error ejecutando migración de password_plain (continuando):', migrationError.message);
+        }
+      }
+    } catch (error: any) {
+      if (error.code === 'ECONNREFUSED' || error.message?.includes('ECONNREFUSED')) {
+        console.error('⚠️  No se pudo conectar a PostgreSQL');
+        console.error('💡 Asegúrate de que PostgreSQL esté corriendo o configura DATABASE_URL en .env');
+        console.error('🔄 El servidor continuará pero algunas funcionalidades no estarán disponibles');
+      } else {
+        console.error('❌ Error inicializando base de datos (continuando):', error.message);
+      }
+    }
+  })();
   
   // Health check endpoints
   app.get("/health", (req, res) => {
