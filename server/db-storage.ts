@@ -1037,10 +1037,16 @@ export class DatabaseStorage implements IStorage {
    */
   private async syncTransaccionesSequence(): Promise<void> {
     try {
-      const result = await db.execute(
-        sql`SELECT setval('transacciones_id_seq', COALESCE((SELECT MAX(id) FROM transacciones), 1), true)`
-      );
-      console.log('✅ Secuencia de transacciones sincronizada');
+      // Usar pg_get_serial_sequence para evitar depender del nombre exacto de la secuencia en prod
+      // (ej: cuando cambia el schema o el nombre generado).
+      await db.execute(sql`
+        SELECT setval(
+          pg_get_serial_sequence('transacciones', 'id'),
+          COALESCE((SELECT MAX(id) FROM transacciones), 0),
+          true
+        )
+      `);
+      console.log("✅ Secuencia de transacciones sincronizada (transacciones.id)");
     } catch (error) {
       console.error('⚠️ Error al sincronizar secuencia de transacciones:', error);
       // No lanzar error, solo loguear - la inserción puede funcionar de todas formas
@@ -1066,8 +1072,12 @@ export class DatabaseStorage implements IStorage {
       return newTransaccion;
     } catch (error: any) {
       // Detectar error de clave duplicada (código 23505 en PostgreSQL)
-      if (error?.code === '23505' && error?.constraint === 'transacciones_pkey') {
-        console.warn('⚠️ Error de clave duplicada detectado, sincronizando secuencia...');
+      // Nota: dependiendo del driver, `constraint` puede venir undefined. Con el `code` basta.
+      if (error?.code === "23505") {
+        console.warn(
+          "⚠️ Error 23505 (clave duplicada) detectado en createTransaccion; sincronizando secuencia y reintentando...",
+          { constraint: error?.constraint, detail: error?.detail }
+        );
         
         // Sincronizar la secuencia
         await this.syncTransaccionesSequence();
@@ -1134,8 +1144,11 @@ export class DatabaseStorage implements IStorage {
       return { ...newTransaccion, codigo_solicitud: codigoSolicitud } as Transaccion;
     } catch (error: any) {
       // Detectar error de clave duplicada (código 23505 en PostgreSQL)
-      if (error?.code === '23505' && error?.constraint === 'transacciones_pkey') {
-        console.warn('⚠️ Error de clave duplicada detectado en transacción pendiente, sincronizando secuencia...');
+      if (error?.code === "23505") {
+        console.warn(
+          "⚠️ Error 23505 (clave duplicada) detectado en createTransaccionPendiente; sincronizando secuencia y reintentando...",
+          { constraint: error?.constraint, detail: error?.detail }
+        );
         
         // Sincronizar la secuencia
         await this.syncTransaccionesSequence();
