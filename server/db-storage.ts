@@ -1031,19 +1031,71 @@ export class DatabaseStorage implements IStorage {
     return transaccion;
   }
 
-  async createTransaccion(transaccion: InsertTransaccion & { userId?: string }): Promise<Transaccion> {
-    const [newTransaccion] = await db.insert(transacciones).values({
-      ...transaccion,
-      userId: transaccion.userId || 'main_user',
-    } as any).returning();
-
-    // Actualizar balances calculados después de crear la transacción
-    // Solo si la transacción NO está pendiente (las pendientes no afectan balances)
-    if (newTransaccion.estado !== 'pendiente') {
-      await this.updateRelatedBalances(newTransaccion);
+  /**
+   * Sincroniza la secuencia de IDs de transacciones con el máximo ID existente
+   * Esto corrige problemas de desincronización que causan errores de clave duplicada
+   */
+  private async syncTransaccionesSequence(): Promise<void> {
+    try {
+      const result = await db.execute(
+        sql`SELECT setval('transacciones_id_seq', COALESCE((SELECT MAX(id) FROM transacciones), 1), true)`
+      );
+      console.log('✅ Secuencia de transacciones sincronizada');
+    } catch (error) {
+      console.error('⚠️ Error al sincronizar secuencia de transacciones:', error);
+      // No lanzar error, solo loguear - la inserción puede funcionar de todas formas
     }
+  }
 
-    return newTransaccion;
+  async createTransaccion(transaccion: InsertTransaccion & { userId?: string }): Promise<Transaccion> {
+    // Excluir el campo 'id' si viene en el objeto (por seguridad)
+    const { id, ...transaccionSinId } = transaccion as any;
+    
+    try {
+      const [newTransaccion] = await db.insert(transacciones).values({
+        ...transaccionSinId,
+        userId: transaccion.userId || 'main_user',
+      } as any).returning();
+
+      // Actualizar balances calculados después de crear la transacción
+      // Solo si la transacción NO está pendiente (las pendientes no afectan balances)
+      if (newTransaccion.estado !== 'pendiente') {
+        await this.updateRelatedBalances(newTransaccion);
+      }
+
+      return newTransaccion;
+    } catch (error: any) {
+      // Detectar error de clave duplicada (código 23505 en PostgreSQL)
+      if (error?.code === '23505' && error?.constraint === 'transacciones_pkey') {
+        console.warn('⚠️ Error de clave duplicada detectado, sincronizando secuencia...');
+        
+        // Sincronizar la secuencia
+        await this.syncTransaccionesSequence();
+        
+        // Reintentar la inserción
+        try {
+          const [newTransaccion] = await db.insert(transacciones).values({
+            ...transaccionSinId,
+            userId: transaccion.userId || 'main_user',
+          } as any).returning();
+
+          // Actualizar balances calculados después de crear la transacción
+          if (newTransaccion.estado !== 'pendiente') {
+            await this.updateRelatedBalances(newTransaccion);
+          }
+
+          console.log('✅ Transacción creada exitosamente después de sincronizar secuencia');
+          return newTransaccion;
+        } catch (retryError: any) {
+          // Si aún falla después de sincronizar, lanzar el error original
+          console.error('❌ Error persistente después de sincronizar secuencia:', retryError);
+          throw retryError;
+        }
+      }
+      
+      // Si no es un error de clave duplicada, lanzar el error original
+      throw error;
+    }
   }
 
   // Crear transacción pendiente (solicitud)
@@ -1053,29 +1105,73 @@ export class DatabaseStorage implements IStorage {
       detalle_solicitud?: string;
     }
   ): Promise<Transaccion> {
-    // Generar código único para la solicitud (TX-{id} se generará después, pero preparamos el formato)
-    const [newTransaccion] = await db.insert(transacciones).values({
-      ...transaccion,
-      estado: 'pendiente',
-      deQuienTipo: null, // Origen no definido aún
-      deQuienId: null,
-      formaPago: transaccion.formaPago || 'pendiente', // Valor temporal
-      userId: transaccion.userId || 'main_user',
-      detalle_solicitud: transaccion.detalle_solicitud || null,
-      tiene_voucher: false,
-    } as any).returning();
+    // Excluir el campo 'id' si viene en el objeto (por seguridad)
+    const { id, ...transaccionSinId } = transaccion as any;
+    
+    try {
+      // Generar código único para la solicitud (TX-{id} se generará después, pero preparamos el formato)
+      const [newTransaccion] = await db.insert(transacciones).values({
+        ...transaccionSinId,
+        estado: 'pendiente',
+        deQuienTipo: null, // Origen no definido aún
+        deQuienId: null,
+        formaPago: transaccion.formaPago || 'pendiente', // Valor temporal
+        userId: transaccion.userId || 'main_user',
+        detalle_solicitud: transaccion.detalle_solicitud || null,
+        tiene_voucher: false,
+      } as any).returning();
 
-    // Generar código de solicitud basado en el ID
-    const codigoSolicitud = `TX-${newTransaccion.id}`;
-    await db
-      .update(transacciones)
-      .set({ codigo_solicitud: codigoSolicitud })
-      .where(eq(transacciones.id, newTransaccion.id));
+      // Generar código de solicitud basado en el ID
+      const codigoSolicitud = `TX-${newTransaccion.id}`;
+      await db
+        .update(transacciones)
+        .set({ codigo_solicitud: codigoSolicitud })
+        .where(eq(transacciones.id, newTransaccion.id));
 
-    // Las transacciones pendientes NO afectan balances
-    // No llamamos a updateRelatedBalances
+      // Las transacciones pendientes NO afectan balances
+      // No llamamos a updateRelatedBalances
 
-    return { ...newTransaccion, codigo_solicitud: codigoSolicitud } as Transaccion;
+      return { ...newTransaccion, codigo_solicitud: codigoSolicitud } as Transaccion;
+    } catch (error: any) {
+      // Detectar error de clave duplicada (código 23505 en PostgreSQL)
+      if (error?.code === '23505' && error?.constraint === 'transacciones_pkey') {
+        console.warn('⚠️ Error de clave duplicada detectado en transacción pendiente, sincronizando secuencia...');
+        
+        // Sincronizar la secuencia
+        await this.syncTransaccionesSequence();
+        
+        // Reintentar la inserción
+        try {
+          const [newTransaccion] = await db.insert(transacciones).values({
+            ...transaccionSinId,
+            estado: 'pendiente',
+            deQuienTipo: null,
+            deQuienId: null,
+            formaPago: transaccion.formaPago || 'pendiente',
+            userId: transaccion.userId || 'main_user',
+            detalle_solicitud: transaccion.detalle_solicitud || null,
+            tiene_voucher: false,
+          } as any).returning();
+
+          // Generar código de solicitud basado en el ID
+          const codigoSolicitud = `TX-${newTransaccion.id}`;
+          await db
+            .update(transacciones)
+            .set({ codigo_solicitud: codigoSolicitud })
+            .where(eq(transacciones.id, newTransaccion.id));
+
+          console.log('✅ Transacción pendiente creada exitosamente después de sincronizar secuencia');
+          return { ...newTransaccion, codigo_solicitud: codigoSolicitud } as Transaccion;
+        } catch (retryError: any) {
+          // Si aún falla después de sincronizar, lanzar el error original
+          console.error('❌ Error persistente después de sincronizar secuencia:', retryError);
+          throw retryError;
+        }
+      }
+      
+      // Si no es un error de clave duplicada, lanzar el error original
+      throw error;
+    }
   }
 
   // Obtener todas las transacciones pendientes
