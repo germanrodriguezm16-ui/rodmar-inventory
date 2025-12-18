@@ -24,6 +24,8 @@ import { getDateRangeFilter, isDateInRange } from "@/lib/utils";
 import DateFilterDropdown from "@/components/ui/date-filter-dropdown";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import type { ViajeWithDetails, Mina, Comprador } from "@shared/schema";
+import { apiUrl } from "@/lib/api";
+import { getAuthToken } from "@/hooks/useAuth";
 
 interface PrincipalProps {
   onOpenCargue: () => void;
@@ -154,8 +156,6 @@ export default function Principal({ onOpenCargue, onOpenDescargue }: PrincipalPr
   }>({
     queryKey: ["/api/viajes", currentPage, pageSize],
     queryFn: async () => {
-      const { apiUrl } = await import('@/lib/api');
-      const { getAuthToken } = await import('@/hooks/useAuth');
       const limit = getLimitForServer();
       const token = getAuthToken();
       const headers: Record<string, string> = {};
