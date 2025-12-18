@@ -2583,6 +2583,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Emitir evento Socket.io para invalidar caché en otros clientes
       const affectedEntityTypes = new Set<string>();
+      // Importante: esta operación afecta el módulo de pendientes y el módulo general de transacciones
+      affectedEntityTypes.add("pending-transactions");
       if (data.paraQuienTipo) affectedEntityTypes.add(data.paraQuienTipo);
       emitTransactionUpdate({
         type: "created",
@@ -2773,6 +2775,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`✅ Transacción ${id} completada exitosamente`);
+
+      // Emitir evento WebSocket para invalidar caché en otros clientes (crítico multi-usuario)
+      // Debe invalidar:
+      // - /api/transacciones (módulo general, donde pendientes también se muestran)
+      // - /api/transacciones/pendientes y /count (porque sale de pendientes al completarse)
+      // - listados/balances de entidades afectadas (mina/comprador/volquetero/rodmar/cuentas)
+      try {
+        const affectedEntityTypes = new Set<string>();
+        affectedEntityTypes.add("pending-transactions");
+
+        // Entidades afectadas: usar original (pendiente) y la transacción ya completada
+        if (originalTransaction?.deQuienTipo) affectedEntityTypes.add(originalTransaction.deQuienTipo);
+        if (originalTransaction?.paraQuienTipo) affectedEntityTypes.add(originalTransaction.paraQuienTipo);
+        if (transaccion?.deQuienTipo) affectedEntityTypes.add(transaccion.deQuienTipo);
+        if (transaccion?.paraQuienTipo) affectedEntityTypes.add(transaccion.paraQuienTipo);
+
+        // Cuentas RodMar afectadas
+        const affectedAccounts: string[] = [];
+        if (originalTransaction?.deQuienTipo === "rodmar" && originalTransaction?.deQuienId) {
+          affectedAccounts.push(originalTransaction.deQuienId);
+        }
+        if (originalTransaction?.paraQuienTipo === "rodmar" && originalTransaction?.paraQuienId) {
+          affectedAccounts.push(originalTransaction.paraQuienId);
+        }
+        if (transaccion?.deQuienTipo === "rodmar" && transaccion?.deQuienId) {
+          affectedAccounts.push(transaccion.deQuienId);
+        }
+        if (transaccion?.paraQuienTipo === "rodmar" && transaccion?.paraQuienId) {
+          affectedAccounts.push(transaccion.paraQuienId);
+        }
+
+        // LCDM / Postobón (para invalidaciones de tabs y balances)
+        if (
+          originalTransaction?.deQuienTipo === "lcdm" ||
+          originalTransaction?.paraQuienTipo === "lcdm" ||
+          transaccion?.deQuienTipo === "lcdm" ||
+          transaccion?.paraQuienTipo === "lcdm"
+        ) {
+          affectedEntityTypes.add("lcdm");
+        }
+        if (
+          originalTransaction?.deQuienTipo === "postobon" ||
+          originalTransaction?.paraQuienTipo === "postobon" ||
+          transaccion?.deQuienTipo === "postobon" ||
+          transaccion?.paraQuienTipo === "postobon"
+        ) {
+          affectedEntityTypes.add("postobon");
+        }
+
+        emitTransactionUpdate({
+          type: "updated",
+          transactionId: id,
+          affectedEntityTypes,
+          affectedAccounts,
+        });
+      } catch (wsError) {
+        console.error("⚠️ Error emitiendo evento WebSocket al completar pendiente (no crítico):", wsError);
+      }
 
       // Enviar notificación de completado
       if (originalTransaction?.estado === 'pendiente') {
