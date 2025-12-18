@@ -46,6 +46,13 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   const [showGestionarModal, setShowGestionarModal] = useState(false);
   const [showSolicitarModal, setShowSolicitarModal] = useState(false);
   const [location, setLocation] = useLocation();
+  
+  // OPTIMIZACIÓN CARGA INICIAL:
+  // Para que el módulo Principal (Viajes) cargue más rápido, diferimos la carga de la LISTA de pendientes.
+  // El conteo se mantiene inmediato (badge/indicador), pero la lista se habilita:
+  // - después de un pequeño delay (1-2s) o
+  // - inmediatamente si el usuario abre el modal o llega una notificación.
+  const [enablePendientesPrefetch, setEnablePendientesPrefetch] = useState(false);
 
   // Log inicial del sistema
   useEffect(() => {
@@ -80,6 +87,15 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
 
   const queryClient = useQueryClient();
 
+  // Estado para rastrear si hay una notificación pendiente de procesar
+  const [pendingNotification, setPendingNotification] = useState<any>(null);
+
+  // Habilitar prefetch diferido de pendientes (no bloquea el primer paint del módulo Principal)
+  useEffect(() => {
+    const t = window.setTimeout(() => setEnablePendientesPrefetch(true), 1500);
+    return () => window.clearTimeout(t);
+  }, []);
+
   // Obtener lista de transacciones pendientes para buscar por ID
   const { data: pendientes = [] } = useQuery<any[]>({
     queryKey: ["/api/transacciones/pendientes"],
@@ -98,11 +114,14 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
       if (!response.ok) return [];
       return response.json();
     },
-    refetchInterval: 30000, // Refrescar cada 30 segundos
+    enabled: Boolean(
+      enablePendientesPrefetch ||
+      showPendingModal ||
+      showPendingDetailModal ||
+      pendingNotification
+    ),
+    refetchInterval: 30000, // Refrescar cada 30 segundos (solo cuando está habilitada)
   });
-
-  // Estado para rastrear si hay una notificación pendiente de procesar
-  const [pendingNotification, setPendingNotification] = useState<any>(null);
 
   // Efecto para intentar procesar notificación cuando se cargan los pendientes
   useEffect(() => {
