@@ -161,6 +161,7 @@ function TripCard({ viaje, showExtended = false, onClick, onEditTrip, onDeleteTr
   };
 
   return (
+    <>
     <Card 
       className={`cursor-pointer hover:shadow-md transition-shadow duration-200 ${isSelected ? 'ring-2 ring-primary' : ''} ${getAlternatingBackground()}`} 
       onClick={handleClick}
@@ -560,19 +561,18 @@ function TripCard({ viaje, showExtended = false, onClick, onEditTrip, onDeleteTr
 
       </CardContent>
     </Card>
-    <>
-      <ImageViewer
-        isOpen={showReceipt}
-        onClose={() => {
-          setShowReceipt(false);
-          if (receiptImageUrl && receiptImageUrl.startsWith('blob:')) {
-            URL.revokeObjectURL(receiptImageUrl);
-          }
-        }}
-        imageUrl={receiptImageUrl || undefined}
-        title="Recibo del Viaje"
-      />
-    </>
+    <ImageViewer
+      isOpen={showReceipt}
+      onClose={() => {
+        setShowReceipt(false);
+        if (receiptImageUrl && receiptImageUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(receiptImageUrl);
+        }
+      }}
+      imageUrl={receiptImageUrl || undefined}
+      title="Recibo del Viaje"
+    />
+  </>
   );
 }
 
