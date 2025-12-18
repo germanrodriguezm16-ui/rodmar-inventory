@@ -154,7 +154,9 @@ export default function Principal({ onOpenCargue, onOpenDescargue }: PrincipalPr
       hasMore: boolean;
     };
   }>({
-    queryKey: ["/api/viajes", currentPage, pageSize],
+    // v2: cambia el payload del backend (se omite recibo base64 y se envía tieneRecibo).
+    // Esto fuerza a React Query a refetchear y evita quedarse con el payload pesado en caché.
+    queryKey: ["/api/viajes", "v2", currentPage, pageSize],
     queryFn: async () => {
       const limit = getLimitForServer();
       const token = getAuthToken();

@@ -7,9 +7,19 @@ interface ReceiptImageUploadProps {
   value?: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  tripId?: string;
+  hasRemoteImage?: boolean;
+  onUserCleared?: () => void;
 }
 
-export function ReceiptImageUpload({ value, onChange, placeholder = "Número de recibo" }: ReceiptImageUploadProps) {
+export function ReceiptImageUpload({
+  value,
+  onChange,
+  placeholder = "Número de recibo",
+  tripId,
+  hasRemoteImage = false,
+  onUserCleared,
+}: ReceiptImageUploadProps) {
   // Parse existing value to get image (text field removed)
   const parseValue = (val: string) => {
     if (!val) return { image: "" };
@@ -22,6 +32,7 @@ export function ReceiptImageUpload({ value, onChange, placeholder = "Número de 
   const parsed = parseValue(value || "");
   const [imageUrl, setImageUrl] = useState<string>(parsed.image);
   const [showImageViewer, setShowImageViewer] = useState(false);
+  const [isLoadingRemote, setIsLoadingRemote] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -32,6 +43,35 @@ export function ReceiptImageUpload({ value, onChange, placeholder = "Número de 
     console.log("=== ReceiptImageUpload - parsed:", newParsed);
     setImageUrl(newParsed.image);
   }, [value]);
+
+  const loadRemoteReceipt = async () => {
+    if (!tripId || isLoadingRemote) return;
+    try {
+      setIsLoadingRemote(true);
+      const { apiUrl } = await import('@/lib/api');
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(apiUrl(`/recibo/${tripId}`), { credentials: "include", headers });
+      if (!res.ok) return;
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await res.json();
+        if (typeof data?.recibo === "string") {
+          setImageUrl(data.recibo);
+        }
+        return;
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      setImageUrl(objectUrl);
+    } catch (e) {
+      console.error("Error loading remote receipt:", e);
+    } finally {
+      setIsLoadingRemote(false);
+    }
+  };
 
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -107,6 +147,7 @@ export function ReceiptImageUpload({ value, onChange, placeholder = "Número de 
     }
     // Clear the form value
     onChange("");
+    onUserCleared?.();
   };
 
   const handleCameraCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,15 +194,21 @@ export function ReceiptImageUpload({ value, onChange, placeholder = "Número de 
           <Upload className="h-4 w-4" />
         </Button>
         
-        {imageUrl && (
+        {(imageUrl || hasRemoteImage) && (
           <>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setShowImageViewer(true)}
+              onClick={async () => {
+                if (!imageUrl && hasRemoteImage) {
+                  await loadRemoteReceipt();
+                }
+                setShowImageViewer(true);
+              }}
               className="px-3"
               title="Ver imagen"
+              disabled={isLoadingRemote}
             >
               <Eye className="h-4 w-4" />
             </Button>
@@ -198,9 +245,9 @@ export function ReceiptImageUpload({ value, onChange, placeholder = "Número de 
         className="hidden"
       />
       
-      {imageUrl && (
+      {(imageUrl || hasRemoteImage) && (
         <div className="text-xs text-muted-foreground">
-          Imagen adjuntada. Haz clic en el ícono del ojo para ver.
+          {imageUrl ? "Imagen adjuntada. Haz clic en el ícono del ojo para ver." : "Recibo guardado. Haz clic en el ícono del ojo para cargarlo."}
         </div>
       )}
 

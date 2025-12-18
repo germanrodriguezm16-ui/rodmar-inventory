@@ -528,6 +528,9 @@ export type InsertPushSubscription = {
 export type ViajeWithDetails = Viaje & {
   mina?: Mina;
   comprador?: Comprador;
+  // Optimización: el listado de viajes puede omitir el recibo (base64) para reducir payload.
+  // Este flag permite al frontend saber si existe recibo y cargarlo on-demand.
+  tieneRecibo?: boolean;
 };
 
 export type TransaccionWithSocio = Transaccion & {

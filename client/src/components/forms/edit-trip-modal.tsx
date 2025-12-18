@@ -61,6 +61,7 @@ interface EditTripModalProps {
 export function EditTripModal({ viaje, isOpen, onClose }: EditTripModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [userClearedReceipt, setUserClearedReceipt] = useState(false);
   
   // Autocomplete state
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -194,6 +195,7 @@ export function EditTripModal({ viaje, isOpen, onClose }: EditTripModalProps) {
       form.reset(formData);
       
       form.reset(formData);
+      setUserClearedReceipt(false);
     }
   }, [viaje, isOpen, form]);
 
@@ -342,6 +344,15 @@ export function EditTripModal({ viaje, isOpen, onClose }: EditTripModalProps) {
       cut: ((calculatedTotalCompra / data.peso) || 0).toString(),
       fut: ((calculatedTotalFlete / data.peso) || 0).toString(),
     };
+
+    // OPTIMIZACIÓN + SEGURIDAD DE DATOS:
+    // El listado de viajes ya no trae el recibo (base64) para reducir payload.
+    // Si el viaje tiene recibo guardado pero el formulario llega sin recibo (porque no se cargó),
+    // NO debemos enviar recibo="" ya que borraría el recibo en el servidor.
+    const viajeTieneRecibo = Boolean((viaje as any)?.tieneRecibo) || Boolean(viaje?.recibo);
+    if (viajeTieneRecibo && !userClearedReceipt && !dataWithCalculations.recibo) {
+      delete (dataWithCalculations as any).recibo;
+    }
     
     console.log("=== EditTripModal - Sending calculated data:", dataWithCalculations);
     mutation.mutate(dataWithCalculations);
@@ -722,6 +733,9 @@ export function EditTripModal({ viaje, isOpen, onClose }: EditTripModalProps) {
                         value={field.value}
                         onChange={field.onChange}
                         placeholder="Número de recibo"
+                        tripId={viaje?.id}
+                        hasRemoteImage={Boolean((viaje as any)?.tieneRecibo) && !field.value}
+                        onUserCleared={() => setUserClearedReceipt(true)}
                       />
                     </FormControl>
                     <FormMessage />
