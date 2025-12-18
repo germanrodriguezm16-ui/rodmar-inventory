@@ -24,6 +24,7 @@ import {
   fusionSchema,
   revertFusionSchema,
 } from "@shared/schema";
+import { parseColombiaDate } from "@shared/date-colombia";
 import { ViajeIdGenerator } from "./id-generator";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -2543,8 +2544,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convertir fecha de string YYYY-MM-DD a objeto Date
       let fechaDate: Date;
       if (data.fecha) {
-        // Si viene como string YYYY-MM-DD, convertir a Date
-        fechaDate = new Date(data.fecha + 'T00:00:00');
+        // Colombia-first: interpretar YYYY-MM-DD como fecha Colombia (no UTC)
+        fechaDate = parseColombiaDate(String(data.fecha));
         // Validar que la fecha es válida
         if (isNaN(fechaDate.getTime())) {
           fechaDate = new Date();

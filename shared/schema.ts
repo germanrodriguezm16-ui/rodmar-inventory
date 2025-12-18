@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, decimal, timestamp, boolean, varchar, jsonb, index, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { parseColombiaDate } from "./date-colombia";
 
 // Session storage table for authentication
 export const sessions = pgTable(
@@ -415,7 +416,8 @@ export const insertInversionSchema = createInsertSchema(inversiones).omit({
   id: true,
   createdAt: true,
 }).extend({
-  fecha: z.string().transform((val) => new Date(val)),
+  // Colombia-first: evitar que "YYYY-MM-DD" se interprete como UTC (corrimiento al día anterior)
+  fecha: z.string().transform((val) => parseColombiaDate(val)),
 });
 
 export const insertTransaccionSchema = z.object({
@@ -426,7 +428,8 @@ export const insertTransaccionSchema = z.object({
   postobonCuenta: z.enum(["santa-rosa", "cimitarra", "otras"]).optional(), // Solo para transacciones con Postobón
   concepto: z.string().min(1),
   valor: z.string().min(1),
-  fecha: z.string().transform((val) => new Date(val)),
+  // Colombia-first: evitar que "YYYY-MM-DD" se interprete como UTC (corrimiento al día anterior)
+  fecha: z.string().transform((val) => parseColombiaDate(val)),
   formaPago: z.string().min(1),
   voucher: z.string().optional(),
   comentario: z.string().optional(),

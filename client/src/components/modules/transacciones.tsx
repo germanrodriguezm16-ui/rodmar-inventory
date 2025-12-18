@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Download, X, Pencil, Trash2 } from "lucide-react";
-import { formatDateSimple } from "@/lib/date-utils";
+import { formatDateForInputBogota, formatDateSimple } from "@/lib/date-utils";
 import DateFilterDropdown from "@/components/ui/date-filter-dropdown-new";
 import type { TransaccionWithSocio } from "@shared/schema";
 
@@ -40,7 +40,7 @@ export default function Transacciones({ onOpenTransaction, onEditTransaction, on
   const transacciones = rawTransacciones.map(transaccion => ({
     ...transaccion,
     fecha: typeof transaccion.fecha === 'string' ? transaccion.fecha : 
-           transaccion.fecha instanceof Date ? transaccion.fecha.toISOString().split('T')[0] : 
+           transaccion.fecha instanceof Date ? formatDateForInputBogota(transaccion.fecha) : 
            String(transaccion.fecha)
   }));
 

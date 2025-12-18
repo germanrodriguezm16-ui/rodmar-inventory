@@ -83,6 +83,26 @@ export function formatDateForInput(date: Date | string): string {
 }
 
 /**
+ * Formatea una fecha como YYYY-MM-DD en zona horaria de Colombia (America/Bogota)
+ * Evita el bug típico de usar toISOString() (UTC) que puede mover el día.
+ */
+export function formatDateForInputBogota(date: Date | string): string {
+  const dateObj = typeof date === "string" ? new Date(date) : date;
+  // Usar Intl con timeZone fija para Colombia
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(dateObj);
+
+  const year = parts.find((p) => p.type === "year")?.value ?? "1970";
+  const month = parts.find((p) => p.type === "month")?.value ?? "01";
+  const day = parts.find((p) => p.type === "day")?.value ?? "01";
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Crea una fecha local evitando problemas de zona horaria UTC
  * Agrega T00:00:00 para inicio del día o T23:59:59 para final del día
  */

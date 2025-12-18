@@ -13,6 +13,7 @@ import { TransactionDetailModal } from "@/components/modals/transaction-detail-m
 import { formatCurrency } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
 import { getAuthToken } from "@/hooks/useAuth";
+import { formatDateForInputBogota } from "@/lib/date-utils";
 // Formateo de fechas se maneja directamente en el componente
 import { 
   startOfDay, 
@@ -331,8 +332,8 @@ export default function VolqueteroDetail() {
           }
           
           if (transaction.fecha instanceof Date) {
-            // Objeto Date - usar toISOString para extraer fecha
-            return transaction.fecha.toISOString().split('T')[0];
+            // Objeto Date - formatear en zona Colombia para evitar corrimiento por UTC
+            return formatDateForInputBogota(transaction.fecha);
           }
           
           return '1970-01-01';

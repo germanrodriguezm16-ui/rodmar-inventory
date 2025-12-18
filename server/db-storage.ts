@@ -33,6 +33,7 @@ import {
 import { db } from "./db";
 import { eq, desc, and, or, sql, isNull, inArray, ne } from "drizzle-orm";
 import type { IStorage } from "./storage";
+import { parseColombiaDate } from "../shared/date-colombia";
 
 // Helper para capturar errores de conexión y propagarlos correctamente
 async function wrapDbOperation<T>(operation: () => Promise<T>): Promise<T> {
@@ -1326,8 +1327,8 @@ export class DatabaseStorage implements IStorage {
       let fechaDate: Date | undefined;
       if (updates.fecha) {
         if (typeof updates.fecha === 'string') {
-          // Si viene como string YYYY-MM-DD, convertir a Date
-          fechaDate = new Date(updates.fecha + 'T00:00:00');
+          // Colombia-first: interpretar YYYY-MM-DD como fecha Colombia (no UTC)
+          fechaDate = parseColombiaDate(updates.fecha);
         } else {
           fechaDate = updates.fecha;
         }
