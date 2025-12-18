@@ -16,6 +16,7 @@ import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getAuthToken } from "@/hooks/useAuth";
+import { formatDateForInputBogota } from "@/lib/date-utils";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
@@ -50,7 +51,10 @@ const getDayOfWeek = (dateInput: string | Date): string => {
     const [year, month, day] = dateStr.split('-').map(Number);
     date = new Date(year, month - 1, day);
   } else {
-    date = dateInput;
+    // Si es Date, convertirlo a YYYY-MM-DD en Colombia y reconstruir en local para evitar corrimiento por UTC
+    const ymd = formatDateForInputBogota(dateInput);
+    const [year, month, day] = ymd.split('-').map(Number);
+    date = new Date(year, month - 1, day);
   }
   
   return daysOfWeek[date.getDay()];
@@ -341,7 +345,24 @@ export default function VolqueteroDetail() {
         id: t.id.toString(),
         concepto: t.concepto,
         valor: valorFinal.toString(),
-        fecha: t.fecha ? (t.fecha instanceof Date ? t.fecha : new Date(t.fecha)) : new Date(),
+        // Importante: evitar new Date("YYYY-MM-DD") o new Date(ISO-Z) + getDate() local (puede correrse al día anterior en Colombia)
+        // Normalizamos a Date local basado en YYYY-MM-DD (Colombia) para que UI muestre el día correcto.
+        fecha: (() => {
+          const raw = t.fecha ?? t.createdAt;
+          if (!raw) return new Date();
+          if (raw instanceof Date) {
+            const ymd = formatDateForInputBogota(raw);
+            const [y, m, d] = ymd.split("-").map(Number);
+            return new Date(y, m - 1, d);
+          }
+          if (typeof raw === "string") {
+            const ymd = raw.includes("T") ? raw.split("T")[0] : raw;
+            const [y, m, d] = ymd.split("-").map(Number);
+            if (y && m && d) return new Date(y, m - 1, d);
+            return new Date(raw);
+          }
+          return new Date();
+        })(),
         formaPago: t.formaPago || "",
         voucher: t.voucher || null,
         comentario: t.comentario || null,
@@ -357,9 +378,23 @@ export default function VolqueteroDetail() {
     
     const resultado = [...transaccionesManuales, ...viajesCompletados, ...transaccionesTemporalesConTipo]
       .sort((a, b) => {
-        const fechaA = new Date(a.fecha);
-        const fechaB = new Date(b.fecha);
-        return fechaB.getTime() - fechaA.getTime();
+        // Ordenar usando fecha normalizada a YYYY-MM-DD (Colombia) para evitar corrimientos por UTC
+        const norm = (raw: any): number => {
+          if (!raw) return 0;
+          if (raw instanceof Date) {
+            const ymd = formatDateForInputBogota(raw);
+            const [y, m, d] = ymd.split("-").map(Number);
+            return new Date(y, m - 1, d).getTime();
+          }
+          if (typeof raw === "string") {
+            const ymd = raw.includes("T") ? raw.split("T")[0] : raw;
+            const [y, m, d] = ymd.split("-").map(Number);
+            if (y && m && d) return new Date(y, m - 1, d).getTime();
+            return new Date(raw).getTime();
+          }
+          return 0;
+        };
+        return norm(b.fecha) - norm(a.fecha);
       });
     
     return resultado;
@@ -498,10 +533,11 @@ export default function VolqueteroDetail() {
     if (!range) return transacciones;
     
     return transacciones.filter(t => {
-      const fechaTransaccion = t.fecha instanceof Date ? t.fecha : new Date(t.fecha);
-      const fechaStr = fechaTransaccion.getFullYear() + '-' + 
-        String(fechaTransaccion.getMonth() + 1).padStart(2, '0') + '-' + 
-        String(fechaTransaccion.getDate()).padStart(2, '0');
+      const fechaStr = (() => {
+        if (t.fecha instanceof Date) return formatDateForInputBogota(t.fecha);
+        if (typeof (t as any).fecha === "string") return (t as any).fecha.includes("T") ? (t as any).fecha.split("T")[0] : (t as any).fecha;
+        return formatDateForInputBogota(new Date((t as any).fecha));
+      })();
       
       if (range.start && range.end) {
         return fechaStr >= range.start && fechaStr <= range.end;
