@@ -273,7 +273,23 @@ export default function VolqueteroDetail() {
           id: t.id.toString(),
           concepto: t.concepto,
           valor: valorFinal.toString(),
-          fecha: new Date(t.fecha || t.createdAt || Date.now()),
+          // Normalizar fecha a YYYY-MM-DD (Colombia) para evitar corrimiento al día anterior
+          fecha: (() => {
+            const raw = t.fecha ?? t.createdAt ?? Date.now();
+            if (raw instanceof Date) {
+              const ymd = formatDateForInputBogota(raw);
+              const [y, m, d] = ymd.split("-").map(Number);
+              return new Date(y, m - 1, d);
+            }
+            if (typeof raw === "string") {
+              const ymd = raw.includes("T") ? raw.split("T")[0] : raw;
+              const [y, m, d] = ymd.split("-").map(Number);
+              if (y && m && d) return new Date(y, m - 1, d);
+              return new Date(raw);
+            }
+            // number/otros
+            return new Date(raw);
+          })(),
           formaPago: t.formaPago || "",
           voucher: t.voucher || null,
           comentario: t.comentario || null,
