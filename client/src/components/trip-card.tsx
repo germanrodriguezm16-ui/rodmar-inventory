@@ -1,8 +1,11 @@
 import { useState, memo, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Truck, Calendar, User, Mountain, Handshake, Weight, DollarSign, Eye, EyeOff } from "lucide-react";
+import { Truck, Calendar, User, Mountain, Handshake, Weight, DollarSign, Eye, EyeOff, Receipt } from "lucide-react";
 import { formatDateWithDaySpanish } from "@/lib/date-utils";
+import { ImageViewer } from "@/components/ui/image-viewer";
+import { apiUrl } from "@/lib/api";
+import { getAuthToken } from "@/hooks/useAuth";
 import type { ViajeWithDetails } from "@shared/schema";
 
 // Extender window para función global
@@ -26,6 +29,9 @@ interface TripCardProps {
 
 function TripCard({ viaje, showExtended = false, onClick, onEditTrip, onDeleteTrip, isSelected = false, onSelect, context = 'default', index = 0 }: TripCardProps) {
   const [showIndividualFinancial, setShowIndividualFinancial] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
+  const [isLoadingReceipt, setIsLoadingReceipt] = useState(false);
 
   // Memoizar cálculos pesados
   const memoizedValues = useMemo(() => {
@@ -275,7 +281,7 @@ function TripCard({ viaje, showExtended = false, onClick, onEditTrip, onDeleteTr
                   {viaje.mina?.nombre || "N/A"}
                 </p>
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1">
                 <p className="text-muted-foreground text-[10px] mb-0.5 flex items-center gap-1">
                   <Handshake className="w-2.5 h-2.5" />
                   Comprador
@@ -284,6 +290,58 @@ function TripCard({ viaje, showExtended = false, onClick, onEditTrip, onDeleteTr
                    title={viaje.comprador?.nombre || "Por asignar"}>
                   {viaje.comprador?.nombre || "Por asignar"}
                 </p>
+              </div>
+              <div className="col-span-1">
+                {viaje.tieneRecibo ? (
+                  <button
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!receiptImageUrl && !isLoadingReceipt) {
+                        setIsLoadingReceipt(true);
+                        try {
+                          const token = getAuthToken();
+                          const headers: Record<string, string> = {};
+                          if (token) {
+                            headers["Authorization"] = `Bearer ${token}`;
+                          }
+                          const response = await fetch(apiUrl(`/recibo/${viaje.id}`), {
+                            credentials: "include",
+                            headers,
+                          });
+                          if (response.ok) {
+                            const contentType = response.headers.get("content-type") || "";
+                            if (contentType.includes("application/json")) {
+                              const data = await response.json();
+                              if (typeof data?.recibo === "string") {
+                                setReceiptImageUrl(data.recibo);
+                              }
+                            } else {
+                              const blob = await response.blob();
+                              const objectUrl = URL.createObjectURL(blob);
+                              setReceiptImageUrl(objectUrl);
+                            }
+                          }
+                        } catch (error) {
+                          console.error("Error loading receipt:", error);
+                        } finally {
+                          setIsLoadingReceipt(false);
+                        }
+                      }
+                      setShowReceipt(true);
+                    }}
+                    className="w-full text-[10px] py-1 px-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/20 dark:hover:bg-blue-900/30 dark:text-blue-300 rounded-md transition-colors flex items-center justify-center gap-1"
+                    title="Ver recibo"
+                    disabled={isLoadingReceipt}
+                  >
+                    <Receipt className="w-2.5 h-2.5" />
+                    <span className="text-[9px]">Ver recibo</span>
+                  </button>
+                ) : (
+                  <div className="text-[10px] text-muted-foreground">
+                    Sin recibo
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -502,6 +560,19 @@ function TripCard({ viaje, showExtended = false, onClick, onEditTrip, onDeleteTr
 
       </CardContent>
     </Card>
+    <>
+      <ImageViewer
+        isOpen={showReceipt}
+        onClose={() => {
+          setShowReceipt(false);
+          if (receiptImageUrl && receiptImageUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(receiptImageUrl);
+          }
+        }}
+        imageUrl={receiptImageUrl || undefined}
+        title="Recibo del Viaje"
+      />
+    </>
   );
 }
 
