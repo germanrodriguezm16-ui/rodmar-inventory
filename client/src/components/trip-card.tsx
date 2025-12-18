@@ -319,8 +319,13 @@ function TripCard({ viaje, showExtended = false, onClick, onEditTrip, onDeleteTr
                               }
                             } else {
                               const blob = await response.blob();
-                              const objectUrl = URL.createObjectURL(blob);
-                              setReceiptImageUrl(objectUrl);
+                              // Convertir blob a data URL para que persista (no necesita revocación)
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                const dataUrl = reader.result as string;
+                                setReceiptImageUrl(dataUrl);
+                              };
+                              reader.readAsDataURL(blob);
                             }
                           }
                         } catch (error) {
@@ -565,9 +570,7 @@ function TripCard({ viaje, showExtended = false, onClick, onEditTrip, onDeleteTr
       isOpen={showReceipt}
       onClose={() => {
         setShowReceipt(false);
-        if (receiptImageUrl && receiptImageUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(receiptImageUrl);
-        }
+        // Ya no necesitamos revocar porque usamos data URL (persistente)
       }}
       imageUrl={receiptImageUrl || undefined}
       title="Recibo del Viaje"
