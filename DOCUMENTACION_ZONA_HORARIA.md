@@ -95,6 +95,48 @@ Esto se implementa en:
 - [ ] ¿Se prueba la función con fechas en diferentes zonas horarias?
 - [ ] ¿Se documenta el manejo de zona horaria en comentarios?
 
+---
+
+## ✅ Fix aplicado: “Transacciones manuales en Volqueteros salen con un día anterior” (Colombia)
+
+### Síntoma
+- En **Volqueteros → Transacciones**, las **tarjetas/filas** de transacciones **manuales** mostraban la fecha con **un día de anterioridad**.
+- Al abrir el **modal de detalle**, la fecha se veía correcta.
+
+### Causa raíz
+Había **lógicas distintas** de formateo/parsing:
+- El **modal** usaba `formatDateWithDaySpanish()` (ya protegía contra UTC).
+- Las **tarjetas/tabla** (Volqueteros) y otros puntos convertían fechas con patrones como:
+  - `new Date("YYYY-MM-DD")` → se interpreta como **UTC**
+  - `toISOString().split('T')[0]` → fuerza **UTC**
+
+En Colombia (UTC-5), esos patrones pueden desplazar la fecha al **día anterior**.
+
+### Solución implementada (regla del proyecto)
+**"YYYY-MM-DD" siempre se interpreta como una fecha de calendario en Colombia.**
+
+Se implementó una normalización central:
+- `shared/date-colombia.ts` → `parseColombiaDate()` crea un `Date` estable usando **mediodía Colombia** (equiv. `17:00Z`) para evitar corrimientos.
+
+### Archivos clave afectados
+- **Backend / Shared**
+  - `shared/schema.ts`: `insertTransaccionSchema.fecha` y `insertInversionSchema.fecha` ahora usan `parseColombiaDate()`.
+  - `server/routes.ts`: solicitudes (`/api/transacciones/solicitar`) usan `parseColombiaDate()`.
+  - `server/db-storage.ts`: completar pendientes usa `parseColombiaDate()`.
+- **Frontend**
+  - `client/src/lib/date-utils.ts`: `formatDateForInputBogota()` para obtener `YYYY-MM-DD` con `America/Bogota` sin UTC.
+  - `client/src/pages/volquetero-detail.tsx`: normaliza fechas de transacciones manuales para render/orden/filtros en Colombia.
+  - `client/src/components/modules/transacciones.tsx`: evita `toISOString().split('T')[0]` para fechas `Date`.
+
+### Recomendación para código nuevo
+Evitar estos patrones en UI/inputs:
+- ❌ `toISOString().split('T')[0]`
+- ❌ `new Date("YYYY-MM-DD")`
+
+Preferir:
+- ✅ `formatDateForInputBogota(date)` para `YYYY-MM-DD` en UI/inputs (Colombia)
+- ✅ `parseColombiaDate("YYYY-MM-DD")` en backend/shared para convertir a `Date` sin corrimiento
+
 ## Referencias
 
 - [MDN: Date](https://developer.mozilla.org/es/docs/Web/JavaScript/Reference/Global_Objects/Date)
