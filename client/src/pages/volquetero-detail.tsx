@@ -109,6 +109,7 @@ export default function VolqueteroDetail() {
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
   const [showTransactionDetail, setShowTransactionDetail] = useState(false);
+  const [selectedRelatedTrip, setSelectedRelatedTrip] = useState<any>(null);
   
   // Estado para transacciones temporales (solo en memoria)
   const [transaccionesTemporales, setTransaccionesTemporales] = useState<TransaccionWithSocio[]>([]);
@@ -415,6 +416,18 @@ export default function VolqueteroDetail() {
     
     return resultado;
   }, [transaccionesData, viajesVolquetero, volquetero, volqueteroIdActual, transaccionesTemporales]);
+
+  // Resolver viaje relacionado para transacciones tipo "Viaje"
+  const getRelatedTripForTransaction = useCallback((tx: any) => {
+    const idFromProp = tx?.viajeId;
+    const idFromId = typeof tx?.id === "string" && tx.id.startsWith("viaje-") ? tx.id.replace("viaje-", "") : null;
+    const viajeId = idFromProp || idFromId || null;
+    if (!viajeId) return null;
+
+    const listA = Array.isArray(viajesVolquetero) ? viajesVolquetero : [];
+    const listB = Array.isArray(todosViajesIncOcultos) ? todosViajesIncOcultos : [];
+    return listA.find((v: any) => v.id === viajeId) || listB.find((v: any) => v.id === viajeId) || null;
+  }, [viajesVolquetero, todosViajesIncOcultos]);
 
   // Función para obtener el rango de fechas según el filtro
   const getDateRange = useCallback((filterType: DateFilterType, filterValue: string, filterValueEnd: string) => {
@@ -1275,12 +1288,18 @@ export default function VolqueteroDetail() {
                               onClick={() => {
                                 if (transaccion.tipo === "Manual" && transaccion.originalTransaction) {
                                   setSelectedTransaction(transaccion.originalTransaction);
+                                  setSelectedRelatedTrip(null);
                                   // Si es transacción pendiente, abrir modal de detalles de solicitud
                                   if (transaccion.originalTransaction.estado === 'pendiente') {
                                     setShowPendingDetailModal(true);
                                   } else {
                                     setShowTransactionDetail(true);
                                   }
+                                } else if (transaccion.tipo === "Viaje") {
+                                  // Transacción automática de viaje: abrir detalle con el viaje relacionado.
+                                  setSelectedTransaction(transaccion);
+                                  setSelectedRelatedTrip(getRelatedTripForTransaction(transaccion));
+                                  setShowTransactionDetail(true);
                                 } else if (transaccion.tipo === "Temporal") {
                                   // Las transacciones temporales no tienen detalle, solo se pueden eliminar
                                 }
@@ -1471,12 +1490,17 @@ export default function VolqueteroDetail() {
                         onClick={() => {
                           if (transaccion.tipo === "Manual" && transaccion.originalTransaction) {
                             setSelectedTransaction(transaccion.originalTransaction);
+                            setSelectedRelatedTrip(null);
                             // Si es transacción pendiente, abrir modal de detalles de solicitud
                             if (transaccion.originalTransaction.estado === 'pendiente') {
                               setShowPendingDetailModal(true);
                             } else {
                               setShowTransactionDetail(true);
                             }
+                          } else if (transaccion.tipo === "Viaje") {
+                            setSelectedTransaction(transaccion);
+                            setSelectedRelatedTrip(getRelatedTripForTransaction(transaccion));
+                            setShowTransactionDetail(true);
                           } else if (transaccion.tipo === "Temporal") {
                             // Las transacciones temporales no tienen detalle, solo se pueden eliminar
                           }
@@ -1766,9 +1790,13 @@ export default function VolqueteroDetail() {
         open={showTransactionDetail}
         onOpenChange={(open) => {
           setShowTransactionDetail(open);
-          if (!open) setSelectedTransaction(null);
+          if (!open) {
+            setSelectedTransaction(null);
+            setSelectedRelatedTrip(null);
+          }
         }}
         transaction={selectedTransaction}
+        relatedTrip={selectedRelatedTrip}
       />
 
       <EditTransactionModal
