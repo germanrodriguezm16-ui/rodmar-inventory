@@ -169,14 +169,14 @@ export function ReceiptImageUpload({
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {/* Botón de cámara para tomar foto directamente */}
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={() => cameraInputRef.current?.click()}
-          className="flex-1"
+          className="flex-1 min-w-[3rem]"
           title="Tomar foto"
         >
           <Camera className="h-4 w-4" />
@@ -188,7 +188,7 @@ export function ReceiptImageUpload({
           variant="outline"
           size="sm"
           onClick={() => fileInputRef.current?.click()}
-          className="flex-1"
+          className="flex-1 min-w-[3rem]"
           title="Subir archivo"
         >
           <Upload className="h-4 w-4" />

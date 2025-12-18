@@ -4201,14 +4201,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Recibo no encontrado" });
       }
 
+      // Normalizar: algunos recibos se guardan como "|IMAGE:<data:image/...>"
+      const reciboRaw = typeof viaje.recibo === "string" ? viaje.recibo : String(viaje.recibo);
+      const recibo = reciboRaw.startsWith("|IMAGE:") ? reciboRaw.substring("|IMAGE:".length) : reciboRaw;
+
       // Verificar si el recibo es una imagen base64
-      if (!viaje.recibo.startsWith("data:image/")) {
+      if (!recibo.startsWith("data:image/")) {
         console.log(`❌ Recibo de ${tripId} no es una imagen válida`);
         return res.status(400).json({ error: "Formato de imagen no válido" });
       }
 
       // Extraer el tipo de imagen y los datos base64
-      const matches = viaje.recibo.match(
+      const matches = recibo.match(
         /^data:image\/([a-zA-Z]+);base64,(.+)$/,
       );
       if (!matches) {
