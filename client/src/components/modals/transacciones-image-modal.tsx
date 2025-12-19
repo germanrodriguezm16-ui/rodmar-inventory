@@ -316,41 +316,31 @@ export function TransaccionesImageModal({
                     <tr className="bg-blue-600 text-white" style={{ height: '20px' }}>
                       <th className="border border-gray-300 text-left font-semibold" style={{ 
                         fontSize: '9px',
-                        padding: '0',
+                        verticalAlign: 'middle',
+                        lineHeight: '1.4',
+                        padding: '5px 8px',
                         height: '20px',
                         width: '80px',
-                        minWidth: '80px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        boxSizing: 'border-box'
-                      }}>
-                        <div style={{ paddingLeft: '8px', paddingRight: '8px' }}>FECHA</div>
-                      </th>
+                        minWidth: '80px'
+                      }}>FECHA</th>
                       <th className="border border-gray-300 text-left font-semibold" style={{ 
                         fontSize: '9px',
-                        padding: '0',
+                        verticalAlign: 'middle',
+                        lineHeight: '1.4',
+                        padding: '5px 8px',
                         height: '20px',
                         width: '210px',
-                        minWidth: '210px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        boxSizing: 'border-box'
-                      }}>
-                        <div style={{ paddingLeft: '8px', paddingRight: '8px' }}>COMENTARIO</div>
-                      </th>
+                        minWidth: '210px'
+                      }}>COMENTARIO</th>
                       <th className="border border-gray-300 text-right font-semibold" style={{ 
                         fontSize: '9px',
-                        padding: '0',
+                        verticalAlign: 'middle',
+                        lineHeight: '1.4',
+                        padding: '5px 8px',
                         height: '20px',
                         width: '60px',
-                        minWidth: '60px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-end',
-                        boxSizing: 'border-box'
-                      }}>
-                        <div style={{ paddingLeft: '8px', paddingRight: '8px' }}>VALOR</div>
-                      </th>
+                        minWidth: '60px'
+                      }}>VALOR</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -421,42 +411,32 @@ export function TransaccionesImageModal({
                         <tr key={transaccion.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} style={{ height: '18px' }}>
                           <td className="border border-gray-300" style={{ 
                             fontSize: '9px',
-                            padding: '0',
-                            height: '18px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            boxSizing: 'border-box'
+                            verticalAlign: 'middle',
+                            lineHeight: '1.4',
+                            padding: '4px 8px',
+                            height: '18px'
                           }}>
-                            <div style={{ paddingLeft: '8px', paddingRight: '8px' }}>
-                              {formatDateCompact(transaccion.fecha)}
-                            </div>
+                            {formatDateCompact(transaccion.fecha)}
                           </td>
                           <td className="border border-gray-300" style={{ 
                             fontSize: '9px',
-                            padding: '0',
-                            height: '18px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            boxSizing: 'border-box'
+                            verticalAlign: 'middle',
+                            lineHeight: '1.4',
+                            padding: '4px 8px',
+                            height: '18px'
                           }}>
-                            <div style={{ paddingLeft: '8px', paddingRight: '8px' }}>
-                              {transaccion.concepto && transaccion.concepto.startsWith('Viaje') 
-                                ? transaccion.concepto 
-                                : (transaccion.comentario || '-')}
-                            </div>
+                            {transaccion.concepto && transaccion.concepto.startsWith('Viaje') 
+                              ? transaccion.concepto 
+                              : (transaccion.comentario || '-')}
                           </td>
                           <td className={`border border-gray-300 text-right font-medium ${colorClass}`} style={{ 
                             fontSize: '9px',
-                            padding: '0',
-                            height: '18px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
-                            boxSizing: 'border-box'
+                            verticalAlign: 'middle',
+                            lineHeight: '1.4',
+                            padding: '4px 8px',
+                            height: '18px'
                           }}>
-                            <div style={{ paddingLeft: '8px', paddingRight: '8px' }}>
-                              {signo}{formatCurrency(Math.abs(valor))}
-                            </div>
+                            {signo}{formatCurrency(Math.abs(valor))}
                           </td>
                         </tr>
                       );
