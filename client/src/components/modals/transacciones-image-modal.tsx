@@ -305,24 +305,27 @@ export function TransaccionesImageModal({
                 <table className="w-full border-collapse border border-gray-300">
                   <thead>
                     <tr className="bg-blue-600 text-white" style={{ height: '20px' }}>
-                      <th className="border border-gray-300 px-2 text-left font-semibold" style={{ 
+                      <th className="border border-gray-300 text-left font-semibold" style={{ 
                         fontSize: '9px',
                         verticalAlign: 'middle',
-                        lineHeight: '1.2',
+                        lineHeight: '1.4',
+                        padding: '4px 8px',
                         width: '80px',
                         minWidth: '80px'
                       }}>FECHA</th>
-                      <th className="border border-gray-300 px-2 text-left font-semibold" style={{ 
+                      <th className="border border-gray-300 text-left font-semibold" style={{ 
                         fontSize: '9px',
                         verticalAlign: 'middle',
-                        lineHeight: '1.2',
+                        lineHeight: '1.4',
+                        padding: '4px 8px',
                         width: '210px',
                         minWidth: '210px'
                       }}>COMENTARIO</th>
-                      <th className="border border-gray-300 px-2 text-right font-semibold" style={{ 
+                      <th className="border border-gray-300 text-right font-semibold" style={{ 
                         fontSize: '9px',
                         verticalAlign: 'middle',
-                        lineHeight: '1.2',
+                        lineHeight: '1.4',
+                        padding: '4px 8px',
                         width: '60px',
                         minWidth: '60px'
                       }}>VALOR</th>
@@ -394,26 +397,29 @@ export function TransaccionesImageModal({
                       
                       return (
                         <tr key={transaccion.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} style={{ height: '18px' }}>
-                          <td className="border border-gray-300 px-2" style={{ 
+                          <td className="border border-gray-300" style={{ 
                             fontSize: '9px',
                             verticalAlign: 'middle',
-                            lineHeight: '1.2'
+                            lineHeight: '1.4',
+                            padding: '3px 8px'
                           }}>
                             {formatDateCompact(transaccion.fecha)}
                           </td>
-                          <td className="border border-gray-300 px-2" style={{ 
+                          <td className="border border-gray-300" style={{ 
                             fontSize: '9px',
                             verticalAlign: 'middle',
-                            lineHeight: '1.2'
+                            lineHeight: '1.4',
+                            padding: '3px 8px'
                           }}>
                             {transaccion.concepto && transaccion.concepto.startsWith('Viaje') 
                               ? transaccion.concepto 
                               : (transaccion.comentario || '-')}
                           </td>
-                          <td className={`border border-gray-300 px-2 text-right font-medium ${colorClass}`} style={{ 
+                          <td className={`border border-gray-300 text-right font-medium ${colorClass}`} style={{ 
                             fontSize: '9px',
                             verticalAlign: 'middle',
-                            lineHeight: '1.2'
+                            lineHeight: '1.4',
+                            padding: '3px 8px'
                           }}>
                             {signo}{formatCurrency(Math.abs(valor))}
                           </td>
