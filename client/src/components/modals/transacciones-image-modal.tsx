@@ -525,7 +525,15 @@ export function TransaccionesImageModal({
                     textAlign: 'left',
                     boxSizing: 'border-box'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', paddingRight: '8px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      height: '100%', 
+                      paddingLeft: '8px', 
+                      paddingRight: '8px',
+                      paddingTop: '2px',
+                      paddingBottom: '0px'
+                    }}>
                       FECHA
                     </div>
                   </th>
@@ -540,7 +548,15 @@ export function TransaccionesImageModal({
                     textAlign: 'left',
                     boxSizing: 'border-box'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', paddingRight: '8px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      height: '100%', 
+                      paddingLeft: '8px', 
+                      paddingRight: '8px',
+                      paddingTop: '2px',
+                      paddingBottom: '0px'
+                    }}>
                       COMENTARIO
                     </div>
                   </th>
@@ -555,7 +571,16 @@ export function TransaccionesImageModal({
                     textAlign: 'right',
                     boxSizing: 'border-box'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingLeft: '8px', paddingRight: '8px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'flex-end', 
+                      height: '100%', 
+                      paddingLeft: '8px', 
+                      paddingRight: '8px',
+                      paddingTop: '2px',
+                      paddingBottom: '0px'
+                    }}>
                       VALOR
                     </div>
                   </th>
@@ -627,7 +652,16 @@ export function TransaccionesImageModal({
                         height: '18px',
                         boxSizing: 'border-box'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', paddingRight: '8px' }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          height: '100%', 
+                          paddingLeft: '8px', 
+                          paddingRight: '8px',
+                          paddingTop: '2px',
+                          paddingBottom: '0px',
+                          transform: 'translateY(-1px)'
+                        }}>
                           {formatDateCompact(transaccion.fecha)}
                         </div>
                       </td>
@@ -638,7 +672,16 @@ export function TransaccionesImageModal({
                         height: '18px',
                         boxSizing: 'border-box'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', paddingRight: '8px' }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          height: '100%', 
+                          paddingLeft: '8px', 
+                          paddingRight: '8px',
+                          paddingTop: '2px',
+                          paddingBottom: '0px',
+                          transform: 'translateY(-1px)'
+                        }}>
                           {transaccion.concepto && transaccion.concepto.startsWith('Viaje') 
                             ? transaccion.concepto 
                             : (transaccion.comentario || '-')}
@@ -653,7 +696,17 @@ export function TransaccionesImageModal({
                         color: colorClass,
                         boxSizing: 'border-box'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingLeft: '8px', paddingRight: '8px' }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'flex-end', 
+                          height: '100%', 
+                          paddingLeft: '8px', 
+                          paddingRight: '8px',
+                          paddingTop: '2px',
+                          paddingBottom: '0px',
+                          transform: 'translateY(-1px)'
+                        }}>
                           {signo}{formatCurrency(Math.abs(valor))}
                         </div>
                       </td>
