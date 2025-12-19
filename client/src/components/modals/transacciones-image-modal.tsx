@@ -722,9 +722,9 @@ export function TransaccionesImageModal({
         )}
 
         {/* Footer */}
-        <div style={{ textAlign: 'center', fontSize: '8px', color: '#6b7280', marginTop: '8px', borderTop: '1px solid #e5e7eb', paddingTop: '4px' }}>
-          <div>Generado por RodMar - Sistema de Gestión Minera</div>
-          <div>© 2025 - Todos los derechos reservados</div>
+        <div style={{ textAlign: 'center', fontSize: '8px', color: '#6b7280', marginTop: '8px', borderTop: '1px solid #e5e7eb', paddingTop: '10px' }}>
+          <div style={{ transform: 'translateY(-10px)' }}>Generado por RodMar - Sistema de Gestión Minera</div>
+          <div style={{ transform: 'translateY(-10px)' }}>© 2025 - Todos los derechos reservados</div>
         </div>
       </div>
     </Dialog>
