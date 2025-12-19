@@ -676,15 +676,14 @@ export default function RodMarCuentaDetail() {
           </div>
           <div className="flex items-center space-x-2">
             <Button
-              variant="outline"
               size="sm"
               onClick={() => setIsImageModalOpen(true)}
-              className="h-8 px-3 text-xs bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
+              className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
               disabled={transaccionesFiltradas.length === 0}
             >
-              <Image className="w-3 h-3 mr-1" />
+              <Image className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Imagen</span>
-              <span className="sm:hidden">Img</span>
+              <span className="sm:hidden">IMG</span>
             </Button>
           </div>
         </div>

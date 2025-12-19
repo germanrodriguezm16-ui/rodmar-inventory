@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
-  ArrowLeft, Users, Receipt, DollarSign, Truck, Calendar, X, Download, Eye,
+  ArrowLeft, Users, Receipt, DollarSign, Truck, Calendar, X, Download, Eye, Image,
   TrendingUp, TrendingDown, PieChart, BarChart3, LineChart, Calculator,
   Plus, Edit, Trash2, Search, Filter, SortAsc, SortDesc, CalendarDays,
   ArrowUp, ArrowDown
@@ -1243,11 +1243,11 @@ export default function MinaDetail() {
                       <Button
                         onClick={() => setShowTransaccionesImagePreview(true)}
                         size="sm"
-                        variant="outline"
-                        className="text-purple-600 border-purple-600 hover:bg-purple-50 h-7 sm:h-8 px-2 sm:px-3 text-xs"
+                        className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
                       >
-                        <Eye className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                        <Image className="w-3 h-3 sm:w-4 sm:h-4" />
                         <span className="hidden sm:inline">Imagen</span>
+                        <span className="sm:hidden">IMG</span>
                       </Button>
                     </div>
                   </div>

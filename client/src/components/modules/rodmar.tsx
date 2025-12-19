@@ -1357,12 +1357,12 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
               <Button
                 size="sm"
                 onClick={() => setShowImageModal(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1"
+                className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
                 title={`Descargar imagen de transacciones (máximo 100)`}
               >
-                <ImageIcon className="w-3 h-3" />
+                <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Imagen</span>
-                <span className="sm:hidden">Img</span>
+                <span className="sm:hidden">IMG</span>
               </Button>
             </div>
             
@@ -2393,16 +2393,16 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
               
               <div className="flex items-center gap-1">
                 {/* Botón de descarga de imagen */}
-                <Button
-                  onClick={() => setShowImageModal(true)}
-                  variant="outline"
-                  size="sm"
-                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 h-8 px-3"
-                  title={`Descargar imagen (máx. 100 de ${transaccionesFiltradas.length} transacciones)`}
-                >
-                  <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                  <span className="hidden sm:inline">Imagen</span>
-                </Button>
+              <Button
+                onClick={() => setShowImageModal(true)}
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
+                title={`Descargar imagen (máx. 100 de ${transaccionesFiltradas.length} transacciones)`}
+              >
+                <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Imagen</span>
+                <span className="sm:hidden">IMG</span>
+              </Button>
 
                 {/* Botón de transacción temporal - Como en minas */}
                 <Button

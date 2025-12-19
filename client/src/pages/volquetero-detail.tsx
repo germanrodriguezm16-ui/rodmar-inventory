@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Truck, Eye, EyeOff, Plus, Edit, Trash2, Search, CalendarDays, DollarSign, ArrowUp, ArrowDown, X, Download } from "lucide-react";
+import { ArrowLeft, Truck, Eye, EyeOff, Plus, Edit, Trash2, Search, CalendarDays, DollarSign, ArrowUp, ArrowDown, X, Download, Image } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1084,12 +1084,12 @@ export default function VolqueteroDetail() {
                         <Button
                           onClick={() => setShowTransaccionesImagePreview(true)}
                           size="sm"
-                          variant="outline"
-                          className="h-8 px-2 text-xs"
+                          className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
                           title="Descargar imagen de transacciones"
                         >
-                          <Download className="w-3 h-3 mr-1" />
-                          Imagen
+                          <Image className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="hidden sm:inline">Imagen</span>
+                          <span className="sm:hidden">IMG</span>
                         </Button>
                       </div>
                       

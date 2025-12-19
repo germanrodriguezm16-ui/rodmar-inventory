@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
-  ArrowLeft, Users, Receipt, DollarSign, Truck, Calendar, X, Download, Eye, EyeOff,
+  ArrowLeft, Users, Receipt, DollarSign, Truck, Calendar, X, Download, Eye, EyeOff, Image,
   TrendingUp, TrendingDown, PieChart, BarChart3, LineChart, Calculator, Edit, Trash2, Plus, Search
 } from "lucide-react";
 import { useLocation } from "wouter";
@@ -1939,13 +1939,13 @@ function CompradorTransaccionesTab({
                 onClick={() => {
                   setShowTransaccionesImagePreview(true);
                 }}
-                variant="outline"
                 size="sm"
-                className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 h-7 px-2 text-xs"
+                className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
                 title={`Descargar imagen (máx. 50 de ${transaccionesFiltradas.length} transacciones)`}
               >
-                <Eye className="w-3 h-3 mr-1" />
+                <Image className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Imagen</span>
+                <span className="sm:hidden">IMG</span>
               </Button>
             </div>
           </div>
