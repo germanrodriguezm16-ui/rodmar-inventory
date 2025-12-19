@@ -531,8 +531,9 @@ export function TransaccionesImageModal({
                       height: '100%', 
                       paddingLeft: '8px', 
                       paddingRight: '8px',
-                      paddingTop: '2px',
-                      paddingBottom: '0px'
+                      paddingTop: '3px',
+                      paddingBottom: '0px',
+                      transform: 'translateY(-1px)'
                     }}>
                       FECHA
                     </div>
@@ -554,8 +555,9 @@ export function TransaccionesImageModal({
                       height: '100%', 
                       paddingLeft: '8px', 
                       paddingRight: '8px',
-                      paddingTop: '2px',
-                      paddingBottom: '0px'
+                      paddingTop: '3px',
+                      paddingBottom: '0px',
+                      transform: 'translateY(-1px)'
                     }}>
                       COMENTARIO
                     </div>
@@ -578,8 +580,9 @@ export function TransaccionesImageModal({
                       height: '100%', 
                       paddingLeft: '8px', 
                       paddingRight: '8px',
-                      paddingTop: '2px',
-                      paddingBottom: '0px'
+                      paddingTop: '3px',
+                      paddingBottom: '0px',
+                      transform: 'translateY(-1px)'
                     }}>
                       VALOR
                     </div>
@@ -658,9 +661,9 @@ export function TransaccionesImageModal({
                           height: '100%', 
                           paddingLeft: '8px', 
                           paddingRight: '8px',
-                          paddingTop: '2px',
+                          paddingTop: '3px',
                           paddingBottom: '0px',
-                          transform: 'translateY(-1px)'
+                          transform: 'translateY(-2px)'
                         }}>
                           {formatDateCompact(transaccion.fecha)}
                         </div>
@@ -678,9 +681,9 @@ export function TransaccionesImageModal({
                           height: '100%', 
                           paddingLeft: '8px', 
                           paddingRight: '8px',
-                          paddingTop: '2px',
+                          paddingTop: '3px',
                           paddingBottom: '0px',
-                          transform: 'translateY(-1px)'
+                          transform: 'translateY(-2px)'
                         }}>
                           {transaccion.concepto && transaccion.concepto.startsWith('Viaje') 
                             ? transaccion.concepto 
@@ -703,9 +706,9 @@ export function TransaccionesImageModal({
                           height: '100%', 
                           paddingLeft: '8px', 
                           paddingRight: '8px',
-                          paddingTop: '2px',
+                          paddingTop: '3px',
                           paddingBottom: '0px',
-                          transform: 'translateY(-1px)'
+                          transform: 'translateY(-2px)'
                         }}>
                           {signo}{formatCurrency(Math.abs(valor))}
                         </div>
