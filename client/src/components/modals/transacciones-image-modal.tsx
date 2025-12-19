@@ -20,6 +20,8 @@ interface TransaccionesImageModalProps {
   transacciones?: any[];
   mina?: Mina;
   filterLabel?: string;
+  // Props para volqueteros
+  volquetero?: { id: number; nombre: string };
 }
 
 export function TransaccionesImageModal({
@@ -34,7 +36,9 @@ export function TransaccionesImageModal({
   onOpenChange,
   transacciones,
   mina,
-  filterLabel
+  filterLabel,
+  // Props para volqueteros
+  volquetero
 }: TransaccionesImageModalProps) {
   // Unificar props para compatibilidad
   const modalOpen = isOpen ?? open ?? false;
@@ -133,7 +137,8 @@ export function TransaccionesImageModal({
       });
 
       const link = document.createElement('a');
-      link.download = `${mina?.nombre || 'Transacciones'}_Transacciones_${(() => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; })()}.png`;
+      const nombreEntidad = mina?.nombre || volquetero?.nombre || 'Transacciones';
+      link.download = `${nombreEntidad}_Transacciones_${(() => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; })()}.png`;
       link.href = canvas.toDataURL();
       link.click();
     } catch (error) {
@@ -147,15 +152,37 @@ export function TransaccionesImageModal({
   // Calcular totales usando lógica adaptativa según el tipo de cuenta
   const totalTransacciones = transaccionesData.length;
   
-  // Detectar si es LCDM, Postobón o una mina regular
+  // Detectar si es LCDM, Postobón, una mina regular, o un volquetero
   const esLCDM = mina?.id?.toString() === 'lcdm' || mina?.nombre === 'La Casa del Motero' || accountType === 'lcdm';
   const esPostobon = mina?.nombre?.toLowerCase().includes('postobón') || mina?.nombre?.toLowerCase().includes('postobon') || accountType === 'postobon';
   const esRodMarAccount = esLCDM || esPostobon;
+  const esVolquetero = !!volquetero;
   
   let positiveSum = 0;
   let negativeSum = 0;
   
-  if (esRodMarAccount) {
+  if (esVolquetero) {
+    // Lógica para volqueteros
+    const volqueteroId = volquetero.id.toString();
+    
+    transaccionesData.forEach(t => {
+      const valor = parseFloat(t.valor || '0');
+      
+      if (t.tipo === "Viaje") {
+        // Transacciones de viajes = positivos (ingresos para el volquetero)
+        positiveSum += Math.abs(valor);
+      } else if (t.tipo === "Manual") {
+        // Para transacciones manuales: 
+        // - Si el volquetero recibe dinero (paraQuienTipo: "volquetero") = negativo (egreso)
+        // - Si el volquetero paga dinero (deQuienTipo: "volquetero") = positivo (ingreso)
+        if (t.paraQuienTipo === 'volquetero' && t.paraQuienId === volqueteroId) {
+          negativeSum += Math.abs(valor);
+        } else if (t.deQuienTipo === 'volquetero' && t.deQuienId === volqueteroId) {
+          positiveSum += Math.abs(valor);
+        }
+      }
+    });
+  } else if (esRodMarAccount) {
     // Lógica para cuentas RodMar (LCDM/Postobón)
     transaccionesData.forEach(t => {
       const valor = parseFloat(t.valor || '0');
@@ -274,7 +301,7 @@ export function TransaccionesImageModal({
         >
           {/* Header del reporte ultra-compacto - máxima densidad */}
           <div className="text-center mb-1 border-b border-gray-200 pb-0.5">
-            <div className="text-xs font-bold text-gray-800">{mina?.nombre || modalTitle} - {filterLabel}</div>
+            <div className="text-xs font-bold text-gray-800">{mina?.nombre || volquetero?.nombre || modalTitle} - {filterLabel}</div>
             <div className="text-[10px] text-gray-500">
               {new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
             </div>
@@ -380,6 +407,34 @@ export function TransaccionesImageModal({
                             signo = '';
                           }
                         }
+                      } else if (esVolquetero) {
+                        // Lógica para volqueteros
+                        const volqueteroId = volquetero.id.toString();
+                        
+                        if (transaccion.tipo === "Viaje") {
+                          // Transacciones de viajes = VERDE y POSITIVO (ingresos)
+                          colorClass = 'text-green-600';
+                          signo = '+';
+                        } else if (transaccion.tipo === "Manual") {
+                          // Transacciones manuales según dirección
+                          if (transaccion.paraQuienTipo === 'volquetero' && transaccion.paraQuienId === volqueteroId) {
+                            // Volquetero recibe dinero = ROJO y NEGATIVO (egreso)
+                            colorClass = 'text-red-600';
+                            signo = '-';
+                          } else if (transaccion.deQuienTipo === 'volquetero' && transaccion.deQuienId === volqueteroId) {
+                            // Volquetero paga dinero = VERDE y POSITIVO (ingreso)
+                            colorClass = 'text-green-600';
+                            signo = '+';
+                          } else {
+                            // Fallback
+                            colorClass = 'text-gray-600';
+                            signo = '';
+                          }
+                        } else {
+                          // Fallback para otros tipos
+                          colorClass = 'text-gray-600';
+                          signo = '';
+                        }
                       } else {
                         // Lógica corregida para minas regulares - MISMO ORDEN que pestaña de transacciones
                         const esViaje = transaccion.concepto && transaccion.concepto.startsWith('Viaje');
@@ -473,7 +528,7 @@ export function TransaccionesImageModal({
         {/* Header del reporte */}
         <div style={{ textAlign: 'center', marginBottom: '4px', borderBottom: '1px solid #e5e7eb', paddingBottom: '2px', paddingTop: '10px' }}>
           <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#1f2937', transform: 'translateY(-12px)' }}>
-            {mina?.nombre || modalTitle} - {modalSubtitle}
+              {mina?.nombre || volquetero?.nombre || modalTitle} - {modalSubtitle}
           </div>
           <div style={{ fontSize: '10px', color: '#6b7280', transform: 'translateY(-12px)' }}>
             {new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -621,6 +676,34 @@ export function TransaccionesImageModal({
                         colorClass = '#4b5563';
                         signo = '';
                       }
+                    }
+                  } else if (esVolquetero) {
+                    // Lógica para volqueteros
+                    const volqueteroId = volquetero.id.toString();
+                    
+                    if (transaccion.tipo === "Viaje") {
+                      // Transacciones de viajes = VERDE y POSITIVO (ingresos)
+                      colorClass = '#16a34a';
+                      signo = '+';
+                    } else if (transaccion.tipo === "Manual") {
+                      // Transacciones manuales según dirección
+                      if (transaccion.paraQuienTipo === 'volquetero' && transaccion.paraQuienId === volqueteroId) {
+                        // Volquetero recibe dinero = ROJO y NEGATIVO (egreso)
+                        colorClass = '#dc2626';
+                        signo = '-';
+                      } else if (transaccion.deQuienTipo === 'volquetero' && transaccion.deQuienId === volqueteroId) {
+                        // Volquetero paga dinero = VERDE y POSITIVO (ingreso)
+                        colorClass = '#16a34a';
+                        signo = '+';
+                      } else {
+                        // Fallback
+                        colorClass = '#4b5563';
+                        signo = '';
+                      }
+                    } else {
+                      // Fallback para otros tipos
+                      colorClass = '#4b5563';
+                      signo = '';
                     }
                   } else {
                     const esViaje = transaccion.concepto && transaccion.concepto.startsWith('Viaje');

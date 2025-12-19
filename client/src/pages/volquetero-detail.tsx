@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Truck, Eye, EyeOff, Plus, Edit, Trash2, Search, CalendarDays, DollarSign, ArrowUp, ArrowDown, X } from "lucide-react";
+import { ArrowLeft, Truck, Eye, EyeOff, Plus, Edit, Trash2, Search, CalendarDays, DollarSign, ArrowUp, ArrowDown, X, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,6 +36,7 @@ import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transac
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
 import { CompleteTransactionModal } from "@/components/modals/complete-transaction-modal";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
+import { TransaccionesImageModal } from "@/components/modals/transacciones-image-modal";
 import type { ViajeWithDetails, TransaccionWithSocio } from "@shared/schema";
 
 // Filtro de fechas (tipos válidos)
@@ -110,6 +111,7 @@ export default function VolqueteroDetail() {
   const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
   const [showTransactionDetail, setShowTransactionDetail] = useState(false);
   const [selectedRelatedTrip, setSelectedRelatedTrip] = useState<any>(null);
+  const [showTransaccionesImagePreview, setShowTransaccionesImagePreview] = useState(false);
   
   // Estado para transacciones temporales (solo en memoria)
   const [transaccionesTemporales, setTransaccionesTemporales] = useState<TransaccionWithSocio[]>([]);
@@ -1079,6 +1081,16 @@ export default function VolqueteroDetail() {
                         >
                           + Temporal
                         </Button>
+                        <Button
+                          onClick={() => setShowTransaccionesImagePreview(true)}
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2 text-xs"
+                          title="Descargar imagen de transacciones"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          Imagen
+                        </Button>
                       </div>
                       
                       {/* Fila inferior: Filtro de tipo y botón mostrar ocultas */}
@@ -1899,6 +1911,47 @@ export default function VolqueteroDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de imagen de transacciones */}
+      <TransaccionesImageModal
+        open={showTransaccionesImagePreview}
+        onOpenChange={(open) => setShowTransaccionesImagePreview(open)}
+        transacciones={transaccionesFiltradas}
+        title={volquetero?.nombre || "Volquetero"}
+        volquetero={volquetero ? { id: volquetero.id, nombre: volquetero.nombre } : undefined}
+        subtitle={(() => {
+          // Función para formatear fecha en formato DD/MM/YYYY
+          const formatDateForLabel = (dateString: string): string => {
+            if (!dateString) return "";
+            if (dateString.includes('-')) {
+              const [year, month, day] = dateString.split('-');
+              return `${day}/${month}/${year}`;
+            }
+            return dateString;
+          };
+
+          const formatValue = formatDateForLabel(transaccionesFechaFilterValue);
+          const formatValueEnd = formatDateForLabel(transaccionesFechaFilterValueEnd);
+          
+          const filterLabels: Record<string, string> = {
+            "todos": "Todas las Transacciones",
+            "exactamente": `Fecha: ${formatValue}`,
+            "entre": `Entre: ${formatValue} - ${formatValueEnd}`,
+            "despues-de": `Después de ${formatValue}`,
+            "antes-de": `Antes de ${formatValue}`,
+            "hoy": "Hoy",
+            "ayer": "Ayer",
+            "esta-semana": "Esta Semana",
+            "semana-pasada": "Semana Pasada",
+            "este-mes": "Este Mes",
+            "mes-pasado": "Mes Pasado",
+            "este-año": "Este Año",
+            "año-pasado": "Año Pasado"
+          };
+          
+          return filterLabels[transaccionesFechaFilterType] || "Filtro Personalizado";
+        })()}
+      />
 
       {/* Navegación inferior */}
       <BottomNavigation />
