@@ -1681,9 +1681,46 @@ export class DatabaseStorage implements IStorage {
 
     const results = await db
       .select({
-        viaje: viajes,
-        mina: minas,
-        comprador: compradores,
+        // IMPORTANTE: NO incluir `viajes.recibo` en el listado (puede ser base64 pesado).
+        // El recibo se carga on-demand vía GET /recibo/:tripId.
+        viaje: {
+          id: viajes.id,
+          fechaCargue: viajes.fechaCargue,
+          fechaDescargue: viajes.fechaDescargue,
+          conductor: viajes.conductor,
+          tipoCarro: viajes.tipoCarro,
+          placa: viajes.placa,
+          minaId: viajes.minaId,
+          compradorId: viajes.compradorId,
+          peso: viajes.peso,
+          precioCompraTon: viajes.precioCompraTon,
+          ventaTon: viajes.ventaTon,
+          fleteTon: viajes.fleteTon,
+          otrosGastosFlete: viajes.otrosGastosFlete,
+          quienPagaFlete: viajes.quienPagaFlete,
+          vut: viajes.vut,
+          cut: viajes.cut,
+          fut: viajes.fut,
+          totalVenta: viajes.totalVenta,
+          totalCompra: viajes.totalCompra,
+          totalFlete: viajes.totalFlete,
+          valorConsignar: viajes.valorConsignar,
+          ganancia: viajes.ganancia,
+          observaciones: viajes.observaciones,
+          estado: viajes.estado,
+          oculta: viajes.oculta,
+          userId: viajes.userId,
+          createdAt: viajes.createdAt,
+        },
+        tieneRecibo: sql<boolean>`CASE WHEN ${viajes.recibo} IS NOT NULL AND ${viajes.recibo} != '' THEN true ELSE false END`,
+        mina: {
+          id: minas.id,
+          nombre: minas.nombre,
+        },
+        comprador: {
+          id: compradores.id,
+          nombre: compradores.nombre,
+        },
       })
       .from(viajes)
       .leftJoin(minas, eq(viajes.minaId, minas.id))
@@ -1693,8 +1730,12 @@ export class DatabaseStorage implements IStorage {
 
     return results.map(result => ({
       ...result.viaje,
-      mina: result.mina || undefined,
-      comprador: result.comprador || undefined,
+      // Mantener compatibilidad del shape: recibo existe en el tipo, pero aquí lo omitimos del payload
+      // para evitar enviar base64 pesado en listados.
+      recibo: null,
+      tieneRecibo: result.tieneRecibo,
+      mina: result.mina ? { id: result.mina.id, nombre: result.mina.nombre } : undefined,
+      comprador: result.comprador ? { id: result.comprador.id, nombre: result.comprador.nombre } : undefined,
     }));
   }
 
@@ -1706,9 +1747,46 @@ export class DatabaseStorage implements IStorage {
 
     const results = await db
       .select({
-        viaje: viajes,
-        mina: minas,
-        comprador: compradores,
+        // IMPORTANTE: NO incluir `viajes.recibo` en el listado (puede ser base64 pesado).
+        // El recibo se carga on-demand vía GET /recibo/:tripId.
+        viaje: {
+          id: viajes.id,
+          fechaCargue: viajes.fechaCargue,
+          fechaDescargue: viajes.fechaDescargue,
+          conductor: viajes.conductor,
+          tipoCarro: viajes.tipoCarro,
+          placa: viajes.placa,
+          minaId: viajes.minaId,
+          compradorId: viajes.compradorId,
+          peso: viajes.peso,
+          precioCompraTon: viajes.precioCompraTon,
+          ventaTon: viajes.ventaTon,
+          fleteTon: viajes.fleteTon,
+          otrosGastosFlete: viajes.otrosGastosFlete,
+          quienPagaFlete: viajes.quienPagaFlete,
+          vut: viajes.vut,
+          cut: viajes.cut,
+          fut: viajes.fut,
+          totalVenta: viajes.totalVenta,
+          totalCompra: viajes.totalCompra,
+          totalFlete: viajes.totalFlete,
+          valorConsignar: viajes.valorConsignar,
+          ganancia: viajes.ganancia,
+          observaciones: viajes.observaciones,
+          estado: viajes.estado,
+          oculta: viajes.oculta,
+          userId: viajes.userId,
+          createdAt: viajes.createdAt,
+        },
+        tieneRecibo: sql<boolean>`CASE WHEN ${viajes.recibo} IS NOT NULL AND ${viajes.recibo} != '' THEN true ELSE false END`,
+        mina: {
+          id: minas.id,
+          nombre: minas.nombre,
+        },
+        comprador: {
+          id: compradores.id,
+          nombre: compradores.nombre,
+        },
       })
       .from(viajes)
       .leftJoin(minas, eq(viajes.minaId, minas.id))
@@ -1718,8 +1796,12 @@ export class DatabaseStorage implements IStorage {
 
     return results.map(result => ({
       ...result.viaje,
-      mina: result.mina || undefined,
-      comprador: result.comprador || undefined,
+      // Mantener compatibilidad del shape: recibo existe en el tipo, pero aquí lo omitimos del payload
+      // para evitar enviar base64 pesado en listados.
+      recibo: null,
+      tieneRecibo: result.tieneRecibo,
+      mina: result.mina ? { id: result.mina.id, nombre: result.mina.nombre } : undefined,
+      comprador: result.comprador ? { id: result.comprador.id, nombre: result.comprador.nombre } : undefined,
     }));
   }
 
@@ -1731,9 +1813,46 @@ export class DatabaseStorage implements IStorage {
 
     const results = await db
       .select({
-        viaje: viajes,
-        mina: minas,
-        comprador: compradores,
+        // IMPORTANTE: NO incluir `viajes.recibo` en el listado (puede ser base64 pesado).
+        // El recibo se carga on-demand vía GET /recibo/:tripId.
+        viaje: {
+          id: viajes.id,
+          fechaCargue: viajes.fechaCargue,
+          fechaDescargue: viajes.fechaDescargue,
+          conductor: viajes.conductor,
+          tipoCarro: viajes.tipoCarro,
+          placa: viajes.placa,
+          minaId: viajes.minaId,
+          compradorId: viajes.compradorId,
+          peso: viajes.peso,
+          precioCompraTon: viajes.precioCompraTon,
+          ventaTon: viajes.ventaTon,
+          fleteTon: viajes.fleteTon,
+          otrosGastosFlete: viajes.otrosGastosFlete,
+          quienPagaFlete: viajes.quienPagaFlete,
+          vut: viajes.vut,
+          cut: viajes.cut,
+          fut: viajes.fut,
+          totalVenta: viajes.totalVenta,
+          totalCompra: viajes.totalCompra,
+          totalFlete: viajes.totalFlete,
+          valorConsignar: viajes.valorConsignar,
+          ganancia: viajes.ganancia,
+          observaciones: viajes.observaciones,
+          estado: viajes.estado,
+          oculta: viajes.oculta,
+          userId: viajes.userId,
+          createdAt: viajes.createdAt,
+        },
+        tieneRecibo: sql<boolean>`CASE WHEN ${viajes.recibo} IS NOT NULL AND ${viajes.recibo} != '' THEN true ELSE false END`,
+        mina: {
+          id: minas.id,
+          nombre: minas.nombre,
+        },
+        comprador: {
+          id: compradores.id,
+          nombre: compradores.nombre,
+        },
       })
       .from(viajes)
       .leftJoin(minas, eq(viajes.minaId, minas.id))
@@ -1743,8 +1862,12 @@ export class DatabaseStorage implements IStorage {
 
     return results.map(result => ({
       ...result.viaje,
-      mina: result.mina || undefined,
-      comprador: result.comprador || undefined,
+      // Mantener compatibilidad del shape: recibo existe en el tipo, pero aquí lo omitimos del payload
+      // para evitar enviar base64 pesado en listados.
+      recibo: null,
+      tieneRecibo: result.tieneRecibo,
+      mina: result.mina ? { id: result.mina.id, nombre: result.mina.nombre } : undefined,
+      comprador: result.comprador ? { id: result.comprador.id, nombre: result.comprador.nombre } : undefined,
     }));
   }
 
