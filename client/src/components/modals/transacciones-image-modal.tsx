@@ -306,24 +306,33 @@ export function TransaccionesImageModal({
                       <th className="border border-gray-300 text-left font-semibold" style={{ 
                         fontSize: '9px',
                         verticalAlign: 'middle',
-                        lineHeight: '1.4',
-                        padding: '4px 8px',
+                        lineHeight: '1.2',
+                        paddingTop: '6px',
+                        paddingBottom: '4px',
+                        paddingLeft: '8px',
+                        paddingRight: '8px',
                         width: '80px',
                         minWidth: '80px'
                       }}>FECHA</th>
                       <th className="border border-gray-300 text-left font-semibold" style={{ 
                         fontSize: '9px',
                         verticalAlign: 'middle',
-                        lineHeight: '1.4',
-                        padding: '4px 8px',
+                        lineHeight: '1.2',
+                        paddingTop: '6px',
+                        paddingBottom: '4px',
+                        paddingLeft: '8px',
+                        paddingRight: '8px',
                         width: '210px',
                         minWidth: '210px'
                       }}>COMENTARIO</th>
                       <th className="border border-gray-300 text-right font-semibold" style={{ 
                         fontSize: '9px',
                         verticalAlign: 'middle',
-                        lineHeight: '1.4',
-                        padding: '4px 8px',
+                        lineHeight: '1.2',
+                        paddingTop: '6px',
+                        paddingBottom: '4px',
+                        paddingLeft: '8px',
+                        paddingRight: '8px',
                         width: '60px',
                         minWidth: '60px'
                       }}>VALOR</th>
@@ -398,16 +407,22 @@ export function TransaccionesImageModal({
                           <td className="border border-gray-300" style={{ 
                             fontSize: '9px',
                             verticalAlign: 'middle',
-                            lineHeight: '1.4',
-                            padding: '3px 8px'
+                            lineHeight: '1.2',
+                            paddingTop: '5px',
+                            paddingBottom: '3px',
+                            paddingLeft: '8px',
+                            paddingRight: '8px'
                           }}>
                             {formatDateCompact(transaccion.fecha)}
                           </td>
                           <td className="border border-gray-300" style={{ 
                             fontSize: '9px',
                             verticalAlign: 'middle',
-                            lineHeight: '1.4',
-                            padding: '3px 8px'
+                            lineHeight: '1.2',
+                            paddingTop: '5px',
+                            paddingBottom: '3px',
+                            paddingLeft: '8px',
+                            paddingRight: '8px'
                           }}>
                             {transaccion.concepto && transaccion.concepto.startsWith('Viaje') 
                               ? transaccion.concepto 
@@ -416,8 +431,11 @@ export function TransaccionesImageModal({
                           <td className={`border border-gray-300 text-right font-medium ${colorClass}`} style={{ 
                             fontSize: '9px',
                             verticalAlign: 'middle',
-                            lineHeight: '1.4',
-                            padding: '3px 8px'
+                            lineHeight: '1.2',
+                            paddingTop: '5px',
+                            paddingBottom: '3px',
+                            paddingLeft: '8px',
+                            paddingRight: '8px'
                           }}>
                             {signo}{formatCurrency(Math.abs(valor))}
                           </td>
