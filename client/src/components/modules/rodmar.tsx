@@ -1391,13 +1391,13 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                 {/* Botón de transacción temporal - Como en LCDM */}
                 <Button
                   size="sm"
+                  variant="outline"
                   onClick={() => setShowTemporalTransaction(true)}
-                  className="bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-1"
+                  className="bg-orange-50 hover:bg-orange-100 border-orange-600 text-orange-600 h-8 px-3 text-xs flex items-center gap-1"
                   title="Agregar transacción temporal"
                 >
-                  <Plus className="w-3 h-3" />
-                  <span className="hidden sm:inline">Nueva Temporal</span>
-                  <span className="sm:hidden">Temp</span>
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span>TEMP</span>
                 </Button>
               </div>
             </div>
@@ -2408,10 +2408,11 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
                 <Button
                   onClick={() => setShowTemporalTransaction(true)}
                   size="sm"
-                  className="h-8 px-2 text-xs bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-700"
+                  variant="outline"
+                  className="bg-orange-50 hover:bg-orange-100 border-orange-600 text-orange-600 h-8 px-3 text-xs flex items-center gap-1"
                 >
-                  <Plus className="w-2.5 h-2.5 mr-1" />
-                  Temporal
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span>TEMP</span>
                 </Button>
               </div>
             </div>

@@ -1235,10 +1235,10 @@ export default function MinaDetail() {
                         onClick={() => setShowTemporalTransaction(true)}
                         size="sm"
                         variant="outline"
-                        className="text-orange-600 border-orange-600 hover:bg-orange-50 h-7 sm:h-8 px-2 sm:px-3 text-xs"
+                        className="bg-orange-50 hover:bg-orange-100 border-orange-600 text-orange-600 h-8 px-3 text-xs flex items-center gap-1"
                       >
-                        <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                        <span className="hidden sm:inline">Temporal</span>
+                        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span>TEMP</span>
                       </Button>
                       <Button
                         onClick={() => setShowTransaccionesImagePreview(true)}
