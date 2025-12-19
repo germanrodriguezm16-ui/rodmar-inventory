@@ -45,9 +45,8 @@ export function TransaccionesImageModal({
 
   const [isGenerating, setIsGenerating] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
-  // NOTA SOBRE RENDIMIENTO: Si en el futuro se implementa una tabla clon dedicada para exportar
-  // (solución alternativa si el ajuste con span no funciona), el impacto en rendimiento debería
-  // ser mínimo para el tamaño típico de RodMar Inventory:
+  const exportRef = useRef<HTMLDivElement>(null); // Ref para tabla clon dedicada a exportar
+  // NOTA SOBRE RENDIMIENTO: La tabla clon dedicada para exportar tiene impacto mínimo:
   // - Tablas típicas: 20-200 transacciones (20-200 filas)
   // - html2canvas procesa ~100-500 nodos DOM adicionales (tabla clon)
   // - Tiempo adicional estimado: <100ms para tablas pequeñas (<50 filas), <500ms para grandes (100-200 filas)
@@ -105,7 +104,8 @@ export function TransaccionesImageModal({
   };
 
   const handleDownload = async () => {
-    if (!imageRef.current || !transaccionesData) return;
+    // Usar tabla clon para exportar (mejor alineación vertical con html2canvas)
+    if (!exportRef.current || !transaccionesData) return;
 
     // Advertencia informativa (no bloqueante) si hay muchas transacciones
     if (transaccionesData.length > 200) {
@@ -118,13 +118,16 @@ export function TransaccionesImageModal({
 
     setIsGenerating(true);
     try {
-      const canvas = await html2canvas(imageRef.current, {
+      // Esperar un momento para asegurar que la tabla clon esté renderizada
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const canvas = await html2canvas(exportRef.current, {
         backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        height: imageRef.current.scrollHeight,
-        width: imageRef.current.scrollWidth,
+        height: exportRef.current.scrollHeight,
+        width: exportRef.current.scrollWidth,
         scrollX: 0,
         scrollY: 0
       });
@@ -313,34 +316,31 @@ export function TransaccionesImageModal({
                     <tr className="bg-blue-600 text-white" style={{ height: '20px' }}>
                       <th className="border border-gray-300 text-left font-semibold" style={{ 
                         fontSize: '9px',
-                        lineHeight: '20px',
-                        padding: '0 8px',
+                        verticalAlign: 'middle',
+                        lineHeight: '1.4',
+                        padding: '4px 8px',
                         height: '20px',
                         width: '80px',
                         minWidth: '80px'
-                      }}>
-                        <span style={{ display: 'inline-block', position: 'relative', top: '-1px' }}>FECHA</span>
-                      </th>
+                      }}>FECHA</th>
                       <th className="border border-gray-300 text-left font-semibold" style={{ 
                         fontSize: '9px',
-                        lineHeight: '20px',
-                        padding: '0 8px',
+                        verticalAlign: 'middle',
+                        lineHeight: '1.4',
+                        padding: '4px 8px',
                         height: '20px',
                         width: '210px',
                         minWidth: '210px'
-                      }}>
-                        <span style={{ display: 'inline-block', position: 'relative', top: '-1px' }}>COMENTARIO</span>
-                      </th>
+                      }}>COMENTARIO</th>
                       <th className="border border-gray-300 text-right font-semibold" style={{ 
                         fontSize: '9px',
-                        lineHeight: '20px',
-                        padding: '0 8px',
+                        verticalAlign: 'middle',
+                        lineHeight: '1.4',
+                        padding: '4px 8px',
                         height: '20px',
                         width: '60px',
                         minWidth: '60px'
-                      }}>
-                        <span style={{ display: 'inline-block', position: 'relative', top: '-1px' }}>VALOR</span>
-                      </th>
+                      }}>VALOR</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -411,35 +411,32 @@ export function TransaccionesImageModal({
                         <tr key={transaccion.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} style={{ height: '18px' }}>
                           <td className="border border-gray-300" style={{ 
                             fontSize: '9px',
-                            lineHeight: '18px',
-                            padding: '0 8px',
+                            verticalAlign: 'middle',
+                            lineHeight: '1.4',
+                            padding: '3px 8px',
                             height: '18px'
                           }}>
-                            <span style={{ display: 'inline-block', position: 'relative', top: '-1px' }}>
-                              {formatDateCompact(transaccion.fecha)}
-                            </span>
+                            {formatDateCompact(transaccion.fecha)}
                           </td>
                           <td className="border border-gray-300" style={{ 
                             fontSize: '9px',
-                            lineHeight: '18px',
-                            padding: '0 8px',
+                            verticalAlign: 'middle',
+                            lineHeight: '1.4',
+                            padding: '3px 8px',
                             height: '18px'
                           }}>
-                            <span style={{ display: 'inline-block', position: 'relative', top: '-1px' }}>
-                              {transaccion.concepto && transaccion.concepto.startsWith('Viaje') 
-                                ? transaccion.concepto 
-                                : (transaccion.comentario || '-')}
-                            </span>
+                            {transaccion.concepto && transaccion.concepto.startsWith('Viaje') 
+                              ? transaccion.concepto 
+                              : (transaccion.comentario || '-')}
                           </td>
                           <td className={`border border-gray-300 text-right font-medium ${colorClass}`} style={{ 
                             fontSize: '9px',
-                            lineHeight: '18px',
-                            padding: '0 8px',
+                            verticalAlign: 'middle',
+                            lineHeight: '1.4',
+                            padding: '3px 8px',
                             height: '18px'
                           }}>
-                            <span style={{ display: 'inline-block', position: 'relative', top: '-1px' }}>
-                              {signo}{formatCurrency(Math.abs(valor))}
-                            </span>
+                            {signo}{formatCurrency(Math.abs(valor))}
                           </td>
                         </tr>
                       );
@@ -456,6 +453,224 @@ export function TransaccionesImageModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* Tabla clon dedicada para exportar - oculta fuera de pantalla, estilos optimizados para html2canvas */}
+      <div
+        ref={exportRef}
+        style={{
+          position: 'fixed',
+          left: '-9999px',
+          top: '0',
+          width: '400px',
+          minWidth: '400px',
+          maxWidth: '400px',
+          backgroundColor: '#ffffff',
+          padding: '8px',
+          fontSize: '11px',
+          lineHeight: '1.3'
+        }}
+      >
+        {/* Header del reporte */}
+        <div style={{ textAlign: 'center', marginBottom: '4px', borderBottom: '1px solid #e5e7eb', paddingBottom: '2px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#1f2937' }}>
+            {mina?.nombre || modalTitle} - {modalSubtitle}
+          </div>
+          <div style={{ fontSize: '10px', color: '#6b7280' }}>
+            {new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          </div>
+        </div>
+
+        {/* Resumen */}
+        <div style={{ marginBottom: '4px', backgroundColor: '#f9fafb', borderRadius: '4px', padding: '4px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', textAlign: 'center', fontSize: '9px' }}>
+            <div>
+              <div style={{ color: '#4b5563', fontSize: '8px' }}>Positivos</div>
+              <div style={{ color: '#16a34a', fontWeight: 'bold' }}>+{formatCurrency(positiveSum.toString())}</div>
+            </div>
+            <div>
+              <div style={{ color: '#4b5563', fontSize: '8px' }}>Negativos</div>
+              <div style={{ color: '#dc2626', fontWeight: 'bold' }}>-{formatCurrency(Math.abs(negativeSum).toString())}</div>
+            </div>
+            <div>
+              <div style={{ color: '#4b5563', fontSize: '8px' }}>Balance</div>
+              <div style={{ fontWeight: 'bold', color: totalValor >= 0 ? '#16a34a' : '#dc2626' }}>
+                {formatCurrency(totalValor.toString())}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: '#4b5563', fontSize: '8px' }}>Total</div>
+              <div style={{ fontWeight: 'bold', color: '#1f2937' }}>({transaccionesData.length})</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabla de transacciones con estilos optimizados para html2canvas */}
+        {transaccionesData.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '12px', color: '#6b7280', fontSize: '9px' }}>
+            No hay transacciones que coincidan con el filtro aplicado
+          </div>
+        ) : (
+          <div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #d1d5db' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#2563eb', color: '#ffffff', height: '20px' }}>
+                  <th style={{
+                    border: '1px solid #d1d5db',
+                    fontSize: '9px',
+                    fontWeight: '600',
+                    padding: '0',
+                    height: '20px',
+                    width: '80px',
+                    minWidth: '80px',
+                    textAlign: 'left',
+                    boxSizing: 'border-box'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', paddingRight: '8px' }}>
+                      FECHA
+                    </div>
+                  </th>
+                  <th style={{
+                    border: '1px solid #d1d5db',
+                    fontSize: '9px',
+                    fontWeight: '600',
+                    padding: '0',
+                    height: '20px',
+                    width: '210px',
+                    minWidth: '210px',
+                    textAlign: 'left',
+                    boxSizing: 'border-box'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', paddingRight: '8px' }}>
+                      COMENTARIO
+                    </div>
+                  </th>
+                  <th style={{
+                    border: '1px solid #d1d5db',
+                    fontSize: '9px',
+                    fontWeight: '600',
+                    padding: '0',
+                    height: '20px',
+                    width: '60px',
+                    minWidth: '60px',
+                    textAlign: 'right',
+                    boxSizing: 'border-box'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingLeft: '8px', paddingRight: '8px' }}>
+                      VALOR
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {transaccionesData.map((transaccion, index) => {
+                  const valor = parseFloat(transaccion.valor || '0');
+                  const minaId = mina?.id?.toString();
+                  
+                  // Misma lógica de colores que la tabla visible
+                  let colorClass = '';
+                  let signo = '';
+                  
+                  if (esRodMarAccount) {
+                    if (esLCDM) {
+                      if (transaccion.paraQuienTipo === 'rodmar' || transaccion.paraQuienTipo === 'banco') {
+                        colorClass = '#16a34a';
+                        signo = '+';
+                      } else if (transaccion.paraQuienTipo === 'lcdm') {
+                        colorClass = '#dc2626';
+                        signo = '-';
+                      } else {
+                        colorClass = '#4b5563';
+                        signo = '';
+                      }
+                    } else if (esPostobon) {
+                      if (transaccion.paraQuienTipo === 'rodmar' || transaccion.paraQuienTipo === 'banco') {
+                        colorClass = '#16a34a';
+                        signo = '+';
+                      } else if (transaccion.paraQuienTipo === 'postobon') {
+                        colorClass = '#dc2626';
+                        signo = '-';
+                      } else {
+                        colorClass = '#4b5563';
+                        signo = '';
+                      }
+                    }
+                  } else {
+                    const esViaje = transaccion.concepto && transaccion.concepto.startsWith('Viaje');
+                    
+                    if (esViaje) {
+                      colorClass = '#16a34a';
+                      signo = '+';
+                    } else if (transaccion.deQuienTipo === 'mina' && transaccion.deQuienId === minaId) {
+                      colorClass = '#16a34a';
+                      signo = '+';
+                    } else if (transaccion.paraQuienTipo === 'mina' && transaccion.paraQuienId === minaId) {
+                      colorClass = '#dc2626';
+                      signo = '-';
+                    } else if (transaccion.paraQuienTipo === 'rodmar' || transaccion.paraQuienTipo === 'banco') {
+                      colorClass = '#16a34a';
+                      signo = '+';
+                    } else {
+                      colorClass = '#4b5563';
+                      signo = '';
+                    }
+                  }
+                  
+                  return (
+                    <tr key={transaccion.id} style={{
+                      height: '18px',
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb'
+                    }}>
+                      <td style={{
+                        border: '1px solid #d1d5db',
+                        fontSize: '9px',
+                        padding: '0',
+                        height: '18px',
+                        boxSizing: 'border-box'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', paddingRight: '8px' }}>
+                          {formatDateCompact(transaccion.fecha)}
+                        </div>
+                      </td>
+                      <td style={{
+                        border: '1px solid #d1d5db',
+                        fontSize: '9px',
+                        padding: '0',
+                        height: '18px',
+                        boxSizing: 'border-box'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', paddingRight: '8px' }}>
+                          {transaccion.concepto && transaccion.concepto.startsWith('Viaje') 
+                            ? transaccion.concepto 
+                            : (transaccion.comentario || '-')}
+                        </div>
+                      </td>
+                      <td style={{
+                        border: '1px solid #d1d5db',
+                        fontSize: '9px',
+                        padding: '0',
+                        height: '18px',
+                        fontWeight: '500',
+                        color: colorClass,
+                        boxSizing: 'border-box'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingLeft: '8px', paddingRight: '8px' }}>
+                          {signo}{formatCurrency(Math.abs(valor))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ textAlign: 'center', fontSize: '8px', color: '#6b7280', marginTop: '8px', borderTop: '1px solid #e5e7eb', paddingTop: '4px' }}>
+          <div>Generado por RodMar - Sistema de Gestión Minera</div>
+          <div>© 2025 - Todos los derechos reservados</div>
+        </div>
+      </div>
     </Dialog>
   );
 }
