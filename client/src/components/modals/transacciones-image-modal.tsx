@@ -45,6 +45,14 @@ export function TransaccionesImageModal({
 
   const [isGenerating, setIsGenerating] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
+  // NOTA SOBRE RENDIMIENTO: Si en el futuro se implementa una tabla clon dedicada para exportar
+  // (solución alternativa si el ajuste con span no funciona), el impacto en rendimiento debería
+  // ser mínimo para el tamaño típico de RodMar Inventory:
+  // - Tablas típicas: 20-200 transacciones (20-200 filas)
+  // - html2canvas procesa ~100-500 nodos DOM adicionales (tabla clon)
+  // - Tiempo adicional estimado: <100ms para tablas pequeñas (<50 filas), <500ms para grandes (100-200 filas)
+  // - El costo principal sigue siendo el renderizado del canvas, no la duplicación del DOM
+  // - Conclusión: Impacto aceptable para el beneficio de alineación vertical correcta
   const { hideNavigation, showNavigation } = useNavigationVisibility();
 
   // Controlar la visibilidad de la navegación basado en el estado del modal
