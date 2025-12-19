@@ -99,10 +99,13 @@ export function TransaccionesImageModal({
   const handleDownload = async () => {
     if (!imageRef.current || !transaccionesData) return;
 
-    // Validar que no haya más de 100 transacciones
-    if (transaccionesData.length > 100) {
-      alert('No se puede descargar la imagen con más de 100 transacciones. Por favor, aplica filtros para reducir el número de transacciones a máximo 100.');
-      return;
+    // Advertencia informativa (no bloqueante) si hay muchas transacciones
+    if (transaccionesData.length > 200) {
+      const confirmar = window.confirm(
+        `Estás a punto de generar una imagen con ${transaccionesData.length} transacciones. ` +
+        `Esto puede tardar varios segundos y generar una imagen muy larga. ¿Deseas continuar?`
+      );
+      if (!confirmar) return;
     }
 
     setIsGenerating(true);
@@ -126,6 +129,7 @@ export function TransaccionesImageModal({
       link.click();
     } catch (error) {
       console.error('Error generando imagen:', error);
+      alert('Error al generar la imagen. Si hay muchas transacciones, intenta aplicar filtros para reducir la cantidad.');
     } finally {
       setIsGenerating(false);
     }
@@ -230,17 +234,17 @@ export function TransaccionesImageModal({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Advertencia si hay más de 100 transacciones */}
-        {transaccionesData.length > 100 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+        {/* Advertencia informativa si hay muchas transacciones */}
+        {transaccionesData.length > 200 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
             <div className="flex items-start gap-3">
-              <div className="text-amber-600 mt-0.5">⚠️</div>
+              <div className="text-blue-600 mt-0.5">ℹ️</div>
               <div>
-                <h4 className="text-amber-800 font-medium text-sm mb-1">
-                  Demasiadas transacciones para descargar ({transaccionesData.length} transacciones)
+                <h4 className="text-blue-800 font-medium text-sm mb-1">
+                  Muchas transacciones ({transaccionesData.length} transacciones)
                 </h4>
-                <p className="text-amber-700 text-sm">
-                  La descarga de imagen está limitada a máximo 100 transacciones. Por favor, aplica filtros para reducir el número de transacciones antes de descargar.
+                <p className="text-blue-700 text-sm">
+                  La generación de la imagen puede tardar varios segundos. La imagen será muy larga pero incluirá todas las transacciones.
                 </p>
               </div>
             </div>
@@ -325,7 +329,7 @@ export function TransaccionesImageModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {transaccionesData.slice(0, 50).map((transaccion, index) => {
+                    {transaccionesData.map((transaccion, index) => {
                       const valor = parseFloat(transaccion.valor || '0');
                       const minaId = mina?.id?.toString(); // Definir minaId para visualización
                       
