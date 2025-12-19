@@ -674,18 +674,6 @@ export default function RodMarCuentaDetail() {
               <p className="text-sm text-muted-foreground">Historial de Transacciones</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              size="sm"
-              onClick={() => setIsImageModalOpen(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
-              disabled={transaccionesFiltradas.length === 0}
-            >
-              <Image className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Imagen</span>
-              <span className="sm:hidden">IMG</span>
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -783,6 +771,16 @@ export default function RodMarCuentaDetail() {
                     +{hiddenCuentaCount}
                   </Button>
                 ) : null}
+                <Button
+                  onClick={() => setIsImageModalOpen(true)}
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
+                  disabled={transaccionesFiltradas.length === 0}
+                >
+                  <Image className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Imagen</span>
+                  <span className="sm:hidden">IMG</span>
+                </Button>
                 <Button
                   onClick={() => setShowTemporalTransaction(true)}
                   variant="outline"

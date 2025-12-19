@@ -1935,18 +1935,6 @@ function CompradorTransaccionesTab({
                 <Download className="w-3 h-3 mr-1" />
                 <span className="hidden sm:inline">Excel</span>
               </Button>
-              <Button
-                onClick={() => {
-                  setShowTransaccionesImagePreview(true);
-                }}
-                size="sm"
-                className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
-                title={`Descargar imagen (máx. 50 de ${transaccionesFiltradas.length} transacciones)`}
-              >
-                <Image className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Imagen</span>
-                <span className="sm:hidden">IMG</span>
-              </Button>
             </div>
           </div>
 
@@ -1964,7 +1952,7 @@ function CompradorTransaccionesTab({
               />
             </div>
             
-            {/* Botón Temporal y Filtro de fecha en la misma fila */}
+            {/* Botones Temporal e Imagen y Filtro de fecha en la misma fila */}
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -1976,6 +1964,18 @@ function CompradorTransaccionesTab({
               >
                 <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span>TEMP</span>
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowTransaccionesImagePreview(true);
+                }}
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
+                title={`Descargar imagen (máx. 50 de ${transaccionesFiltradas.length} transacciones)`}
+              >
+                <Image className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Imagen</span>
+                <span className="sm:hidden">IMG</span>
               </Button>
 
               <Select value={transaccionesFechaFilterType} onValueChange={setTransaccionesFechaFilterType}>

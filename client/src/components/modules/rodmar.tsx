@@ -1352,18 +1352,6 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                   <p className="text-xs sm:text-sm text-yellow-600 hidden sm:block">Historial financiero Postobón</p>
                 </div>
               </div>
-              
-              {/* Botón de imagen siempre visible */}
-              <Button
-                size="sm"
-                onClick={() => setShowImageModal(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
-                title={`Descargar imagen de transacciones (máximo 100)`}
-              >
-                <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Imagen</span>
-                <span className="sm:hidden">IMG</span>
-              </Button>
             </div>
             
             {/* Segunda línea: Contador de registros y botones adicionales */}
@@ -1373,7 +1361,7 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                 <span className="text-yellow-700 font-medium text-xs sm:text-sm">{transaccionesFiltradas.length} registros</span>
               </div>
               
-              {/* Botones de inversión y temporal en segunda línea */}
+              {/* Botones de inversión, imagen y temporal en segunda línea */}
               <div className="flex items-center gap-1">
                 {/* Botón de inversión solo para Santa Rosa y Cimitarra */}
                 {(filterType === 'santa-rosa' || filterType === 'cimitarra') && onOpenInvestmentModal && (
@@ -1387,6 +1375,18 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                     <span className="sm:hidden">Inv</span>
                   </Button>
                 )}
+
+                {/* Botón de imagen */}
+                <Button
+                  size="sm"
+                  onClick={() => setShowImageModal(true)}
+                  className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
+                  title={`Descargar imagen de transacciones (máximo 100)`}
+                >
+                  <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Imagen</span>
+                  <span className="sm:hidden">IMG</span>
+                </Button>
 
                 {/* Botón de transacción temporal - Como en LCDM */}
                 <Button
