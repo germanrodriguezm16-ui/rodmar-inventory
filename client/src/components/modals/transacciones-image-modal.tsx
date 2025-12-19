@@ -305,34 +305,25 @@ export function TransaccionesImageModal({
                     <tr className="bg-blue-600 text-white" style={{ height: '20px' }}>
                       <th className="border border-gray-300 text-left font-semibold" style={{ 
                         fontSize: '9px',
-                        verticalAlign: 'middle',
-                        lineHeight: '1.2',
-                        paddingTop: '6px',
-                        paddingBottom: '4px',
-                        paddingLeft: '8px',
-                        paddingRight: '8px',
+                        lineHeight: '20px',
+                        padding: '0 8px',
+                        height: '20px',
                         width: '80px',
                         minWidth: '80px'
                       }}>FECHA</th>
                       <th className="border border-gray-300 text-left font-semibold" style={{ 
                         fontSize: '9px',
-                        verticalAlign: 'middle',
-                        lineHeight: '1.2',
-                        paddingTop: '6px',
-                        paddingBottom: '4px',
-                        paddingLeft: '8px',
-                        paddingRight: '8px',
+                        lineHeight: '20px',
+                        padding: '0 8px',
+                        height: '20px',
                         width: '210px',
                         minWidth: '210px'
                       }}>COMENTARIO</th>
                       <th className="border border-gray-300 text-right font-semibold" style={{ 
                         fontSize: '9px',
-                        verticalAlign: 'middle',
-                        lineHeight: '1.2',
-                        paddingTop: '6px',
-                        paddingBottom: '4px',
-                        paddingLeft: '8px',
-                        paddingRight: '8px',
+                        lineHeight: '20px',
+                        padding: '0 8px',
+                        height: '20px',
                         width: '60px',
                         minWidth: '60px'
                       }}>VALOR</th>
@@ -406,23 +397,17 @@ export function TransaccionesImageModal({
                         <tr key={transaccion.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} style={{ height: '18px' }}>
                           <td className="border border-gray-300" style={{ 
                             fontSize: '9px',
-                            verticalAlign: 'middle',
-                            lineHeight: '1.2',
-                            paddingTop: '5px',
-                            paddingBottom: '3px',
-                            paddingLeft: '8px',
-                            paddingRight: '8px'
+                            lineHeight: '18px',
+                            padding: '0 8px',
+                            height: '18px'
                           }}>
                             {formatDateCompact(transaccion.fecha)}
                           </td>
                           <td className="border border-gray-300" style={{ 
                             fontSize: '9px',
-                            verticalAlign: 'middle',
-                            lineHeight: '1.2',
-                            paddingTop: '5px',
-                            paddingBottom: '3px',
-                            paddingLeft: '8px',
-                            paddingRight: '8px'
+                            lineHeight: '18px',
+                            padding: '0 8px',
+                            height: '18px'
                           }}>
                             {transaccion.concepto && transaccion.concepto.startsWith('Viaje') 
                               ? transaccion.concepto 
@@ -430,12 +415,9 @@ export function TransaccionesImageModal({
                           </td>
                           <td className={`border border-gray-300 text-right font-medium ${colorClass}`} style={{ 
                             fontSize: '9px',
-                            verticalAlign: 'middle',
-                            lineHeight: '1.2',
-                            paddingTop: '5px',
-                            paddingBottom: '3px',
-                            paddingLeft: '8px',
-                            paddingRight: '8px'
+                            lineHeight: '18px',
+                            padding: '0 8px',
+                            height: '18px'
                           }}>
                             {signo}{formatCurrency(Math.abs(valor))}
                           </td>
