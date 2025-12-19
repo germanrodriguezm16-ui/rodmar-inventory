@@ -116,11 +116,9 @@ export function TransaccionesImageModal({
         useCORS: true,
         allowTaint: true,
         height: imageRef.current.scrollHeight,
-        width: 400, // Ancho fijo para diseño móvil
+        width: imageRef.current.scrollWidth,
         scrollX: 0,
-        scrollY: 0,
-        windowWidth: 500,
-        windowHeight: imageRef.current.scrollHeight
+        scrollY: 0
       });
 
       const link = document.createElement('a');
