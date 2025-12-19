@@ -310,7 +310,9 @@ export function TransaccionesImageModal({
                         height: '20px',
                         width: '80px',
                         minWidth: '80px'
-                      }}>FECHA</th>
+                      }}>
+                        <span style={{ display: 'inline-block', position: 'relative', top: '-1px' }}>FECHA</span>
+                      </th>
                       <th className="border border-gray-300 text-left font-semibold" style={{ 
                         fontSize: '9px',
                         lineHeight: '20px',
@@ -318,7 +320,9 @@ export function TransaccionesImageModal({
                         height: '20px',
                         width: '210px',
                         minWidth: '210px'
-                      }}>COMENTARIO</th>
+                      }}>
+                        <span style={{ display: 'inline-block', position: 'relative', top: '-1px' }}>COMENTARIO</span>
+                      </th>
                       <th className="border border-gray-300 text-right font-semibold" style={{ 
                         fontSize: '9px',
                         lineHeight: '20px',
@@ -326,7 +330,9 @@ export function TransaccionesImageModal({
                         height: '20px',
                         width: '60px',
                         minWidth: '60px'
-                      }}>VALOR</th>
+                      }}>
+                        <span style={{ display: 'inline-block', position: 'relative', top: '-1px' }}>VALOR</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -401,7 +407,9 @@ export function TransaccionesImageModal({
                             padding: '0 8px',
                             height: '18px'
                           }}>
-                            {formatDateCompact(transaccion.fecha)}
+                            <span style={{ display: 'inline-block', position: 'relative', top: '-1px' }}>
+                              {formatDateCompact(transaccion.fecha)}
+                            </span>
                           </td>
                           <td className="border border-gray-300" style={{ 
                             fontSize: '9px',
@@ -409,9 +417,11 @@ export function TransaccionesImageModal({
                             padding: '0 8px',
                             height: '18px'
                           }}>
-                            {transaccion.concepto && transaccion.concepto.startsWith('Viaje') 
-                              ? transaccion.concepto 
-                              : (transaccion.comentario || '-')}
+                            <span style={{ display: 'inline-block', position: 'relative', top: '-1px' }}>
+                              {transaccion.concepto && transaccion.concepto.startsWith('Viaje') 
+                                ? transaccion.concepto 
+                                : (transaccion.comentario || '-')}
+                            </span>
                           </td>
                           <td className={`border border-gray-300 text-right font-medium ${colorClass}`} style={{ 
                             fontSize: '9px',
@@ -419,7 +429,9 @@ export function TransaccionesImageModal({
                             padding: '0 8px',
                             height: '18px'
                           }}>
-                            {signo}{formatCurrency(Math.abs(valor))}
+                            <span style={{ display: 'inline-block', position: 'relative', top: '-1px' }}>
+                              {signo}{formatCurrency(Math.abs(valor))}
+                            </span>
                           </td>
                         </tr>
                       );
