@@ -471,11 +471,11 @@ export function TransaccionesImageModal({
         }}
       >
         {/* Header del reporte */}
-        <div style={{ textAlign: 'center', marginBottom: '4px', borderBottom: '1px solid #e5e7eb', paddingBottom: '2px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#1f2937' }}>
+        <div style={{ textAlign: 'center', marginBottom: '4px', borderBottom: '1px solid #e5e7eb', paddingBottom: '2px', paddingTop: '4px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#1f2937', transform: 'translateY(-3px)' }}>
             {mina?.nombre || modalTitle} - {modalSubtitle}
           </div>
-          <div style={{ fontSize: '10px', color: '#6b7280' }}>
+          <div style={{ fontSize: '10px', color: '#6b7280', transform: 'translateY(-3px)' }}>
             {new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
           </div>
         </div>
@@ -531,9 +531,9 @@ export function TransaccionesImageModal({
                       height: '100%', 
                       paddingLeft: '8px', 
                       paddingRight: '8px',
-                      paddingTop: '6px',
+                      paddingTop: '7px',
                       paddingBottom: '0px',
-                      transform: 'translateY(-4px)'
+                      transform: 'translateY(-6px)'
                     }}>
                       FECHA
                     </div>
@@ -555,9 +555,9 @@ export function TransaccionesImageModal({
                       height: '100%', 
                       paddingLeft: '8px', 
                       paddingRight: '8px',
-                      paddingTop: '6px',
+                      paddingTop: '7px',
                       paddingBottom: '0px',
-                      transform: 'translateY(-4px)'
+                      transform: 'translateY(-6px)'
                     }}>
                       COMENTARIO
                     </div>
@@ -580,9 +580,9 @@ export function TransaccionesImageModal({
                       height: '100%', 
                       paddingLeft: '8px', 
                       paddingRight: '8px',
-                      paddingTop: '6px',
+                      paddingTop: '7px',
                       paddingBottom: '0px',
-                      transform: 'translateY(-4px)'
+                      transform: 'translateY(-6px)'
                     }}>
                       VALOR
                     </div>
