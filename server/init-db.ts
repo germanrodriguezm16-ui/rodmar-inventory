@@ -38,6 +38,13 @@ export async function initializeRolesAndPermissions() {
       { key: 'module.VOLQUETEROS.tab.TRANSACCIONES.view', descripcion: 'Ver pestaña Transacciones en Volqueteros', categoria: 'tab' },
       { key: 'module.VOLQUETEROS.tab.BALANCES.view', descripcion: 'Ver pestaña Balances en Volqueteros', categoria: 'tab' },
       { key: 'module.RODMAR.accounts.view', descripcion: 'Ver cuentas RodMar', categoria: 'tab' },
+      // Permisos por cuenta RodMar individual
+      { key: 'module.RODMAR.account.Bemovil.view', descripcion: 'Ver cuenta RodMar: Bemovil', categoria: 'account' },
+      { key: 'module.RODMAR.account.Corresponsal.view', descripcion: 'Ver cuenta RodMar: Corresponsal', categoria: 'account' },
+      { key: 'module.RODMAR.account.Efectivo.view', descripcion: 'Ver cuenta RodMar: Efectivo', categoria: 'account' },
+      { key: 'module.RODMAR.account.Cuentas German.view', descripcion: 'Ver cuenta RodMar: Cuentas German', categoria: 'account' },
+      { key: 'module.RODMAR.account.Cuentas Jhon.view', descripcion: 'Ver cuenta RodMar: Cuentas Jhon', categoria: 'account' },
+      { key: 'module.RODMAR.account.Otros.view', descripcion: 'Ver cuenta RodMar: Otros', categoria: 'account' },
       { key: 'module.RODMAR.LCDM.view', descripcion: 'Ver sección LCDM en RodMar', categoria: 'tab' },
       { key: 'module.RODMAR.Postobon.view', descripcion: 'Ver sección Postobón en RodMar', categoria: 'tab' },
       { key: 'module.RODMAR.balances.view', descripcion: 'Ver balances globales en RodMar', categoria: 'tab' },

@@ -4,6 +4,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth, optionalAuth } from "./middleware/auth";
 import { getUserPermissions, requirePermission, invalidateUserPermissionsCache } from "./middleware/permissions";
+import { canViewRodMarAccount } from "./rodmar-account-permissions";
 import { emitTransactionUpdate } from "./socket";
 import { db } from "./db";
 import { roles, permissions, rolePermissions, users, userPermissionsOverride } from "../shared/schema";
@@ -3977,9 +3978,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Transacciones de una cuenta específica de RodMar
-  app.get("/api/transacciones/cuenta/:cuentaNombre", async (req, res) => {
+  app.get("/api/transacciones/cuenta/:cuentaNombre", requireAuth, async (req, res) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "No autenticado" });
+      }
+
+      // Obtener permisos del usuario
+      const userPermissions = await getUserPermissions(req.user.id);
+
+      // Función para verificar si el usuario tiene permiso para ver una cuenta específica
+      const tienePermisoCuenta = (nombreCuenta: string): boolean => {
+        return canViewRodMarAccount(userPermissions, nombreCuenta);
+      };
+
       const { cuentaNombre } = req.params;
+      
+      // Convertir slug a nombre de cuenta (ej: "cuentas-german" -> "Cuentas German")
+      const cuentaNameFromSlug = (slug: string): string => {
+        const map: Record<string, string> = {
+          'bemovil': 'Bemovil',
+          'corresponsal': 'Corresponsal',
+          'efectivo': 'Efectivo',
+          'cuentas-german': 'Cuentas German',
+          'cuentas-jhon': 'Cuentas Jhon',
+          'otros': 'Otros'
+        };
+        return map[slug.toLowerCase()] || slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      };
+
+      const nombreCuentaReal = cuentaNameFromSlug(cuentaNombre);
+
+      // Verificar permisos
+      if (!tienePermisoCuenta(nombreCuentaReal)) {
+        return res.status(403).json({
+          error: "No tienes permiso para ver esta cuenta",
+          requiredPermission: `module.RODMAR.account.${nombreCuentaReal}.view`,
+        });
+      }
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       
@@ -4112,8 +4148,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Balances de cuentas RodMar
-  app.get("/api/rodmar-accounts", async (req, res) => {
+  app.get("/api/rodmar-accounts", requireAuth, async (req, res) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "No autenticado" });
+      }
+
+      // Obtener permisos del usuario
+      const userPermissions = await getUserPermissions(req.user.id);
+
       const transacciones = await storage.getTransacciones();
 
       // Función para mapear nombre de cuenta a ID (igual que en frontend)
@@ -4121,8 +4164,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return nombre.toLowerCase().replace(/\s+/g, "-");
       };
 
+      // Función para verificar si el usuario tiene permiso para ver una cuenta específica
+      const tienePermisoCuenta = (nombreCuenta: string): boolean => {
+        // Si tiene el permiso general de ver todas las cuentas, puede ver todas
+        if (userPermissions.includes("module.RODMAR.accounts.view")) {
+          return true;
+        }
+        // Si tiene el permiso específico de esta cuenta, puede verla
+        const permisoCuenta = `module.RODMAR.account.${nombreCuenta}.view`;
+        return userPermissions.includes(permisoCuenta);
+      };
+
       // Mapeo de cuentas de RodMar con sus identificadores (usando mismo mapeo que frontend)
-      const cuentasRodMar = [
+      const todasLasCuentas = [
         { nombre: "Bemovil", id: cuentaNameToId("Bemovil") },
         { nombre: "Corresponsal", id: cuentaNameToId("Corresponsal") },
         { nombre: "Efectivo", id: cuentaNameToId("Efectivo") },
@@ -4131,7 +4185,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { nombre: "Otros", id: cuentaNameToId("Otros") },
       ];
 
-      // Calcular balance de cada cuenta
+      // Filtrar cuentas según permisos del usuario
+      const cuentasRodMar = todasLasCuentas.filter((cuenta) =>
+        tienePermisoCuenta(cuenta.nombre)
+      );
+
+      // Calcular balance de cada cuenta permitida
       const balancesCuentas = cuentasRodMar.map((cuenta) => {
         let ingresos = 0;
         let egresos = 0;
