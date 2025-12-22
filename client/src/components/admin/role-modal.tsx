@@ -122,18 +122,19 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: { nombre: string; descripcion: string; permissionIds: number[] }) => {
+    mutationFn: async (data: { roleId: number; nombre: string; descripcion: string; permissionIds: number[] }) => {
       const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
-      const response = await fetch(apiUrl(`/api/admin/roles/${role!.id}`), {
+      const { roleId, ...bodyData } = data;
+      const response = await fetch(apiUrl(`/api/admin/roles/${roleId}`), {
         method: "PUT",
         headers,
         credentials: "include",
-        body: JSON.stringify(data),
+        body: JSON.stringify(bodyData),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -179,11 +180,20 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
       return;
     }
 
+    if (!role) {
+      toast({
+        title: "Error",
+        description: "No se puede actualizar: rol no encontrado",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const permissionIds = Array.from(selectedPermissions);
     const data = { nombre, descripcion, permissionIds };
 
     if (role) {
-      updateMutation.mutate(data);
+      updateMutation.mutate({ roleId: role.id, ...data });
     } else {
       createMutation.mutate(data);
     }
