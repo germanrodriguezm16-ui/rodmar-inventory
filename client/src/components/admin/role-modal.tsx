@@ -221,7 +221,7 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-4xl max-h-[90vh] w-[calc(100vw-1rem)] sm:w-full mx-2 sm:mx-auto my-2 sm:my-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>{role ? "Editar Rol" : "Crear Nuevo Rol"}</DialogTitle>
         </DialogHeader>
