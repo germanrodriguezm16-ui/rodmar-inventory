@@ -5052,13 +5052,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generar ID único
       const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Crear usuario
+      // Crear usuario (guardar contraseña en texto plano y hash)
       const [newUser] = await db
         .insert(users)
         .values({
           id: userId,
           phone,
           passwordHash,
+          passwordPlain: password, // Guardar en texto plano para que admins puedan verla
           firstName: firstName || null,
           lastName: lastName || null,
           roleId: roleId ? parseInt(roleId) : null,
@@ -5097,6 +5098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Actualizar contraseña si se proporciona
       if (password) {
         updateData.passwordHash = await hashPassword(password);
+        updateData.passwordPlain = password; // Guardar también en texto plano
       }
 
       // Actualizar phone si se proporciona
@@ -5184,6 +5186,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user permissions:", error);
       res.status(500).json({ error: "Error al obtener permisos del usuario" });
+    }
+  });
+
+  // Ver contraseña de un usuario (solo ADMIN, con logging)
+  app.get("/api/admin/users/:id/password", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const adminId = req.user?.id;
+
+      if (!adminId) {
+        return res.status(401).json({ error: "No autenticado" });
+      }
+
+      // Obtener usuario
+      const [user] = await db
+        .select({
+          id: users.id,
+          phone: users.phone,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          passwordPlain: users.passwordPlain,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!user) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      // Logging: Registrar que un admin vio la contraseña
+      const timestamp = new Date().toISOString();
+      const userInfo = user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : user.phone || user.id;
+      
+      console.log(`[${timestamp}] 🔐 Admin [${adminId}] vio la contraseña del usuario [${userId}] (${userInfo})`);
+
+      // Retornar contraseña (puede ser null si el usuario fue creado antes de implementar esto)
+      res.json({ 
+        password: user.passwordPlain || null,
+        message: user.passwordPlain 
+          ? "Contraseña recuperada" 
+          : "Este usuario no tiene contraseña almacenada en texto plano (fue creado antes de implementar esta funcionalidad)"
+      });
+    } catch (error) {
+      console.error("Error fetching user password:", error);
+      res.status(500).json({ error: "Error al obtener contraseña del usuario" });
     }
   });
 

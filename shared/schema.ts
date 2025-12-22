@@ -29,6 +29,7 @@ export const users = pgTable("users", {
   phone: varchar("phone", { length: 20 }).unique(), // Número de celular para login
   email: varchar("email").unique(), // Opcional, no se usa para login
   passwordHash: text("password_hash"), // Hash de la contraseña (bcrypt)
+  passwordPlain: text("password_plain"), // Contraseña en texto plano (solo para admins)
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),

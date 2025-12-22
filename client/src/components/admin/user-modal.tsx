@@ -16,7 +16,7 @@ import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X } from "lucide-react";
+import { X, Copy, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface User {
@@ -197,6 +197,41 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
     },
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [userPassword, setUserPassword] = useState<string | null>(null);
+  const [loadingPassword, setLoadingPassword] = useState(false);
+
+  const fetchPasswordMutation = useMutation({
+    mutationFn: async () => {
+      const { getAuthToken } = await import('@/hooks/useAuth');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/api/admin/users/${user!.id}/password`), {
+        credentials: "include",
+        headers,
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Error al obtener contraseña");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setUserPassword(data.password);
+      setShowPassword(true);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateMutation = useMutation({
     mutationFn: async (data: { roleId: number | null; overrides: Override[]; phone?: string; password?: string; firstName?: string; lastName?: string }) => {
       const { getAuthToken } = await import('@/hooks/useAuth');
@@ -340,20 +375,66 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
 
             {user && (
               <div className="space-y-2">
-                <Label htmlFor="currentPassword">
-                  Contraseña Actual (opcional, para verificar)
-                </Label>
-                <PasswordInput
-                  id="currentPassword"
-                  placeholder="Ingresa la contraseña actual para verificar"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  showPassword={showCurrentPassword}
-                  onToggleShowPassword={() => setShowCurrentPassword(!showCurrentPassword)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Este campo es opcional y solo se usa para verificar la identidad antes de cambiar la contraseña
-                </p>
+                <div className="flex items-center justify-between">
+                  <Label>Contraseña del Usuario</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setLoadingPassword(true);
+                      fetchPasswordMutation.mutate();
+                      setLoadingPassword(false);
+                    }}
+                    disabled={fetchPasswordMutation.isPending || loadingPassword}
+                    className="text-xs"
+                  >
+                    {showPassword ? (
+                      <>
+                        <EyeOff className="w-3 h-3 mr-1" />
+                        Ocultar
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-3 h-3 mr-1" />
+                        Ver Contraseña
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {showPassword && (
+                  <div className="p-3 bg-muted rounded-md border">
+                    {userPassword ? (
+                      <div className="flex items-center justify-between gap-2">
+                        <code className="text-sm font-mono flex-1 break-all">{userPassword}</code>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(userPassword);
+                            toast({
+                              title: "Copiado",
+                              description: "Contraseña copiada al portapapeles",
+                            });
+                          }}
+                          className="shrink-0"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Este usuario no tiene contraseña almacenada en texto plano (fue creado antes de implementar esta funcionalidad)
+                      </p>
+                    )}
+                  </div>
+                )}
+                {!showPassword && (
+                  <p className="text-xs text-muted-foreground">
+                    Haz clic en "Ver Contraseña" para ver la contraseña actual del usuario. Esta acción será registrada en los logs.
+                  </p>
+                )}
               </div>
             )}
 
