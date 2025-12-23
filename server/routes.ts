@@ -5208,6 +5208,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para agregar permisos faltantes manualmente
+  app.post("/api/admin/permissions/add-missing", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const { addMissingPermissions } = await import('./add-missing-permissions');
+      await addMissingPermissions();
+      res.json({ success: true, message: "Permisos faltantes agregados correctamente" });
+    } catch (error: any) {
+      console.error("Error agregando permisos faltantes:", error);
+      res.status(500).json({ error: "Error al agregar permisos faltantes" });
+    }
+  });
+
   // Listar todos los permisos del sistema
   app.get("/api/admin/permissions", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
     try {
