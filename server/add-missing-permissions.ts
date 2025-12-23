@@ -64,18 +64,6 @@ async function addMissingPermissions() {
       console.log('\n📝 Asignando permisos faltantes al ADMIN...\n');
     }
 
-    // Obtener rol ADMIN
-    const adminRole = await db
-      .select()
-      .from(roles)
-      .where(eq(roles.nombre, 'ADMIN'))
-      .limit(1);
-
-    if (adminRole.length === 0) {
-      console.log('⚠️  No se encontró el rol ADMIN, no se pueden asignar permisos');
-      return;
-    }
-
     // Primero, asignar todos los permisos del sistema que no están asignados
     let assignedCount = 0;
     for (const perm of unassignedSystemPermissions) {
