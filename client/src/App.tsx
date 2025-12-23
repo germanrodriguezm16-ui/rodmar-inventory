@@ -20,13 +20,16 @@ import NotFound from "@/pages/not-found";
 import { useEffect, useState } from "react";
 import { NavigationVisibilityContext, useNavigationVisibilityState } from "@/hooks/use-navigation-visibility";
 import { useSocket } from "@/hooks/useSocket";
+import { usePermissions } from "@/hooks/usePermissions";
+import { getFirstAvailableModule, type Module } from "@/lib/module-utils";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { permissions, isLoading: permissionsLoading } = usePermissions();
   const [location] = useLocation();
 
-  // Mostrar loading mientras se verifica autenticación
-  if (isLoading) {
+  // Mostrar loading mientras se verifica autenticación o permisos
+  if (isLoading || (isAuthenticated && permissionsLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -42,15 +45,21 @@ function Router() {
     return <LoginPage />;
   }
 
-  // Si está autenticado y está en /login, redirigir a home
+  // Si está autenticado y está en /login, redirigir al primer módulo disponible
   if (isAuthenticated && location === "/login") {
-    return <Dashboard initialModule="principal" />;
+    const firstModule = getFirstAvailableModule(permissions);
+    return <Dashboard initialModule={firstModule} />;
   }
+
+  // Determinar módulo inicial para la ruta raíz según permisos
+  const getInitialModule = (): Module => {
+    return getFirstAvailableModule(permissions);
+  };
 
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
-      <Route path="/" component={() => <Dashboard initialModule="transacciones" />} />
+      <Route path="/" component={() => <Dashboard initialModule={getInitialModule()} />} />
       <Route path="/principal">
         <Dashboard initialModule="principal" />
       </Route>

@@ -19,7 +19,8 @@ export async function initializeRolesAndPermissions() {
 
     // Definir todos los permisos del sistema
     const permisosBase = [
-      // Módulos (6)
+      // Módulos (7)
+      { key: 'module.PRINCIPAL.view', descripcion: 'Ver módulo Principal (Viajes)', categoria: 'module' },
       { key: 'module.MINAS.view', descripcion: 'Ver módulo de Minas', categoria: 'module' },
       { key: 'module.COMPRADORES.view', descripcion: 'Ver módulo de Compradores', categoria: 'module' },
       { key: 'module.VOLQUETEROS.view', descripcion: 'Ver módulo de Volqueteros', categoria: 'module' },

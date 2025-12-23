@@ -26,6 +26,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiUrl } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getAuthToken } from "@/hooks/useAuth";
+import { hasModulePermission, getFirstAvailableModule } from "@/lib/module-utils";
 
 type Module = "principal" | "minas" | "compradores" | "volqueteros" | "transacciones" | "rodmar";
 
@@ -46,6 +47,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
   const [showGestionarModal, setShowGestionarModal] = useState(false);
   const [showSolicitarModal, setShowSolicitarModal] = useState(false);
   const [location, setLocation] = useLocation();
+  const { has, permissions, isLoading: permissionsLoading } = usePermissions();
   
   // OPTIMIZACIÓN CARGA INICIAL:
   // Para que el módulo Principal (Viajes) cargue más rápido, diferimos la carga de la LISTA de pendientes.
@@ -60,6 +62,26 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     setDebugLoggerInstance(debugLogger);
     logger.info('SYSTEM', 'Dashboard cargado', { initialModule, timestamp: Date.now() });
   }, []);
+
+  // Validar permisos del módulo inicial y redirigir si no tiene acceso
+  useEffect(() => {
+    if (permissionsLoading) return; // Esperar a que carguen los permisos
+    
+    // Verificar si el usuario tiene permiso para el módulo inicial
+    if (!hasModulePermission(permissions, initialModule)) {
+      // Si no tiene permiso, redirigir al primer módulo disponible
+      const firstAvailable = getFirstAvailableModule(permissions);
+      console.log(`[DASHBOARD] Usuario sin permiso para "${initialModule}", redirigiendo a "${firstAvailable}"`);
+      setActiveModule(firstAvailable);
+      // Actualizar la URL si es necesario
+      if (location !== `/${firstAvailable}`) {
+        setLocation(`/${firstAvailable}`);
+      }
+    } else {
+      // Si tiene permiso, asegurar que el módulo activo coincida con el inicial
+      setActiveModule(initialModule);
+    }
+  }, [initialModule, permissions, permissionsLoading, location, setLocation]);
 
   // Consultar el conteo de transacciones pendientes
   const { data: pendingCount = 0 } = useQuery<number>({
@@ -822,8 +844,6 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         return <Principal onOpenCargue={() => setShowCargueModal(true)} onOpenDescargue={() => setShowDescargueModal(true)} />;
     }
   };
-
-  const { has } = usePermissions();
 
   const handleQuickAction = () => {
     // El botón flotante ahora abre el modal de gestionar transacciones

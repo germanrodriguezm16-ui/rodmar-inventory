@@ -24,7 +24,7 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
   
   // Mapeo de módulos a permisos
   const modulePermissions: Record<string, string> = {
-    principal: "", // Principal siempre visible
+    principal: "module.PRINCIPAL.view",
     minas: "module.MINAS.view",
     compradores: "module.COMPRADORES.view",
     volqueteros: "module.VOLQUETEROS.view",

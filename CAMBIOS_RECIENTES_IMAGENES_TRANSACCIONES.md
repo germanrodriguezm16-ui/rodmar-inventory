@@ -277,3 +277,5 @@ Las transacciones en volqueteros incluyen:
 2. **Optimización adicional:** Considerar virtualización de listas si el volumen de transacciones crece significativamente
 3. **Monitoreo:** Verificar que la generación de imágenes funcione correctamente en producción con diferentes volúmenes de datos
 
+
+
