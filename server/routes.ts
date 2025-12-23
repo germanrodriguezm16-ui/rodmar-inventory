@@ -4156,6 +4156,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Obtener permisos del usuario
       const userPermissions = await getUserPermissions(req.user.id);
+      
+      console.log(`[RODMAR-ACCOUNTS] Usuario: ${req.user.id}`);
+      console.log(`[RODMAR-ACCOUNTS] Permisos del usuario (${userPermissions.length}):`, userPermissions.filter(p => p.includes('RODMAR')));
 
       const transacciones = await storage.getTransacciones();
 
@@ -4168,11 +4171,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tienePermisoCuenta = (nombreCuenta: string): boolean => {
         // Si tiene el permiso general de ver todas las cuentas, puede ver todas
         if (userPermissions.includes("module.RODMAR.accounts.view")) {
+          console.log(`[RODMAR-ACCOUNTS] Usuario tiene permiso general, puede ver todas las cuentas`);
           return true;
         }
         // Si tiene el permiso específico de esta cuenta, puede verla
         const permisoCuenta = `module.RODMAR.account.${nombreCuenta}.view`;
-        return userPermissions.includes(permisoCuenta);
+        const tienePermiso = userPermissions.includes(permisoCuenta);
+        console.log(`[RODMAR-ACCOUNTS] Cuenta "${nombreCuenta}": permiso "${permisoCuenta}" = ${tienePermiso}`);
+        return tienePermiso;
       };
 
       // Mapeo de cuentas de RodMar con sus identificadores (usando mismo mapeo que frontend)
@@ -4189,6 +4195,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cuentasRodMar = todasLasCuentas.filter((cuenta) =>
         tienePermisoCuenta(cuenta.nombre)
       );
+      
+      console.log(`[RODMAR-ACCOUNTS] Total cuentas: ${todasLasCuentas.length}, Cuentas permitidas: ${cuentasRodMar.length}`);
+      console.log(`[RODMAR-ACCOUNTS] Cuentas permitidas:`, cuentasRodMar.map(c => c.nombre));
 
       // Calcular balance de cada cuenta permitida
       const balancesCuentas = cuentasRodMar.map((cuenta) => {
