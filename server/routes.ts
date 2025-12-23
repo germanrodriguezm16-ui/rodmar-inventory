@@ -2351,6 +2351,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const userId = req.user?.id || "main_user";
 
+        // Si el usuario tiene permisos de transacciones, puede ver TODAS las transacciones
+        // (sin filtrar por userId) para mantener coherencia en tiempo real
+        const userPermissions = await getUserPermissions(userId);
+        const hasTransactionPermissions = 
+          userPermissions.includes("action.TRANSACCIONES.create") ||
+          userPermissions.includes("action.TRANSACCIONES.completePending") ||
+          userPermissions.includes("action.TRANSACCIONES.edit") ||
+          userPermissions.includes("action.TRANSACCIONES.delete");
+        
+        // Si tiene permisos de transacciones, no filtrar por userId (ver todas)
+        const effectiveUserId = hasTransactionPermissions ? undefined : userId;
+
         const { compradorId } = req.params;
         const { includeHidden } = req.query;
 
@@ -2363,7 +2375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const transacciones = await storage.getTransaccionesForModule(
           "comprador",
           parseInt(compradorId as string),
-          userId,
+          effectiveUserId,
           includeHidden === "true",
           "comprador",
         );
