@@ -2,7 +2,7 @@ import { db } from './db';
 import { minas, compradores, volqueteros, viajes, transacciones, roles, permissions, rolePermissions, users } from '../shared/schema';
 import { sql, eq, and } from 'drizzle-orm';
 import { hashPassword } from './middleware/auth-helpers';
-import { addMissingPermissions } from './add-missing-permissions';
+import { addMissingPermissions as addMissingPermissionsFromFile } from './add-missing-permissions';
 
 // Inicializar roles y permisos base
 export async function initializeRolesAndPermissions() {
@@ -246,7 +246,7 @@ export async function initializeDatabase() {
     await initializeRolesAndPermissions();
     
     // Agregar permisos faltantes (para bases de datos existentes)
-    await addMissingPermissions();
+    await addMissingPermissionsFromFile();
     
     // Luego crear usuario admin por defecto si no existe
     await initializeAdminUser();
