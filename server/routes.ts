@@ -2016,6 +2016,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const routeStartTime = Date.now();
       try {
         const userId = req.user!.id;
+        
+        // Si el usuario tiene permisos de transacciones, puede ver TODAS las transacciones
+        // (sin filtrar por userId) para mantener coherencia en tiempo real
+        const userPermissions = await getUserPermissions(userId);
+        const hasTransactionPermissions = 
+          userPermissions.includes("action.TRANSACCIONES.create") ||
+          userPermissions.includes("action.TRANSACCIONES.completePending") ||
+          userPermissions.includes("action.TRANSACCIONES.edit") ||
+          userPermissions.includes("action.TRANSACCIONES.delete");
+        
+        // Si tiene permisos de transacciones, no filtrar por userId (ver todas)
+        const effectiveUserId = hasTransactionPermissions ? undefined : userId;
+        
         const page = req.query.page ? parseInt(req.query.page as string) : undefined;
         const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
 
@@ -2023,6 +2036,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('═══════════════════════════════════════════════════════════');
         console.log(`⏱️  [PERF] GET /api/transacciones - Iniciando request...`);
         console.log(`   Usuario: ${userId}`);
+        console.log(`   Permisos de transacciones: ${hasTransactionPermissions ? 'SÍ' : 'NO'}`);
+        console.log(`   Filtrando por userId: ${effectiveUserId || 'NINGUNO (todas las transacciones)'}`);
         console.log(`   Paginación: ${page ? `page=${page}, limit=${limit}` : 'sin paginación'}`);
         console.log(`   Timestamp: ${new Date().toISOString()}`);
         console.log('═══════════════════════════════════════════════════════════');
@@ -2042,7 +2057,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`=== GET /api/transacciones - Paginado (page: ${page}, limit: ${limit}) ===`);
           
           // Obtener todas las transacciones para aplicar filtros
-          const allTransacciones = await storage.getTransacciones(userId);
+          const allTransacciones = await storage.getTransacciones(effectiveUserId);
           
           // Filter out automatic trip transactions for compradores
           let filteredData = allTransacciones.filter((transaccion) => {
@@ -2196,7 +2211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         } else {
           // Sin paginación - mantener compatibilidad hacia atrás
-          const allTransacciones = await storage.getTransacciones(userId);
+          const allTransacciones = await storage.getTransacciones(effectiveUserId);
 
           // Filter out automatic trip transactions for compradores
           const filterStart = Date.now();
@@ -3038,19 +3053,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint paginado para transacciones de LCDM (DEBE IR ANTES de /api/transacciones/:id)
   app.get("/api/transacciones/lcdm", requireAuth, async (req, res) => {
     try {
-      // Verificar si el usuario es ADMIN - si lo es, no filtrar por userId
-      let userId: string | undefined = req.user?.id || "main_user";
-      const isAdmin = req.user?.roleId ? await db.select().from(roles).where(eq(roles.id, req.user.roleId)).then(r => r[0]?.nombre === 'ADMIN') : false;
+      const userId = req.user?.id || "main_user";
       
-      // Si es admin, no filtrar por userId (ver todas las transacciones)
-      if (isAdmin) {
-        userId = undefined;
-      }
+      // Si el usuario tiene permisos de transacciones, puede ver TODAS las transacciones
+      // (sin filtrar por userId) para mantener coherencia en tiempo real
+      const userPermissions = await getUserPermissions(userId);
+      const hasTransactionPermissions = 
+        userPermissions.includes("action.TRANSACCIONES.create") ||
+        userPermissions.includes("action.TRANSACCIONES.completePending") ||
+        userPermissions.includes("action.TRANSACCIONES.edit") ||
+        userPermissions.includes("action.TRANSACCIONES.delete");
+      
+      // Si tiene permisos de transacciones, no filtrar por userId (ver todas)
+      const effectiveUserId = hasTransactionPermissions ? undefined : userId;
       
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       
-      console.log(`[LCDM] Request recibido - userId: ${userId || 'ALL (ADMIN)'}, page: ${page}, limit: ${limit}, isAdmin: ${isAdmin}`);
+      console.log(`[LCDM] Request recibido - userId: ${userId}, permisos de transacciones: ${hasTransactionPermissions ? 'SÍ' : 'NO'}, effectiveUserId: ${effectiveUserId || 'ALL'}, page: ${page}, limit: ${limit}`);
       
       // Leer parámetros de filtro
       const search = req.query.search as string || '';
@@ -3058,22 +3078,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fechaHasta = req.query.fechaHasta as string || '';
       const includeHidden = req.query.includeHidden === 'true';
       
-      console.log(`[LCDM] Obteniendo transacciones para userId: ${userId || 'ALL (ADMIN)'}, includeHidden: ${includeHidden}`);
+      console.log(`[LCDM] Obteniendo transacciones para effectiveUserId: ${effectiveUserId || 'ALL'}, includeHidden: ${includeHidden}`);
       
       // Si includeHidden=true, devolver todas las transacciones sin paginación
       if (includeHidden) {
-        const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(userId);
+        const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(effectiveUserId);
         const lcdmTransactions = allTransaccionesIncludingHidden.filter((t: any) => 
           t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm'
         );
         return res.json(lcdmTransactions);
       }
       
-      const allTransacciones = await storage.getTransacciones(userId);
+      const allTransacciones = await storage.getTransacciones(effectiveUserId);
       console.log(`[LCDM] Total transacciones obtenidas: ${allTransacciones.length}`);
       
       // Obtener TODAS las transacciones (incluyendo ocultas) para contar las ocultas
-      const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(userId);
+      const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(effectiveUserId);
       const hiddenLcdmCount = allTransaccionesIncludingHidden.filter((t: any) => 
         (t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm') && t.oculta
       ).length;
@@ -3169,32 +3189,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint paginado para transacciones de Postobón (DEBE IR ANTES de /api/transacciones/:id)
   app.get("/api/transacciones/postobon", requireAuth, async (req, res) => {
     try {
-      // Verificar si el usuario es ADMIN - si lo es, no filtrar por userId
-      let userId: string | undefined = req.user?.id || "main_user";
-      const isAdmin = req.user?.roleId ? await db.select().from(roles).where(eq(roles.id, req.user.roleId)).then(r => r[0]?.nombre === 'ADMIN') : false;
+      const userId = req.user?.id || "main_user";
       
-      // Si es admin, no filtrar por userId (ver todas las transacciones)
-      if (isAdmin) {
-        userId = undefined;
-      }
+      // Si el usuario tiene permisos de transacciones, puede ver TODAS las transacciones
+      // (sin filtrar por userId) para mantener coherencia en tiempo real
+      const userPermissions = await getUserPermissions(userId);
+      const hasTransactionPermissions = 
+        userPermissions.includes("action.TRANSACCIONES.create") ||
+        userPermissions.includes("action.TRANSACCIONES.completePending") ||
+        userPermissions.includes("action.TRANSACCIONES.edit") ||
+        userPermissions.includes("action.TRANSACCIONES.delete");
+      
+      // Si tiene permisos de transacciones, no filtrar por userId (ver todas)
+      const effectiveUserId = hasTransactionPermissions ? undefined : userId;
       
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       const filterType = req.query.filterType as string || 'todas'; // todas, santa-rosa, cimitarra
       
-      console.log(`[Postobón] Request recibido - userId: ${userId || 'ALL (ADMIN)'}, page: ${page}, limit: ${limit}, filterType: ${filterType}, isAdmin: ${isAdmin}`);
+      console.log(`[Postobón] Request recibido - userId: ${userId}, permisos de transacciones: ${hasTransactionPermissions ? 'SÍ' : 'NO'}, effectiveUserId: ${effectiveUserId || 'ALL'}, page: ${page}, limit: ${limit}, filterType: ${filterType}`);
       
       // Leer parámetros de filtro
       const search = req.query.search as string || '';
       const fechaDesde = req.query.fechaDesde as string || '';
       const fechaHasta = req.query.fechaHasta as string || '';
       
-      console.log(`[Postobón] Obteniendo transacciones para userId: ${userId || 'ALL (ADMIN)'}`);
-      const allTransacciones = await storage.getTransacciones(userId);
+      console.log(`[Postobón] Obteniendo transacciones para effectiveUserId: ${effectiveUserId || 'ALL'}`);
+      const allTransacciones = await storage.getTransacciones(effectiveUserId);
       console.log(`[Postobón] Total transacciones obtenidas: ${allTransacciones.length}`);
       
       // Obtener TODAS las transacciones (incluyendo ocultas) para contar las ocultas
-      const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(userId);
+      const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(effectiveUserId);
       let hiddenPostobonCount = allTransaccionesIncludingHidden.filter((t: any) => 
         (t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon') && t.oculta
       ).length;
