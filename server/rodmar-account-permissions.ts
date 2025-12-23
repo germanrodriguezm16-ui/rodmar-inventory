@@ -43,16 +43,16 @@ export async function createRodMarAccountPermission(cuentaNombre: string): Promi
 /**
  * Verifica si un usuario tiene permiso para ver una cuenta RodMar específica
  * (Función síncrona para uso en filtros)
+ * 
+ * NOTA: El permiso general module.RODMAR.accounts.view solo habilita la pestaña,
+ * pero NO otorga acceso a las cuentas. Solo los permisos específicos dan acceso.
  */
 export function canViewRodMarAccount(
   userPermissions: string[],
   cuentaNombre: string
 ): boolean {
-  // Si tiene el permiso general de ver todas las cuentas, puede ver todas
-  if (userPermissions.includes('module.RODMAR.accounts.view')) {
-    return true;
-  }
-  // Si tiene el permiso específico de esta cuenta, puede verla
+  // Solo verificar el permiso específico de esta cuenta
+  // El permiso general NO otorga acceso automático
   const permisoCuenta = `module.RODMAR.account.${cuentaNombre}.view`;
   return userPermissions.includes(permisoCuenta);
 }
