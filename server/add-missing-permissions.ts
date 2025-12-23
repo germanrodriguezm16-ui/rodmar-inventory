@@ -189,8 +189,15 @@ async function addMissingPermissions() {
   }
 }
 
-// Ejecutar si se llama directamente
-if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.includes('add-missing-permissions.ts')) {
+// Ejecutar solo si se llama directamente como script (no cuando se importa como módulo)
+// Verificar si este archivo es el punto de entrada principal
+const isMainModule = process.argv[1] && (
+  process.argv[1].endsWith('add-missing-permissions.ts') ||
+  process.argv[1].endsWith('add-missing-permissions.js') ||
+  process.argv[1].includes('add-missing-permissions')
+);
+
+if (isMainModule) {
   addMissingPermissions()
     .then(() => {
       console.log('✅ Script completado');
