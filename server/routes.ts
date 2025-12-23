@@ -2302,6 +2302,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .json({ error: "Missing tipoSocio or socioId parameters" });
         }
 
+        // Si el usuario tiene permisos de transacciones, puede ver TODAS las transacciones
+        // (sin filtrar por userId) para mantener coherencia en tiempo real
+        const userPermissions = await getUserPermissions(userId);
+        const hasTransactionPermissions = 
+          userPermissions.includes("action.TRANSACCIONES.create") ||
+          userPermissions.includes("action.TRANSACCIONES.completePending") ||
+          userPermissions.includes("action.TRANSACCIONES.edit") ||
+          userPermissions.includes("action.TRANSACCIONES.delete");
+        
+        // Si tiene permisos de transacciones, no filtrar por userId (ver todas)
+        const effectiveUserId = hasTransactionPermissions ? undefined : userId;
+
         // Determinar el módulo correcto según el tipo de socio
         let modulo: 'general' | 'comprador' | 'mina' | 'volquetero' = 'general';
         if (tipoSocio === 'mina') {
@@ -2313,11 +2325,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Usar getTransaccionesForModule con el módulo correcto en lugar de getTransaccionesBySocio
-        console.log(`🔍 [DEBUG] getTransaccionesForModule - tipoSocio: ${tipoSocio}, socioId: ${socioId}, modulo: ${modulo}, includeHidden: ${includeHidden === "true"}`);
+        console.log(`🔍 [DEBUG] getTransaccionesForModule - tipoSocio: ${tipoSocio}, socioId: ${socioId}, modulo: ${modulo}, includeHidden: ${includeHidden === "true"}, effectiveUserId: ${effectiveUserId || 'ALL'}`);
         const transacciones = await storage.getTransaccionesForModule(
           tipoSocio as string,
           parseInt(socioId as string),
-          userId,
+          effectiveUserId,
           includeHidden === "true",
           modulo,
         );
@@ -4051,6 +4063,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Obtener permisos del usuario
       const userPermissions = await getUserPermissions(req.user.id);
       
+      // Si el usuario tiene permisos de transacciones, puede ver TODAS las transacciones
+      // (sin filtrar por userId) para mantener coherencia en tiempo real
+      const hasTransactionPermissions = 
+        userPermissions.includes("action.TRANSACCIONES.create") ||
+        userPermissions.includes("action.TRANSACCIONES.completePending") ||
+        userPermissions.includes("action.TRANSACCIONES.edit") ||
+        userPermissions.includes("action.TRANSACCIONES.delete");
+      
       // Obtener overrides del usuario para verificar denegaciones específicas
       const userOverrides = await db
         .select({
@@ -4068,7 +4088,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Función para verificar si el usuario tiene permiso para ver una cuenta específica
       // NOTA: El permiso general module.RODMAR.accounts.view solo habilita la pestaña,
       // pero NO otorga acceso a las cuentas. Solo los permisos específicos dan acceso.
+      // EXCEPCIÓN: Si tiene permisos de transacciones, puede ver todas las cuentas.
       const tienePermisoCuenta = (nombreCuenta: string): boolean => {
+        // Si tiene permisos de transacciones, permitir todas las cuentas
+        if (hasTransactionPermissions) {
+          return true;
+        }
+        
         const permisoCuenta = `module.RODMAR.account.${nombreCuenta}.view`;
         
         // PRIMERO: Verificar si tiene un override "deny" para esta cuenta específica
