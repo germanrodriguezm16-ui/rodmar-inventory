@@ -79,12 +79,21 @@ async function addMissingPermissions() {
         .limit(1);
 
       if (existingAssignment.length === 0) {
-        await db.insert(rolePermissions).values({
-          roleId: adminRole[0].id,
-          permissionId: perm.id,
-        });
-        assignedCount++;
-        console.log(`✅ Permiso ${perm.key} asignado al rol ADMIN`);
+        try {
+          await db.insert(rolePermissions).values({
+            roleId: adminRole[0].id,
+            permissionId: perm.id,
+          });
+          assignedCount++;
+          console.log(`✅ Permiso ${perm.key} asignado al rol ADMIN`);
+        } catch (error: any) {
+          // Si ya está asignado (error 23505), ignorar
+          if (error.code === '23505' && error.constraint_name === 'unique_role_permission') {
+            console.log(`✅ Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
+          } else {
+            throw error; // Re-lanzar otros errores
+          }
+        }
       }
     }
 
@@ -105,14 +114,34 @@ async function addMissingPermissions() {
 
       if (existing.length > 0) {
         permissionId = existing[0].id;
+        console.log(`✅ Permiso ${perm.key} ya existe (ID: ${permissionId})`);
       } else {
-        // Crear el permiso
-        const [newPermission] = await db
-          .insert(permissions)
-          .values(perm)
-          .returning();
-        permissionId = newPermission.id;
-        console.log(`✅ Permiso creado: ${perm.key} (ID: ${permissionId})`);
+        // Crear el permiso con manejo de duplicados
+        try {
+          const [newPermission] = await db
+            .insert(permissions)
+            .values(perm)
+            .returning();
+          permissionId = newPermission.id;
+          console.log(`✅ Permiso creado: ${perm.key} (ID: ${permissionId})`);
+        } catch (error: any) {
+          // Si el permiso ya existe (error 23505), obtenerlo
+          if (error.code === '23505' && error.constraint_name === 'permissions_key_unique') {
+            const existingPerm = await db
+              .select()
+              .from(permissions)
+              .where(eq(permissions.key, perm.key))
+              .limit(1);
+            if (existingPerm.length > 0) {
+              permissionId = existingPerm[0].id;
+              console.log(`✅ Permiso ${perm.key} ya existía (ID: ${permissionId})`);
+            } else {
+              throw error; // Re-lanzar si no podemos obtenerlo
+            }
+          } else {
+            throw error; // Re-lanzar otros errores
+          }
+        }
       }
 
       // Verificar si ya está asignado al ADMIN
@@ -128,11 +157,20 @@ async function addMissingPermissions() {
         .limit(1);
 
       if (existingAssignment.length === 0) {
-        await db.insert(rolePermissions).values({
-          roleId: adminRole[0].id,
-          permissionId: permissionId,
-        });
-        console.log(`✅ Permiso ${perm.key} asignado al rol ADMIN`);
+        try {
+          await db.insert(rolePermissions).values({
+            roleId: adminRole[0].id,
+            permissionId: permissionId,
+          });
+          console.log(`✅ Permiso ${perm.key} asignado al rol ADMIN`);
+        } catch (error: any) {
+          // Si ya está asignado (error 23505), ignorar
+          if (error.code === '23505' && error.constraint_name === 'unique_role_permission') {
+            console.log(`✅ Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
+          } else {
+            throw error; // Re-lanzar otros errores
+          }
+        }
       } else {
         console.log(`✅ Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
       }
@@ -140,9 +178,14 @@ async function addMissingPermissions() {
 
     console.log('=== PERMISOS FALTANTES AGREGADOS EXITOSAMENTE ===');
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('=== ERROR AGREGANDO PERMISOS FALTANTES ===', error);
-    throw error;
+    // No lanzar error para no bloquear la inicialización si es un error de duplicado
+    if (error.code === '23505') {
+      console.log('⚠️  Error de duplicado ignorado (permiso o asignación ya existe)');
+    } else {
+      throw error; // Re-lanzar otros errores
+    }
   }
 }
 
