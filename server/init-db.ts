@@ -51,13 +51,14 @@ export async function initializeRolesAndPermissions() {
       { key: 'module.RODMAR.balances.view', descripcion: 'Ver balances globales en RodMar', categoria: 'tab' },
       { key: 'module.TRANSACCIONES.tab.pending.view', descripcion: 'Ver transacciones pendientes', categoria: 'tab' },
       
-      // Acciones (17)
+      // Acciones (18)
       { key: 'action.TRANSACCIONES.create', descripcion: 'Crear transacciones', categoria: 'action' },
       { key: 'action.TRANSACCIONES.edit', descripcion: 'Editar transacciones', categoria: 'action' },
       { key: 'action.TRANSACCIONES.delete', descripcion: 'Eliminar transacciones', categoria: 'action' },
       { key: 'action.TRANSACCIONES.hide', descripcion: 'Ocultar transacciones', categoria: 'action' },
       { key: 'action.TRANSACCIONES.viewPending', descripcion: 'Ver transacciones pendientes', categoria: 'action' },
       { key: 'action.TRANSACCIONES.completePending', descripcion: 'Completar transacciones pendientes', categoria: 'action' },
+      { key: 'action.TRANSACCIONES.solicitar', descripcion: 'Solicitar transacciones pendientes', categoria: 'action' },
       { key: 'action.VIAJES.create', descripcion: 'Crear viajes', categoria: 'action' },
       { key: 'action.VIAJES.edit', descripcion: 'Editar viajes', categoria: 'action' },
       { key: 'action.VIAJES.delete', descripcion: 'Eliminar viajes', categoria: 'action' },

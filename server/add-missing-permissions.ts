@@ -25,6 +25,7 @@ async function addMissingPermissions() {
     // Permisos a agregar/verificar
     const missingPermissions = [
       { key: 'module.PRINCIPAL.view', descripcion: 'Ver módulo Principal (Viajes)', categoria: 'module' },
+      { key: 'action.TRANSACCIONES.solicitar', descripcion: 'Solicitar transacciones pendientes', categoria: 'action' },
       { key: 'module.COMPRADORES.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Compradores', categoria: 'tab' },
       { key: 'module.VOLQUETEROS.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Volqueteros', categoria: 'tab' },
       { key: 'module.RODMAR.LCDM.view', descripcion: 'Ver sección LCDM en RodMar', categoria: 'tab' },

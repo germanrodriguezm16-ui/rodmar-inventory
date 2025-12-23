@@ -222,7 +222,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/minas", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const minas = await storage.getMinas(userId);
+      
+      // Si el usuario tiene permisos de transacciones, devolver TODAS las minas
+      // (sin filtrar por userId) para que pueda seleccionarlas en transacciones
+      const userPermissions = await getUserPermissions(userId);
+      const hasTransactionPermissions = 
+        userPermissions.includes("action.TRANSACCIONES.create") ||
+        userPermissions.includes("action.TRANSACCIONES.completePending") ||
+        userPermissions.includes("action.TRANSACCIONES.edit") ||
+        userPermissions.includes("action.TRANSACCIONES.delete");
+      
+      const minas = hasTransactionPermissions 
+        ? await storage.getMinas() // Sin userId = todas las minas
+        : await storage.getMinas(userId); // Con userId = solo las del usuario
       res.json(minas);
     } catch (error: any) {
       console.error("Error fetching minas:", error.message);
@@ -568,7 +580,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const userId = req.user!.id;
-        const compradores = await storage.getCompradores(userId);
+        
+        // Si el usuario tiene permisos de transacciones, devolver TODOS los compradores
+        // (sin filtrar por userId) para que pueda seleccionarlos en transacciones
+        const userPermissions = await getUserPermissions(userId);
+        const hasTransactionPermissions = 
+          userPermissions.includes("action.TRANSACCIONES.create") ||
+          userPermissions.includes("action.TRANSACCIONES.completePending") ||
+          userPermissions.includes("action.TRANSACCIONES.edit") ||
+          userPermissions.includes("action.TRANSACCIONES.delete");
+        
+        const compradores = hasTransactionPermissions 
+          ? await storage.getCompradores() // Sin userId = todos los compradores
+          : await storage.getCompradores(userId); // Con userId = solo los del usuario
         res.json(compradores);
       } catch (error: any) {
         console.error("Error fetching compradores:", error.message);
@@ -775,10 +799,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const userId = req.user!.id;
-        const viajes = await storage.getViajes(userId);
+        
+        // Si el usuario tiene permisos de transacciones, obtener TODOS los viajes
+        // (sin filtrar por userId) para que pueda ver todos los volqueteros en transacciones
+        const userPermissions = await getUserPermissions(userId);
+        const hasTransactionPermissions = 
+          userPermissions.includes("action.TRANSACCIONES.create") ||
+          userPermissions.includes("action.TRANSACCIONES.completePending") ||
+          userPermissions.includes("action.TRANSACCIONES.edit") ||
+          userPermissions.includes("action.TRANSACCIONES.delete");
+        
+        const viajes = hasTransactionPermissions 
+          ? await storage.getViajes() // Sin userId = todos los viajes
+          : await storage.getViajes(userId); // Con userId = solo los del usuario
 
         // Obtener volqueteros reales de la tabla para usar IDs correctos
-        const volqueterosReales = await storage.getVolqueteros();
+        // Si tiene permisos de transacciones, obtener TODOS los volqueteros
+        const volqueterosReales = hasTransactionPermissions
+          ? await storage.getVolqueteros() // Sin userId = todos los volqueteros
+          : await storage.getVolqueteros(userId); // Con userId = solo los del usuario
         const volqueterosPorNombre: Record<string, any> = {};
         volqueterosReales.forEach((v) => {
           volqueterosPorNombre[v.nombre.toLowerCase()] = v;
@@ -2435,7 +2474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Crear transacción pendiente (solicitud)
-  app.post("/api/transacciones/solicitar", requireAuth, async (req, res) => {
+  app.post("/api/transacciones/solicitar", requireAuth, requirePermission("action.TRANSACCIONES.solicitar"), async (req, res) => {
     try {
       const userId = req.user!.id;
       const data = req.body;
@@ -4206,10 +4245,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey)
       );
       
+      // Si el usuario tiene permisos de transacciones, puede ver TODAS las cuentas RodMar
+      // para poder seleccionarlas en transacciones (como si fuera administrador)
+      const hasTransactionPermissions = 
+        userPermissions.includes("action.TRANSACCIONES.create") ||
+        userPermissions.includes("action.TRANSACCIONES.completePending") ||
+        userPermissions.includes("action.TRANSACCIONES.edit") ||
+        userPermissions.includes("action.TRANSACCIONES.delete");
+      
       // Función para verificar si el usuario tiene permiso para ver una cuenta específica
       // NOTA: El permiso general module.RODMAR.accounts.view solo habilita la pestaña,
       // pero NO otorga acceso a las cuentas. Solo los permisos específicos dan acceso.
+      // EXCEPCIÓN: Si tiene permisos de transacciones, puede ver todas las cuentas.
       const tienePermisoCuenta = (nombreCuenta: string): boolean => {
+        // Si tiene permisos de transacciones, permitir todas las cuentas
+        if (hasTransactionPermissions) {
+          console.log(`[RODMAR-ACCOUNTS] Cuenta "${nombreCuenta}": PERMITIDA (permisos de transacciones)`);
+          return true;
+        }
+        
         const permisoCuenta = `module.RODMAR.account.${nombreCuenta}.view`;
         
         // PRIMERO: Verificar si tiene un override "deny" para esta cuenta específica
