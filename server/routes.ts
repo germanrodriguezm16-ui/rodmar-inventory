@@ -3986,10 +3986,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Obtener permisos del usuario
       const userPermissions = await getUserPermissions(req.user.id);
+      
+      // Obtener overrides del usuario para verificar denegaciones específicas
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, req.user.id));
+      
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey)
+      );
 
       // Función para verificar si el usuario tiene permiso para ver una cuenta específica
+      // NOTA: El permiso general module.RODMAR.accounts.view solo habilita la pestaña,
+      // pero NO otorga acceso a las cuentas. Solo los permisos específicos dan acceso.
       const tienePermisoCuenta = (nombreCuenta: string): boolean => {
-        return canViewRodMarAccount(userPermissions, nombreCuenta);
+        const permisoCuenta = `module.RODMAR.account.${nombreCuenta}.view`;
+        
+        // PRIMERO: Verificar si tiene un override "deny" para esta cuenta específica
+        if (deniedPermissions.has(permisoCuenta)) {
+          return false;
+        }
+        
+        // SEGUNDO: Verificar si tiene el permiso específico de esta cuenta
+        // (El permiso general NO otorga acceso automático)
+        return userPermissions.includes(permisoCuenta);
       };
 
       const { cuentaNombre } = req.params;
@@ -4182,34 +4207,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // Función para verificar si el usuario tiene permiso para ver una cuenta específica
+      // NOTA: El permiso general module.RODMAR.accounts.view solo habilita la pestaña,
+      // pero NO otorga acceso a las cuentas. Solo los permisos específicos dan acceso.
       const tienePermisoCuenta = (nombreCuenta: string): boolean => {
         const permisoCuenta = `module.RODMAR.account.${nombreCuenta}.view`;
         
         // PRIMERO: Verificar si tiene un override "deny" para esta cuenta específica
-        // Si tiene un deny, NO puede verla, incluso si tiene el permiso general
         if (deniedPermissions.has(permisoCuenta)) {
           console.log(`[RODMAR-ACCOUNTS] Cuenta "${nombreCuenta}": DENEGADA por override`);
           return false;
         }
         
         // SEGUNDO: Verificar si tiene el permiso específico de esta cuenta
+        // (El permiso general NO otorga acceso automático)
         if (userPermissions.includes(permisoCuenta)) {
           console.log(`[RODMAR-ACCOUNTS] Cuenta "${nombreCuenta}": PERMITIDA por permiso específico`);
           return true;
         }
         
-        // TERCERO: Verificar si tiene el permiso general (solo si no tiene deny específico)
-        if (userPermissions.includes("module.RODMAR.accounts.view")) {
-          // Verificar si el permiso general está denegado
-          if (deniedPermissions.has("module.RODMAR.accounts.view")) {
-            console.log(`[RODMAR-ACCOUNTS] Cuenta "${nombreCuenta}": DENEGADA (permiso general denegado)`);
-            return false;
-          }
-          console.log(`[RODMAR-ACCOUNTS] Cuenta "${nombreCuenta}": PERMITIDA por permiso general`);
-          return true;
-        }
-        
-        console.log(`[RODMAR-ACCOUNTS] Cuenta "${nombreCuenta}": DENEGADA (sin permisos)`);
+        console.log(`[RODMAR-ACCOUNTS] Cuenta "${nombreCuenta}": DENEGADA (sin permiso específico)`);
         return false;
       };
 
