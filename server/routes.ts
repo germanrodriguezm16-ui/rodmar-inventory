@@ -2797,7 +2797,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/transacciones/pendientes", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const pendientes = await storage.getTransaccionesPendientes(userId);
+      
+      // Si el usuario tiene permisos para ver o completar transacciones pendientes,
+      // puede ver TODAS las transacciones pendientes (no solo las suyas)
+      const userPermissions = await getUserPermissions(userId);
+      const hasPendingPermissions = 
+        userPermissions.includes("action.TRANSACCIONES.viewPending") ||
+        userPermissions.includes("action.TRANSACCIONES.completePending");
+      
+      // Si tiene permisos, no filtrar por userId (ver todas)
+      const effectiveUserId = hasPendingPermissions ? undefined : userId;
+      
+      const pendientes = await storage.getTransaccionesPendientes(effectiveUserId);
       res.json(pendientes);
     } catch (error) {
       console.error("Error getting pendientes:", error);
@@ -2814,7 +2825,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/transacciones/pendientes/count", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const count = await storage.countTransaccionesPendientes(userId);
+      
+      // Si el usuario tiene permisos para ver o completar transacciones pendientes,
+      // puede ver TODAS las transacciones pendientes (no solo las suyas)
+      const userPermissions = await getUserPermissions(userId);
+      const hasPendingPermissions = 
+        userPermissions.includes("action.TRANSACCIONES.viewPending") ||
+        userPermissions.includes("action.TRANSACCIONES.completePending");
+      
+      // Si tiene permisos, no filtrar por userId (contar todas)
+      const effectiveUserId = hasPendingPermissions ? undefined : userId;
+      
+      const count = await storage.countTransaccionesPendientes(effectiveUserId);
       res.json({ count });
     } catch (error) {
       console.error("Error counting pendientes:", error);
