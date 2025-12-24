@@ -32,9 +32,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
-import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
 import { CompleteTransactionModal } from "@/components/modals/complete-transaction-modal";
+import { GestionarTransaccionesModal } from "@/components/modals/gestionar-transacciones-modal";
+import { PendingListModal } from "@/components/pending-transactions/pending-list-modal";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import { TransaccionesImageModal } from "@/components/modals/transacciones-image-modal";
 import type { ViajeWithDetails, TransaccionWithSocio } from "@shared/schema";
@@ -102,6 +102,9 @@ export default function VolqueteroDetail() {
   
   const [showNewTransactionModal, setShowNewTransactionModal] = useState(false);
   const [showTemporalTransaction, setShowTemporalTransaction] = useState(false);
+  const [showGestionarModal, setShowGestionarModal] = useState(false);
+  const [showSolicitarModal, setShowSolicitarModal] = useState(false);
+  const [showPendingModal, setShowPendingModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<any | null>(null);
   const [deletingTransaction, setDeletingTransaction] = useState<any | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
@@ -1780,11 +1783,37 @@ export default function VolqueteroDetail() {
       <Button
         size="icon"
         className="fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-50"
-        onClick={() => setShowNewTransactionModal(true)}
-        aria-label="Crear transacción"
+        onClick={() => setShowGestionarModal(true)}
+        aria-label="Gestionar transacciones"
       >
         <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
       </Button>
+
+      {/* Modal de gestionar transacciones */}
+      <GestionarTransaccionesModal
+        open={showGestionarModal}
+        onClose={() => setShowGestionarModal(false)}
+        onCrear={() => setShowNewTransactionModal(true)}
+        onSolicitar={() => setShowSolicitarModal(true)}
+        onCompletar={() => setShowPendingModal(true)}
+      />
+
+      {/* Modal de solicitar transacción */}
+      <SolicitarTransaccionModal
+        open={showSolicitarModal}
+        onClose={() => setShowSolicitarModal(false)}
+      />
+
+      {/* Modal de transacciones pendientes */}
+      <PendingListModal
+        open={showPendingModal}
+        onClose={() => setShowPendingModal(false)}
+        onSelectTransaction={(transaction) => {
+          setSelectedTransaction(transaction);
+          setShowPendingDetailModal(true);
+          setShowPendingModal(false);
+        }}
+      />
 
       {/* Modals */}
       <NewTransactionModal
