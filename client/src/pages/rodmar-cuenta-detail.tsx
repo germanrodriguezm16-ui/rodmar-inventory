@@ -172,8 +172,7 @@ export default function RodMarCuentaDetail() {
   const [, setLocation] = useLocation();
   const cuentaSlug = params.cuentaSlug || '';
   const cuentaNombre = slugToCuentaName(cuentaSlug);
-  
-
+  const { has } = usePermissions();
   
   // Estados para filtros
   const [filtros, setFiltros] = useState<TransaccionFiltrosState>({
