@@ -4100,13 +4100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Función para verificar si el usuario tiene permiso para ver una cuenta específica
       // NOTA: El permiso general module.RODMAR.accounts.view solo habilita la pestaña,
       // pero NO otorga acceso a las cuentas. Solo los permisos específicos dan acceso.
-      // EXCEPCIÓN: Si tiene permisos de transacciones, puede ver todas las cuentas.
       const tienePermisoCuenta = (nombreCuenta: string): boolean => {
-        // Si tiene permisos de transacciones, permitir todas las cuentas
-        if (hasTransactionPermissions) {
-          return true;
-        }
-        
         const permisoCuenta = `module.RODMAR.account.${nombreCuenta}.view`;
         
         // PRIMERO: Verificar si tiene un override "deny" para esta cuenta específica
