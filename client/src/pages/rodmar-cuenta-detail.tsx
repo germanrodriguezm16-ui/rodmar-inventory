@@ -6,6 +6,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/hooks/use-toast";
 import { apiUrl } from "@/lib/api";
 import { getAuthToken } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1123,15 +1124,19 @@ export default function RodMarCuentaDetail() {
           FILTROS_FECHA.find(f => f.value === filtros.fechaTipo)?.label || "Personalizado"}
       />
 
-      {/* Botón flotante para gestionar transacciones */}
-      <Button
-        size="icon"
-        className="fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-40"
-        onClick={() => setShowGestionarModal(true)}
-        aria-label="Gestionar transacciones"
-      >
-        <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
-      </Button>
+      {/* Botón flotante para gestionar transacciones - Solo visible si tiene permisos */}
+      {(has("action.TRANSACCIONES.create") || 
+        has("action.TRANSACCIONES.solicitar") || 
+        has("action.TRANSACCIONES.completePending")) && (
+        <Button
+          size="icon"
+          className="fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-40"
+          onClick={() => setShowGestionarModal(true)}
+          aria-label="Gestionar transacciones"
+        >
+          <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
+        </Button>
+      )}
 
       {/* Modal de gestionar transacciones */}
       <GestionarTransaccionesModal

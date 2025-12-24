@@ -879,8 +879,12 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
           animation: blink 1.5s ease-in-out infinite;
         }
       `}</style>
-      {/* Botón flotante solo visible si tiene permiso para crear transacciones o ver pendientes */}
-      {(has("action.TRANSACCIONES.create") || has("action.TRANSACCIONES.viewPending") || hasPending) && (
+      {/* Botón flotante visible si tiene permiso para crear, solicitar, completar transacciones o ver pendientes */}
+      {(has("action.TRANSACCIONES.create") || 
+        has("action.TRANSACCIONES.solicitar") || 
+        has("action.TRANSACCIONES.completePending") || 
+        has("action.TRANSACCIONES.viewPending") || 
+        hasPending) && (
         <Button
           size="icon"
           className={`fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-[100] ${

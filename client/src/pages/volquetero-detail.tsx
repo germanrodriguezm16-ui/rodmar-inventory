@@ -1779,15 +1779,19 @@ export default function VolqueteroDetail() {
 
 
 
-      {/* Botón flotante para nueva transacción */}
-      <Button
-        size="icon"
-        className="fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-50"
-        onClick={() => setShowGestionarModal(true)}
-        aria-label="Gestionar transacciones"
-      >
-        <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
-      </Button>
+      {/* Botón flotante para nueva transacción - Solo visible si tiene permisos */}
+      {(has("action.TRANSACCIONES.create") || 
+        has("action.TRANSACCIONES.solicitar") || 
+        has("action.TRANSACCIONES.completePending")) && (
+        <Button
+          size="icon"
+          className="fixed bottom-24 right-4 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg z-50"
+          onClick={() => setShowGestionarModal(true)}
+          aria-label="Gestionar transacciones"
+        >
+          <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
+        </Button>
+      )}
 
       {/* Modal de gestionar transacciones */}
       <GestionarTransaccionesModal
