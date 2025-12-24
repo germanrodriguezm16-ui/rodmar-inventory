@@ -4308,25 +4308,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey)
       );
       
-      // Si el usuario tiene permisos de transacciones, puede ver TODAS las cuentas RodMar
-      // para poder seleccionarlas en transacciones (como si fuera administrador)
-      const hasTransactionPermissions = 
-        userPermissions.includes("action.TRANSACCIONES.create") ||
-        userPermissions.includes("action.TRANSACCIONES.completePending") ||
-        userPermissions.includes("action.TRANSACCIONES.edit") ||
-        userPermissions.includes("action.TRANSACCIONES.delete");
-      
       // Función para verificar si el usuario tiene permiso para ver una cuenta específica
       // NOTA: El permiso general module.RODMAR.accounts.view solo habilita la pestaña,
       // pero NO otorga acceso a las cuentas. Solo los permisos específicos dan acceso.
-      // EXCEPCIÓN: Si tiene permisos de transacciones, puede ver todas las cuentas.
       const tienePermisoCuenta = (nombreCuenta: string): boolean => {
-        // Si tiene permisos de transacciones, permitir todas las cuentas
-        if (hasTransactionPermissions) {
-          console.log(`[RODMAR-ACCOUNTS] Cuenta "${nombreCuenta}": PERMITIDA (permisos de transacciones)`);
-          return true;
-        }
-        
         const permisoCuenta = `module.RODMAR.account.${nombreCuenta}.view`;
         
         // PRIMERO: Verificar si tiene un override "deny" para esta cuenta específica
