@@ -1152,6 +1152,10 @@ export default function RodMarCuentaDetail() {
       <PendingListModal
         open={showPendingModal}
         onClose={() => setShowPendingModal(false)}
+        onSelectTransaction={(transaction) => {
+          setSelectedTransaction(transaction);
+          setShowPendingModal(false);
+        }}
       />
 
       {/* Modal para nueva transacción */}
