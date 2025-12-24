@@ -3713,13 +3713,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.socioId = req.body.socioId;
       }
 
+      // Obtener transacción original ANTES de construir updateData para preservar horaInterna
+      const originalTransaction = await storage.getTransaccion(id);
+      
+      if (!originalTransaction) {
+        console.error(`❌ [PATCH :id] Transacción ${id} no encontrada`);
+        return res.status(404).json({ 
+          error: "Transacción no encontrada o no tienes permiso para actualizarla" 
+        });
+      }
+
+      // Preservar horaInterna si la fecha NO cambió (para mantener el orden dentro del mismo día)
+      const fechaOriginal = originalTransaction.fecha;
+      const nuevaFecha = req.body.fecha ? new Date(req.body.fecha) : undefined;
+      
+      // Comparar fechas (solo día, mes y año, sin hora)
+      const fechaCambio = nuevaFecha && (
+        fechaOriginal.getFullYear() !== nuevaFecha.getFullYear() ||
+        fechaOriginal.getMonth() !== nuevaFecha.getMonth() ||
+        fechaOriginal.getDate() !== nuevaFecha.getDate()
+      );
+
+      // Si la fecha NO cambió, preservar horaInterna original para mantener el orden
+      if (!fechaCambio && originalTransaction.horaInterna) {
+        updateData.horaInterna = originalTransaction.horaInterna;
+        console.log("=== PATCH /api/transacciones/:id - Preservando horaInterna original:", originalTransaction.horaInterna);
+      } else if (fechaCambio) {
+        console.log("=== PATCH /api/transacciones/:id - Fecha cambió, horaInterna se actualizará automáticamente");
+      }
+
       console.log(
         "=== PATCH /api/transacciones/:id - Update data:",
         updateData,
       );
-
-      // Obtener transacción original para comparar
-      const originalTransaction = await storage.getTransaccion(id);
 
       const transaccion = await storage.updateTransaccion(
         id,
