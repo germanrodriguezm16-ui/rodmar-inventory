@@ -3659,9 +3659,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.user?.id || "main_user";
 
+      // Si el usuario tiene permisos de transacciones, puede actualizar TODAS las transacciones
+      // (sin filtrar por userId) para mantener coherencia en tiempo real
+      const userPermissions = await getUserPermissions(userId);
+      const hasTransactionPermissions = 
+        userPermissions.includes("action.TRANSACCIONES.create") ||
+        userPermissions.includes("action.TRANSACCIONES.completePending") ||
+        userPermissions.includes("action.TRANSACCIONES.edit") ||
+        userPermissions.includes("action.TRANSACCIONES.delete");
+      
+      // Si tiene permisos de transacciones, no filtrar por userId (actualizar cualquier transacción)
+      const effectiveUserId = hasTransactionPermissions ? undefined : userId;
+
       const id = parseInt(req.params.id);
 
       console.log("=== PATCH /api/transacciones/:id - Request body:", req.body);
+      console.log("=== PATCH /api/transacciones/:id - Permisos de transacciones:", hasTransactionPermissions ? 'SÍ' : 'NO');
+      console.log("=== PATCH /api/transacciones/:id - effectiveUserId:", effectiveUserId || 'NINGUNO (todas las transacciones)');
 
       // Handle both old and new schema formats
       const updateData: any = {
@@ -3710,8 +3724,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const transaccion = await storage.updateTransaccion(
         id,
         updateData,
-        userId,
+        effectiveUserId,
       );
+
+      // Validar que la transacción se encontró y actualizó correctamente
+      if (!transaccion) {
+        console.error(`❌ [PATCH :id] Transacción ${id} no encontrada o no se pudo actualizar`);
+        return res.status(404).json({ 
+          error: "Transacción no encontrada o no tienes permiso para actualizarla" 
+        });
+      }
 
       console.log(
         "=== PATCH /api/transacciones/:id - Updated transaction:",
