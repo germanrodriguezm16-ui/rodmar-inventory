@@ -2273,9 +2273,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "Invalid transaction ID" });
         }
 
+        // Si el usuario tiene permisos de transacciones, puede ver vouchers de TODAS las transacciones
+        // (sin filtrar por userId) para mantener coherencia con lo que puede ver
+        const userPermissions = await getUserPermissions(userId);
+        const hasTransactionPermissions = 
+          userPermissions.includes("action.TRANSACCIONES.create") ||
+          userPermissions.includes("action.TRANSACCIONES.completePending") ||
+          userPermissions.includes("action.TRANSACCIONES.edit") ||
+          userPermissions.includes("action.TRANSACCIONES.delete");
+        
+        // Si tiene permisos de transacciones, no filtrar por userId (ver vouchers de todas las transacciones)
+        const effectiveUserId = hasTransactionPermissions ? undefined : userId;
+
         const voucher = await storage.getTransaccionVoucher(
           transaccionId,
-          userId,
+          effectiveUserId,
         );
 
         res.json({ voucher });
