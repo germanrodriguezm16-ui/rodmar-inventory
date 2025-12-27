@@ -31,6 +31,10 @@ export default function AddVolqueteroModal({ open, onOpenChange }: AddVolquetero
   const createVolqueteroMutation = useMutation({
     mutationFn: async (data: InsertVolquetero) => {
       const response = await apiRequest("POST", "/api/volqueteros", data);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Error desconocido" }));
+        throw new Error(errorData.error || "No se pudo crear el volquetero");
+      }
       return response.json();
     },
     onSuccess: () => {
