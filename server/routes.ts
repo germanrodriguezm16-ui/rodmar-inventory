@@ -853,6 +853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         > = {};
 
+        // Procesar viajes para agrupar por conductor y extraer placas
         viajes.forEach((viaje) => {
           if (viaje.conductor) {
             const nombreLower = viaje.conductor.toLowerCase();
@@ -882,6 +883,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             conductoresPorNombre[nombreLower].placas[placa].viajesCount++;
             conductoresPorNombre[nombreLower].totalViajes++;
+          }
+        });
+
+        // Agregar volqueteros de la tabla que no tienen viajes asociados
+        volqueterosReales.forEach((volquetero) => {
+          const nombreLower = volquetero.nombre.toLowerCase();
+          
+          // Si el volquetero no está en conductoresPorNombre (no tiene viajes), agregarlo
+          if (!conductoresPorNombre[nombreLower]) {
+            conductoresPorNombre[nombreLower] = {
+              id: volquetero.id,
+              nombre: volquetero.nombre,
+              placas: {
+                [volquetero.placa]: {
+                  placa: volquetero.placa,
+                  tipoCarro: "Sin especificar", // Valor por defecto si no hay viajes
+                  viajesCount: 0,
+                },
+              },
+              totalViajes: 0,
+              saldo: volquetero.saldo?.toString() || "0",
+            };
+          } else {
+            // Si ya existe pero no tiene la placa del volquetero en la tabla, agregarla
+            const placaEnTabla = volquetero.placa;
+            if (!conductoresPorNombre[nombreLower].placas[placaEnTabla]) {
+              conductoresPorNombre[nombreLower].placas[placaEnTabla] = {
+                placa: placaEnTabla,
+                tipoCarro: "Sin especificar",
+                viajesCount: 0,
+              };
+            }
+            // Asegurar que el ID real esté presente
+            if (!conductoresPorNombre[nombreLower].id) {
+              conductoresPorNombre[nombreLower].id = volquetero.id;
+            }
+            // Actualizar saldo si está disponible
+            if (volquetero.saldo) {
+              conductoresPorNombre[nombreLower].saldo = volquetero.saldo.toString();
+            }
           }
         });
 
