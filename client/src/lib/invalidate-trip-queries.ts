@@ -130,9 +130,12 @@ export function invalidateTripRelatedQueries(
       queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
     });
     
-    // Para volqueteros, necesitamos obtener el ID del volquetero basado en el conductor
-    // Por ahora, invalidamos todas las queries de volqueteros que coincidan con el conductor
-    // (esto se manejará mejor cuando tengamos el ID del volquetero)
+    // Para volqueteros, cuando cambia el conductor, necesitamos refetchear la lista completa
+    // porque el conteo de viajes se calcula agrupando por nombre de conductor
+    if (conductoresAfectados.size > 0) {
+      // Refetchear explícitamente la lista de volqueteros para actualizar el conteo
+      queryClient.refetchQueries({ queryKey: ["/api/volqueteros"] });
+    }
   }
   
   // Refetch SIEMPRE de balances (críticos para tarjetas y encabezados)
@@ -140,6 +143,12 @@ export function invalidateTripRelatedQueries(
   queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] });
   queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] });
   queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] });
+  
+  // Refetch explícito de /api/volqueteros si cambió algún conductor (para actualizar conteo en tarjetas)
+  // Esto asegura que el conteo de viajes se actualice inmediatamente
+  if (tripChangeInfo && (tripChangeInfo.oldConductor || tripChangeInfo.newConductor)) {
+    queryClient.refetchQueries({ queryKey: ["/api/volqueteros"] });
+  }
   
   // Refetch de queries activas de viajes y transacciones (para actualización en tiempo real)
   queryClient.refetchQueries({ 
