@@ -402,6 +402,28 @@ export class MemStorage implements IStorage {
     return volquetero;
   }
 
+  async findOrCreateVolqueteroByNombre(
+    nombreConductor: string,
+    placaDelViaje: string,
+    userId?: string
+  ): Promise<Volquetero> {
+    // Buscar volquetero existente por nombre (case-insensitive)
+    const nombreNormalizado = nombreConductor.trim().toLowerCase();
+    const volqueteroExistente = Array.from(this.volqueteros.values()).find(
+      (v) => v.nombre.toLowerCase().trim() === nombreNormalizado
+    );
+    
+    if (volqueteroExistente) {
+      return volqueteroExistente;
+    }
+    
+    // Crear nuevo volquetero
+    return await this.createVolquetero({
+      nombre: nombreConductor.trim(),
+      placa: placaDelViaje || "Sin placa",
+    });
+  }
+
   async updateVolqueteroSaldo(id: number, saldo: string): Promise<void> {
     const volquetero = this.volqueteros.get(id);
     if (volquetero) {
