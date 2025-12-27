@@ -376,10 +376,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/minas", async (req, res) => {
+  app.post("/api/minas", requireAuth, async (req, res) => {
     try {
+      const userId = req.user!.id;
       const data = insertMinaSchema.parse(req.body);
-      const mina = await storage.createMina(data);
+      const mina = await storage.createMina({ ...data, userId });
       res.json(mina);
     } catch (error: any) {
       console.error("Error creating mina:", error.message);
@@ -628,10 +629,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/compradores", async (req, res) => {
+  app.post("/api/compradores", requireAuth, async (req, res) => {
     try {
+      const userId = req.user!.id;
       const data = insertCompradorSchema.parse(req.body);
-      const comprador = await storage.createComprador(data);
+      const comprador = await storage.createComprador({ ...data, userId });
       res.json(comprador);
     } catch (error: any) {
       console.error("Error creating comprador:", error.message);
