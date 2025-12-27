@@ -846,11 +846,17 @@ export default function VolqueteroDetail() {
   const balanceEncabezado = useMemo(() => {
     if (!volquetero) return { total: 0 };
     
-    // Calcular ingresos de viajes (todos los viajes, incluyendo ocultos)
-    const ingresosViajes = todosViajesIncOcultos.reduce((sum, v) => {
-      const totalFlete = parseFloat(v.totalFlete || "0");
-      return sum + totalFlete; // Positivo porque es ingreso para volquetero
-    }, 0);
+    // Calcular ingresos de viajes (solo viajes donde RodMar paga el flete, incluyendo ocultos)
+    // Excluir viajes donde el comprador paga el flete porque no afectan el balance del volquetero
+    const ingresosViajes = todosViajesIncOcultos
+      .filter(v => 
+        v.quienPagaFlete !== "comprador" && 
+        v.quienPagaFlete !== "El comprador"
+      )
+      .reduce((sum, v) => {
+        const totalFlete = parseFloat(v.totalFlete || "0");
+        return sum + totalFlete; // Positivo porque es ingreso para volquetero
+      }, 0);
     
     // Calcular transacciones manuales (todas, incluyendo ocultas)
     // EXCLUIR transacciones pendientes (no afectan balances)
