@@ -493,21 +493,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         // Check if mina has viajes (sin filtrar por userId - similar a compradores)
+        // Solo contar viajes NO ocultos
         const viajes = await storage.getViajesByMina(minaId);
-        console.log(`=== Found ${viajes.length} viajes for mina ${minaId} ===`);
-        if (viajes.length > 0) {
+        const viajesVisibles = viajes.filter(v => !v.oculta);
+        console.log(`=== Found ${viajes.length} viajes totales, ${viajesVisibles.length} visibles for mina ${minaId} ===`);
+        if (viajesVisibles.length > 0) {
           return res.status(400).json({
             error: "No se puede eliminar la mina porque tiene viajes asociados",
           });
         }
 
         // Check if mina has transacciones (sin filtrar por userId - similar a compradores)
+        // Solo contar transacciones NO ocultas (el filtro de ocultas ya se aplica en getTransaccionesBySocio)
         const transacciones = await storage.getTransaccionesBySocio(
           "mina",
           minaId,
         );
         console.log(
-          `=== Found ${transacciones.length} transacciones for mina ${minaId} ===`,
+          `=== Found ${transacciones.length} transacciones visibles for mina ${minaId} ===`,
         );
         if (transacciones.length > 0) {
           return res.status(400).json({
