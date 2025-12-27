@@ -1,5 +1,44 @@
 # Changelog - RodMar Inventory v2.1.0
 
+## 📅 Cambios Recientes (Diciembre 2025 - Enero 2025)
+
+### 🔄 v2.0.1 - Migración Automática de Volqueteros y Transacciones (Diciembre 2025)
+
+#### 🎯 Objetivo
+Eliminar la necesidad de IDs artificiales para volqueteros, creando registros reales en la base de datos para todos los conductores que aparecen en viajes. Además, migrar transacciones huérfanas que referenciaban IDs artificiales.
+
+#### ✨ Cambios Implementados
+
+**1. Migración Automática de Volqueteros**
+- ✅ Función `migrateVolqueterosFromViajes()` que se ejecuta automáticamente al iniciar
+- ✅ Crea registros reales para todos los conductores únicos en viajes
+- ✅ Usa la placa más común de cada conductor
+- ✅ Idempotente: puede ejecutarse múltiples veces sin crear duplicados
+
+**2. Migración de Transacciones Huérfanas**
+- ✅ Función `migrateTransaccionesOrphanas()` que actualiza transacciones con IDs artificiales
+- ✅ Estrategia dual: extrae nombre del concepto (principal) o usa mapeo de IDs artificiales (fallback)
+- ✅ Actualiza automáticamente `deQuienId` y `paraQuienId` a IDs reales
+
+**3. Creación Automática de Volqueteros**
+- ✅ Integrado `findOrCreateVolqueteroByNombre` en endpoints de viajes
+- ✅ Se crea automáticamente un volquetero real cuando se crea/edita un viaje con conductor nuevo
+- ✅ Funciona también en importación masiva de viajes
+
+**4. Mejoras en Endpoints**
+- ✅ `GET /api/volqueteros/:id/viajes` ahora maneja IDs artificiales correctamente
+- ✅ `getViajesByVolquetero` usa comparación case-insensitive para nombres
+
+#### 📝 Archivos Modificados
+- `server/init-db.ts`: Funciones de migración automática
+- `server/routes.ts`: Manejo mejorado de IDs artificiales
+- `server/db-storage.ts`: Comparación case-insensitive en búsquedas
+
+#### 📚 Documentación
+Ver `CAMBIOS_RECIENTES_MIGRACION_VOLQUETEROS.md` para detalles completos.
+
+---
+
 ## 📅 Cambios Recientes (Enero 2025)
 
 ### ⚡ v2.1.2 - Optimización de Invalidaciones de React Query (Enero 2025)
