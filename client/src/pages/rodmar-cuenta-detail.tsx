@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiUrl } from "@/lib/api";
 import { getAuthToken } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useHiddenTransactions } from "@/hooks/useHiddenTransactions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -218,90 +219,31 @@ export default function RodMarCuentaDetail() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Mutación para ocultar transacciones individuales
-  const hideTransactionMutation = useMutation({
-    mutationFn: async (transactionId: number) => {
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide`), {
-        method: 'PATCH',
-        headers,
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error('Error al ocultar transacción');
-      return await response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/cuenta/${cuentaNombre}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/cuenta/${cuentaNombre}/all`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
-      
-      // Forzar refetch inmediato para actualización inmediata
-      queryClient.refetchQueries({ 
-        queryKey: [`/api/transacciones/cuenta/${cuentaNombre}`],
-        type: 'active'
-      });
-      queryClient.refetchQueries({ 
-        queryKey: [`/api/transacciones/cuenta/${cuentaNombre}/all`],
-        type: 'active'
-      });
-      queryClient.refetchQueries({ 
-        queryKey: ["/api/rodmar-accounts"],
-        type: 'active'
-      });
-      
-      toast({
-        title: "Transacción ocultada",
-        description: "La transacción se ha ocultado correctamente"
-      });
-    },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo ocultar la transacción",
-        variant: "destructive"
-      });
-    }
-  });
+  // Hook para manejar transacciones ocultas de forma local y temporal
+  const {
+    hiddenTransactions,
+    hideTransaction: hideTransactionLocal,
+    showAllHidden: showAllHiddenLocal,
+    getHiddenCount: getHiddenTransactionsCount,
+  } = useHiddenTransactions(`rodmar-cuenta-${cuentaNombre}`);
 
-  // Mutación para mostrar todas las transacciones ocultas
-  const showAllHiddenMutation = useMutation({
-    mutationFn: async () => {
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/show-all-hidden`), {
-        method: 'PATCH',
-        headers,
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error('Error al mostrar transacciones ocultas');
-      return await response.json();
-    },
-    onSuccess: () => {
-      toast({
-        description: "Todas las transacciones ocultas ahora son visibles",
-        duration: 2000,
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/cuenta/${cuentaNombre}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/cuenta/${cuentaNombre}/all`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
-    },
-    onError: () => {
-      toast({
-        description: "Error al mostrar transacciones ocultas",
-        variant: "destructive",
-        duration: 3000,
-      });
-    }
-  });
+  // Función para ocultar transacciones localmente (sin llamar a la API)
+  const handleHideTransaction = (transactionId: number) => {
+    hideTransactionLocal(transactionId);
+    toast({
+      title: "Transacción ocultada",
+      description: "La transacción se ha ocultado correctamente"
+    });
+  };
+
+  // Función para mostrar todas las transacciones ocultas localmente
+  const handleShowAllHidden = () => {
+    showAllHiddenLocal();
+    toast({
+      description: "Todas las transacciones ocultas ahora son visibles",
+      duration: 2000,
+    });
+  };
 
   // Calcular fechaDesde y fechaHasta para enviar al servidor
   // IMPORTANTE: Crear fechas en hora local para evitar problemas de zona horaria (Colombia UTC-5)
@@ -404,7 +346,8 @@ export default function RodMarCuentaDetail() {
 
   const allTransaccionesReales = transactionsData?.data || [];
   const pagination = transactionsData?.pagination;
-  const hiddenCuentaCount = todasTransaccionesIncOcultas?.filter((t: any) => t.oculta).length || 0;
+  // Contar transacciones ocultas localmente (solo visual)
+  const hiddenCuentaCount = getHiddenTransactionsCount();
 
   // Filtrado client-side sobre la página activa
   const transaccionesReales = useMemo(() => {
@@ -568,9 +511,16 @@ export default function RodMarCuentaDetail() {
     setCurrentPage(1);
   }, [searchTerm, filtros.fechaTipo, filtros.fechaEspecifica, filtros.fechaInicio, filtros.fechaFin]);
 
-  // Las transacciones ya vienen filtradas del servidor
-  // Solo necesitamos combinar con temporales e inversiones
-  const transaccionesFiltradas = todasTransacciones;
+  // Filtrar transacciones ocultas localmente (solo visual, no afecta BD)
+  const transaccionesFiltradas = useMemo(() => {
+    return todasTransacciones.filter(t => {
+      // Solo filtrar transacciones manuales (las temporales e inversiones se mantienen visibles)
+      if (t.tipo === "Manual" && typeof t.id === 'number') {
+        return !hiddenTransactions.has(t.id);
+      }
+      return true; // Mantener temporales e inversiones visibles
+    });
+  }, [todasTransacciones, hiddenTransactions]);
 
   // Calcular balances dinámicos
   const calcularBalances = () => {
@@ -782,10 +732,10 @@ export default function RodMarCuentaDetail() {
                 {/* Botón mostrar ocultas */}
                 {hiddenCuentaCount > 0 ? (
                   <Button
-                    onClick={() => showAllHiddenMutation.mutate()}
+                    onClick={() => handleShowAllHidden()}
                     size="sm"
                     className="h-8 px-2 text-xs bg-blue-600 hover:bg-blue-700 text-white"
-                    disabled={showAllHiddenMutation.isPending}
+                    disabled={false}
                     title={`Mostrar ${hiddenCuentaCount} transacciones ocultas`}
                   >
                     +{hiddenCuentaCount}
@@ -1045,11 +995,11 @@ export default function RodMarCuentaDetail() {
                             e.stopPropagation();
                             const realTransaction = transaccionesReales.find((t: any) => t.id.toString() === transaccion.id.toString());
                             if (realTransaction) {
-                              hideTransactionMutation.mutate(realTransaction.id);
+                              handleHideTransaction(realTransaction.id);
                             }
                           }}
                           className="w-4 h-4 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-                          disabled={hideTransactionMutation.isPending}
+                          disabled={false}
                           title="Ocultar transacción"
                         >
                           <Eye className="w-2.5 h-2.5 text-gray-500" />
