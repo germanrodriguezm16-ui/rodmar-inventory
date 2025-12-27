@@ -248,6 +248,127 @@ export async function addMissingPermissions() {
   }
 }
 
+/**
+ * Migra volqueteros desde viajes: crea registros en la tabla volqueteros
+ * para todos los conductores únicos que aparecen en viajes pero no tienen
+ * un registro correspondiente en volqueteros.
+ * 
+ * Esta función es idempotente: puede ejecutarse múltiples veces sin crear duplicados.
+ */
+export async function migrateVolqueterosFromViajes() {
+  console.log('=== MIGRANDO VOLQUETEROS DESDE VIAJES ===');
+  
+  try {
+    // Obtener todos los viajes (sin filtrar por userId para migración completa)
+    const todosViajes = await storage.getViajes();
+    
+    if (todosViajes.length === 0) {
+      console.log('✅ No hay viajes para migrar');
+      return;
+    }
+    
+    // Obtener todos los volqueteros existentes
+    const volqueterosExistentes = await storage.getVolqueteros();
+    const volqueterosPorNombre = new Map<string, boolean>();
+    volqueterosExistentes.forEach((v) => {
+      const nombreNormalizado = v.nombre.toLowerCase().trim();
+      volqueterosPorNombre.set(nombreNormalizado, true);
+    });
+    
+    // Agrupar viajes por conductor (nombre normalizado)
+    const conductoresPorNombre = new Map<string, {
+      nombre: string;
+      placaMasComun: string;
+      userId: string | null;
+      totalViajes: number;
+    }>();
+    
+    // Contar placas por conductor para encontrar la más común
+    const placasPorConductor = new Map<string, Map<string, number>>();
+    
+    todosViajes.forEach((viaje) => {
+      if (!viaje.conductor) return;
+      
+      const nombreOriginal = viaje.conductor;
+      const nombreNormalizado = nombreOriginal.toLowerCase().trim();
+      
+      // Inicializar contador de placas para este conductor
+      if (!placasPorConductor.has(nombreNormalizado)) {
+        placasPorConductor.set(nombreNormalizado, new Map());
+      }
+      
+      const placa = viaje.placa || "Sin placa";
+      const contadorPlacas = placasPorConductor.get(nombreNormalizado)!;
+      contadorPlacas.set(placa, (contadorPlacas.get(placa) || 0) + 1);
+      
+      // Inicializar datos del conductor
+      if (!conductoresPorNombre.has(nombreNormalizado)) {
+        conductoresPorNombre.set(nombreNormalizado, {
+          nombre: nombreOriginal, // Mantener el nombre original (con mayúsculas)
+          placaMasComun: placa, // Temporal, se actualizará después
+          userId: viaje.userId || null,
+          totalViajes: 0,
+        });
+      }
+      
+      const datosConductor = conductoresPorNombre.get(nombreNormalizado)!;
+      datosConductor.totalViajes++;
+    });
+    
+    // Encontrar la placa más común para cada conductor
+    conductoresPorNombre.forEach((datos, nombreNormalizado) => {
+      const contadorPlacas = placasPorConductor.get(nombreNormalizado);
+      if (contadorPlacas) {
+        let placaMasComun = "Sin placa";
+        let maxCount = 0;
+        contadorPlacas.forEach((count, placa) => {
+          if (count > maxCount) {
+            maxCount = count;
+            placaMasComun = placa;
+          }
+        });
+        datos.placaMasComun = placaMasComun;
+      }
+    });
+    
+    // Crear volqueteros que no existen
+    let creados = 0;
+    let yaExistentes = 0;
+    
+    for (const [nombreNormalizado, datos] of conductoresPorNombre) {
+      // Verificar si ya existe un volquetero con este nombre
+      if (volqueterosPorNombre.has(nombreNormalizado)) {
+        yaExistentes++;
+        continue;
+      }
+      
+      // Crear volquetero usando findOrCreateVolqueteroByNombre (maneja duplicados y race conditions)
+      try {
+        await storage.findOrCreateVolqueteroByNombre(
+          datos.nombre,
+          datos.placaMasComun,
+          datos.userId || undefined
+        );
+        creados++;
+        console.log(`✅ Volquetero creado: "${datos.nombre}" (${datos.totalViajes} viajes, placa: ${datos.placaMasComun})`);
+      } catch (error: any) {
+        // Si hay un error (por ejemplo, ya fue creado por otra instancia), continuar
+        console.log(`⚠️  No se pudo crear volquetero "${datos.nombre}": ${error.message}`);
+      }
+    }
+    
+    console.log(`=== MIGRACIÓN COMPLETADA ===`);
+    console.log(`✅ Volqueteros creados: ${creados}`);
+    console.log(`ℹ️  Volqueteros ya existentes: ${yaExistentes}`);
+    console.log(`📊 Total conductores únicos: ${conductoresPorNombre.size}`);
+    
+  } catch (error: any) {
+    console.error('❌ Error migrando volqueteros desde viajes:', error.message);
+    // No lanzar error para no bloquear la inicialización
+    // La migración puede ejecutarse en el próximo inicio
+  }
+}
+
 export async function initializeDatabase() {
   console.log('=== INICIALIZANDO BASE DE DATOS POSTGRESQL ===');
   
@@ -260,6 +381,9 @@ export async function initializeDatabase() {
     
     // Luego crear usuario admin por defecto si no existe
     await initializeAdminUser();
+    
+    // Migrar volqueteros desde viajes (crear IDs reales para todos los conductores)
+    await migrateVolqueterosFromViajes();
     
     // Verificar si ya hay datos
     const existingMinas = await db.select().from(minas);
