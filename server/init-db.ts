@@ -326,18 +326,29 @@ export async function migrateTransaccionesOrphanas() {
       }
     });
     
-    // Crear mapeo de ID artificial a nombre y luego a ID real
-    let artificialIdCounter = 1000;
-    const mapeoIdArtificialANombre = new Map<number, string>();
+    // Crear mapeo de nombre a ID real (más confiable que IDs artificiales)
     const mapeoNombreAIdReal = new Map<string, number>();
-    
-    Object.entries(conductoresPorNombre).forEach(([nombreKey, data]) => {
-      const idAsignado = data.id || artificialIdCounter++;
-      mapeoIdArtificialANombre.set(idAsignado, data.nombre);
-      if (data.id) {
-        mapeoNombreAIdReal.set(data.nombre.toLowerCase().trim(), data.id);
-      }
+    volqueterosReales.forEach((v) => {
+      mapeoNombreAIdReal.set(v.nombre.toLowerCase().trim(), v.id);
     });
+    
+    // Función helper para extraer nombre de volquetero del concepto
+    const extraerNombreDelConcepto = (concepto: string | null): string | null => {
+      if (!concepto) return null;
+      // Buscar patrones como "Volquetero (Nombre)" o "a Volquetero (Nombre)" o "de Volquetero (Nombre)"
+      const patrones = [
+        /Volquetero\s*\(([^)]+)\)/i,
+        /a\s+Volquetero\s*\(([^)]+)\)/i,
+        /de\s+Volquetero\s*\(([^)]+)\)/i,
+      ];
+      for (const patron of patrones) {
+        const match = concepto.match(patron);
+        if (match && match[1]) {
+          return match[1].trim();
+        }
+      }
+      return null;
+    };
     
     // Actualizar transacciones huérfanas
     let actualizadas = 0;
@@ -347,24 +358,49 @@ export async function migrateTransaccionesOrphanas() {
       let necesitaActualizacion = false;
       const updates: any = {};
       
+      // Estrategia 1: Intentar extraer nombre del concepto (más confiable)
+      // Estrategia 2: Reconstruir mapeo de IDs artificiales (menos confiable pero como fallback)
+      
+      // Crear mapeo de ID artificial a nombre (solo para fallback)
+      let artificialIdCounter = 1000;
+      const mapeoIdArtificialANombre = new Map<number, string>();
+      Object.entries(conductoresPorNombre).forEach(([nombreKey, data]) => {
+        const idAsignado = data.id || artificialIdCounter++;
+        mapeoIdArtificialANombre.set(idAsignado, data.nombre);
+      });
+      
       // Verificar y actualizar deQuienId si es necesario
       if (transaccion.deQuienTipo === 'volquetero' && transaccion.deQuienId) {
         const idActual = parseInt(transaccion.deQuienId);
         if (idActual >= 1000) {
-          const nombreVolquetero = mapeoIdArtificialANombre.get(idActual);
-          if (nombreVolquetero) {
-            const idReal = mapeoNombreAIdReal.get(nombreVolquetero.toLowerCase().trim());
+          let idReal: number | undefined;
+          
+          // Estrategia 1: Buscar nombre en el concepto
+          const nombreDelConcepto = extraerNombreDelConcepto(transaccion.concepto);
+          if (nombreDelConcepto) {
+            idReal = mapeoNombreAIdReal.get(nombreDelConcepto.toLowerCase().trim());
             if (idReal) {
-              updates.deQuienId = idReal.toString();
-              necesitaActualizacion = true;
-              console.log(`🔍 Transacción ${transaccion.id}: ID artificial ${idActual} -> "${nombreVolquetero}" -> ID real ${idReal}`);
-            } else {
-              sinMapeo++;
-              console.log(`⚠️  No se encontró ID real para "${nombreVolquetero}" (ID artificial ${idActual}) en transacción ${transaccion.id}`);
+              console.log(`🔍 Transacción ${transaccion.id}: Encontrado nombre "${nombreDelConcepto}" en concepto -> ID real ${idReal}`);
             }
+          }
+          
+          // Estrategia 2: Usar mapeo de ID artificial (fallback)
+          if (!idReal) {
+            const nombreVolquetero = mapeoIdArtificialANombre.get(idActual);
+            if (nombreVolquetero) {
+              idReal = mapeoNombreAIdReal.get(nombreVolquetero.toLowerCase().trim());
+              if (idReal) {
+                console.log(`🔍 Transacción ${transaccion.id}: ID artificial ${idActual} -> "${nombreVolquetero}" -> ID real ${idReal}`);
+              }
+            }
+          }
+          
+          if (idReal) {
+            updates.deQuienId = idReal.toString();
+            necesitaActualizacion = true;
           } else {
             sinMapeo++;
-            console.log(`⚠️  No se encontró nombre para ID artificial ${idActual} en transacción ${transaccion.id}`);
+            console.log(`⚠️  No se encontró ID real para transacción ${transaccion.id} (ID artificial ${idActual}, concepto: "${transaccion.concepto}")`);
           }
         }
       }
@@ -373,20 +409,34 @@ export async function migrateTransaccionesOrphanas() {
       if (transaccion.paraQuienTipo === 'volquetero' && transaccion.paraQuienId) {
         const idActual = parseInt(transaccion.paraQuienId);
         if (idActual >= 1000) {
-          const nombreVolquetero = mapeoIdArtificialANombre.get(idActual);
-          if (nombreVolquetero) {
-            const idReal = mapeoNombreAIdReal.get(nombreVolquetero.toLowerCase().trim());
+          let idReal: number | undefined;
+          
+          // Estrategia 1: Buscar nombre en el concepto
+          const nombreDelConcepto = extraerNombreDelConcepto(transaccion.concepto);
+          if (nombreDelConcepto) {
+            idReal = mapeoNombreAIdReal.get(nombreDelConcepto.toLowerCase().trim());
             if (idReal) {
-              updates.paraQuienId = idReal.toString();
-              necesitaActualizacion = true;
-              console.log(`🔍 Transacción ${transaccion.id}: ID artificial ${idActual} -> "${nombreVolquetero}" -> ID real ${idReal}`);
-            } else {
-              sinMapeo++;
-              console.log(`⚠️  No se encontró ID real para "${nombreVolquetero}" (ID artificial ${idActual}) en transacción ${transaccion.id}`);
+              console.log(`🔍 Transacción ${transaccion.id}: Encontrado nombre "${nombreDelConcepto}" en concepto -> ID real ${idReal}`);
             }
+          }
+          
+          // Estrategia 2: Usar mapeo de ID artificial (fallback)
+          if (!idReal) {
+            const nombreVolquetero = mapeoIdArtificialANombre.get(idActual);
+            if (nombreVolquetero) {
+              idReal = mapeoNombreAIdReal.get(nombreVolquetero.toLowerCase().trim());
+              if (idReal) {
+                console.log(`🔍 Transacción ${transaccion.id}: ID artificial ${idActual} -> "${nombreVolquetero}" -> ID real ${idReal}`);
+              }
+            }
+          }
+          
+          if (idReal) {
+            updates.paraQuienId = idReal.toString();
+            necesitaActualizacion = true;
           } else {
             sinMapeo++;
-            console.log(`⚠️  No se encontró nombre para ID artificial ${idActual} en transacción ${transaccion.id}`);
+            console.log(`⚠️  No se encontró ID real para transacción ${transaccion.id} (ID artificial ${idActual}, concepto: "${transaccion.concepto}")`);
           }
         }
       }
