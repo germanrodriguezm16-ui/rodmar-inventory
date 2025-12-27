@@ -162,7 +162,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const result = await db.delete(minas).where(and(...conditions));
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async updateMinaNombre(id: number, nombre: string, userId?: string): Promise<Mina | undefined> {
@@ -231,7 +231,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const result = await db.delete(compradores).where(and(...conditions));
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async updateCompradorNombre(id: number, nombre: string, userId?: string): Promise<Comprador | undefined> {
