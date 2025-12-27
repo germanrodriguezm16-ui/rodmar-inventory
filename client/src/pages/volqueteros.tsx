@@ -4,13 +4,14 @@ import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Search, X, SortAsc, SortDesc, Merge, History, RefreshCw } from "lucide-react";
+import { Users, Search, X, SortAsc, SortDesc, Merge, History, RefreshCw, Plus } from "lucide-react";
 import type { VolqueteroConPlacas } from "@shared/schema";
 import { EditableTitle } from "@/components/EditableTitle";
 import { formatCurrency } from "@/lib/utils";
 import { useVolqueterosBalance } from "@/hooks/useVolqueterosBalance";
 import MergeEntitiesModal from "@/components/fusion/MergeEntitiesModal";
 import FusionHistoryModal from "@/components/fusion/FusionHistoryModal";
+import AddVolqueteroModal from "@/components/modals/add-volquetero-modal";
 
 export default function Volqueteros() {
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -18,6 +19,7 @@ export default function Volqueteros() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showAddVolquetero, setShowAddVolquetero] = useState(false);
   const [, setLocation] = useLocation();
 
   // Usar hook compartido para balances de volqueteros

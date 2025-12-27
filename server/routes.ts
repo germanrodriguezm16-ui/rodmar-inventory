@@ -936,10 +936,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.post("/api/volqueteros", async (req, res) => {
+  app.post("/api/volqueteros", requireAuth, async (req, res) => {
     try {
       const data = insertVolqueteroSchema.parse(req.body);
-      const volquetero = await storage.createVolquetero(data);
+      const volquetero = await storage.createVolquetero({
+        ...data,
+        userId: req.user!.id,
+      });
       res.json(volquetero);
     } catch (error: any) {
       console.error("Error creating volquetero:", error.message);
