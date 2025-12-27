@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiUrl } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getAuthToken } from "@/hooks/useAuth";
+import { useHiddenTransactions } from "@/hooks/useHiddenTransactions";
 // Función para obtener día de la semana abreviado
 const getDayOfWeek = (dateInput: string | Date): string => {
   const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -133,47 +134,21 @@ export default function CompradorDetail() {
     }).format(value).replace('COP', '$');
   };
 
-  // useEffect para limpiar transacciones ocultas al salir de la página
+  // Hook para manejar transacciones ocultas de forma local y temporal
+  const {
+    hiddenTransactions,
+    hideTransaction: hideTransactionLocal,
+    showAllHidden: showAllHiddenLocal,
+    filterVisible: filterVisibleTransactions,
+    getHiddenCount: getHiddenTransactionsCount,
+  } = useHiddenTransactions(`comprador-${compradorId}`);
+
+  // Limpiar transacciones temporales al salir de la página
   useEffect(() => {
     return () => {
-      // Cleanup function - se ejecuta cuando se desmonta el componente
-      if (compradorId) {
-        console.log('🔄 LIMPIEZA: Mostrando transacciones ocultas al salir de la página del comprador', compradorId);
-        
-        // Función async para manejar la limpieza
-        (async () => {
-          try {
-            // Llamar a la API para mostrar todas las transacciones ocultas
-            const token = getAuthToken();
-            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-            if (token) {
-              headers['Authorization'] = `Bearer ${token}`;
-            }
-            fetch(apiUrl(`/api/transacciones/socio/comprador/${compradorId}/show-all`), {
-              method: 'POST',
-              headers,
-              credentials: "include",
-            }).catch(error => {
-              console.error('Error al limpiar transacciones ocultas:', error);
-            });
-            
-            // También mostrar viajes ocultos (reutilizar headers y token)
-            fetch(apiUrl(`/api/viajes/comprador/${compradorId}/show-all`), {
-              method: 'POST',
-              headers,
-              credentials: "include",
-            }).catch(error => {
-              console.error('Error al limpiar viajes ocultos:', error);
-            });
-          } catch (error) {
-            console.error('Error en cleanup:', error);
-          }
-        })();
-        
-        // Limpiar transacciones temporales
-        setTransaccionesTemporales([]);
-        console.log('🧹 Transacciones temporales eliminadas al salir del comprador');
-      }
+      // Limpiar transacciones temporales
+      setTransaccionesTemporales([]);
+      console.log('🧹 Transacciones temporales eliminadas al salir del comprador');
     };
   }, [compradorId]);
 
@@ -570,47 +545,14 @@ export default function CompradorDetail() {
     setEndDate("");
   };
 
-  // Mutaciones para ocultar transacciones usando endpoint específico de compradores
-  const hideTransactionMutation = useMutation({
-    mutationFn: async (transactionId: number) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide-comprador`), {
-        method: 'PATCH',
-        headers,
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error('Error al ocultar transacción en módulo compradores');
-      return response.json();
-    },
-    onSuccess: async () => {
-      toast({
-        description: "Transacción ocultada en módulo compradores",
-        duration: 2000,
-      });
-      // Invalidar y forzar refetch inmediato de queries específicas (similar a volqueteros)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] }),
-      ]);
-      // Forzar refetch inmediato para actualización visual instantánea
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId], type: 'active' }),
-        queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"], type: 'active' }),
-      ]);
-    },
-    onError: () => {
-      toast({
-        description: "Error al ocultar transacción en módulo compradores",
-        variant: "destructive",
-        duration: 3000,
-      });
-    }
-  });
+  // Función para ocultar transacciones localmente (sin llamar a la API)
+  const handleHideTransaction = (transactionId: number) => {
+    hideTransactionLocal(transactionId);
+    toast({
+      description: "Transacción ocultada",
+      duration: 2000,
+    });
+  };
 
   // Mutación para ocultar viajes
   const hideViajesMutation = useMutation({
@@ -935,7 +877,7 @@ export default function CompradorDetail() {
                   setExcelPreviewData={setExcelPreviewData}
                   setShowExcelPreview={setShowExcelPreview}
                   todasTransaccionesIncOcultas={todasTransaccionesIncOcultas}
-                  hideTransactionMutation={hideTransactionMutation}
+                  hideTransactionMutation={handleHideTransaction}
                   hideViajesMutation={hideViajesMutation}
                   showAllHiddenMutation={showAllHiddenMutation}
                   viajes={viajes}
@@ -1801,6 +1743,16 @@ function CompradorTransaccionesTab({
     }
     // Si balanceFilter === 'all', no filtrar por balance
     
+    // Filtrar transacciones ocultas localmente (solo visual, no afecta BD)
+    // Solo filtrar transacciones manuales (las de viajes se manejan diferente)
+    filtered = filtered.filter(t => {
+      if (t.tipo === "Manual" && t.id.toString().startsWith('manual-')) {
+        const realTransactionId = parseInt(t.id.toString().replace('manual-', ''));
+        return !hiddenTransactions.has(realTransactionId);
+      }
+      return true; // Mantener viajes y temporales visibles
+    });
+    
     return filtered;
   }, [todasTransacciones, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, balanceFilter]);
 
@@ -1927,17 +1879,17 @@ function CompradorTransaccionesTab({
             <div className="flex gap-1.5 flex-wrap">
               {/* Botón para mostrar elementos ocultos */}
               {(() => {
-                const transaccionesOcultas = todasTransaccionesIncOcultas?.filter(t => 
-                  t.ocultaEnComprador && 
-                  ((t.deQuienTipo === "comprador" && t.deQuienId === compradorId.toString()) ||
-                   (t.paraQuienTipo === "comprador" && t.paraQuienId === compradorId.toString()))
-                ).length || 0;
+                // Contar transacciones ocultas localmente (solo visual)
+                const transaccionesOcultas = getHiddenTransactionsCount();
                 const viajesOcultos = todosViajesIncOcultos?.filter((v: ViajeWithDetails) => v.oculta && v.compradorId === compradorId).length || 0;
                 const totalOcultos = transaccionesOcultas + viajesOcultos;
                 
                 return totalOcultos > 0 ? (
                   <Button
-                    onClick={() => showAllHiddenMutation.mutate()}
+                    onClick={() => {
+                      handleShowAllHidden();
+                      showAllHiddenMutation.mutate(); // También mostrar viajes ocultos (estos sí están en BD)
+                    }}
                     variant="outline"
                     disabled={showAllHiddenMutation.isPending}
                     size="sm"
@@ -2426,7 +2378,7 @@ function CompradorTransaccionesTab({
                                 e.stopPropagation();
                                 const transactionIdStr = transaccion.id.toString();
                                 const realTransactionId = parseInt(transactionIdStr.replace('manual-', ''));
-                                hideTransactionMutation.mutate(realTransactionId);
+                                handleHideTransaction(realTransactionId);
                               }}
                               variant="ghost"
                               size="sm"
@@ -2736,7 +2688,7 @@ function CompradorTransaccionesTab({
                           e.stopPropagation();
                           const transactionIdStr = transaccion.id.toString();
                           const realTransactionId = transactionIdStr.replace('manual-', '');
-                          hideTransactionMutation.mutate(parseInt(realTransactionId));
+                          handleHideTransaction(parseInt(realTransactionId));
                         }}
                         variant="ghost"
                         size="sm"

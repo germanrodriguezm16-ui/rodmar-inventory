@@ -468,8 +468,22 @@ export default function RodMarCuentaDetail() {
               typeof pageSize === "number" ? pageSize : 999999
             ],
             queryFn: async () => {
-              const response = await fetch(apiUrl(`/api/transacciones/cuenta/${cuentaNombre}?${params.toString()}`));
-              if (!response.ok) throw new Error('Error al obtener transacciones');
+              const token = getAuthToken();
+              const headers: Record<string, string> = {};
+              if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+              }
+              const response = await fetch(apiUrl(`/api/transacciones/cuenta/${cuentaNombre}?${params.toString()}`), {
+                credentials: "include",
+                headers,
+              });
+              if (!response.ok) {
+                // No lanzar error para 401, solo retornar array vacío para evitar spam en consola
+                if (response.status === 401) {
+                  return { data: [], pagination: null };
+                }
+                throw new Error('Error al obtener transacciones');
+              }
               return response.json();
             },
             staleTime: 300000,

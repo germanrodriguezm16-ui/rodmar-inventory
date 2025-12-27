@@ -22,6 +22,7 @@ import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getAuthToken } from "@/hooks/useAuth";
+import { useHiddenTransactions } from "@/hooks/useHiddenTransactions";
 
 // Components
 import BottomNavigation from "@/components/layout/bottom-navigation";
@@ -73,95 +74,30 @@ export default function MinaDetail() {
   };
   const [activeTab, setActiveTab] = useState<string>(getInitialTab());
 
-  // Función para ejecutar limpieza de transacciones ocultas
-  const ejecutarLimpiezaTransaccionesOcultas = useCallback(async () => {
-    if (minaId) {
-      console.log('🔄 LIMPIEZA: Mostrando transacciones ocultas de la mina', minaId);
-      const { apiUrl } = await import('@/lib/api');
-      
-      // Llamar a la API para mostrar todas las transacciones ocultas de la mina
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}/show-all`), {
-        method: 'POST',
-        headers,
-        credentials: "include",
-      }).catch(error => {
-        console.error('Error al limpiar transacciones ocultas de mina:', error);
-      });
-      
-      // También mostrar viajes ocultos de la mina (reutilizar headers y token)
-      fetch(apiUrl(`/api/viajes/mina/${minaId}/show-all`), {
-        method: 'POST',
-        headers,
-        credentials: "include",
-      }).catch(error => {
-        console.error('Error al limpiar viajes ocultos de mina:', error);
-      });
-    }
-  }, [minaId]);
+  // Hook para manejar transacciones ocultas de forma local y temporal
+  const {
+    hiddenTransactions,
+    hideTransaction: hideTransactionLocal,
+    showAllHidden: showAllHiddenLocal,
+    getHiddenCount: getHiddenTransactionsCount,
+  } = useHiddenTransactions(`mina-${minaId}`);
 
-  // useEffect para limpiar transacciones ocultas al cambiar de pestaña
-  useEffect(() => {
-    // Solo ejecutar limpieza si no estamos en la pestaña de transacciones
-    if (activeTab !== "transacciones") {
-      console.log('🔄 LIMPIEZA: Cambiando de pestaña, mostrando transacciones ocultas', activeTab);
-      ejecutarLimpiezaTransaccionesOcultas();
-    }
-  }, [activeTab, ejecutarLimpiezaTransaccionesOcultas]);
-
-  // useEffect para limpiar transacciones ocultas y temporales al salir de la página
+  // Limpiar transacciones temporales al salir de la página
   useEffect(() => {
     return () => {
-      // Cleanup function - se ejecuta cuando se desmonta el componente
-      if (minaId) {
-        console.log('🔄 LIMPIEZA: Saliendo de la página de la mina, mostrando transacciones ocultas', minaId);
-        
-        // Limpiar transacciones temporales
-        setTransaccionesTemporales([]);
-        
-        // Ejecutar limpieza
-        ejecutarLimpiezaTransaccionesOcultas();
-      }
+      // Limpiar transacciones temporales
+      setTransaccionesTemporales([]);
     };
-  }, [minaId, ejecutarLimpiezaTransaccionesOcultas]);
+  }, [minaId]);
 
-  // Mutación para ocultar transacciones individuales
-  const hideTransactionMutation = useMutation({
-    mutationFn: async (transactionId: number) => {
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide`), {
-        method: 'PATCH',
-        headers,
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Error al ocultar transacción');
-      return await response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}/all`] });
-      toast({
-        title: "Transacción ocultada",
-        description: "La transacción se ha ocultada correctamente"
-      });
-    },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo ocultar la transacción",
-        variant: "destructive"
-      });
-    }
-  });
+  // Función para ocultar transacciones localmente (sin llamar a la API)
+  const handleHideTransaction = (transactionId: number) => {
+    hideTransactionLocal(transactionId);
+    toast({
+      title: "Transacción ocultada",
+      description: "La transacción se ha ocultado correctamente"
+    });
+  };
 
   // Mutación para ocultar viajes individuales
   const hideViajeMutation = useMutation({
@@ -713,9 +649,25 @@ export default function MinaDetail() {
 
   // Aplicar filtros a transacciones
   const transaccionesFiltradas = useMemo(() => {
-    let filtered = filterType === "todos" ? 
-      todasTransacciones.filter(t => !t.oculta) : 
-      todasTransacciones.filter(t => t.oculta);
+    // Primero filtrar por ocultas localmente (solo visual, no afecta BD)
+    let filtered = todasTransacciones.filter(t => {
+      // Solo filtrar transacciones manuales (las de viajes se manejan diferente)
+      if (t.tipo !== "Viaje" && typeof t.id === 'number') {
+        return !hiddenTransactions.has(t.id);
+      }
+      return true; // Mantener viajes visibles
+    });
+    
+    // Luego aplicar el filtro de tipo (todos/ocultas)
+    if (filterType === "ocultas") {
+      // Para mostrar ocultas, usar las que están en hiddenTransactions
+      filtered = todasTransacciones.filter(t => {
+        if (t.tipo !== "Viaje" && typeof t.id === 'number') {
+          return hiddenTransactions.has(t.id);
+        }
+        return false; // No mostrar viajes en la vista de ocultas
+      });
+    }
 
     // Aplicar filtro de fecha
     filtered = filterTransaccionesByDate(filtered, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd);
@@ -771,7 +723,7 @@ export default function MinaDetail() {
     }
 
     return filtered;
-  }, [todasTransacciones, filterType, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, sortByFecha, sortByValor, filterTransaccionesByDate, balanceFilter]);
+  }, [todasTransacciones, filterType, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, sortByFecha, sortByValor, filterTransaccionesByDate, balanceFilter, hiddenTransactions]);
 
   // Aplicar filtros a viajes
   const viajesFiltrados = useMemo(() => {
@@ -1360,7 +1312,10 @@ export default function MinaDetail() {
                         
                         return hayElementosOcultos ? (
                           <Button
-                            onClick={() => showAllHiddenMutation.mutate()}
+                            onClick={() => {
+                              handleShowAllHidden();
+                              showAllHiddenMutation.mutate(); // También mostrar viajes ocultos (estos sí están en BD)
+                            }}
                             size="sm"
                             className="h-8 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-xs"
                             disabled={showAllHiddenMutation.isPending}
@@ -1697,9 +1652,9 @@ export default function MinaDetail() {
                                 className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-gray-100 shrink-0"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  hideTransactionMutation.mutate(transaccion.id);
+                                  handleHideTransaction(transaccion.id);
                                 }}
-                                disabled={hideTransactionMutation.isPending}
+                                disabled={false}
                                 title="Ocultar transacción"
                               >
                                 <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-500" />
