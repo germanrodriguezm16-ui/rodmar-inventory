@@ -1929,6 +1929,11 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .orderBy(desc(viajes.createdAt));
 
+    console.log(`🔍 [getViajesByVolquetero] Resultados de la query: ${results.length} viajes encontrados`);
+    if (results.length > 0) {
+      console.log(`🔍 [getViajesByVolquetero] Primer viaje: ID=${results[0].viaje.id}, conductor="${results[0].viaje.conductor}", estado="${results[0].viaje.estado}", fechaDescargue=${results[0].viaje.fechaDescargue}`);
+    }
+
     return results.map(result => ({
       ...result.viaje,
       // Mantener compatibilidad del shape: recibo existe en el tipo, pero aquí lo omitimos del payload
