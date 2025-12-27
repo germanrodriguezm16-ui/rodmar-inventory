@@ -252,8 +252,8 @@ export async function addMissingPermissions() {
  * Migra transacciones huérfanas: actualiza transacciones que referencian IDs artificiales
  * de volqueteros (>= 1000) para que apunten a los IDs reales correspondientes.
  * 
- * Esta función busca transacciones con IDs >= 1000 y las actualiza usando el mapeo
- * de IDs artificiales a IDs reales basado en los nombres de los volqueteros.
+ * Esta función usa la misma lógica que GET /api/volqueteros/:id/viajes para reconstruir
+ * el mapeo de IDs artificiales a nombres, y luego busca el volquetero real por nombre.
  */
 export async function migrateTransaccionesOrphanas() {
   console.log('=== MIGRANDO TRANSACCIONES HUÉRFANAS DE VOLQUETEROS ===');
@@ -283,15 +283,7 @@ export async function migrateTransaccionesOrphanas() {
     
     console.log(`🔍 Encontradas ${transaccionesOrfanas.length} transacciones con IDs artificiales`);
     
-    // Obtener todos los volqueteros reales
-    const todosVolqueteros = await storage.getVolqueteros();
-    const volqueterosPorNombre = new Map<string, number>();
-    todosVolqueteros.forEach((v) => {
-      const nombreNormalizado = v.nombre.toLowerCase().trim();
-      volqueterosPorNombre.set(nombreNormalizado, v.id);
-    });
-    
-    // Obtener todos los viajes para reconstruir el mapeo de IDs artificiales a nombres
+    // Obtener todos los viajes y volqueteros para reconstruir el mapeo (igual que en GET /api/volqueteros/:id/viajes)
     const todosViajes = await storage.getViajes();
     const volqueterosReales = await storage.getVolqueteros();
     const volqueterosPorNombreMap: Record<string, any> = {};
@@ -334,15 +326,16 @@ export async function migrateTransaccionesOrphanas() {
       }
     });
     
-    // Crear mapeo de ID artificial a ID real
+    // Crear mapeo de ID artificial a nombre y luego a ID real
     let artificialIdCounter = 1000;
-    const mapeoIdArtificialAReal = new Map<number, number | null>();
+    const mapeoIdArtificialANombre = new Map<number, string>();
+    const mapeoNombreAIdReal = new Map<string, number>();
     
     Object.entries(conductoresPorNombre).forEach(([nombreKey, data]) => {
       const idAsignado = data.id || artificialIdCounter++;
-      if (idAsignado >= 1000 && data.id) {
-        // Este ID artificial ahora tiene un ID real
-        mapeoIdArtificialAReal.set(idAsignado, data.id);
+      mapeoIdArtificialANombre.set(idAsignado, data.nombre);
+      if (data.id) {
+        mapeoNombreAIdReal.set(data.nombre.toLowerCase().trim(), data.id);
       }
     });
     
@@ -358,15 +351,20 @@ export async function migrateTransaccionesOrphanas() {
       if (transaccion.deQuienTipo === 'volquetero' && transaccion.deQuienId) {
         const idActual = parseInt(transaccion.deQuienId);
         if (idActual >= 1000) {
-          const idReal = mapeoIdArtificialAReal.get(idActual);
-          if (idReal) {
-            updates.deQuienId = idReal.toString();
-            necesitaActualizacion = true;
+          const nombreVolquetero = mapeoIdArtificialANombre.get(idActual);
+          if (nombreVolquetero) {
+            const idReal = mapeoNombreAIdReal.get(nombreVolquetero.toLowerCase().trim());
+            if (idReal) {
+              updates.deQuienId = idReal.toString();
+              necesitaActualizacion = true;
+              console.log(`🔍 Transacción ${transaccion.id}: ID artificial ${idActual} -> "${nombreVolquetero}" -> ID real ${idReal}`);
+            } else {
+              sinMapeo++;
+              console.log(`⚠️  No se encontró ID real para "${nombreVolquetero}" (ID artificial ${idActual}) en transacción ${transaccion.id}`);
+            }
           } else {
-            // Intentar buscar por nombre en el concepto o comentario
-            // Si no se encuentra, dejar el ID artificial (será un caso edge)
             sinMapeo++;
-            console.log(`⚠️  No se encontró mapeo para ID artificial ${idActual} en transacción ${transaccion.id}`);
+            console.log(`⚠️  No se encontró nombre para ID artificial ${idActual} en transacción ${transaccion.id}`);
           }
         }
       }
@@ -375,13 +373,20 @@ export async function migrateTransaccionesOrphanas() {
       if (transaccion.paraQuienTipo === 'volquetero' && transaccion.paraQuienId) {
         const idActual = parseInt(transaccion.paraQuienId);
         if (idActual >= 1000) {
-          const idReal = mapeoIdArtificialAReal.get(idActual);
-          if (idReal) {
-            updates.paraQuienId = idReal.toString();
-            necesitaActualizacion = true;
+          const nombreVolquetero = mapeoIdArtificialANombre.get(idActual);
+          if (nombreVolquetero) {
+            const idReal = mapeoNombreAIdReal.get(nombreVolquetero.toLowerCase().trim());
+            if (idReal) {
+              updates.paraQuienId = idReal.toString();
+              necesitaActualizacion = true;
+              console.log(`🔍 Transacción ${transaccion.id}: ID artificial ${idActual} -> "${nombreVolquetero}" -> ID real ${idReal}`);
+            } else {
+              sinMapeo++;
+              console.log(`⚠️  No se encontró ID real para "${nombreVolquetero}" (ID artificial ${idActual}) en transacción ${transaccion.id}`);
+            }
           } else {
             sinMapeo++;
-            console.log(`⚠️  No se encontró mapeo para ID artificial ${idActual} en transacción ${transaccion.id}`);
+            console.log(`⚠️  No se encontró nombre para ID artificial ${idActual} en transacción ${transaccion.id}`);
           }
         }
       }
@@ -408,6 +413,7 @@ export async function migrateTransaccionesOrphanas() {
     
   } catch (error: any) {
     console.error('❌ Error migrando transacciones huérfanas:', error.message);
+    console.error('❌ Stack:', error.stack);
     // No lanzar error para no bloquear la inicialización
   }
 }
