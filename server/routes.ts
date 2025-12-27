@@ -1199,7 +1199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? await storage.getViajesByVolquetero(volqueteroNombre) // Sin userId = todos los viajes
         : await storage.getViajesByVolquetero(volqueteroNombre, userId); // Con userId = solo los del usuario
       
-      console.log(`🔍 [GET /api/volqueteros/:id/viajes] Viajes encontrados: ${viajes.length} viajes con conductor="${volquetero.nombre}"`);
+      console.log(`🔍 [GET /api/volqueteros/:id/viajes] Viajes encontrados: ${viajes.length} viajes con conductor="${volqueteroNombre}"`);
       
       // Filtrar solo los completados (mostrar todos los viajes, independientemente de quién paga el flete)
       const viajesFiltrados = viajes.filter(v => 
