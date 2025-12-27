@@ -1027,17 +1027,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoint para obtener viajes de un volquetero específico (optimización)
-  app.get("/api/volqueteros/:id/viajes", async (req, res) => {
+  app.get("/api/volqueteros/:id/viajes", requireAuth, async (req, res) => {
     try {
-      const userId = req.user?.id || "main_user";
+      const userId = req.user!.id;
       const volqueteroId = parseInt(req.params.id);
       
       if (isNaN(volqueteroId)) {
         return res.status(400).json({ error: "ID de volquetero inválido" });
       }
       
+      // Si el usuario tiene permisos de transacciones, obtener TODOS los viajes
+      // (sin filtrar por userId) para que pueda ver todos los viajes del volquetero
+      const userPermissions = await getUserPermissions(userId);
+      const hasTransactionPermissions = 
+        userPermissions.includes("action.TRANSACCIONES.create") ||
+        userPermissions.includes("action.TRANSACCIONES.completePending") ||
+        userPermissions.includes("action.TRANSACCIONES.edit") ||
+        userPermissions.includes("action.TRANSACCIONES.delete");
+      
       // Obtener el volquetero para obtener su nombre
-      const volquetero = await storage.getVolqueteroById(volqueteroId, userId);
+      // Si tiene permisos de transacciones, obtener el volquetero sin filtrar por userId
+      const volquetero = hasTransactionPermissions
+        ? await storage.getVolqueteroById(volqueteroId) // Sin userId = todos los volqueteros
+        : await storage.getVolqueteroById(volqueteroId, userId); // Con userId = solo los del usuario
+      
       if (!volquetero) {
         return res.status(404).json({ error: "Volquetero no encontrado" });
       }
@@ -1045,7 +1058,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const includeHidden = req.query.includeHidden === 'true';
       
       // Obtener viajes del volquetero por nombre del conductor
-      const viajes = await storage.getViajesByVolquetero(volquetero.nombre, userId);
+      // Si tiene permisos de transacciones, no filtrar por userId
+      const viajes = hasTransactionPermissions
+        ? await storage.getViajesByVolquetero(volquetero.nombre) // Sin userId = todos los viajes
+        : await storage.getViajesByVolquetero(volquetero.nombre, userId); // Con userId = solo los del usuario
       
       // Filtrar solo los completados y donde RodMar paga el flete
       const viajesFiltrados = viajes.filter(v => 
