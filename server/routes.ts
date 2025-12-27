@@ -1063,12 +1063,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? await storage.getViajesByVolquetero(volquetero.nombre) // Sin userId = todos los viajes
         : await storage.getViajesByVolquetero(volquetero.nombre, userId); // Con userId = solo los del usuario
       
-      // Filtrar solo los completados y donde RodMar paga el flete
+      // Filtrar solo los completados (mostrar todos los viajes, independientemente de quién paga el flete)
       const viajesFiltrados = viajes.filter(v => 
         v.estado === "completado" && 
-        v.fechaDescargue &&
-        v.quienPagaFlete !== "comprador" &&
-        v.quienPagaFlete !== "El comprador"
+        v.fechaDescargue
       );
       
       // Si includeHidden es false, filtrar viajes ocultos (comportamiento por defecto)
