@@ -163,8 +163,10 @@ export class DatabaseStorage implements IStorage {
       }
 
       const result = await db.delete(minas).where(and(...conditions));
-      console.log(`🔍 [deleteMina] ID: ${id}, userId: ${userId || 'none'}, rowCount: ${result.rowCount}`);
-      return result.rowCount !== null && result.rowCount > 0;
+      // Drizzle puede devolver rowCount como undefined, null, o un número
+      const rowCount = result.rowCount ?? 0;
+      console.log(`🔍 [deleteMina] ID: ${id}, userId: ${userId || 'none'}, rowCount: ${rowCount}`);
+      return rowCount > 0;
     } catch (error) {
       console.error(`❌ [deleteMina] Error deleting mina ${id}:`, error);
       throw error;
@@ -237,7 +239,9 @@ export class DatabaseStorage implements IStorage {
     }
 
     const result = await db.delete(compradores).where(and(...conditions));
-    return result.rowCount !== null && result.rowCount > 0;
+    // Drizzle puede devolver rowCount como undefined, null, o un número
+    const rowCount = result.rowCount ?? 0;
+    return rowCount > 0;
   }
 
   async updateCompradorNombre(id: number, nombre: string, userId?: string): Promise<Comprador | undefined> {
