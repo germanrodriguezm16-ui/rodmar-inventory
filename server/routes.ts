@@ -1080,10 +1080,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         v.fechaDescargue
       );
       
+      console.log(`🔍 [GET /api/volqueteros/:id/viajes] Viajes completados con fechaDescargue: ${viajesFiltrados.length}`);
+      
       // Si includeHidden es false, filtrar viajes ocultos (comportamiento por defecto)
       const viajesFinales = includeHidden 
         ? viajesFiltrados 
         : viajesFiltrados.filter(v => !v.oculta);
+      
+      console.log(`🔍 [GET /api/volqueteros/:id/viajes] Viajes finales (includeHidden=${includeHidden}): ${viajesFinales.length}`);
+      if (viajesFinales.length === 0 && viajes.length > 0) {
+        console.log(`⚠️ [GET /api/volqueteros/:id/viajes] ADVERTENCIA: Hay ${viajes.length} viajes pero ninguno pasó los filtros. Ejemplo:`, {
+          primerViaje: viajes[0] ? {
+            id: viajes[0].id,
+            conductor: viajes[0].conductor,
+            estado: viajes[0].estado,
+            fechaDescargue: viajes[0].fechaDescargue,
+            oculta: viajes[0].oculta
+          } : null
+        });
+      }
       
       res.json(viajesFinales);
     } catch (error) {
