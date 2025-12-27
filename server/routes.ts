@@ -854,8 +854,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         > = {};
 
         // Procesar viajes para agrupar por conductor y extraer placas
+        // IMPORTANTE: Solo contar viajes completados con fechaDescargue para que el conteo
+        // sea consistente con lo que se muestra en la pestaña de viajes
         viajes.forEach((viaje) => {
           if (viaje.conductor) {
+            // Filtrar solo viajes completados con fechaDescargue (igual que en /api/volqueteros/:id/viajes)
+            if (viaje.estado !== "completado" || !viaje.fechaDescargue) {
+              return; // Saltar viajes no completados o sin fechaDescargue
+            }
+            
             const nombreLower = viaje.conductor.toLowerCase();
             const nombre = viaje.conductor;
             const volqueteroReal = volqueterosPorNombre[nombreLower];
