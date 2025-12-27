@@ -135,6 +135,30 @@ export function invalidateTripRelatedQueries(
     if (conductoresAfectados.size > 0) {
       // Refetchear explícitamente la lista de volqueteros para actualizar el conteo
       queryClient.refetchQueries({ queryKey: ["/api/volqueteros"] });
+      
+      // Invalidar y refetchear TODAS las queries de viajes de volqueteros (sin importar si están activas)
+      // Esto asegura que cuando se cambia el conductor, las pestañas de viajes de ambos volqueteros
+      // (anterior y nuevo) se actualicen correctamente, incluso si no están abiertas
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          // Invalidar todas las queries de viajes de volqueteros
+          return key?.startsWith("/api/volqueteros") && 
+                 query.queryKey[1] && 
+                 query.queryKey[2] === "viajes";
+        }
+      });
+      
+      // Refetchear explícitamente todas las queries de viajes de volqueteros
+      // (sin importar si están activas, para asegurar que se actualicen cuando se abran)
+      queryClient.refetchQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key?.startsWith("/api/volqueteros") && 
+                 query.queryKey[1] && 
+                 query.queryKey[2] === "viajes";
+        }
+      });
     }
   }
   
@@ -148,6 +172,26 @@ export function invalidateTripRelatedQueries(
   // Esto asegura que el conteo de viajes se actualice inmediatamente
   if (tripChangeInfo && (tripChangeInfo.oldConductor || tripChangeInfo.newConductor)) {
     queryClient.refetchQueries({ queryKey: ["/api/volqueteros"] });
+    
+    // También invalidar y refetchear todas las queries de viajes de volqueteros
+    // para asegurar que las pestañas de viajes se actualicen
+    queryClient.invalidateQueries({
+      predicate: (query) => {
+        const key = query.queryKey[0] as string;
+        return key?.startsWith("/api/volqueteros") && 
+               query.queryKey[1] && 
+               query.queryKey[2] === "viajes";
+      }
+    });
+    
+    queryClient.refetchQueries({
+      predicate: (query) => {
+        const key = query.queryKey[0] as string;
+        return key?.startsWith("/api/volqueteros") && 
+               query.queryKey[1] && 
+               query.queryKey[2] === "viajes";
+      }
+    });
   }
   
   // Refetch de queries activas de viajes y transacciones (para actualización en tiempo real)
