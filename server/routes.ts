@@ -492,6 +492,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `=== DELETE MINA REQUEST - ID: ${minaId} ===`,
         );
 
+        // Verificar primero si la mina existe (sin filtrar por userId)
+        const mina = await storage.getMinaById(minaId);
+        if (!mina) {
+          console.log(`=== Mina ${minaId} not found ===`);
+          return res.status(404).json({ error: "Mina no encontrada" });
+        }
+
         // Check if mina has viajes (sin filtrar por userId - similar a compradores)
         // Solo contar viajes NO ocultos
         const viajes = await storage.getViajesByMina(minaId);
@@ -528,9 +535,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (deleteResult) {
           res.json({ message: "Mina eliminada exitosamente" });
         } else {
-          res
-            .status(404)
-            .json({ error: "Mina no encontrada" });
+          // Si deleteResult es false pero la mina existe, puede ser un error de permisos o base de datos
+          console.error(`=== Failed to delete mina ${minaId} (mina exists but delete returned false) ===`);
+          res.status(500).json({ error: "Error al eliminar la mina" });
         }
       } catch (error) {
         console.error("=== Error deleting mina:", error);
