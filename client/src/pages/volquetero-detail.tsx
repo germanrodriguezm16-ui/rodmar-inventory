@@ -313,8 +313,13 @@ export default function VolqueteroDetail() {
       });
 
     // Transacciones dinámicas de viajes completados
-    // Usar viajesVolquetero que ya viene filtrado del backend
+    // Filtrar solo viajes donde RodMar paga el flete (no cuando el comprador paga)
+    // Esto es solo para la pestaña de transacciones; en la pestaña de viajes se muestran todos
     const viajesCompletados = (Array.isArray(viajesVolquetero) ? viajesVolquetero : [])
+      .filter(v => 
+        v.quienPagaFlete !== "comprador" && 
+        v.quienPagaFlete !== "El comprador"
+      )
       .map(v => {
         const fechaViajeRaw = v.fechaDescargue!;
         // Convertir fecha a Date si es string
