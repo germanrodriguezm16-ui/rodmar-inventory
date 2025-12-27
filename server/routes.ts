@@ -1062,6 +1062,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Volquetero no encontrado" });
       }
       
+      console.log(`🔍 [GET /api/volqueteros/:id/viajes] Volquetero encontrado: ID=${volqueteroId}, nombre="${volquetero.nombre}"`);
+      
       const includeHidden = req.query.includeHidden === 'true';
       
       // Obtener viajes del volquetero por nombre del conductor
@@ -1069,6 +1071,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const viajes = hasTransactionPermissions
         ? await storage.getViajesByVolquetero(volquetero.nombre) // Sin userId = todos los viajes
         : await storage.getViajesByVolquetero(volquetero.nombre, userId); // Con userId = solo los del usuario
+      
+      console.log(`🔍 [GET /api/volqueteros/:id/viajes] Viajes encontrados: ${viajes.length} viajes con conductor="${volquetero.nombre}"`);
       
       // Filtrar solo los completados (mostrar todos los viajes, independientemente de quién paga el flete)
       const viajesFiltrados = viajes.filter(v => 
