@@ -3,6 +3,7 @@ import { minas, compradores, volqueteros, viajes, transacciones, roles, permissi
 import { sql, eq, and } from 'drizzle-orm';
 import { hashPassword } from './middleware/auth-helpers';
 import { addMissingPermissions as addMissingPermissionsFromFile } from './add-missing-permissions';
+import { storage } from './storage';
 
 // Inicializar roles y permisos base
 export async function initializeRolesAndPermissions() {
