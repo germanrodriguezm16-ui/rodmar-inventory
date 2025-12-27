@@ -1,6 +1,6 @@
 import { db } from './db';
 import { minas, compradores, volqueteros, viajes, transacciones, roles, permissions, rolePermissions, users } from '../shared/schema';
-import { sql, eq, and } from 'drizzle-orm';
+import { sql, eq, and, or } from 'drizzle-orm';
 import { hashPassword } from './middleware/auth-helpers';
 import { addMissingPermissions as addMissingPermissionsFromFile } from './add-missing-permissions';
 import { storage } from './storage';
