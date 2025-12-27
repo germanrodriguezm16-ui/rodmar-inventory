@@ -36,6 +36,7 @@ export interface IStorage {
   getVolqueteros(userId?: string): Promise<Volquetero[]>;
   getVolqueteroById(id: number, userId?: string): Promise<Volquetero | undefined>;
   createVolquetero(volquetero: InsertVolquetero & { userId?: string }): Promise<Volquetero>;
+  findOrCreateVolqueteroByNombre(nombreConductor: string, placaDelViaje: string, userId?: string): Promise<Volquetero>;
   updateVolquetero(id: number, updates: Partial<InsertVolquetero>, userId?: string): Promise<Volquetero | undefined>;
   updateVolqueteroNombre(id: number, nombre: string, userId?: string): Promise<Volquetero | undefined>;
   deleteVolquetero(id: number, userId?: string): Promise<boolean>;

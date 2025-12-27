@@ -288,6 +288,61 @@ export class DatabaseStorage implements IStorage {
     return newVolquetero;
   }
 
+  /**
+   * Busca un volquetero por nombre (case-insensitive) o lo crea si no existe.
+   * Esto asegura que siempre haya un volquetero real en la base de datos,
+   * evitando IDs artificiales.
+   * 
+   * @param nombreConductor - Nombre del conductor (del viaje)
+   * @param placaDelViaje - Placa del viaje (para crear nuevo volquetero si no existe)
+   * @param userId - ID del usuario (opcional)
+   * @returns El volquetero existente o recién creado
+   */
+  async findOrCreateVolqueteroByNombre(
+    nombreConductor: string,
+    placaDelViaje: string,
+    userId?: string
+  ): Promise<Volquetero> {
+    return wrapDbOperation(async () => {
+      // Normalizar nombre para búsqueda consistente
+      const nombreNormalizado = nombreConductor.trim().toLowerCase();
+      
+      // Buscar volquetero existente por nombre (case-insensitive)
+      const todosVolqueteros = await this.getVolqueteros(userId);
+      let volqueteroExistente = todosVolqueteros.find(
+        (v) => v.nombre.toLowerCase().trim() === nombreNormalizado
+      );
+      
+      // Si existe, retornarlo (no importa la placa, las placas se agrupan en /api/volqueteros)
+      if (volqueteroExistente) {
+        console.log(`✅ Volquetero existente encontrado: "${volqueteroExistente.nombre}" (ID: ${volqueteroExistente.id})`);
+        return volqueteroExistente;
+      }
+      
+      // Si no existe, verificar nuevamente justo antes de crear para evitar race conditions
+      const volqueterosUpdated = await this.getVolqueteros(userId);
+      volqueteroExistente = volqueterosUpdated.find(
+        (v) => v.nombre.toLowerCase().trim() === nombreNormalizado
+      );
+      
+      if (volqueteroExistente) {
+        console.log(`✅ Volquetero existente encontrado (segunda verificación): "${volqueteroExistente.nombre}" (ID: ${volqueteroExistente.id})`);
+        return volqueteroExistente;
+      }
+      
+      // Crear nuevo volquetero con el nombre y la placa del viaje
+      console.log(`🆕 Creando nuevo volquetero: "${nombreConductor.trim()}" con placa "${placaDelViaje}"`);
+      const nuevoVolquetero = await this.createVolquetero({
+        nombre: nombreConductor.trim(), // Eliminar espacios extras
+        placa: placaDelViaje || "Sin placa", // Usar placa del viaje o valor por defecto
+        userId: userId,
+      });
+      
+      console.log(`✅ Volquetero creado: "${nuevoVolquetero.nombre}" (ID: ${nuevoVolquetero.id})`);
+      return nuevoVolquetero;
+    });
+  }
+
   async updateVolquetero(id: number, updates: Partial<InsertVolquetero>, userId?: string): Promise<Volquetero | undefined> {
     const conditions = [eq(volqueteros.id, id)];
     if (userId) {

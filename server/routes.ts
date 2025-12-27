@@ -1452,6 +1452,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
+        // Auto-crear volquetero si el conductor cambió y no existe
+        if (req.body.conductor && req.body.conductor !== existingViaje.conductor) {
+          try {
+            await storage.findOrCreateVolqueteroByNombre(
+              req.body.conductor,
+              req.body.placa || existingViaje.placa || "Sin placa",
+              userId
+            );
+          } catch (error) {
+            console.error("Error al buscar/crear volquetero:", error);
+            // No fallar la edición del viaje si hay error con el volquetero
+          }
+        }
+
         // Convert the frontend data to match storage expectations
         const processedData = {
           fechaCargue: req.body.fechaCargue,
@@ -1626,14 +1640,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 (parsedData as any).compradorId = compradorId;
               }
 
-              // Handle volquetero creation
+              // Handle volquetero creation - usar findOrCreateVolqueteroByNombre para evitar duplicados
               if (parsedData.conductor) {
                 const conductorName = parsedData.conductor.toLowerCase();
                 if (!volqueterosByName.has(conductorName)) {
-                  const newVolquetero = await storage.createVolquetero({
-                    nombre: parsedData.conductor,
-                    placa: parsedData.placa || "Vehículo por definir",
-                  });
+                  // Usar findOrCreateVolqueteroByNombre para evitar race conditions y duplicados
+                  const newVolquetero = await storage.findOrCreateVolqueteroByNombre(
+                    parsedData.conductor,
+                    parsedData.placa || "Vehículo por definir",
+                    undefined // userId no disponible en bulk import
+                  );
                   volqueterosByName.set(conductorName, newVolquetero);
                 }
               }
@@ -1837,6 +1853,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const data = insertViajeSchema.parse(req.body);
       console.log("Parsed viaje data:", data);
+
+      // Auto-crear volquetero si el conductor no existe
+      if (data.conductor) {
+        try {
+          await storage.findOrCreateVolqueteroByNombre(
+            data.conductor,
+            data.placa || "Sin placa",
+            userId
+          );
+        } catch (error) {
+          console.error("Error al buscar/crear volquetero:", error);
+          // No fallar la creación del viaje si hay error con el volquetero
+        }
+      }
 
       // Auto-crear entidades basadas en nombres si vienen del Excel
       let minaId = data.minaId;
