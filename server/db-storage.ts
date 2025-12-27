@@ -156,13 +156,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMina(id: number, userId?: string): Promise<boolean> {
-    const conditions = [eq(minas.id, id)];
-    if (userId) {
-      conditions.push(eq(minas.userId, userId));
-    }
+    try {
+      const conditions = [eq(minas.id, id)];
+      if (userId) {
+        conditions.push(eq(minas.userId, userId));
+      }
 
-    const result = await db.delete(minas).where(and(...conditions));
-    return result.rowCount !== null && result.rowCount > 0;
+      const result = await db.delete(minas).where(and(...conditions));
+      console.log(`🔍 [deleteMina] ID: ${id}, userId: ${userId || 'none'}, rowCount: ${result.rowCount}`);
+      return result.rowCount !== null && result.rowCount > 0;
+    } catch (error) {
+      console.error(`❌ [deleteMina] Error deleting mina ${id}:`, error);
+      throw error;
+    }
   }
 
   async updateMinaNombre(id: number, nombre: string, userId?: string): Promise<Mina | undefined> {
