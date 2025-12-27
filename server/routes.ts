@@ -1052,25 +1052,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userPermissions.includes("action.TRANSACCIONES.edit") ||
         userPermissions.includes("action.TRANSACCIONES.delete");
       
-      // Obtener el volquetero para obtener su nombre
-      // Si tiene permisos de transacciones, obtener el volquetero sin filtrar por userId
-      const volquetero = hasTransactionPermissions
-        ? await storage.getVolqueteroById(volqueteroId) // Sin userId = todos los volqueteros
-        : await storage.getVolqueteroById(volqueteroId, userId); // Con userId = solo los del usuario
+      // Si el ID es >= 1000, es un ID artificial (no existe en la base de datos)
+      // En este caso, debemos obtener el nombre desde la lista de volqueteros
+      let volqueteroNombre: string | null = null;
       
-      if (!volquetero) {
+      if (volqueteroId >= 1000) {
+        // ID artificial: obtener desde la lista de volqueteros
+        const viajes = hasTransactionPermissions 
+          ? await storage.getViajes() // Sin userId = todos los viajes
+          : await storage.getViajes(userId); // Con userId = solo los del usuario
+        
+        const volqueterosReales = hasTransactionPermissions
+          ? await storage.getVolqueteros() // Sin userId = todos los volqueteros
+          : await storage.getVolqueteros(userId); // Con userId = solo los del usuario
+        const volqueterosPorNombre: Record<string, any> = {};
+        volqueterosReales.forEach((v) => {
+          volqueterosPorNombre[v.nombre.toLowerCase()] = v;
+        });
+
+        // Agrupar datos por conductor (mismo código que en GET /api/volqueteros)
+        const conductoresPorNombre: Record<
+          string,
+          {
+            id: number | null;
+            nombre: string;
+            placas: Record<string, any>;
+            totalViajes: number;
+            saldo: string;
+          }
+        > = {};
+
+        viajes.forEach((viaje) => {
+          if (viaje.conductor) {
+            if (viaje.estado !== "completado" || !viaje.fechaDescargue) {
+              return;
+            }
+            
+            const nombreLower = viaje.conductor.toLowerCase();
+            const nombre = viaje.conductor;
+            const volqueteroReal = volqueterosPorNombre[nombreLower];
+
+            if (!conductoresPorNombre[nombreLower]) {
+              conductoresPorNombre[nombreLower] = {
+                id: volqueteroReal?.id || null,
+                nombre: nombre,
+                placas: {},
+                totalViajes: 0,
+                saldo: volqueteroReal?.saldo?.toString() || "0",
+              };
+            }
+
+            const placa = viaje.placa || "Sin placa";
+            const tipoCarro = viaje.tipoCarro || "Sin especificar";
+
+            if (!conductoresPorNombre[nombreLower].placas[placa]) {
+              conductoresPorNombre[nombreLower].placas[placa] = {
+                placa: placa,
+                tipoCarro: tipoCarro,
+                viajesCount: 0,
+              };
+            }
+
+            conductoresPorNombre[nombreLower].placas[placa].viajesCount++;
+            conductoresPorNombre[nombreLower].totalViajes++;
+          }
+        });
+
+        // Agregar volqueteros de la tabla que no tienen viajes asociados
+        volqueterosReales.forEach((volquetero) => {
+          const nombreLower = volquetero.nombre.toLowerCase();
+          
+          if (!conductoresPorNombre[nombreLower]) {
+            conductoresPorNombre[nombreLower] = {
+              id: volquetero.id,
+              nombre: volquetero.nombre,
+              placas: {
+                [volquetero.placa]: {
+                  placa: volquetero.placa,
+                  tipoCarro: "Sin especificar",
+                  viajesCount: 0,
+                },
+              },
+              totalViajes: 0,
+              saldo: volquetero.saldo?.toString() || "0",
+            };
+          } else {
+            const placaEnTabla = volquetero.placa;
+            if (!conductoresPorNombre[nombreLower].placas[placaEnTabla]) {
+              conductoresPorNombre[nombreLower].placas[placaEnTabla] = {
+                placa: placaEnTabla,
+                tipoCarro: "Sin especificar",
+                viajesCount: 0,
+              };
+            }
+            if (!conductoresPorNombre[nombreLower].id) {
+              conductoresPorNombre[nombreLower].id = volquetero.id;
+            }
+            if (volquetero.saldo) {
+              conductoresPorNombre[nombreLower].saldo = volquetero.saldo.toString();
+            }
+          }
+        });
+
+        // Convertir a array con IDs (igual que en GET /api/volqueteros)
+        let artificialIdCounter = 1000;
+        const volqueterosConPlacas = Object.entries(conductoresPorNombre).map(
+          ([nombreKey, data]) => ({
+            id: data.id || artificialIdCounter++,
+            nombre: data.nombre,
+            placas: Object.values(data.placas),
+            viajesCount: data.totalViajes,
+            saldo: data.saldo,
+            isRealId: data.id !== null,
+          }),
+        );
+
+        // Buscar el volquetero por ID en la lista generada
+        const volqueteroEncontrado = volqueterosConPlacas.find(v => v.id === volqueteroId);
+        if (volqueteroEncontrado) {
+          volqueteroNombre = volqueteroEncontrado.nombre;
+        }
+      } else {
+        // ID real: buscar en la base de datos
+        const volquetero = hasTransactionPermissions
+          ? await storage.getVolqueteroById(volqueteroId) // Sin userId = todos los volqueteros
+          : await storage.getVolqueteroById(volqueteroId, userId); // Con userId = solo los del usuario
+        
+        if (!volquetero) {
+          return res.status(404).json({ error: "Volquetero no encontrado" });
+        }
+        
+        volqueteroNombre = volquetero.nombre;
+      }
+      
+      if (!volqueteroNombre) {
         return res.status(404).json({ error: "Volquetero no encontrado" });
       }
       
-      console.log(`🔍 [GET /api/volqueteros/:id/viajes] Volquetero encontrado: ID=${volqueteroId}, nombre="${volquetero.nombre}"`);
+      console.log(`🔍 [GET /api/volqueteros/:id/viajes] Volquetero encontrado: ID=${volqueteroId}, nombre="${volqueteroNombre}"`);
       
       const includeHidden = req.query.includeHidden === 'true';
       
       // Obtener viajes del volquetero por nombre del conductor
       // Si tiene permisos de transacciones, no filtrar por userId
       const viajes = hasTransactionPermissions
-        ? await storage.getViajesByVolquetero(volquetero.nombre) // Sin userId = todos los viajes
-        : await storage.getViajesByVolquetero(volquetero.nombre, userId); // Con userId = solo los del usuario
+        ? await storage.getViajesByVolquetero(volqueteroNombre) // Sin userId = todos los viajes
+        : await storage.getViajesByVolquetero(volqueteroNombre, userId); // Con userId = solo los del usuario
       
       console.log(`🔍 [GET /api/volqueteros/:id/viajes] Viajes encontrados: ${viajes.length} viajes con conductor="${volquetero.nombre}"`);
       
