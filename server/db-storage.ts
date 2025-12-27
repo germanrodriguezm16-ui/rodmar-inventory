@@ -162,11 +162,11 @@ export class DatabaseStorage implements IStorage {
         conditions.push(eq(minas.userId, userId));
       }
 
-      const result = await db.delete(minas).where(and(...conditions));
-      // Drizzle puede devolver rowCount como undefined, null, o un número
-      const rowCount = result.rowCount ?? 0;
-      console.log(`🔍 [deleteMina] ID: ${id}, userId: ${userId || 'none'}, rowCount: ${rowCount}`);
-      return rowCount > 0;
+      // Usar .returning() para obtener el registro eliminado y verificar si existía
+      const deleted = await db.delete(minas).where(and(...conditions)).returning();
+      const wasDeleted = deleted.length > 0;
+      console.log(`🔍 [deleteMina] ID: ${id}, userId: ${userId || 'none'}, deleted.length: ${deleted.length}`);
+      return wasDeleted;
     } catch (error) {
       console.error(`❌ [deleteMina] Error deleting mina ${id}:`, error);
       throw error;
@@ -238,10 +238,9 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(compradores.userId, userId));
     }
 
-    const result = await db.delete(compradores).where(and(...conditions));
-    // Drizzle puede devolver rowCount como undefined, null, o un número
-    const rowCount = result.rowCount ?? 0;
-    return rowCount > 0;
+    // Usar .returning() para obtener el registro eliminado y verificar si existía
+    const deleted = await db.delete(compradores).where(and(...conditions)).returning();
+    return deleted.length > 0;
   }
 
   async updateCompradorNombre(id: number, nombre: string, userId?: string): Promise<Comprador | undefined> {
