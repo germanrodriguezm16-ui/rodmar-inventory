@@ -1870,7 +1870,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getViajesByVolquetero(conductor: string, userId?: string): Promise<ViajeWithDetails[]> {
-    const conditions = [eq(viajes.conductor, conductor)];
+    // Usar comparación case-insensitive y normalizada (trim) para evitar problemas
+    // con diferencias en mayúsculas/minúsculas o espacios
+    const conditions = [
+      sql`LOWER(TRIM(${viajes.conductor})) = LOWER(TRIM(${conductor}))`
+    ];
     if (userId) {
       conditions.push(eq(viajes.userId, userId));
     }
