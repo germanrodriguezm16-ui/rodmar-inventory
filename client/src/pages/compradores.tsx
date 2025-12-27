@@ -74,11 +74,22 @@ export default function Compradores() {
     return balancesCompradores[compradorId] || 0;
   };
 
-  // Función optimizada: solo compradores sin viajes ni transacciones pueden eliminarse
+  // Función para verificar si se puede eliminar un comprador (sin viajes ni transacciones)
   const canDeleteComprador = (compradorId: number): boolean => {
-    // Para optimización: por ahora devolver false ya que la eliminación requiere verificación del backend
-    // TODO: Implementar verificación optimizada en el backend con datos pre-calculados
-    return false;
+    // Usar estadísticas del hook para verificar viajes (más eficiente)
+    const tieneViajes = (viajesStats[compradorId]?.viajesCount || 0) > 0;
+    // Para transacciones, usar allTransacciones si está disponible, sino asumir que no se puede eliminar
+    if (allTransacciones.length === 0) {
+      // Si no se han cargado las transacciones, usar heurística: si tiene balance, probablemente tiene transacciones
+      const balance = balancesCompradores[compradorId] || 0;
+      return !tieneViajes && balance === 0;
+    }
+    const tieneTransacciones = allTransacciones.some((t: any) => 
+      (t.deQuienTipo === "comprador" && t.deQuienId === compradorId.toString()) ||
+      (t.paraQuienTipo === "comprador" && t.paraQuienId === compradorId.toString()) ||
+      (t.tipoSocio === "comprador" && t.socioId === compradorId)
+    );
+    return !tieneViajes && !tieneTransacciones;
   };
 
   // Función optimizada: usar estadísticas del hook

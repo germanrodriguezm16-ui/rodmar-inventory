@@ -485,15 +485,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireAuth,
     async (req, res) => {
       try {
-        const userId = req.user!.id;
         const minaId = parseInt(req.params.id);
 
         console.log(
-          `=== DELETE MINA REQUEST - ID: ${minaId}, User: ${userId} ===`,
+          `=== DELETE MINA REQUEST - ID: ${minaId} ===`,
         );
 
-        // Check if mina has viajes
-        const viajes = await storage.getViajesByMina(minaId, userId);
+        // Check if mina has viajes (sin filtrar por userId - similar a compradores)
+        const viajes = await storage.getViajesByMina(minaId);
         console.log(`=== Found ${viajes.length} viajes for mina ${minaId} ===`);
         if (viajes.length > 0) {
           return res.status(400).json({
@@ -501,11 +500,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Check if mina has transacciones
+        // Check if mina has transacciones (sin filtrar por userId - similar a compradores)
         const transacciones = await storage.getTransaccionesBySocio(
           "mina",
           minaId,
-          userId,
         );
         console.log(
           `=== Found ${transacciones.length} transacciones for mina ${minaId} ===`,
@@ -517,7 +515,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        const deleteResult = await storage.deleteMina(minaId, userId);
+        // Eliminar sin filtrar por userId (similar a compradores)
+        const deleteResult = await storage.deleteMina(minaId);
         console.log(
           `=== Delete result for mina ${minaId}: ${deleteResult} ===`,
         );
@@ -527,7 +526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           res
             .status(404)
-            .json({ error: "Mina no encontrada o no pertenece al usuario" });
+            .json({ error: "Mina no encontrada" });
         }
       } catch (error) {
         console.error("=== Error deleting mina:", error);
