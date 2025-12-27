@@ -142,9 +142,19 @@ export default function Volqueteros() {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-semibold text-foreground">Volqueteros</h2>
-          <span className="text-sm bg-muted px-2 py-1 rounded-full">
-            {searchTerm ? filteredAndSortedVolqueteros.length : (volqueteros as VolqueteroConPlacas[]).length}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm bg-muted px-2 py-1 rounded-full">
+              {searchTerm ? filteredAndSortedVolqueteros.length : (volqueteros as VolqueteroConPlacas[]).length}
+            </span>
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={() => setShowAddVolquetero(true)}
+              className="h-8 w-8"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         
         {/* Balance General */}
@@ -408,6 +418,12 @@ export default function Volqueteros() {
       <FusionHistoryModal
         open={showHistoryModal}
         onOpenChange={setShowHistoryModal}
+      />
+
+      {/* Modal para agregar volquetero */}
+      <AddVolqueteroModal 
+        open={showAddVolquetero} 
+        onOpenChange={setShowAddVolquetero} 
       />
     </div>
   );
