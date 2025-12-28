@@ -404,9 +404,7 @@ export default function RodMar() {
       </Card>
 
       {/* Tabs Section */}
-      <Card>
-        <CardContent className="p-6">
-          <Tabs defaultValue="cuentas" className="w-full">
+      <Tabs defaultValue="cuentas" className="w-full">
             <TabsList className={`rodmar-tabs grid w-full gap-1 sm:gap-0 p-1 ${
               (() => {
                 const visibleTabs = [
@@ -871,8 +869,6 @@ export default function RodMar() {
               </div>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
 
       {/* Modal de Inversiones */}
       <InvestmentModal
