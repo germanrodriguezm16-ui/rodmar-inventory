@@ -366,28 +366,6 @@ export default function MinaDetail() {
   });
 
   // Ya no necesitamos obtener todas las transacciones incluyendo ocultas (se usa ocultamiento local)
-    refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
-    refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
-    queryFn: async () => {
-      const { apiUrl } = await import('@/lib/api');
-      const token = getAuthToken();
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}?includeHidden=true`), {
-        credentials: "include",
-        headers,
-      });
-      if (!response.ok) {
-        console.error(`Error fetching todas transacciones for mina ${minaId}:`, response.status, response.statusText);
-        return []; // Devolver array vacío en caso de error
-      }
-      const data = await response.json();
-      // Asegurar que siempre sea un array
-      return Array.isArray(data) ? data : [];
-    }
-  });
 
   // Combinar transacciones manuales con viajes completados y transacciones temporales
   const todasTransacciones = useMemo(() => {
