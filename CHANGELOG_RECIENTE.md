@@ -155,18 +155,35 @@ Todos los botones "mostrar ocultas" ahora tienen un estilo consistente y profesi
   - Afecta a todos los usuarios
   - Implementado mediante mutaciones al servidor
 
-### Columnas de Base de Datos
-Las columnas `oculta`, `ocultaEnComprador`, `ocultaEnMina`, `ocultaEnVolquetero`, `ocultaEnGeneral` en la tabla `transacciones` ya no son necesarias para los módulos migrados, pero **se mantienen en el esquema** por compatibilidad. Los viajes siguen usando `viajes.oculta` normalmente.
+### Columnas de Base de Datos (ACTUALIZADO)
+Las columnas `oculta`, `ocultaEnComprador`, `ocultaEnMina`, `ocultaEnVolquetero`, `ocultaEnGeneral` en la tabla `transacciones` **han sido eliminadas** de la base de datos y del código del servidor. Ver documentación completa en `MIGRACION_ELIMINACION_COLUMNAS_OCULTAMIENTO.md`. Los viajes siguen usando `viajes.oculta` normalmente.
+
+---
+
+## 5. Eliminación de Columnas Obsoletas de Ocultamiento (COMPLETADO)
+
+### Objetivo
+Eliminar las columnas de ocultamiento obsoletas de la base de datos y del código del servidor, completando la migración al sistema local.
+
+### Cambios Realizados
+- ✅ Eliminadas las columnas de la tabla `transacciones` en la BD (ejecutado en Drizzle Studio)
+- ✅ Actualizado el schema de Drizzle para reflejar la estructura real
+- ✅ Eliminadas todas las referencias a estas columnas en el código del servidor
+- ✅ Deprecados los métodos que manejaban ocultamiento de transacciones (ahora son no-operativos)
+
+### Archivos Modificados
+- `shared/schema.ts` - Eliminadas definiciones de columnas
+- `server/db-storage.ts` - Eliminadas referencias en queries y deprecados métodos
+- `server/routes.ts` - Eliminadas referencias y actualizados comentarios
+
+### Documentación
+Ver `MIGRACION_ELIMINACION_COLUMNAS_OCULTAMIENTO.md` para documentación completa.
 
 ---
 
 ## Próximos Pasos Recomendados
 
-1. **Limpieza de Base de Datos** (Opcional):
-   - Considerar eliminar las columnas de ocultamiento de `transacciones` después de confirmar que no hay dependencias
-   - Mantener `viajes.oculta` que sigue siendo necesario
-
-2. **Testing**:
+1. **Testing**:
    - Verificar que el ocultamiento funciona correctamente en todos los módulos
    - Confirmar que los viajes mantienen su ocultamiento en BD
    - Verificar que el estilo unificado se ve correcto en todos los módulos
