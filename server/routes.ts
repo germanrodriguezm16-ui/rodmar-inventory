@@ -1,4 +1,4 @@
-image.pngimage.pngimport type { Express } from "express";
+import type { Express } from "express";
 import { Router } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
