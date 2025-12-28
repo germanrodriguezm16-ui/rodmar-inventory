@@ -734,11 +734,12 @@ export default function RodMarCuentaDetail() {
                   <Button
                     onClick={() => handleShowAllHidden()}
                     size="sm"
-                    className="h-8 px-2 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                    className="h-8 px-2 bg-blue-600 hover:bg-blue-700 text-xs"
                     disabled={false}
                     title={`Mostrar ${hiddenCuentaCount} transacciones ocultas`}
                   >
-                    +{hiddenCuentaCount}
+                    <Eye className="w-3 h-3 mr-1" />
+                    {hiddenCuentaCount}
                   </Button>
                 ) : null}
                 <Button

@@ -1882,14 +1882,13 @@ function CompradorTransaccionesTab({
                         showAllHiddenViajesMutation.mutate(); // También mostrar viajes ocultos (estos sí están en BD)
                       }
                     }}
-                    variant="outline"
                     disabled={showAllHiddenViajesMutation.isPending}
                     size="sm"
-                    className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200 h-7 px-2 text-xs"
+                    className="h-8 px-2 bg-blue-600 hover:bg-blue-700 text-xs"
                     title={`Mostrar ${totalOcultos} elementos ocultos`}
                   >
-                    <EyeOff className="w-3 h-3 mr-1" />
-                    <span className="hidden sm:inline">{totalOcultos}</span>
+                    <Eye className="w-3 h-3 mr-1" />
+                    {totalOcultos}
                   </Button>
                 ) : null;
               })()}

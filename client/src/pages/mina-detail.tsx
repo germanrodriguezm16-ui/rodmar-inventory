@@ -1287,11 +1287,12 @@ export default function MinaDetail() {
                               }
                             }}
                             size="sm"
-                            className="h-8 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-xs"
+                            className="h-8 px-2 bg-blue-600 hover:bg-blue-700 text-xs"
                             disabled={showAllHiddenViajesMutation.isPending}
                             title={`Mostrar ${totalOcultos} elementos ocultos (${transaccionesOcultas} transacciones, ${viajesOcultos} viajes)`}
                           >
-                            +{totalOcultos}
+                            <Eye className="w-3 h-3 mr-1" />
+                            {totalOcultos}
                           </Button>
                         ) : null;
                       })()}

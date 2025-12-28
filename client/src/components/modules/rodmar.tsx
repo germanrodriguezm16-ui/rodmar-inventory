@@ -1402,10 +1402,11 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                   <Button
                     onClick={handleShowAllHidden}
                     size="sm"
-                    className="h-8 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-xs"
+                    className="h-8 px-2 bg-blue-600 hover:bg-blue-700 text-xs"
                     title={`Mostrar ${hiddenPostobonCount} transacciones ocultas`}
                   >
-                    +{hiddenPostobonCount}
+                    <Eye className="w-3 h-3 mr-1" />
+                    {hiddenPostobonCount}
                   </Button>
                 ) : null}
               </div>
