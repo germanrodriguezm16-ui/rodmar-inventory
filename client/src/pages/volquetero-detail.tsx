@@ -37,6 +37,7 @@ import { GestionarTransaccionesModal } from "@/components/modals/gestionar-trans
 import { PendingListModal } from "@/components/pending-transactions/pending-list-modal";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import { TransaccionesImageModal } from "@/components/modals/transacciones-image-modal";
+import { useHiddenTransactions } from "@/hooks/useHiddenTransactions";
 import type { ViajeWithDetails, TransaccionWithSocio } from "@shared/schema";
 
 // Filtro de fechas (tipos válidos)
@@ -154,6 +155,15 @@ export default function VolqueteroDetail() {
 
   const volqueteroIdActual = volquetero?.id || 0;
 
+  // Hook para manejar transacciones ocultas de forma local y temporal
+  const {
+    hideTransaction: hideTransactionLocal,
+    showAllHidden: showAllHiddenLocal,
+    getHiddenCount: getHiddenTransactionsCount,
+    isHidden: isTransactionHidden,
+    filterVisible: filterVisibleTransactions,
+  } = useHiddenTransactions(`volquetero-${volqueteroIdActual}`);
+
   const { data: transaccionesData = [] } = useQuery({
     queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"],
     queryFn: async () => {
@@ -180,32 +190,6 @@ export default function VolqueteroDetail() {
     refetchOnWindowFocus: false,
   });
 
-  // Obtener TODAS las transacciones del volquetero (incluyendo ocultas) para contar ocultas
-  const { data: todasTransaccionesIncOcultas = [] } = useQuery({
-    queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"],
-    queryFn: async () => {
-      const token = getAuthToken();
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/socio/volquetero/${volqueteroIdActual}?includeHidden=true`), {
-        credentials: "include",
-        headers,
-      });
-      if (!response.ok) {
-        console.error(`Error fetching todas transacciones for volquetero ${volqueteroIdActual}:`, response.status, response.statusText);
-        return []; // Devolver array vacío en caso de error
-      }
-      const data = await response.json();
-      // Asegurar que siempre sea un array
-      return Array.isArray(data) ? data : [];
-    },
-    enabled: volqueteroIdActual > 0,
-    staleTime: 300000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-  });
   
   // Obtener solo los viajes de este volquetero específico (optimización) - solo visibles
   const { data: viajesVolquetero = [] } = useQuery({
@@ -305,7 +289,6 @@ export default function VolqueteroDetail() {
           paraQuienId: t.paraQuienId || "",
           tipo: "Manual" as const,
           esViajeCompleto: false,
-          oculta: t.ocultaEnVolquetero || false,
           originalTransaction: t // Guardar referencia al objeto original
         };
         
@@ -398,8 +381,7 @@ export default function VolqueteroDetail() {
         paraQuienTipo: t.paraQuienTipo || "",
         paraQuienId: t.paraQuienId || "",
         tipo: "Temporal" as const,
-        esViajeCompleto: false,
-        oculta: false
+        esViajeCompleto: false
       };
     });
     
@@ -589,39 +571,14 @@ export default function VolqueteroDetail() {
     });
   }, [getDateRange]);
 
-  // Mutación para ocultar transacciones individuales
-  const hideTransactionMutation = useMutation({
-    mutationFn: async (transactionId: number) => {
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide-volquetero`), {
-        method: 'PATCH',
-        headers,
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error('Error al ocultar transacción');
-      return await response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
-      toast({
-        title: "Transacción ocultada",
-        description: "La transacción se ha ocultado correctamente"
-      });
-    },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo ocultar la transacción",
-        variant: "destructive"
-      });
-    }
-  });
+  // Función para ocultar transacciones localmente (sin llamar a la API)
+  const handleHideTransaction = (transactionId: number) => {
+    hideTransactionLocal(transactionId);
+    toast({
+      title: "Transacción ocultada",
+      description: "La transacción se ha ocultado correctamente"
+    });
+  };
 
   // Mutación para ocultar viajes individuales
   const hideViajeMutation = useMutation({
@@ -729,77 +686,26 @@ export default function VolqueteroDetail() {
     },
   });
 
-  const showAllHiddenMutation = useMutation({
-    mutationFn: async () => {
-      const { apiUrl } = await import('@/lib/api');
-      
-      if (!volquetero || !volqueteroIdActual) {
-        throw new Error('Volquetero no encontrado');
-      }
-      
-      // Mostrar transacciones ocultas específicas de este volquetero
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const transaccionesResponse = await fetch(apiUrl(`/api/transacciones/socio/volquetero/${volqueteroIdActual}/show-all`), {
-        method: 'POST',
-        headers,
-        credentials: "include",
-      });
-      
-      // Mostrar viajes ocultos específicos de este volquetero (por nombre del conductor)
-      const viajesResponse = await fetch(apiUrl(`/api/viajes/volquetero/${encodeURIComponent(volquetero.nombre)}/show-all`), {
-        method: 'POST',
-        headers,
-        credentials: "include",
-      });
-      
-      if (!transaccionesResponse.ok && !viajesResponse.ok) {
-        throw new Error('Error al mostrar transacciones y viajes');
-      }
-      
-      const transaccionesResult = transaccionesResponse.ok ? await transaccionesResponse.json() : { updatedCount: 0 };
-      const viajesResult = viajesResponse.ok ? await viajesResponse.json() : { updatedCount: 0 };
-      
-      return {
-        transacciones: transaccionesResult.updatedCount || 0,
-        viajes: viajesResult.updatedCount || 0,
-        total: (transaccionesResult.updatedCount || 0) + (viajesResult.updatedCount || 0)
-      };
-    },
-    onSuccess: (result) => {
-      // Invalidar solo las queries necesarias (similar a minas)
-      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "viajes"] });
-      
-      const mensaje = result.total > 0 
-        ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
-        : "No había elementos ocultos para restaurar";
-        
-      toast({
-        title: "Elementos restaurados",
-        description: mensaje
-      });
-    },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "No se pudieron restaurar los elementos ocultos",
-        variant: "destructive"
-      });
-    }
-  });
+  // Función para mostrar todas las transacciones ocultas localmente
+  const handleShowAllHidden = () => {
+    showAllHiddenLocal();
+    toast({
+      title: "Transacciones restauradas",
+      description: "Todas las transacciones ocultas ahora son visibles"
+    });
+  };
 
-  // Aplicar filtros a transacciones
+  // Aplicar filtros a transacciones (incluyendo filtro de ocultas local)
   const transaccionesFiltradas = useMemo(() => {
-    let filtered = filterType === "todas" ? 
-      transaccionesFormateadas.filter(t => !t.oculta) : 
-      transaccionesFormateadas.filter(t => t.oculta);
+    // Primero filtrar transacciones ocultas localmente (solo transacciones manuales con IDs numéricos)
+    let filtered = transaccionesFormateadas.filter(t => {
+      // Si es una transacción manual (tiene originalTransaction), verificar si está oculta localmente
+      if (t.tipo === "Manual" && t.originalTransaction && typeof t.originalTransaction.id === 'number') {
+        return !isTransactionHidden(t.originalTransaction.id);
+      }
+      // Para viajes y temporales, siempre mostrar (el hook solo maneja transacciones manuales)
+      return true;
+    });
     
     // Luego filtrar por fecha
     filtered = filterTransaccionesByDate(
@@ -839,7 +745,7 @@ export default function VolqueteroDetail() {
     // Si balanceFilter === 'all', no filtrar por balance
     
     return filtered;
-  }, [transaccionesFormateadas, filterType, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, searchTerm, filterTransaccionesByDate, balanceFilter]);
+  }, [transaccionesFormateadas, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, searchTerm, filterTransaccionesByDate, balanceFilter, isTransactionHidden]);
   
   // Balance del encabezado (INCLUYE todas las transacciones y viajes, incluso ocultos)
   // Este balance NO debe cambiar al ocultar/mostrar transacciones
@@ -858,10 +764,10 @@ export default function VolqueteroDetail() {
         return sum + totalFlete; // Positivo porque es ingreso para volquetero
       }, 0);
     
-    // Calcular transacciones manuales (todas, incluyendo ocultas)
+    // Calcular transacciones manuales (todas, incluyendo ocultas localmente)
     // EXCLUIR transacciones pendientes (no afectan balances)
     let totalManuales = 0;
-    todasTransaccionesIncOcultas
+    (transaccionesData as TransaccionWithSocio[])
       .filter((t: TransaccionWithSocio) => t.estado !== 'pendiente') // Excluir transacciones pendientes
       .forEach((t: TransaccionWithSocio) => {
         const valor = parseFloat(t.valor || "0");
@@ -881,14 +787,14 @@ export default function VolqueteroDetail() {
       transacciones: totalManuales,
       total: ingresosViajes + totalManuales
     };
-  }, [todosViajesIncOcultos, todasTransaccionesIncOcultas, volquetero, volqueteroIdActual]);
+  }, [todosViajesIncOcultos, transaccionesData, volquetero, volqueteroIdActual]);
 
   // Calcular balance resumido correctamente (para la pestaña de transacciones - usa transacciones filtradas)
   const balanceResumido = useMemo(() => {
-    // Excluir transacciones pendientes y ocultas del cálculo de balance
+    // Excluir transacciones pendientes del cálculo de balance (las ocultas ya están filtradas)
     const transaccionesVisibles = transaccionesFiltradas.filter(t => {
       const realTransaction = (t as any).originalTransaction || t;
-      return !t.oculta && realTransaction?.estado !== 'pendiente';
+      return realTransaction?.estado !== 'pendiente';
     });
     
     let positivos = 0;
@@ -1040,7 +946,7 @@ export default function VolqueteroDetail() {
             )}
             {has("module.VOLQUETEROS.tab.TRANSACCIONES.view") && (
               <TabsTrigger value="transacciones" className="text-xs">
-                Transacciones ({transaccionesFormateadas.filter(t => !t.oculta).length})
+                Transacciones ({transaccionesFiltradas.length})
               </TabsTrigger>
             )}
             {has("module.VOLQUETEROS.tab.BALANCES.view") && (
@@ -1123,26 +1029,18 @@ export default function VolqueteroDetail() {
                         
                         {/* Botón mostrar ocultas */}
                         {(() => {
-                          const transaccionesOcultas = Array.isArray(todasTransaccionesIncOcultas) 
-                            ? todasTransaccionesIncOcultas.filter((t: any) => t.ocultaEnVolquetero).length 
-                            : 0;
-                          // Usar todosViajesIncOcultos para contar viajes ocultos (no viajesVolquetero que solo trae visibles)
-                          const viajesOcultos = Array.isArray(todosViajesIncOcultos) 
-                            ? todosViajesIncOcultos.filter((v: any) => v.oculta).length 
-                            : 0;
-                          const totalOcultos = transaccionesOcultas + viajesOcultos;
-                          const hayElementosOcultos = totalOcultos > 0;
+                          const transaccionesOcultas = getHiddenTransactionsCount();
+                          const hayElementosOcultos = transaccionesOcultas > 0;
                           
                           return hayElementosOcultos ? (
                             <Button
-                              onClick={() => showAllHiddenMutation.mutate()}
+                              onClick={handleShowAllHidden}
                               size="sm"
                               className="h-8 px-2 bg-blue-600 hover:bg-blue-700 text-xs"
-                              disabled={showAllHiddenMutation.isPending}
-                              title={`Mostrar ${totalOcultos} elemento(s) oculto(s)`}
+                              title={`Mostrar ${transaccionesOcultas} transacción(es) oculta(s)`}
                             >
                               <Eye className="w-3 h-3 mr-1" />
-                              {totalOcultos}
+                              {transaccionesOcultas}
                             </Button>
                           ) : null;
                         })()}
@@ -1209,7 +1107,7 @@ export default function VolqueteroDetail() {
                     <div className="text-green-700 text-xs sm:text-sm font-semibold">
                       +{transaccionesFiltradas.filter(t => {
                         const realTransaction = (t as any).originalTransaction || t;
-                        return !t.oculta && realTransaction?.estado !== 'pendiente' && parseFloat(t.valor) > 0;
+                        return realTransaction?.estado !== 'pendiente' && parseFloat(t.valor) > 0;
                       }).length} {formatCurrency(balanceResumido.positivos)}
                     </div>
                   </div>
@@ -1223,7 +1121,7 @@ export default function VolqueteroDetail() {
                     <div className="text-red-700 text-xs sm:text-sm font-semibold">
                       -{transaccionesFiltradas.filter(t => {
                         const realTransaction = (t as any).originalTransaction || t;
-                        return !t.oculta && realTransaction?.estado !== 'pendiente' && parseFloat(t.valor) < 0;
+                        return realTransaction?.estado !== 'pendiente' && parseFloat(t.valor) < 0;
                       }).length} {formatCurrency(balanceResumido.negativos)}
                     </div>
                   </div>
@@ -1459,12 +1357,13 @@ export default function VolqueteroDetail() {
                                       <Button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          hideTransactionMutation.mutate(transaccion.originalTransaction.id);
+                                          if (typeof transaccion.originalTransaction.id === 'number') {
+                                            handleHideTransaction(transaccion.originalTransaction.id);
+                                          }
                                         }}
                                         variant="ghost"
                                         size="sm"
                                         className="h-6 w-6 p-0 hover:bg-gray-100"
-                                        disabled={hideTransactionMutation.isPending}
                                         title="Ocultar transacción"
                                       >
                                         <Eye className="h-3 w-3 text-gray-500" />
@@ -1726,7 +1625,7 @@ export default function VolqueteroDetail() {
                     <p className="text-sm font-medium text-muted-foreground mb-2">Ingresos por Viajes (Fletes)</p>
                     <p className="text-lg font-bold text-green-600">
                       {formatCurrency(transaccionesFormateadas
-                        .filter(t => t.tipo === "Viaje" && !t.oculta)
+                        .filter(t => t.tipo === "Viaje")
                         .reduce((sum, t) => sum + parseFloat(t.valor || "0"), 0)
                       )}
                     </p>
@@ -1743,7 +1642,7 @@ export default function VolqueteroDetail() {
                         <p className="text-xs text-muted-foreground">Ingresos</p>
                         <p className="text-sm font-semibold text-green-600">
                           {formatCurrency(transaccionesFormateadas
-                            .filter(t => (t.tipo === "Manual" || t.tipo === "Temporal") && !t.oculta && parseFloat(t.valor) > 0)
+                            .filter(t => (t.tipo === "Manual" || t.tipo === "Temporal") && parseFloat(t.valor) > 0)
                             .reduce((sum, t) => sum + parseFloat(t.valor || "0"), 0)
                           )}
                         </p>
@@ -1755,7 +1654,7 @@ export default function VolqueteroDetail() {
                         <p className="text-xs text-muted-foreground">Egresos</p>
                         <p className="text-sm font-semibold text-red-600">
                           {formatCurrency(Math.abs(transaccionesFormateadas
-                            .filter(t => (t.tipo === "Manual" || t.tipo === "Temporal") && !t.oculta && parseFloat(t.valor) < 0)
+                            .filter(t => (t.tipo === "Manual" || t.tipo === "Temporal") && parseFloat(t.valor) < 0)
                             .reduce((sum, t) => sum + parseFloat(t.valor || "0"), 0)
                           ))}
                         </p>

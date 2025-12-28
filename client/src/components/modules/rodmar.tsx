@@ -43,6 +43,7 @@ import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import { useMutation } from "@tanstack/react-query";
+import { useHiddenTransactions } from "@/hooks/useHiddenTransactions";
 
 ChartJS.register(
   CategoryScale,
@@ -916,6 +917,14 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Hook para manejar transacciones ocultas de forma local y temporal
+  const {
+    hideTransaction: hideTransactionLocal,
+    showAllHidden: showAllHiddenLocal,
+    getHiddenCount: getHiddenTransactionsCount,
+    filterVisible: filterVisibleTransactions,
+  } = useHiddenTransactions(`postobon-${filterType}`);
+
   // Estados para modales de acciones
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -1069,37 +1078,9 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
     refetchOnWindowFocus: false,
   });
 
-  // Obtener TODAS las transacciones de Postobón (incluyendo ocultas) para contar ocultas
-  const { data: todasPostobonTransactionsIncOcultas = [] } = useQuery<any[]>({
-    queryKey: ["/api/transacciones/postobon/all", filterType],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        includeHidden: 'true',
-        filterType: filterType,
-      });
-      const { getAuthToken } = await import('@/hooks/useAuth');
-      const token = getAuthToken();
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/postobon?${params.toString()}`), {
-        credentials: "include",
-        headers,
-      });
-      if (!response.ok) throw new Error('Error al obtener transacciones');
-      const data = await response.json();
-      // Cuando includeHidden=true, el servidor devuelve un array directo
-      return Array.isArray(data) ? data : (data.data || []);
-    },
-    staleTime: 300000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-  });
-
   const allBaseFilteredTransactions = transactionsData?.data || [];
   const pagination = transactionsData?.pagination;
-  const hiddenPostobonCount = todasPostobonTransactionsIncOcultas?.filter(t => t.oculta).length || 0;
+  const hiddenPostobonCount = getHiddenTransactionsCount();
 
   // Filtrado client-side sobre la página activa
   const baseFilteredTransactions = useMemo(() => {
@@ -1234,106 +1215,38 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
     });
   };
 
-  // Mutation para ocultar transacciones
-  const hideTransactionMutation = useMutation({
-    mutationFn: async (transactionId: number) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
-      const token = getAuthToken();
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide`), {
-        method: 'PATCH',
-        credentials: 'include',
-        headers,
-      });
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => response.statusText);
-        throw new Error(`Error ${response.status}: ${errorText}`);
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          return Array.isArray(queryKey) &&
-                 queryKey.length > 0 &&
-                 typeof queryKey[0] === "string" &&
-                 queryKey[0].startsWith("/api/transacciones/postobon");
-        },
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
-      toast({
-        title: "Transacción ocultada",
-        description: "La transacción ha sido ocultada correctamente",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "No se pudo ocultar la transacción",
-        variant: "destructive",
-      });
-    },
-  });
+  // Función para ocultar transacciones localmente (sin llamar a la API)
+  const handleHideTransaction = (transactionId: number) => {
+    hideTransactionLocal(transactionId);
+    toast({
+      title: "Transacción ocultada",
+      description: "La transacción se ha ocultado correctamente"
+    });
+  };
 
-  // Mutación para mostrar todas las transacciones ocultas - Postobón
-  const showAllHiddenMutation = useMutation({
-    mutationFn: async () => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/show-all-hidden`), {
-        method: 'PATCH',
-        headers,
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error('Error al mostrar transacciones ocultas');
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        description: "Todas las transacciones ocultas ahora son visibles",
-        duration: 2000,
-      });
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          return Array.isArray(queryKey) &&
-                 queryKey.length > 0 &&
-                 typeof queryKey[0] === "string" &&
-                 queryKey[0].startsWith("/api/transacciones/postobon");
-        },
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
-    },
-    onError: () => {
-      toast({
-        description: "Error al mostrar transacciones ocultas",
-        variant: "destructive",
-        duration: 3000,
-      });
-    }
-  });
+  // Función para mostrar todas las transacciones ocultas localmente
+  const handleShowAllHidden = () => {
+    showAllHiddenLocal();
+    toast({
+      description: "Todas las transacciones ocultas ahora son visibles",
+      duration: 2000,
+    });
+  };
 
   // Resetear a página 1 cuando cambian los filtros
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, fechaFilterType, fechaFilterValue, fechaFilterValueEnd, filterType]);
 
-  // Combinar transacciones normales con temporales - Como en LCDM
+  // Combinar transacciones normales con temporales y filtrar las ocultas localmente
   const todasLasTransacciones = useMemo(() => {
     return [...baseFilteredTransactions, ...transaccionesTemporales];
   }, [baseFilteredTransactions, transaccionesTemporales]);
 
-  // Las transacciones ya vienen filtradas y ordenadas del servidor
-  // Solo combinamos con temporales
-  const transaccionesFiltradas = todasLasTransacciones;
+  // Filtrar transacciones ocultas localmente
+  const transaccionesFiltradas = useMemo(() => {
+    return filterVisibleTransactions(todasLasTransacciones);
+  }, [todasLasTransacciones, filterVisibleTransactions]);
 
   return (
     <div className="space-y-3">
@@ -1487,10 +1400,9 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                 {/* Botón mostrar ocultas - Postobón */}
                 {hiddenPostobonCount > 0 ? (
                   <Button
-                    onClick={() => showAllHiddenMutation.mutate()}
+                    onClick={handleShowAllHidden}
                     size="sm"
                     className="h-8 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-xs"
-                    disabled={showAllHiddenMutation.isPending}
                     title={`Mostrar ${hiddenPostobonCount} transacciones ocultas`}
                   >
                     +{hiddenPostobonCount}
@@ -1687,10 +1599,9 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
                           onClick={(e) => {
                             e.stopPropagation();
                             if (typeof transaccion.id === 'number') {
-                              hideTransactionMutation.mutate(transaccion.id);
+                              handleHideTransaction(transaccion.id);
                             }
                           }}
-                          disabled={hideTransactionMutation.isPending}
                           title="Ocultar transacción"
                         >
                           <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-500" />
@@ -1961,6 +1872,14 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Hook para manejar transacciones ocultas de forma local y temporal
+  const {
+    hideTransaction: hideTransactionLocal,
+    showAllHidden: showAllHiddenLocal,
+    getHiddenCount: getHiddenTransactionsCount,
+    filterVisible: filterVisibleTransactions,
+  } = useHiddenTransactions('lcdm');
+
   // Estados para modales de acciones
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -2108,33 +2027,9 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
     refetchOnWindowFocus: false,
   });
 
-  // Obtener TODAS las transacciones de LCDM (incluyendo ocultas) para contar ocultas
-  const { data: todasLcdmTransactionsIncOcultas = [] } = useQuery<any[]>({
-    queryKey: ["/api/transacciones/lcdm/all"],
-    queryFn: async () => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
-      const token = getAuthToken();
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/lcdm?includeHidden=true`), {
-        credentials: "include",
-        headers,
-      });
-      if (!response.ok) throw new Error('Error al obtener transacciones');
-      const data = await response.json();
-      // Cuando includeHidden=true, el servidor devuelve un array directo
-      return Array.isArray(data) ? data : (data.data || []);
-    },
-    staleTime: 300000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-  });
-
   const allLcdmTransactions = transactionsData?.data || [];
   const pagination = transactionsData?.pagination;
-  const hiddenLcdmCount = todasLcdmTransactionsIncOcultas?.filter(t => t.oculta).length || 0;
+  const hiddenLcdmCount = getHiddenTransactionsCount();
 
   // Filtrado client-side sobre la página activa
   const lcdmTransactions = useMemo(() => {
@@ -2271,92 +2166,23 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
     });
   };
 
-  // Mutation para ocultar transacciones
-  const hideTransactionMutation = useMutation({
-    mutationFn: async (transactionId: number) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
-      const token = getAuthToken();
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/${transactionId}/hide`), {
-        method: 'PATCH',
-        credentials: 'include',
-        headers,
-      });
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => response.statusText);
-        throw new Error(`Error ${response.status}: ${errorText}`);
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          return Array.isArray(queryKey) &&
-                 queryKey.length > 0 &&
-                 typeof queryKey[0] === "string" &&
-                 queryKey[0].startsWith("/api/transacciones/lcdm");
-        },
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
-      toast({
-        title: "Transacción ocultada",
-        description: "La transacción ha sido ocultada correctamente",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "No se pudo ocultar la transacción",
-        variant: "destructive",
-      });
-    },
-  });
+  // Función para ocultar transacciones localmente (sin llamar a la API)
+  const handleHideTransaction = (transactionId: number) => {
+    hideTransactionLocal(transactionId);
+    toast({
+      title: "Transacción ocultada",
+      description: "La transacción se ha ocultado correctamente"
+    });
+  };
 
-  // Mutación para mostrar todas las transacciones ocultas
-  const showAllHiddenMutation = useMutation({
-    mutationFn: async () => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/transacciones/show-all-hidden`), {
-        method: 'PATCH',
-        headers,
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error('Error al mostrar transacciones ocultas');
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        description: "Todas las transacciones ocultas ahora son visibles",
-        duration: 2000,
-      });
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          return Array.isArray(queryKey) &&
-                 queryKey.length > 0 &&
-                 typeof queryKey[0] === "string" &&
-                 queryKey[0].startsWith("/api/transacciones/lcdm");
-        },
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
-    },
-    onError: () => {
-      toast({
-        description: "Error al mostrar transacciones ocultas",
-        variant: "destructive",
-        duration: 3000,
-      });
-    }
-  });
+  // Función para mostrar todas las transacciones ocultas localmente
+  const handleShowAllHidden = () => {
+    showAllHiddenLocal();
+    toast({
+      description: "Todas las transacciones ocultas ahora son visibles",
+      duration: 2000,
+    });
+  };
 
 
   // Resetear a página 1 cuando cambian los filtros
@@ -2364,14 +2190,15 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
     setCurrentPage(1);
   }, [searchTerm, fechaFilterType, fechaFilterValue, fechaFilterValueEnd]);
 
-  // Combinar transacciones normales con temporales - Como en minas
+  // Combinar transacciones normales con temporales y filtrar las ocultas localmente
   const todasLasTransacciones = useMemo(() => {
     return [...lcdmTransactions, ...transaccionesTemporales];
   }, [lcdmTransactions, transaccionesTemporales]);
 
-  // Las transacciones ya vienen filtradas y ordenadas del servidor
-  // Solo combinamos con temporales
-  const transaccionesFiltradas = todasLasTransacciones;
+  // Filtrar transacciones ocultas localmente
+  const transaccionesFiltradas = useMemo(() => {
+    return filterVisibleTransactions(todasLasTransacciones);
+  }, [todasLasTransacciones, filterVisibleTransactions]);
 
   return (
     <div className="space-y-3">
@@ -2508,10 +2335,9 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
                 {/* Botón mostrar ocultas - LCDM */}
                 {hiddenLcdmCount > 0 ? (
                   <Button
-                    onClick={() => showAllHiddenMutation.mutate()}
+                    onClick={handleShowAllHidden}
                     size="sm"
                     className="h-8 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-xs"
-                    disabled={showAllHiddenMutation.isPending}
                     title={`Mostrar ${hiddenLcdmCount} transacciones ocultas`}
                   >
                     +{hiddenLcdmCount}
@@ -2705,10 +2531,9 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
                           onClick={(e) => {
                             e.stopPropagation();
                             if (typeof transaccion.id === 'number') {
-                              hideTransactionMutation.mutate(transaccion.id);
+                              handleHideTransaction(transaccion.id);
                             }
                           }}
-                          disabled={hideTransactionMutation.isPending}
                           title="Ocultar transacción"
                         >
                           <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-500" />
