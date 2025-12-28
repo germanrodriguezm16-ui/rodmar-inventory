@@ -1,307 +1,194 @@
 # Changelog - Cambios Recientes
 
-## Fecha: Enero 2025
+## Fecha: Última sesión de desarrollo
 
-### Problema Resuelto: Transacciones de LCDM y Postobón no visibles para usuarios ADMIN
-
-#### Descripción del Problema
-Los usuarios con rol ADMIN no podían ver las transacciones en las pestañas "LCDM" y "Postobón" del módulo RodMar. El sistema devolvía errores 401 (No autenticado) al intentar acceder a estas transacciones.
-
-#### Causa Raíz
-1. **Backend**: Las rutas `/api/transacciones/lcdm` y `/api/transacciones/postobon` estaban filtrando las transacciones por `userId`, lo que impedía que los administradores vieran transacciones creadas por otros usuarios o con `userId` nulo.
-
-2. **Frontend**: Los componentes `LcdmTransactionsTab` y `PostobonTransactionsTab` estaban haciendo queries sin incluir el token de autenticación en los headers, causando errores 401.
+### Resumen General
+Esta sesión se enfocó en completar la migración del sistema de ocultamiento de transacciones de un enfoque basado en base de datos a un enfoque local y temporal usando `sessionStorage`, así como unificar la interfaz de usuario en todos los módulos.
 
 ---
 
-## Cambios en el Backend
+## 1. Migración a Ocultamiento Local Temporal
 
-### Archivo: `server/routes.ts`
+### Objetivo
+Completar la migración de todos los módulos para que las transacciones manuales usen ocultamiento local temporal (solo afecta al usuario actual, se limpia al cambiar de página/pestaña), mientras que los viajes mantienen su ocultamiento en la base de datos.
 
-#### Ruta: `GET /api/transacciones/lcdm`
+### Módulos Migrados
+- ✅ **Postobón** (ya migrado anteriormente)
+- ✅ **LCDM** (ya migrado anteriormente)
+- ✅ **Volqueteros** (ya migrado anteriormente)
+- ✅ **Minas** (migrado en esta sesión)
+- ✅ **Compradores** (migrado en esta sesión)
 
-**Cambios realizados:**
-- Se agregó verificación del rol ADMIN del usuario autenticado
-- Si el usuario es ADMIN, se pasa `userId = undefined` a los métodos de storage, permitiendo ver todas las transacciones
-- Si el usuario no es ADMIN, se mantiene el filtro por `userId` (comportamiento original)
+### Cambios Técnicos
 
-**Código relevante:**
-```typescript
-app.get("/api/transacciones/lcdm", requireAuth, async (req, res) => {
-  try {
-    // Verificar si el usuario es ADMIN - si lo es, no filtrar por userId
-    let userId: string | undefined = req.user?.id || "main_user";
-    const isAdmin = req.user?.roleId ? await db.select().from(roles).where(eq(roles.id, req.user.roleId)).then(r => r[0]?.nombre === 'ADMIN') : false;
-    
-    // Si es admin, no filtrar por userId (ver todas las transacciones)
-    if (isAdmin) {
-      userId = undefined;
-    }
-    
-    // ... resto del código
-  }
-});
-```
+#### Minas (`mina-detail.tsx`)
+- **Eliminado**: Query `todasTransaccionesIncOcultas` que obtenía todas las transacciones incluyendo ocultas
+- **Eliminado**: Mutación `showAllHiddenMutation` que mostraba todas las transacciones ocultas desde el servidor
+- **Agregado**: Uso del hook `useHiddenTransactions` con `isHidden` y `filterVisible`
+- **Agregado**: Función local `handleShowAllHidden` para mostrar transacciones ocultas localmente
+- **Agregado**: Mutación `showAllHiddenViajesMutation` para mostrar viajes ocultos (estos sí están en BD)
+- **Modificado**: Filtrado de transacciones para usar `isTransactionHidden` en lugar de `t.oculta`
+- **Modificado**: Balance del encabezado para usar `transacciones` en lugar de `todasTransaccionesIncOcultas`
+- **Modificado**: Conteo de ocultas para usar `getHiddenTransactionsCount()`
 
-**Funcionalidad:**
-- Verifica el rol del usuario autenticado consultando la tabla `roles`
-- Si es ADMIN, establece `userId = undefined` para que `storage.getTransacciones()` y `storage.getTransaccionesIncludingHidden()` no filtren por usuario
-- Mantiene compatibilidad con usuarios no-admin que solo ven sus propias transacciones
+#### Compradores (`comprador-detail.tsx`)
+- **Eliminado**: Query `todasTransaccionesIncOcultas` que obtenía todas las transacciones incluyendo ocultas
+- **Eliminado**: Mutación `showAllHiddenMutation` que mostraba todas las transacciones ocultas desde el servidor
+- **Agregado**: Uso del hook `useHiddenTransactions` con `isHidden`
+- **Agregado**: Función local `handleShowAllHidden` para mostrar transacciones ocultas localmente
+- **Agregado**: Mutación `showAllHiddenViajesMutation` para mostrar viajes ocultos (estos sí están en BD)
+- **Modificado**: Componente `CompradorTransaccionesTab` para recibir `isTransactionHidden` y `getHiddenTransactionsCount` como props
+- **Modificado**: Filtrado de transacciones para usar `isTransactionHidden` en lugar de `hiddenTransactions.has()`
+- **Modificado**: Balance del encabezado para usar `transacciones` en lugar de `todasTransaccionesIncOcultas`
+- **Modificado**: Conteo de ocultas para usar `getHiddenTransactionsCount()`
 
-#### Ruta: `GET /api/transacciones/postobon`
-
-**Cambios realizados:**
-- Misma lógica que la ruta de LCDM: verificación de rol ADMIN y bypass del filtro `userId` si es necesario
-
-**Parámetros soportados:**
-- `page`: Número de página (default: 1)
-- `limit`: Cantidad de resultados por página (default: 50)
-- `filterType`: Tipo de filtro - 'todas', 'santa-rosa', 'cimitarra'
-- `includeHidden`: Si es 'true', incluye transacciones ocultas sin paginación
-- `search`: Búsqueda por texto
-- `fechaDesde`: Filtro de fecha inicial
-- `fechaHasta`: Filtro de fecha final
-
-**Comportamiento:**
-- Si `includeHidden=true`: Devuelve todas las transacciones (incluyendo ocultas) como array directo
-- Si `includeHidden=false` o no está presente: Devuelve respuesta paginada con estructura `{ data: [...], pagination: {...} }`
+### Nota Importante sobre Viajes
+Los viajes (`viajes.oculta`) **mantienen su ocultamiento en la base de datos** porque es una funcionalidad diferente que requiere persistencia entre sesiones. Solo las transacciones manuales usan ocultamiento local temporal.
 
 ---
 
-## Cambios en el Frontend
+## 2. Corrección de Errores en Funciones de Ocultamiento
 
-### Archivo: `client/src/components/modules/rodmar.tsx`
+### Problema Identificado
+Después de la migración, se encontraron errores donde se usaban funciones incorrectas para ocultar transacciones.
 
-#### Queries Principales (Componente RodMar)
+### Correcciones Realizadas
 
-**Query para LCDM:**
-```typescript
-const { data: lcdmTransactionsData } = useQuery({
-  queryKey: ["/api/transacciones/lcdm?includeHidden=true"],
-  queryFn: async ({ queryKey }) => {
-    const token = getAuthToken();
-    const headers: Record<string, string> = {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    };
-    
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    } else {
-      console.warn('[LCDM] ⚠️ No token available!');
-      removeAuthToken();
-      throw new Error('No autenticado');
-    }
-    
-    const response = await fetch(apiUrl("/api/transacciones/lcdm?includeHidden=true"), {
-      credentials: "include",
-      headers,
-    });
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        removeAuthToken();
-        throw new Error('No autenticado');
-      }
-      throw new Error(`Error: ${response.status}`);
-    }
-    
-    const data = await parseJsonWithDateInterception(response);
-    return Array.isArray(data) ? data : (data.data || []);
-  },
-  enabled: has("module.RODMAR.LCDM.view"),
-});
-```
+#### Volqueteros (`volquetero-detail.tsx`)
+- **Error**: Se estaba usando `hideTransactionMutation.mutate(...)` que no existe
+- **Solución**: Cambiado a `handleHideTransaction(...)` que es la función local correcta
+- **Ubicación**: Línea 1576
 
-**Características:**
-- Usa `includeHidden=true` para obtener todas las transacciones sin paginación
-- Incluye token de autenticación en headers
-- Maneja errores 401 limpiando el token
-- Usa `parseJsonWithDateInterception` para manejar fechas UTC correctamente
-- Solo se ejecuta si el usuario tiene el permiso `module.RODMAR.LCDM.view`
+#### Compradores (`comprador-detail.tsx`)
+- **Error**: En `CompradorTransaccionesTab` se estaba usando `handleHideTransaction(...)` que no existe en ese componente
+- **Solución**: Cambiado a `hideTransactionMutation(...)` que es la prop recibida del componente padre
+- **Ubicaciones**: Líneas 2373 y 2683
 
-**Query para Postobón:**
-- Similar a la query de LCDM pero con `filterType=todas` en la URL
-- Requiere permiso `module.RODMAR.Postobon.view`
-
-#### Componente: `LcdmTransactionsTab`
-
-**Query con Paginación:**
-```typescript
-const { data: transactionsData } = useQuery({
-  queryKey: ["/api/transacciones/lcdm", currentPage, pageSize],
-  queryFn: async () => {
-    const params = new URLSearchParams({
-      page: currentPage.toString(),
-      limit: limit.toString(),
-    });
-    
-    const token = getAuthToken();
-    const headers: Record<string, string> = {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    
-    const response = await fetch(apiUrl(`/api/transacciones/lcdm?${params.toString()}`), {
-      credentials: "include",
-      headers,
-    });
-    
-    return response.json();
-  },
-});
-```
-
-**Cambios realizados:**
-- ✅ Agregado token de autenticación en headers
-- ✅ Agregado headers de cache control
-- ✅ Agregado `credentials: "include"` para mantener cookies de sesión
-
-**Query para Transacciones Ocultas:**
-- Query separada que obtiene todas las transacciones (incluyendo ocultas) para contar cuántas están ocultas
-- Usa `includeHidden=true` en la URL
-- Ya tenía el token correctamente implementado
-
-#### Componente: `PostobonTransactionsTab`
-
-**Query con Paginación:**
-- Similar a `LcdmTransactionsTab` pero con parámetro adicional `filterType`
-- Soporta filtros: 'todas', 'santa-rosa', 'cimitarra'
-
-**Cambios realizados:**
-- ✅ Agregado token de autenticación en headers (mismo patrón que LCDM)
-- ✅ Agregado headers de cache control
-- ✅ Agregado `credentials: "include"`
+### Resultado
+Las transacciones manuales ahora se pueden ocultar correctamente en todos los módulos usando el sistema local temporal.
 
 ---
 
-## Funciones y Utilidades
+## 3. Corrección de Error de Sintaxis
 
-### Función: `getAuthToken()`
-**Ubicación:** `client/src/hooks/useAuth.ts`
+### Problema
+Al eliminar la query `todasTransaccionesIncOcultas` en `mina-detail.tsx`, quedó código residual que causaba un error de sintaxis durante el build.
 
-**Descripción:**
-Obtiene el token de autenticación almacenado en `localStorage` bajo la clave `auth_token`.
-
-**Uso:**
-```typescript
-import { getAuthToken } from "@/hooks/useAuth";
-const token = getAuthToken(); // string | null
-```
-
-### Función: `removeAuthToken()`
-**Ubicación:** `client/src/hooks/useAuth.ts`
-
-**Descripción:**
-Elimina el token de autenticación de `localStorage` y limpia el estado de autenticación.
-
-**Uso:**
-```typescript
-import { removeAuthToken } from "@/hooks/useAuth";
-removeAuthToken();
-```
-
-### Función: `parseJsonWithDateInterception()`
-**Ubicación:** `client/src/lib/queryClient.ts`
-
-**Descripción:**
-Parsea una respuesta JSON interceptando strings que parecen fechas UTC para mantenerlos como strings y evitar conversiones automáticas que cambien la zona horaria.
-
-**Uso:**
-```typescript
-import { parseJsonWithDateInterception } from "@/lib/queryClient";
-const data = await parseJsonWithDateInterception(response);
-```
-
-### Función: `apiUrl()`
-**Ubicación:** `client/src/lib/api.ts`
-
-**Descripción:**
-Construye URLs completas del API usando la URL base configurada en `VITE_API_URL` o una URL relativa en desarrollo.
-
-**Uso:**
-```typescript
-import { apiUrl } from "@/lib/api";
-const fullUrl = apiUrl("/api/transacciones/lcdm?includeHidden=true");
-```
+### Solución
+- **Archivo**: `mina-detail.tsx`
+- **Cambio**: Eliminado código residual de la query eliminada (líneas 369-390)
+- **Resultado**: Build exitoso en Vercel
 
 ---
 
-## Permisos Requeridos
+## 4. Unificación del Estilo del Botón "Mostrar Ocultas"
 
-Para que un usuario pueda ver las transacciones de LCDM y Postobón, debe tener los siguientes permisos asignados:
+### Objetivo
+Unificar el estilo visual del botón "mostrar ocultas" en todos los módulos para que sea consistente con el diseño en Volqueteros.
 
-1. **`module.RODMAR.LCDM.view`**: Permite ver la pestaña y transacciones de LCDM
-2. **`module.RODMAR.Postobon.view`**: Permite ver la pestaña y transacciones de Postobón
+### Estilo Unificado (Modelo: Volqueteros)
+- **Icono**: `<Eye className="w-3 h-3 mr-1" />` (icono de ojo)
+- **Color**: `bg-blue-600 hover:bg-blue-700` (azul)
+- **Clases**: `h-8 px-2 bg-blue-600 hover:bg-blue-700 text-xs`
+- **Conteo**: Muestra el número directamente sin el prefijo "+"
+- **Sin variant**: No usa `variant="outline"`
 
-**Nota:** Estos permisos están incluidos en el rol ADMIN por defecto. Si un usuario no tiene estos permisos, las queries no se ejecutarán (`enabled: has("module.RODMAR.LCDM.view")`).
+### Cambios Realizados por Módulo
 
----
+#### Compradores (`comprador-detail.tsx`)
+- ✅ Cambiado `EyeOff` por `Eye`
+- ✅ Cambiado color naranja a azul
+- ✅ Removido `variant="outline"`
+- ✅ Cambiado `h-7` a `h-8`
+- ✅ Removido `<span className="hidden sm:inline">` para mostrar conteo siempre
 
-## Flujo de Autenticación
+#### Minas (`mina-detail.tsx`)
+- ✅ Agregado icono `<Eye className="w-3 h-3 mr-1" />`
+- ✅ Cambiado `+{totalOcultos}` a solo `{totalOcultos}`
+- ✅ Cambiado `w-7 p-0` a `px-2`
 
-1. **Usuario inicia sesión** → Se genera un JWT token
-2. **Token se guarda** en `localStorage` como `auth_token`
-3. **Cada petición API** incluye el token en el header: `Authorization: Bearer <token>`
-4. **Backend verifica** el token usando `requireAuth` middleware
-5. **Si el usuario es ADMIN**, el backend no filtra por `userId`
-6. **Si el token es inválido o expirado**, el frontend limpia el token y redirige al login
+#### Postobón (`rodmar.tsx`)
+- ✅ Agregado icono `<Eye className="w-3 h-3 mr-1" />`
+- ✅ Cambiado `+{hiddenPostobonCount}` a solo `{hiddenPostobonCount}`
+- ✅ Cambiado `w-7 p-0` a `px-2`
 
----
+#### LCDM (`rodmar.tsx`)
+- ✅ Agregado icono `<Eye className="w-3 h-3 mr-1" />`
+- ✅ Cambiado `+{hiddenLcdmCount}` a solo `{hiddenLcdmCount}`
+- ✅ Cambiado `w-7 p-0` a `px-2`
 
-## Manejo de Errores
+#### RodMar Cuentas (`rodmar-cuenta-detail.tsx`)
+- ✅ Agregado icono `<Eye className="w-3 h-3 mr-1" />`
+- ✅ Cambiado `+{hiddenCuentaCount}` a solo `{hiddenCuentaCount}`
+- ✅ Removido `text-white` (ya está implícito)
+- ✅ Limpiado clases duplicadas
 
-### Error 401 (No autenticado)
-- **Causa:** Token no presente, inválido o expirado
-- **Acción:** 
-  - Se llama a `removeAuthToken()` para limpiar el token
-  - Se lanza un error que React Query maneja
-  - El usuario debería ser redirigido al login
-
-### Error 403 (Sin permisos)
-- **Causa:** Usuario no tiene el permiso requerido
-- **Acción:** Las queries no se ejecutan (`enabled: false`)
-
----
-
-## Consideraciones de Rendimiento
-
-1. **Cache:** Las queries usan `staleTime: 300000` (5 minutos) para evitar refetches innecesarios
-2. **Paginación:** Las queries principales usan `includeHidden=true` para obtener todos los datos de una vez, mientras que los componentes de tabs usan paginación del servidor
-3. **Prefetching:** Los componentes de tabs implementan prefetching automático de páginas siguientes en segundo plano
-
----
-
-## Testing
-
-Para verificar que los cambios funcionan correctamente:
-
-1. **Como usuario ADMIN:**
-   - Iniciar sesión con credenciales de admin
-   - Navegar al módulo RodMar
-   - Verificar que las pestañas LCDM y Postobón muestran transacciones
-   - Verificar que se ven transacciones de todos los usuarios
-
-2. **Como usuario no-admin:**
-   - Iniciar sesión con credenciales de usuario regular
-   - Navegar al módulo RodMar
-   - Verificar que solo se ven las transacciones propias del usuario
-
-3. **Verificar autenticación:**
-   - Abrir las herramientas de desarrollador
-   - Verificar que las peticiones incluyen el header `Authorization: Bearer <token>`
-   - Verificar que no hay errores 401 en la consola
+### Resultado
+Todos los botones "mostrar ocultas" ahora tienen un estilo consistente y profesional en toda la aplicación.
 
 ---
 
-## Notas Adicionales
+## Commits Realizados
 
-- Los cambios son **retrocompatibles**: usuarios no-admin siguen viendo solo sus transacciones
-- El sistema de permisos sigue funcionando: si un usuario no tiene los permisos requeridos, las queries no se ejecutan
-- El token se valida en cada petición, por lo que si expira, el usuario será redirigido al login automáticamente
+1. `083167b` - Migrar Minas y Compradores a ocultamiento local temporal de transacciones
+2. `6670a20` - Fix: Añadir validación para isTransactionHidden en CompradorTransaccionesTab
+3. `f1a83c9` - Fix: Eliminar código residual de query eliminada en mina-detail.tsx
+4. `1735d6e` - Fix: Corregir uso de hideTransactionMutation en volquetero-detail.tsx - usar handleHideTransaction
+5. `9342ca5` - Fix: Corregir uso de handleHideTransaction en CompradorTransaccionesTab - usar hideTransactionMutation prop
+6. `492e055` - Unificar estilo del botón mostrar ocultas en todos los módulos - usar estilo de Volqueteros
+7. `902a2c2` - Fix: Corregir botón mostrar ocultas en LCDM - agregar icono Eye
 
+---
+
+## Estado Actual del Sistema
+
+### Ocultamiento de Transacciones
+- **Transacciones Manuales**: Ocultamiento local temporal usando `sessionStorage` y el hook `useHiddenTransactions`
+  - Solo afecta al usuario actual
+  - Se limpia al cambiar de página/pestaña
+  - No afecta a otros usuarios
+  - No persiste en la base de datos
+  - Implementado en: Postobón, LCDM, Volqueteros, Minas, Compradores, RodMar Cuentas
+
+- **Viajes**: Ocultamiento en base de datos
+  - Persiste entre sesiones
+  - Afecta a todos los usuarios
+  - Implementado mediante mutaciones al servidor
+
+### Columnas de Base de Datos
+Las columnas `oculta`, `ocultaEnComprador`, `ocultaEnMina`, `ocultaEnVolquetero`, `ocultaEnGeneral` en la tabla `transacciones` ya no son necesarias para los módulos migrados, pero **se mantienen en el esquema** por compatibilidad. Los viajes siguen usando `viajes.oculta` normalmente.
+
+---
+
+## Próximos Pasos Recomendados
+
+1. **Limpieza de Base de Datos** (Opcional):
+   - Considerar eliminar las columnas de ocultamiento de `transacciones` después de confirmar que no hay dependencias
+   - Mantener `viajes.oculta` que sigue siendo necesario
+
+2. **Testing**:
+   - Verificar que el ocultamiento funciona correctamente en todos los módulos
+   - Confirmar que los viajes mantienen su ocultamiento en BD
+   - Verificar que el estilo unificado se ve correcto en todos los módulos
+
+3. **Documentación**:
+   - Actualizar documentación técnica si es necesario
+   - Documentar el uso del hook `useHiddenTransactions` para futuros desarrollos
+
+---
+
+## Notas Técnicas
+
+### Hook useHiddenTransactions
+El hook `useHiddenTransactions` proporciona:
+- `hideTransaction(id)`: Oculta una transacción localmente
+- `showTransaction(id)`: Muestra una transacción oculta
+- `showAllHidden()`: Muestra todas las transacciones ocultas
+- `isHidden(id)`: Verifica si una transacción está oculta
+- `getHiddenCount()`: Obtiene el conteo de transacciones ocultas
+- `filterVisible(transactions)`: Filtra transacciones excluyendo las ocultas
+
+### Almacenamiento
+- Se usa `sessionStorage` con clave `hidden_transactions_${moduleKey}`
+- Se limpia automáticamente al cerrar la pestaña
+- Se sincroniza automáticamente cuando cambia el estado
