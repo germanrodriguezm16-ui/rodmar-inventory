@@ -929,24 +929,24 @@ export default function RodMarCuentaDetail() {
                           e.stopPropagation();
                           eliminarTransaccionTemporal(transaccion.id);
                         }}
-                        className="w-4 h-4 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 sm:w-4 sm:h-4 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center transition-colors touch-manipulation"
                         title="Eliminar transacción temporal"
                       >
-                        <X className="w-2.5 h-2.5 text-red-600" />
+                        <X className="w-4 h-4 sm:w-2.5 sm:h-2.5 text-red-600" />
                       </button>
                     )}
                     {transaccion.esInversion && (
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 sm:gap-1">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedInversion(transaccion);
                             setShowEditInversion(true);
                           }}
-                          className="w-4 h-4 rounded-full bg-yellow-100 hover:bg-yellow-200 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 sm:w-4 sm:h-4 rounded-full bg-yellow-100 hover:bg-yellow-200 flex items-center justify-center transition-colors touch-manipulation"
                           title="Editar inversión"
                         >
-                          <Edit className="w-2.5 h-2.5 text-yellow-600" />
+                          <Edit className="w-4 h-4 sm:w-2.5 sm:h-2.5 text-yellow-600" />
                         </button>
                         <button
                           onClick={(e) => {
@@ -954,15 +954,15 @@ export default function RodMarCuentaDetail() {
                             setSelectedInversion(transaccion);
                             setShowDeleteInversion(true);
                           }}
-                          className="w-4 h-4 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 sm:w-4 sm:h-4 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center transition-colors touch-manipulation"
                           title="Eliminar inversión"
                         >
-                          <X className="w-2.5 h-2.5 text-red-600" />
+                          <X className="w-4 h-4 sm:w-2.5 sm:h-2.5 text-red-600" />
                         </button>
                       </div>
                     )}
                     {!transaccion.esTemporal && !transaccion.esInversion && transaccion.tipo === "Manual" && (
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 sm:gap-1">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -972,10 +972,10 @@ export default function RodMarCuentaDetail() {
                               setShowEditTransaction(true);
                             }
                           }}
-                          className="w-4 h-4 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 sm:w-4 sm:h-4 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors touch-manipulation"
                           title="Editar transacción"
                         >
-                          <Edit className="w-2.5 h-2.5 text-blue-600" />
+                          <Edit className="w-4 h-4 sm:w-2.5 sm:h-2.5 text-blue-600" />
                         </button>
                         <button
                           onClick={(e) => {
@@ -986,10 +986,10 @@ export default function RodMarCuentaDetail() {
                               setShowDeleteTransaction(true);
                             }
                           }}
-                          className="w-4 h-4 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 sm:w-4 sm:h-4 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center transition-colors touch-manipulation"
                           title="Eliminar transacción"
                         >
-                          <Trash2 className="w-2.5 h-2.5 text-red-600" />
+                          <Trash2 className="w-4 h-4 sm:w-2.5 sm:h-2.5 text-red-600" />
                         </button>
                         <button
                           onClick={(e) => {
@@ -999,11 +999,11 @@ export default function RodMarCuentaDetail() {
                               handleHideTransaction(realTransaction.id);
                             }
                           }}
-                          className="w-4 h-4 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 sm:w-4 sm:h-4 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors touch-manipulation"
                           disabled={false}
                           title="Ocultar transacción"
                         >
-                          <Eye className="w-2.5 h-2.5 text-gray-500" />
+                          <Eye className="w-4 h-4 sm:w-2.5 sm:h-2.5 text-gray-500" />
                         </button>
                       </div>
                     )}
