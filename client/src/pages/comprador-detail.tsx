@@ -2370,7 +2370,7 @@ function CompradorTransaccionesTab({
                                 e.stopPropagation();
                                 const transactionIdStr = transaccion.id.toString();
                                 const realTransactionId = parseInt(transactionIdStr.replace('manual-', ''));
-                                handleHideTransaction(realTransactionId);
+                                hideTransactionMutation(realTransactionId);
                               }}
                               variant="ghost"
                               size="sm"
@@ -2680,7 +2680,7 @@ function CompradorTransaccionesTab({
                           e.stopPropagation();
                           const transactionIdStr = transaccion.id.toString();
                           const realTransactionId = transactionIdStr.replace('manual-', '');
-                          handleHideTransaction(parseInt(realTransactionId));
+                          hideTransactionMutation(parseInt(realTransactionId));
                         }}
                         variant="ghost"
                         size="sm"
