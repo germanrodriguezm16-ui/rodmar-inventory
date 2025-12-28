@@ -1,4 +1,4 @@
-import type { Express } from "express";
+image.pngimage.pngimport type { Express } from "express";
 import { Router } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -511,7 +511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Check if mina has transacciones (sin filtrar por userId - similar a compradores)
-        // Solo contar transacciones NO ocultas (el filtro de ocultas ya se aplica en getTransaccionesBySocio)
+        // Nota: El ocultamiento de transacciones ahora es local en el frontend
         const transacciones = await storage.getTransaccionesBySocio(
           "mina",
           minaId,
@@ -3402,18 +3402,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allTransacciones = await storage.getTransacciones(effectiveUserId);
       console.log(`[LCDM] Total transacciones obtenidas: ${allTransacciones.length}`);
       
-      // Obtener TODAS las transacciones (incluyendo ocultas) para contar las ocultas
-      const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(effectiveUserId);
-      const hiddenLcdmCount = allTransaccionesIncludingHidden.filter((t: any) => 
-        (t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm') && t.oculta
-      ).length;
+      // Nota: El ocultamiento de transacciones ahora se maneja localmente en el frontend
+      // (ver useHiddenTransactions hook). Ya no hay columnas oculta* en la BD.
       
       // Filtrar transacciones de LCDM (origen o destino)
       let lcdmTransactions = allTransacciones.filter((t: any) => 
         t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm'
       );
-      console.log(`[LCDM] Transacciones filtradas por LCDM: ${lcdmTransactions.length} (includeHidden: ${includeHidden})`);
-      console.log(`[LCDM] Transacciones ocultas de LCDM: ${hiddenLcdmCount}`);
+      console.log(`[LCDM] Transacciones filtradas por LCDM: ${lcdmTransactions.length}`);
 
       // Aplicar filtro de búsqueda
       if (search.trim()) {
@@ -3528,28 +3524,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allTransacciones = await storage.getTransacciones(effectiveUserId);
       console.log(`[Postobón] Total transacciones obtenidas: ${allTransacciones.length}`);
       
-      // Obtener TODAS las transacciones (incluyendo ocultas) para contar las ocultas
-      const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(effectiveUserId);
-      let hiddenPostobonCount = allTransaccionesIncludingHidden.filter((t: any) => 
-        (t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon') && t.oculta
-      ).length;
+      // Nota: El ocultamiento de transacciones ahora se maneja localmente en el frontend
+      // (ver useHiddenTransactions hook). Ya no hay columnas oculta* en la BD.
       
-      // Filtrar por cuenta específica si se especifica (también para ocultas)
-      if (filterType === 'santa-rosa') {
-        hiddenPostobonCount = allTransaccionesIncludingHidden.filter((t: any) => 
-          (t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon') && 
-          t.oculta && 
-          t.postobonCuenta === 'santa-rosa'
-        ).length;
-      } else if (filterType === 'cimitarra') {
-        hiddenPostobonCount = allTransaccionesIncludingHidden.filter((t: any) => 
-          (t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon') && 
-          t.oculta && 
-          t.postobonCuenta === 'cimitarra'
-        ).length;
-      }
-      
-      // Verificar si se deben incluir transacciones ocultas
+      // Verificar si se deben incluir transacciones ocultas (para compatibilidad con frontend)
       const includeHidden = req.query.includeHidden === 'true';
       
       // Si includeHidden=true, devolver todas las transacciones sin paginación
@@ -3581,7 +3559,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon'
       );
       console.log(`[Postobón] Transacciones filtradas por Postobón: ${postobonTransactions.length}`);
-      console.log(`[Postobón] Transacciones ocultas de Postobón: ${hiddenPostobonCount}`);
 
       // Filtrar por cuenta específica si se especifica
       if (filterType === 'santa-rosa') {
@@ -3990,7 +3967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formaPago: req.body.formaPago,
         voucher: req.body.voucher,
         comentario: req.body.comentario,
-        oculta: req.body.oculta, // Agregar soporte para campo oculta
+        // Nota: El campo oculta ya no existe - el ocultamiento ahora es local en el frontend
         // Campos para transacciones pendientes
         detalle_solicitud: req.body.detalle_solicitud,
         estado: req.body.estado,
@@ -4514,10 +4491,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verificar si se deben incluir transacciones ocultas
       const includeHidden = req.query.includeHidden === 'true';
       
-      // Obtener todas las transacciones (con o sin ocultas según el parámetro)
-      const allTransacciones = includeHidden 
-        ? await storage.getTransaccionesIncludingHidden()
-        : await storage.getTransacciones();
+      // Nota: El ocultamiento de transacciones ahora se maneja localmente en el frontend
+      // (ver useHiddenTransactions hook). Siempre obtenemos todas las transacciones.
+      const allTransacciones = await storage.getTransacciones();
 
       // Filtrar transacciones que involucren esta cuenta específica
       let transaccionesCuenta = allTransacciones.filter((t: any) => {

@@ -162,12 +162,6 @@ export const transacciones = pgTable("transacciones", {
   voucher: text("voucher"),
   comentario: text("comentario"),
   tipoTransaccion: text("tipo_transaccion").default("manual"), // manual, inversion
-  oculta: boolean("oculta").default(false).notNull(), // Campo para ocultar transacciones (mantener compatibilidad)
-  // Nuevos campos específicos por módulo
-  ocultaEnComprador: boolean("oculta_en_comprador").default(false).notNull(),
-  ocultaEnMina: boolean("oculta_en_mina").default(false).notNull(),
-  ocultaEnVolquetero: boolean("oculta_en_volquetero").default(false).notNull(),
-  ocultaEnGeneral: boolean("oculta_en_general").default(false).notNull(),
   // Campos para transacciones pendientes
   estado: text("estado").default("completada").notNull(), // 'pendiente' o 'completada'
   detalle_solicitud: text("detalle_solicitud"), // Texto con info de WhatsApp (cuenta, banco, etc.)

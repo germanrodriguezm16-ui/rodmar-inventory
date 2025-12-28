@@ -837,7 +837,7 @@ export class DatabaseStorage implements IStorage {
       console.log('🔵 [PERF] getTransacciones() - INICIANDO');
       console.log('🔵 ===========================================================');
       
-      const conditions = [eq(transacciones.oculta, false)]; // Solo transacciones no ocultas
+      const conditions: any[] = [];
       if (userId) {
         conditions.push(eq(transacciones.userId, userId));
       }
@@ -860,11 +860,6 @@ export class DatabaseStorage implements IStorage {
           // voucher: transacciones.voucher, // EXCLUIDO para optimización
           comentario: transacciones.comentario,
           tipoTransaccion: transacciones.tipoTransaccion,
-          oculta: transacciones.oculta,
-          ocultaEnComprador: transacciones.ocultaEnComprador,
-          ocultaEnMina: transacciones.ocultaEnMina,
-          ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
-          ocultaEnGeneral: transacciones.ocultaEnGeneral,
           estado: transacciones.estado,
           detalle_solicitud: transacciones.detalle_solicitud,
           codigo_solicitud: transacciones.codigo_solicitud,
@@ -877,7 +872,7 @@ export class DatabaseStorage implements IStorage {
           hasVoucher: sql<boolean>`CASE WHEN ${transacciones.voucher} IS NOT NULL AND ${transacciones.voucher} != '' THEN true ELSE false END` // Indicador de voucher
         })
         .from(transacciones)
-        .where(and(...conditions))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna));
 
       const queryTime = Date.now() - queryStart;
@@ -965,11 +960,6 @@ export class DatabaseStorage implements IStorage {
           formaPago: transacciones.formaPago,
           comentario: transacciones.comentario,
           tipoTransaccion: transacciones.tipoTransaccion,
-          oculta: transacciones.oculta,
-          ocultaEnComprador: transacciones.ocultaEnComprador,
-          ocultaEnMina: transacciones.ocultaEnMina,
-          ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
-          ocultaEnGeneral: transacciones.ocultaEnGeneral,
           userId: transacciones.userId,
           tipoSocio: transacciones.deQuienTipo,
           socioId: transacciones.deQuienId,
@@ -1017,7 +1007,7 @@ export class DatabaseStorage implements IStorage {
       const offset = (validPage - 1) * validLimit;
 
       // Preparar condiciones base
-      const conditions = [eq(transacciones.oculta, false)]; // Solo transacciones no ocultas
+      const conditions: any[] = [];
       if (userId) {
         conditions.push(eq(transacciones.userId, userId));
       }
@@ -1027,7 +1017,7 @@ export class DatabaseStorage implements IStorage {
       const countQuery = db
         .select({ count: sql<number>`count(*)::int` })
         .from(transacciones)
-        .where(and(...conditions));
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
       
       const countResult = await countQuery;
       const total = countResult[0]?.count || 0;
@@ -1051,11 +1041,6 @@ export class DatabaseStorage implements IStorage {
           formaPago: transacciones.formaPago,
           comentario: transacciones.comentario,
           tipoTransaccion: transacciones.tipoTransaccion,
-          oculta: transacciones.oculta,
-          ocultaEnComprador: transacciones.ocultaEnComprador,
-          ocultaEnMina: transacciones.ocultaEnMina,
-          ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
-          ocultaEnGeneral: transacciones.ocultaEnGeneral,
           userId: transacciones.userId,
           // Campos adicionales para compatibilidad
           tipoSocio: transacciones.deQuienTipo, // Alias para compatibilidad
@@ -1064,7 +1049,7 @@ export class DatabaseStorage implements IStorage {
           hasVoucher: sql<boolean>`CASE WHEN ${transacciones.voucher} IS NOT NULL AND ${transacciones.voucher} != '' THEN true ELSE false END` // Indicador de voucher
         })
         .from(transacciones)
-        .where(and(...conditions))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna))
         .limit(validLimit)
         .offset(offset);
@@ -1326,8 +1311,7 @@ export class DatabaseStorage implements IStorage {
   async getTransaccionesPendientes(userId?: string): Promise<TransaccionWithSocio[]> {
     return wrapDbOperation(async () => {
       const conditions = [
-        eq(transacciones.estado, 'pendiente'),
-        eq(transacciones.oculta, false)
+        eq(transacciones.estado, 'pendiente')
       ];
       
       if (userId) {
@@ -1349,11 +1333,6 @@ export class DatabaseStorage implements IStorage {
           formaPago: transacciones.formaPago,
           comentario: transacciones.comentario,
           tipoTransaccion: transacciones.tipoTransaccion,
-          oculta: transacciones.oculta,
-          ocultaEnComprador: transacciones.ocultaEnComprador,
-          ocultaEnMina: transacciones.ocultaEnMina,
-          ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
-          ocultaEnGeneral: transacciones.ocultaEnGeneral,
           estado: transacciones.estado,
           detalle_solicitud: transacciones.detalle_solicitud,
           codigo_solicitud: transacciones.codigo_solicitud,
@@ -1364,7 +1343,7 @@ export class DatabaseStorage implements IStorage {
           hasVoucher: sql<boolean>`CASE WHEN ${transacciones.voucher} IS NOT NULL AND ${transacciones.voucher} != '' THEN true ELSE false END`
         })
         .from(transacciones)
-        .where(and(...conditions))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna));
 
       // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 3 queries
@@ -1413,8 +1392,7 @@ export class DatabaseStorage implements IStorage {
   async countTransaccionesPendientes(userId?: string): Promise<number> {
     return wrapDbOperation(async () => {
       const conditions = [
-        eq(transacciones.estado, 'pendiente'),
-        eq(transacciones.oculta, false)
+        eq(transacciones.estado, 'pendiente')
       ];
       
       if (userId) {
@@ -1424,7 +1402,7 @@ export class DatabaseStorage implements IStorage {
       const [result] = await db
         .select({ count: sql<number>`count(*)` })
         .from(transacciones)
-        .where(and(...conditions));
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
 
       return Number(result?.count || 0);
     });
@@ -1655,85 +1633,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async hideTransaccion(id: number, userId?: string): Promise<boolean> {
-    // Solo buscar por ID, no filtrar por userId
-    // Muchas transacciones pueden tener userId NULL o diferente
-    const conditions = [eq(transacciones.id, id)];
-
-    // Usar .returning() para obtener el resultado actualizado
-    // Si devuelve un array con elementos, la actualización fue exitosa
-    const result = await db
-      .update(transacciones)
-      .set({ oculta: true })
-      .where(and(...conditions))
-      .returning();
-    
-    console.log(`🔍 [hideTransaccion] ID: ${id}, result length: ${result.length}`);
-    console.log(`🔍 [hideTransaccion] Result:`, JSON.stringify(result, null, 2));
-    
-    // Si el array tiene elementos, la actualización fue exitosa
-    return result.length > 0;
+    // DEPRECADO: El ocultamiento de transacciones ahora se maneja localmente en el frontend
+    // usando sessionStorage (ver useHiddenTransactions hook). Este método ya no hace nada.
+    console.log(`⚠️ [hideTransaccion] Método deprecado - ocultamiento ahora es local. ID: ${id}`);
+    return false;
   }
 
-  // Nuevas funciones específicas por módulo
+  // DEPRECADO: Estos métodos ya no son necesarios - el ocultamiento ahora es local en el frontend
   async hideTransaccionEnComprador(id: number, userId?: string): Promise<boolean> {
-    const conditions = [eq(transacciones.id, id)];
-    // No filtrar por userId - las transacciones pueden tener userId NULL o diferente
-
-    const result = await db
-      .update(transacciones)
-      .set({ ocultaEnComprador: true })
-      .where(and(...conditions))
-      .returning();
-    return result.length > 0;
+    console.log(`⚠️ [hideTransaccionEnComprador] Método deprecado - ocultamiento ahora es local. ID: ${id}`);
+    return false;
   }
 
   async hideTransaccionEnMina(id: number, userId?: string): Promise<boolean> {
-    const conditions = [eq(transacciones.id, id)];
-    // No filtrar por userId - las transacciones pueden tener userId NULL o diferente
-
-    const result = await db
-      .update(transacciones)
-      .set({ ocultaEnMina: true })
-      .where(and(...conditions))
-      .returning();
-    return result.length > 0;
+    console.log(`⚠️ [hideTransaccionEnMina] Método deprecado - ocultamiento ahora es local. ID: ${id}`);
+    return false;
   }
 
   async hideTransaccionEnVolquetero(id: number, userId?: string): Promise<boolean> {
-    const conditions = [eq(transacciones.id, id)];
-    // No filtrar por userId - las transacciones pueden tener userId NULL o diferente
-
-    const result = await db
-      .update(transacciones)
-      .set({ ocultaEnVolquetero: true })
-      .where(and(...conditions))
-      .returning();
-    return result.length > 0;
+    console.log(`⚠️ [hideTransaccionEnVolquetero] Método deprecado - ocultamiento ahora es local. ID: ${id}`);
+    return false;
   }
 
   async hideTransaccionEnGeneral(id: number, userId?: string): Promise<boolean> {
-    const conditions = [eq(transacciones.id, id)];
-    // No filtrar por userId - las transacciones pueden tener userId NULL o diferente
-
-    const result = await db
-      .update(transacciones)
-      .set({ ocultaEnGeneral: true })
-      .where(and(...conditions))
-      .returning();
-    return result.length > 0;
+    console.log(`⚠️ [hideTransaccionEnGeneral] Método deprecado - ocultamiento ahora es local. ID: ${id}`);
+    return false;
   }
 
   async showTransaccion(id: number, userId?: string): Promise<boolean> {
-    const conditions = [eq(transacciones.id, id)];
-    if (userId) {
-      conditions.push(eq(transacciones.userId, userId));
-    }
-
-    const result = await db
-      .update(transacciones)
-      .set({ oculta: false })
-      .where(and(...conditions));
-    return result.rowCount > 0;
+    // DEPRECADO: El ocultamiento de transacciones ahora se maneja localmente en el frontend
+    console.log(`⚠️ [showTransaccion] Método deprecado - ocultamiento ahora es local. ID: ${id}`);
+    return false;
   }
 
   // Métodos específicos para la aplicación
@@ -2036,11 +1966,6 @@ export class DatabaseStorage implements IStorage {
           // voucher: transacciones.voucher, // EXCLUIDO para optimización
           comentario: transacciones.comentario,
           tipoTransaccion: transacciones.tipoTransaccion,
-          oculta: transacciones.oculta,
-          ocultaEnComprador: transacciones.ocultaEnComprador,
-          ocultaEnMina: transacciones.ocultaEnMina,
-          ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
-          ocultaEnGeneral: transacciones.ocultaEnGeneral,
           estado: transacciones.estado,
           detalle_solicitud: transacciones.detalle_solicitud,
           codigo_solicitud: transacciones.codigo_solicitud,
@@ -2075,11 +2000,6 @@ export class DatabaseStorage implements IStorage {
           // voucher: transacciones.voucher, // EXCLUIDO para optimización
           comentario: transacciones.comentario,
           tipoTransaccion: transacciones.tipoTransaccion,
-          oculta: transacciones.oculta,
-          ocultaEnComprador: transacciones.ocultaEnComprador,
-          ocultaEnMina: transacciones.ocultaEnMina,
-          ocultaEnVolquetero: transacciones.ocultaEnVolquetero,
-          ocultaEnGeneral: transacciones.ocultaEnGeneral,
           estado: transacciones.estado,
           detalle_solicitud: transacciones.detalle_solicitud,
           codigo_solicitud: transacciones.codigo_solicitud,
@@ -2105,23 +2025,8 @@ export class DatabaseStorage implements IStorage {
         index === self.findIndex(t => t.id === transaction.id)
       );
       
-      console.log(`🔍 [getTransaccionesForModule] Resultados únicos antes de filtrar ocultas: ${uniqueResults.length}`);
-      
-      // Filtrar transacciones ocultas DESPUÉS de obtener los resultados (para manejar null correctamente)
-      if (!includeHidden) {
-        const campoOculta = modulo === 'comprador' ? 'ocultaEnComprador' :
-                           modulo === 'mina' ? 'ocultaEnMina' :
-                           modulo === 'volquetero' ? 'ocultaEnVolquetero' :
-                           'ocultaEnGeneral';
-        
-        uniqueResults = uniqueResults.filter((transaction: any) => {
-          const valorOculta = transaction[campoOculta];
-          // Incluir si es null (transacciones antiguas) o false (no oculta)
-          return valorOculta === null || valorOculta === false;
-        });
-        
-        console.log(`🔍 [getTransaccionesForModule] Resultados únicos después de filtrar ocultas: ${uniqueResults.length}`);
-      }
+      // Nota: El filtrado de transacciones ocultas ahora se maneja en el frontend usando sessionStorage
+      // (ver useHiddenTransactions hook). Ya no se filtra por columnas oculta* en la BD.
 
       // Ordenar transacciones: completadas por fecha de finalización (updatedAt), pendientes por fecha de solicitud (fecha)
       uniqueResults.sort((a, b) => {
@@ -2415,16 +2320,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async showAllHiddenTransacciones(userId?: string): Promise<number> {
-    const conditions = [eq(transacciones.oculta, true)];
-    if (userId) {
-      conditions.push(eq(transacciones.userId, userId));
-    }
-
-    const result = await db
-      .update(transacciones)
-      .set({ oculta: false })
-      .where(and(...conditions));
-    return result.rowCount || 0;
+    // DEPRECADO: El ocultamiento de transacciones ahora se maneja localmente en el frontend
+    console.log(`⚠️ [showAllHiddenTransacciones] Método deprecado - ocultamiento ahora es local`);
+    return 0;
   }
 
   async hideViaje(id: string, userId?: string): Promise<boolean> {
@@ -2471,41 +2369,10 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount || 0;
   }
 
-  // Métodos específicos para mostrar elementos ocultos de compradores
+  // DEPRECADO: El ocultamiento de transacciones ahora se maneja localmente en el frontend
   async showAllHiddenTransaccionesForComprador(compradorId: number, userId?: string): Promise<number> {
-    // Condiciones para transacciones donde el comprador es origen (deQuien)
-    const conditionsOrigen = [
-      eq(transacciones.ocultaEnComprador, true),
-      eq(transacciones.deQuienTipo, 'comprador'),
-      eq(transacciones.deQuienId, compradorId.toString())
-    ];
-    if (userId) {
-      conditionsOrigen.push(eq(transacciones.userId, userId));
-    }
-
-    // Condiciones para transacciones donde el comprador es destino (paraQuien)
-    const conditionsDestino = [
-      eq(transacciones.ocultaEnComprador, true),
-      eq(transacciones.paraQuienTipo, 'comprador'),
-      eq(transacciones.paraQuienId, compradorId.toString())
-    ];
-    if (userId) {
-      conditionsDestino.push(eq(transacciones.userId, userId));
-    }
-
-    // Actualizar transacciones donde comprador es origen
-    const resultOrigen = await db
-      .update(transacciones)
-      .set({ ocultaEnComprador: false })
-      .where(and(...conditionsOrigen));
-
-    // Actualizar transacciones donde comprador es destino
-    const resultDestino = await db
-      .update(transacciones)
-      .set({ ocultaEnComprador: false })
-      .where(and(...conditionsDestino));
-
-    return (resultOrigen.rowCount || 0) + (resultDestino.rowCount || 0);
+    console.log(`⚠️ [showAllHiddenTransaccionesForComprador] Método deprecado - ocultamiento ahora es local. Comprador: ${compradorId}`);
+    return 0;
   }
 
   async showAllHiddenViajesForComprador(compradorId: number, userId?: string): Promise<number> {
@@ -2634,7 +2501,7 @@ export class DatabaseStorage implements IStorage {
       const result = await db
         .select()
         .from(inversiones)
-        .where(and(...conditions))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(inversiones.createdAt));
 
       return result;
@@ -2666,7 +2533,7 @@ export class DatabaseStorage implements IStorage {
       const result = await db
         .select()
         .from(inversiones)
-        .where(and(...conditions))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(inversiones.createdAt));
 
       return result;
@@ -2700,7 +2567,7 @@ export class DatabaseStorage implements IStorage {
       const [result] = await db
         .update(inversiones)
         .set(updates)
-        .where(and(...conditions))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
         .returning();
 
       return result;
@@ -2719,7 +2586,7 @@ export class DatabaseStorage implements IStorage {
 
       const result = await db
         .delete(inversiones)
-        .where(and(...conditions));
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
 
       return result.rowCount !== null && result.rowCount > 0;
     } catch (error) {
@@ -2730,33 +2597,10 @@ export class DatabaseStorage implements IStorage {
 
   // ===== MÉTODOS ESPECÍFICOS PARA DESOCULTAMIENTO AUTOMÁTICO DE MINAS =====
 
+  // DEPRECADO: El ocultamiento de transacciones ahora se maneja localmente en el frontend
   async showAllHiddenTransaccionesForMina(minaId: number, userId?: string): Promise<number> {
-    try {
-      // Mostrar transacciones ocultas que estén relacionadas con esta mina específica
-      const conditions = [
-        eq(transacciones.oculta, true),
-        or(
-          // Transacciones donde la mina es el origen
-          and(eq(transacciones.deQuienTipo, 'mina'), eq(transacciones.deQuienId, minaId.toString())),
-          // Transacciones donde la mina es el destino  
-          and(eq(transacciones.paraQuienTipo, 'mina'), eq(transacciones.paraQuienId, minaId.toString()))
-        )
-      ];
-      
-      if (userId) {
-        conditions.push(eq(transacciones.userId, userId));
-      }
-
-      const result = await db
-        .update(transacciones)
-        .set({ oculta: false })
-        .where(and(...conditions));
-        
-      return result.rowCount || 0;
-    } catch (error) {
-      console.error('Error showing hidden transacciones for mina:', error);
-      throw error;
-    }
+    console.log(`⚠️ [showAllHiddenTransaccionesForMina] Método deprecado - ocultamiento ahora es local. Mina: ${minaId}`);
+    return 0;
   }
 
   async showAllHiddenViajesForMina(minaId: number, userId?: string): Promise<number> {
@@ -2774,7 +2618,7 @@ export class DatabaseStorage implements IStorage {
       const result = await db
         .update(viajes)
         .set({ oculta: false })
-        .where(and(...conditions));
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
         
       return result.rowCount || 0;
     } catch (error) {
@@ -2783,39 +2627,10 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Métodos específicos para mostrar elementos ocultos de volqueteros
+  // DEPRECADO: El ocultamiento de transacciones ahora se maneja localmente en el frontend
   async showAllHiddenTransaccionesForVolquetero(volqueteroId: number, userId?: string): Promise<number> {
-    try {
-      console.log(`🔍 [showAllHiddenTransaccionesForVolquetero] Volquetero ID: ${volqueteroId}`);
-      
-      // Mostrar transacciones ocultas que estén relacionadas con este volquetero específico
-      // Buscar por ocultaEnVolquetero: true y que el volquetero sea origen o destino
-      const conditions = [
-        eq(transacciones.ocultaEnVolquetero, true),
-        or(
-          // Transacciones donde el volquetero es el origen
-          and(eq(transacciones.deQuienTipo, 'volquetero'), eq(transacciones.deQuienId, volqueteroId.toString())),
-          // Transacciones donde el volquetero es el destino  
-          and(eq(transacciones.paraQuienTipo, 'volquetero'), eq(transacciones.paraQuienId, volqueteroId.toString()))
-        )
-      ];
-      
-      if (userId) {
-        conditions.push(eq(transacciones.userId, userId));
-      }
-
-      const result = await db
-        .update(transacciones)
-        .set({ ocultaEnVolquetero: false })
-        .where(and(...conditions))
-        .returning();
-      
-      console.log(`✅ [showAllHiddenTransaccionesForVolquetero] Restauradas ${result.length} transacciones`);
-      return result.length;
-    } catch (error) {
-      console.error('❌ [showAllHiddenTransaccionesForVolquetero] Error:', error);
-      throw error;
-    }
+    console.log(`⚠️ [showAllHiddenTransaccionesForVolquetero] Método deprecado - ocultamiento ahora es local. Volquetero: ${volqueteroId}`);
+    return 0;
   }
 
   async showAllHiddenViajesForVolquetero(volqueteroNombre: string, userId?: string): Promise<number> {
@@ -2835,7 +2650,7 @@ export class DatabaseStorage implements IStorage {
       const result = await db
         .update(viajes)
         .set({ oculta: false })
-        .where(and(...conditions))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
         .returning();
       
       console.log(`✅ [showAllHiddenViajesForVolquetero] Restaurados ${result.length} viajes`);
@@ -3408,8 +3223,7 @@ export class DatabaseStorage implements IStorage {
           or(
             and(eq(transacciones.deQuienTipo, 'mina'), eq(transacciones.deQuienId, minaId.toString())),
             and(eq(transacciones.paraQuienTipo, 'mina'), eq(transacciones.paraQuienId, minaId.toString()))
-          ),
-          eq(transacciones.oculta, false)
+          )
         ));
 
       const transaccionesManualesFiltered = transaccionesManuales.filter(t => 
