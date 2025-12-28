@@ -80,6 +80,8 @@ export default function MinaDetail() {
     hideTransaction: hideTransactionLocal,
     showAllHidden: showAllHiddenLocal,
     getHiddenCount: getHiddenTransactionsCount,
+    isHidden: isTransactionHidden,
+    filterVisible: filterVisibleTransactions,
   } = useHiddenTransactions(`mina-${minaId}`);
 
   // Limpiar transacciones temporales al salir de la página
@@ -96,6 +98,15 @@ export default function MinaDetail() {
     toast({
       title: "Transacción ocultada",
       description: "La transacción se ha ocultado correctamente"
+    });
+  };
+
+  // Función para mostrar todas las transacciones ocultas localmente
+  const handleShowAllHidden = () => {
+    showAllHiddenLocal();
+    toast({
+      description: "Todas las transacciones ocultas ahora son visibles",
+      duration: 2000,
     });
   };
 
@@ -190,8 +201,8 @@ export default function MinaDetail() {
     },
   });
 
-  // Mutación para mostrar todas las transacciones ocultas (manuales y viajes)
-  const showAllHiddenMutation = useMutation({
+  // Mutación para mostrar todos los viajes ocultos (los viajes sí usan ocultamiento en BD)
+  const showAllHiddenViajesMutation = useMutation({
     mutationFn: async () => {
       const { apiUrl } = await import('@/lib/api');
       
@@ -199,60 +210,44 @@ export default function MinaDetail() {
         throw new Error('Mina no encontrada');
       }
       
-      // Mostrar transacciones ocultas específicas de esta mina (similar a volqueteros)
+      // Mostrar viajes ocultos específicos de esta mina
       const token = getAuthToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
       
-      const transaccionesResponse = await fetch(apiUrl(`/api/transacciones/socio/mina/${minaId}/show-all`), {
-        method: 'POST',
-        headers,
-        credentials: "include",
-      });
-      
-      // Mostrar viajes ocultos específicos de esta mina
       const viajesResponse = await fetch(apiUrl(`/api/viajes/mina/${minaId}/show-all`), {
         method: 'POST',
         headers,
         credentials: "include",
       });
       
-      if (!transaccionesResponse.ok && !viajesResponse.ok) {
-        throw new Error('Error al mostrar transacciones y viajes');
+      if (!viajesResponse.ok) {
+        throw new Error('Error al mostrar viajes');
       }
       
-      const transaccionesResult = transaccionesResponse.ok ? await transaccionesResponse.json() : { updatedCount: 0 };
-      const viajesResult = viajesResponse.ok ? await viajesResponse.json() : { updatedCount: 0 };
-      
-      return {
-        transacciones: transaccionesResult.updatedCount || 0,
-        viajes: viajesResult.updatedCount || 0,
-        total: (transaccionesResult.updatedCount || 0) + (viajesResult.updatedCount || 0)
-      };
+      const viajesResult = await viajesResponse.json();
+      return viajesResult.updatedCount || 0;
     },
-    onSuccess: (result) => {
-      // Invalidar solo las queries específicas del socio (similar a volqueteros)
-      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}/all`] });
+    onSuccess: (updatedCount) => {
+      // Invalidar queries de viajes
       queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`] });
       queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`, "includeHidden"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
       
-      const mensaje = result.total > 0 
-        ? `${result.transacciones} transacciones y ${result.viajes} viajes restaurados`
-        : "No había elementos ocultos para restaurar";
-        
-      toast({
-        title: "Elementos restaurados",
-        description: mensaje
-      });
+      if (updatedCount > 0) {
+        toast({
+          title: "Viajes restaurados",
+          description: `${updatedCount} viajes restaurados`
+        });
+      }
     },
     onError: (error) => {
       console.error('Error:', error);
       toast({
         title: "Error",
-        description: "No se pudieron restaurar los elementos ocultos",
+        description: "No se pudieron restaurar los viajes ocultos",
         variant: "destructive"
       });
     }
@@ -370,11 +365,7 @@ export default function MinaDetail() {
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
   });
 
-  // Obtener TODAS las transacciones de la mina (incluyendo ocultas) para contar ocultas
-  const { data: todasTransaccionesIncOcultas = [] } = useQuery<TransaccionWithSocio[]>({
-    queryKey: [`/api/transacciones/socio/mina/${minaId}/all`],
-    enabled: !!minaId,
-    staleTime: 300000, // 5 minutos - datos frescos por más tiempo
+  // Ya no necesitamos obtener todas las transacciones incluyendo ocultas (se usa ocultamiento local)
     refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
     queryFn: async () => {
@@ -421,7 +412,6 @@ export default function MinaDetail() {
           tipo: "Viaje" as const,
           esViajeCompleto: true,
           horaInterna: viaje.fechaDescargue!,
-          oculta: false,
           userId: "main_user",
           createdAt: viaje.fechaDescargue!,
           socioNombre: mina?.nombre || "",
@@ -650,20 +640,20 @@ export default function MinaDetail() {
   // Aplicar filtros a transacciones
   const transaccionesFiltradas = useMemo(() => {
     // Primero filtrar por ocultas localmente (solo visual, no afecta BD)
+    // Filtrar solo transacciones manuales (las de viajes se manejan diferente)
     let filtered = todasTransacciones.filter(t => {
-      // Solo filtrar transacciones manuales (las de viajes se manejan diferente)
       if (t.tipo !== "Viaje" && typeof t.id === 'number') {
-        return !hiddenTransactions.has(t.id);
+        return !isTransactionHidden(t.id);
       }
       return true; // Mantener viajes visibles
     });
     
     // Luego aplicar el filtro de tipo (todos/ocultas)
     if (filterType === "ocultas") {
-      // Para mostrar ocultas, usar las que están en hiddenTransactions
+      // Para mostrar ocultas, usar las que están ocultas localmente
       filtered = todasTransacciones.filter(t => {
         if (t.tipo !== "Viaje" && typeof t.id === 'number') {
-          return hiddenTransactions.has(t.id);
+          return isTransactionHidden(t.id);
         }
         return false; // No mostrar viajes en la vista de ocultas
       });
@@ -723,7 +713,7 @@ export default function MinaDetail() {
     }
 
     return filtered;
-  }, [todasTransacciones, filterType, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, sortByFecha, sortByValor, filterTransaccionesByDate, balanceFilter, hiddenTransactions]);
+  }, [todasTransacciones, filterType, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, sortByFecha, sortByValor, filterTransaccionesByDate, balanceFilter, isTransactionHidden]);
 
   // Aplicar filtros a viajes
   const viajesFiltrados = useMemo(() => {
@@ -750,9 +740,9 @@ export default function MinaDetail() {
       .reduce((sum, v) => sum + parseFloat(v.totalCompra || '0'), 0);
 
     // Transacciones netas (solo transacciones manuales, excluyendo viajes y pendientes)
-    // Usar TODAS las transacciones (incluyendo ocultas) para el balance real
+    // Usar TODAS las transacciones (incluyendo ocultas localmente) para el balance real
     // EXCLUIR transacciones pendientes (no afectan balances)
-    const transaccionesNetas = (todasTransaccionesIncOcultas || [])
+    const transaccionesNetas = (transacciones || [])
       .filter(t => t.tipo !== "Viaje" && t.estado !== 'pendiente') // Excluir transacciones de viajes y pendientes
       .reduce((sum, t) => {
         const valor = parseFloat(t.valor || '0');
@@ -770,7 +760,7 @@ export default function MinaDetail() {
       transacciones: transaccionesNetas,
       total: ingresosViajes + transaccionesNetas
     };
-  }, [todosViajesIncOcultos, todasTransaccionesIncOcultas, minaId]);
+  }, [todosViajesIncOcultos, transacciones, minaId]);
 
   // Mutations para eliminar transacciones
   const deleteTransactionMutation = useMutation({
@@ -1304,8 +1294,8 @@ export default function MinaDetail() {
                       
                       {/* Botón mostrar ocultas */}
                       {(() => {
-                        const transaccionesOcultas = todasTransaccionesIncOcultas?.filter(t => t.oculta).length || 0;
-                        // Usar todosViajesIncOcultos para contar viajes ocultos (similar a compradores y volqueteros)
+                        const transaccionesOcultas = getHiddenTransactionsCount();
+                        // Usar todosViajesIncOcultos para contar viajes ocultos (estos sí están en BD)
                         const viajesOcultos = todosViajesIncOcultos?.filter((v: ViajeWithDetails) => v.oculta).length || 0;
                         const totalOcultos = transaccionesOcultas + viajesOcultos;
                         const hayElementosOcultos = totalOcultos > 0;
@@ -1313,13 +1303,15 @@ export default function MinaDetail() {
                         return hayElementosOcultos ? (
                           <Button
                             onClick={() => {
-                              handleShowAllHidden();
-                              showAllHiddenMutation.mutate(); // También mostrar viajes ocultos (estos sí están en BD)
+                              handleShowAllHidden(); // Mostrar transacciones ocultas localmente
+                              if (viajesOcultos > 0) {
+                                showAllHiddenViajesMutation.mutate(); // También mostrar viajes ocultos (estos sí están en BD)
+                              }
                             }}
                             size="sm"
                             className="h-8 w-7 p-0 bg-blue-600 hover:bg-blue-700 text-xs"
-                            disabled={showAllHiddenMutation.isPending}
-                            title={`Mostrar ${totalOcultos} elementos ocultos`}
+                            disabled={showAllHiddenViajesMutation.isPending}
+                            title={`Mostrar ${totalOcultos} elementos ocultos (${transaccionesOcultas} transacciones, ${viajesOcultos} viajes)`}
                           >
                             +{totalOcultos}
                           </Button>
@@ -1353,8 +1345,8 @@ export default function MinaDetail() {
 
             {/* Balance dinámico basado en transacciones filtradas y visibles */}
             {(() => {
-              // Excluir transacciones pendientes y ocultas del cálculo de balance
-              const transaccionesVisibles = transaccionesFiltradas.filter(t => !t.oculta && t.estado !== 'pendiente');
+              // Excluir transacciones pendientes del cálculo de balance (las ocultas ya están filtradas)
+              const transaccionesVisibles = transaccionesFiltradas.filter(t => t.estado !== 'pendiente');
               
               const positivos = transaccionesVisibles.filter(t => {
                 // Verde/Positivo para minas - ORDEN CORRECTO:

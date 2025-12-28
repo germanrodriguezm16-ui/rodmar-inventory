@@ -141,6 +141,7 @@ export default function CompradorDetail() {
     showAllHidden: showAllHiddenLocal,
     filterVisible: filterVisibleTransactions,
     getHiddenCount: getHiddenTransactionsCount,
+    isHidden: isTransactionHidden,
   } = useHiddenTransactions(`comprador-${compradorId}`);
 
   // Limpiar transacciones temporales al salir de la página
@@ -233,33 +234,7 @@ export default function CompradorDetail() {
     refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
   });
 
-  // Fetch todas las transacciones incluyendo ocultas (para el contador del botón y balance del encabezado)
-  const { data: todasTransaccionesIncOcultas = [] } = useQuery<TransaccionWithSocio[]>({
-    queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"],
-    queryFn: async () => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
-      const token = getAuthToken();
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const res = await fetch(apiUrl(`/api/transacciones/comprador/${compradorId}?includeHidden=true`), {
-        credentials: "include",
-        headers,
-      });
-      if (!res.ok) {
-        console.error(`Error fetching todas transacciones for comprador ${compradorId}:`, res.status, res.statusText);
-        return []; // Devolver array vacío en caso de error
-      }
-      const data = await res.json();
-      // Asegurar que siempre sea un array
-      return Array.isArray(data) ? data : [];
-    },
-    enabled: !!compradorId,
-    staleTime: 300000, // 5 minutos - datos frescos por más tiempo
-    refetchOnMount: false, // No recargar al montar - solo cuando hay cambios
-    refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
-  });
+  // Ya no necesitamos obtener todas las transacciones incluyendo ocultas (se usa ocultamiento local)
 
   // Fetch todos los viajes incluyendo ocultos (solo para el balance del encabezado)
   const { data: todosViajesIncOcultos = [] } = useQuery<ViajeWithDetails[]>({
@@ -350,15 +325,15 @@ export default function CompradorDetail() {
     const viajesCompletados = todosViajesIncOcultos?.filter(v => v.fechaDescargue && v.compradorId === parseInt(compradorId)) || [];
     
     // Para transacciones manuales, separar ingresos y egresos
-    // Usar TODAS las transacciones (incluyendo ocultas) para el balance real
+    // Usar TODAS las transacciones (incluyendo ocultas localmente) para el balance real
     // EXCLUIR transacciones pendientes (no afectan balances)
     let totalManualesPositivos = 0;
     let totalManualesNegativos = 0;
 
-    todasTransaccionesIncOcultas
+    (transacciones || [])
       .filter(transaccion => transaccion.estado !== 'pendiente') // Excluir transacciones pendientes
       .forEach(transaccion => {
-        const valor = parseFloat(transaccion.valor);
+        const valor = parseFloat(transaccion.valor || '0');
         
         if (transaccion.paraQuienTipo === 'comprador' && transaccion.paraQuienId === compradorId.toString()) {
           // Transacciones hacia el comprador son egresos (negativos)
@@ -380,7 +355,7 @@ export default function CompradorDetail() {
     const balanceTotal = totalPositivos - totalNegativos;
 
     return balanceTotal;
-  }, [todosViajesIncOcultos, todasTransaccionesIncOcultas, compradorId]);
+  }, [todosViajesIncOcultos, transacciones, compradorId]);
 
   // Función para obtener rangos de fecha
   const getDateRange = (filterType: string, startDate?: string, endDate?: string) => {
@@ -554,6 +529,15 @@ export default function CompradorDetail() {
     });
   };
 
+  // Función para mostrar todas las transacciones ocultas localmente
+  const handleShowAllHidden = () => {
+    showAllHiddenLocal();
+    toast({
+      description: "Todas las transacciones ocultas ahora son visibles",
+      duration: 2000,
+    });
+  };
+
   // Mutación para ocultar viajes
   const hideViajesMutation = useMutation({
     mutationFn: async (viajeId: string) => {
@@ -675,22 +659,16 @@ export default function CompradorDetail() {
     },
   });
 
-  // Mutación para mostrar todas las transacciones y viajes ocultos
-  const showAllHiddenMutation = useMutation({
+  // Mutación para mostrar todos los viajes ocultos (los viajes sí usan ocultamiento en BD)
+  const showAllHiddenViajesMutation = useMutation({
     mutationFn: async () => {
       const { apiUrl } = await import('@/lib/api');
-      // Mostrar transacciones ocultas
       const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      const transaccionesResponse = await fetch(apiUrl(`/api/transacciones/socio/comprador/${compradorId}/show-all`), {
-        method: 'POST',
-        headers,
-        credentials: "include",
-      });
       
       // Mostrar viajes ocultos
       const viajesResponse = await fetch(apiUrl(`/api/viajes/comprador/${compradorId}/show-all`), {
@@ -699,9 +677,12 @@ export default function CompradorDetail() {
         credentials: "include",
       });
       
-      if (!transaccionesResponse.ok || !viajesResponse.ok) {
-        throw new Error('Error al mostrar elementos ocultos');
+      if (!viajesResponse.ok) {
+        throw new Error('Error al mostrar viajes ocultos');
       }
+      
+      const viajesResult = await viajesResponse.json();
+      return viajesResult.updatedCount || 0;
     },
     onMutate: async () => {
       // Actualización optimista: mostrar todos los viajes ocultos inmediatamente
@@ -726,16 +707,17 @@ export default function CompradorDetail() {
       
       return { previousViajes, previousViajesIncOcultos };
     },
-    onSuccess: () => {
-      toast({
-        description: "Todos los elementos ocultos ahora son visibles",
-        duration: 2000,
-      });
+    onSuccess: (updatedCount) => {
+      if (updatedCount > 0) {
+        toast({
+          description: `${updatedCount} viajes restaurados`,
+          duration: 2000,
+        });
+      }
       // Invalidar queries para sincronizar con el backend
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
       queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
       queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
     },
     onError: (error, variables, context) => {
       // Revertir actualización optimista en caso de error
@@ -746,7 +728,7 @@ export default function CompradorDetail() {
         queryClient.setQueryData(["/api/viajes/comprador", compradorId, "includeHidden"], context.previousViajesIncOcultos);
       }
       toast({
-        description: "Error al mostrar elementos ocultos",
+        description: "Error al mostrar viajes ocultos",
         variant: "destructive",
         duration: 3000,
       });
@@ -876,10 +858,12 @@ export default function CompradorDetail() {
                   setShowTransaccionesImagePreview={setShowTransaccionesImagePreview}
                   setExcelPreviewData={setExcelPreviewData}
                   setShowExcelPreview={setShowExcelPreview}
-                  todasTransaccionesIncOcultas={todasTransaccionesIncOcultas}
                   hideTransactionMutation={handleHideTransaction}
                   hideViajesMutation={hideViajesMutation}
-                  showAllHiddenMutation={showAllHiddenMutation}
+                  showAllHiddenViajesMutation={showAllHiddenViajesMutation}
+                  handleShowAllHidden={handleShowAllHidden}
+                  isTransactionHidden={isTransactionHidden}
+                  getHiddenTransactionsCount={getHiddenTransactionsCount}
                   viajes={viajes}
                   todosViajesIncOcultos={todosViajesIncOcultos}
                   setTransaccionesFiltradas={setTransaccionesFiltradas}
@@ -1455,10 +1439,12 @@ function CompradorTransaccionesTab({
   setShowTransaccionesImagePreview,
   setExcelPreviewData,
   setShowExcelPreview,
-  todasTransaccionesIncOcultas,
   hideTransactionMutation,
   hideViajesMutation,
-  showAllHiddenMutation,
+  showAllHiddenViajesMutation,
+  handleShowAllHidden,
+  isTransactionHidden,
+  getHiddenTransactionsCount,
   viajes,
   todosViajesIncOcultos,
   setTransaccionesFiltradas,
@@ -1487,10 +1473,12 @@ function CompradorTransaccionesTab({
   setShowTransaccionesImagePreview: (value: boolean) => void;
   setExcelPreviewData: (data: any[]) => void;
   setShowExcelPreview: (show: boolean) => void;
-  todasTransaccionesIncOcultas: TransaccionWithSocio[];
   hideTransactionMutation: any;
   hideViajesMutation: any;
-  showAllHiddenMutation: any;
+  showAllHiddenViajesMutation: any;
+  handleShowAllHidden: () => void;
+  isTransactionHidden: (id: number) => boolean;
+  getHiddenTransactionsCount: () => number;
   viajes: ViajeWithDetails[];
   todosViajesIncOcultos: ViajeWithDetails[];
   setTransaccionesFiltradas: (transacciones: any[]) => void;
@@ -1748,13 +1736,13 @@ function CompradorTransaccionesTab({
     filtered = filtered.filter(t => {
       if (t.tipo === "Manual" && t.id.toString().startsWith('manual-')) {
         const realTransactionId = parseInt(t.id.toString().replace('manual-', ''));
-        return !hiddenTransactions.has(realTransactionId);
+        return !isTransactionHidden(realTransactionId);
       }
       return true; // Mantener viajes y temporales visibles
     });
     
     return filtered;
-  }, [todasTransacciones, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, balanceFilter]);
+  }, [todasTransacciones, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, balanceFilter, isTransactionHidden]);
 
   // Actualizar las transacciones filtradas en el componente padre
   useEffect(() => {
@@ -1887,11 +1875,13 @@ function CompradorTransaccionesTab({
                 return totalOcultos > 0 ? (
                   <Button
                     onClick={() => {
-                      handleShowAllHidden();
-                      showAllHiddenMutation.mutate(); // También mostrar viajes ocultos (estos sí están en BD)
+                      handleShowAllHidden(); // Mostrar transacciones ocultas localmente
+                      if (viajesOcultos > 0) {
+                        showAllHiddenViajesMutation.mutate(); // También mostrar viajes ocultos (estos sí están en BD)
+                      }
                     }}
                     variant="outline"
-                    disabled={showAllHiddenMutation.isPending}
+                    disabled={showAllHiddenViajesMutation.isPending}
                     size="sm"
                     className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200 h-7 px-2 text-xs"
                     title={`Mostrar ${totalOcultos} elementos ocultos`}
