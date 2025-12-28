@@ -6,9 +6,9 @@ import { requireAuth, optionalAuth } from "./middleware/auth";
 import { getUserPermissions, requirePermission, invalidateUserPermissionsCache } from "./middleware/permissions";
 import { canViewRodMarAccount } from "./rodmar-account-permissions";
 import { emitTransactionUpdate } from "./socket";
-import { db } from "./db";
+import { db, getSqlClient } from "./db";
 import { roles, permissions, rolePermissions, users, userPermissionsOverride } from "../shared/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, or, inArray, sql } from "drizzle-orm";
 import { findUserByPhone, verifyPassword, updateLastLogin, hashPassword, generateToken, verifyToken } from "./middleware/auth-helpers";
 import {
   insertMinaSchema,
@@ -5803,6 +5803,224 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user password:", error);
       res.status(500).json({ error: "Error al obtener contraseña del usuario" });
+    }
+  });
+
+  // ============================================
+  // DATABASE EXPLORER ENDPOINTS - Administración de BD
+  // ============================================
+  
+  // Lista de tablas permitidas (whitelist para seguridad)
+  const ALLOWED_TABLES = [
+    'transacciones',
+    'viajes',
+    'minas',
+    'compradores',
+    'volqueteros',
+    'inversiones',
+    'users',
+    'roles',
+    'permissions',
+    'role_permissions',
+    'user_permissions_override',
+    'sessions',
+    'push_subscriptions',
+    'fusion_backups'
+  ];
+
+  // Listar tablas disponibles
+  app.get("/api/admin/db/tables", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      res.json({
+        tables: ALLOWED_TABLES.map(table => ({
+          name: table,
+          displayName: table.charAt(0).toUpperCase() + table.slice(1).replace(/_/g, ' ')
+        }))
+      });
+    } catch (error) {
+      console.error("Error listing tables:", error);
+      res.status(500).json({ error: "Error al listar tablas" });
+    }
+  });
+
+  // Obtener datos de una tabla con filtros, paginación y ordenamiento
+  app.get("/api/admin/db/table/:tableName", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const tableName = req.params.tableName;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 200); // Límite entre 1 y 200
+      const search = (req.query.search as string || '').trim();
+      const sortBy = (req.query.sortBy as string || 'id').replace(/[^a-zA-Z0-9_]/g, '');
+      const sortOrder = (req.query.sortOrder as string || 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+      
+      // Validar nombre de tabla
+      if (!ALLOWED_TABLES.includes(tableName)) {
+        return res.status(400).json({ error: `Tabla "${tableName}" no permitida` });
+      }
+
+      // Sanitizar nombres (solo letras, números y guiones bajos) - protección contra SQL injection
+      const sanitizedTableName = tableName.replace(/[^a-zA-Z0-9_]/g, '');
+      const sanitizedSortBy = sortBy.replace(/[^a-zA-Z0-9_]/g, '') || 'id';
+      
+      // Validar que page y limit sean números válidos
+      if (page < 1 || isNaN(page) || limit < 1 || isNaN(limit)) {
+        return res.status(400).json({ error: "Página y límite deben ser números válidos" });
+      }
+      
+      const offset = (page - 1) * limit;
+      const sqlClient = getSqlClient();
+
+      // Obtener columnas de la tabla usando information_schema de forma segura
+      const columnsResult = await sqlClient`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = ${sanitizedTableName}
+        ORDER BY ordinal_position
+      `;
+      
+      if (!columnsResult || columnsResult.length === 0) {
+        return res.status(404).json({ error: `Tabla "${tableName}" no encontrada` });
+      }
+      
+      const columnNames = columnsResult.map((row: any) => row.column_name);
+      
+      // Verificar que la columna de ordenamiento existe
+      if (!columnNames.includes(sanitizedSortBy)) {
+        return res.status(400).json({ error: `Columna de ordenamiento "${sortBy}" no existe en la tabla` });
+      }
+
+      // Construir condiciones de búsqueda de forma segura usando sql.unsafe solo para nombres validados
+      let countResult: any;
+      let dataResult: any;
+      const searchValue = `%${search}%`;
+      
+      if (search && columnNames.length > 0) {
+        // Filtrar columnas que son búsquedables (texto, números, fechas)
+        const searchableColumns = columnNames.filter((col: string) => {
+          const colInfo = columnsResult.find((r: any) => r.column_name === col);
+          const dataType = colInfo?.data_type || '';
+          return ['text', 'varchar', 'character varying', 'integer', 'bigint', 'numeric', 'decimal', 'timestamp', 'timestamp without time zone', 'timestamp with time zone'].includes(dataType);
+        }).map((col: string) => col.replace(/[^a-zA-Z0-9_]/g, '')); // Sanitizar nombres de columnas
+        
+        if (searchableColumns.length > 0) {
+          // Construir condiciones de búsqueda usando sql.unsafe de forma segura (solo nombres validados)
+          const searchConditions = searchableColumns.map(col => `CAST("${col}" AS TEXT) ILIKE $1`).join(' OR ');
+          const whereClause = `WHERE (${searchConditions})`;
+          
+          // Query de conteo
+          const countSql = `SELECT COUNT(*) as total FROM "${sanitizedTableName}" ${whereClause}`;
+          countResult = await sqlClient.unsafe(countSql, [searchValue]);
+          
+          // Query de datos
+          const dataSql = `SELECT * FROM "${sanitizedTableName}" ${whereClause} ORDER BY "${sanitizedSortBy}" ${sortOrder} LIMIT ${limit} OFFSET ${offset}`;
+          dataResult = await sqlClient.unsafe(dataSql, [searchValue]);
+        } else {
+          // No hay columnas búsquedables, devolver todo
+          const countSql = `SELECT COUNT(*) as total FROM "${sanitizedTableName}"`;
+          countResult = await sqlClient.unsafe(countSql);
+          
+          const dataSql = `SELECT * FROM "${sanitizedTableName}" ORDER BY "${sanitizedSortBy}" ${sortOrder} LIMIT ${limit} OFFSET ${offset}`;
+          dataResult = await sqlClient.unsafe(dataSql);
+        }
+      } else {
+        // Sin búsqueda
+        const countSql = `SELECT COUNT(*) as total FROM "${sanitizedTableName}"`;
+        countResult = await sqlClient.unsafe(countSql);
+        
+        const dataSql = `SELECT * FROM "${sanitizedTableName}" ORDER BY "${sanitizedSortBy}" ${sortOrder} LIMIT ${limit} OFFSET ${offset}`;
+        dataResult = await sqlClient.unsafe(dataSql);
+      }
+      
+      // Procesar resultados (sqlClient.unsafe devuelve un array directamente, no .rows)
+      const total = parseInt(countResult[0]?.total || '0', 10);
+      const data = Array.isArray(dataResult) ? dataResult : (dataResult.rows || []);
+
+      res.json({
+        data,
+        columns: columnsResult,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasMore: offset + limit < total
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching table data:", error);
+      res.status(500).json({ error: error.message || "Error al obtener datos de la tabla" });
+    }
+  });
+
+  // Exportar tabla completa a Excel (usando el mismo formato que otras exportaciones)
+  app.get("/api/admin/db/table/:tableName/export", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const tableName = req.params.tableName;
+      const search = req.query.search as string || '';
+      
+      // Validar nombre de tabla
+      if (!ALLOWED_TABLES.includes(tableName)) {
+        return res.status(400).json({ error: `Tabla "${tableName}" no permitida` });
+      }
+
+      const sanitizedTableName = tableName.replace(/[^a-zA-Z0-9_]/g, '');
+      const sqlClient = getSqlClient();
+
+      // Obtener columnas de la tabla
+      const columnsResult = await sqlClient`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = ${sanitizedTableName}
+        ORDER BY ordinal_position
+      `;
+      const columnNames = columnsResult.map((row: any) => row.column_name);
+
+      // Construir condiciones de búsqueda usando SQL con parámetros preparados
+      let dataResult: any;
+      const searchValue = `%${search}%`;
+      
+      if (search && columnNames.length > 0) {
+        const searchableColumns = columnNames.filter((col: string) => {
+          const colInfo = columnsResult.find((r: any) => r.column_name === col);
+          return colInfo && ['text', 'varchar', 'character varying', 'integer', 'numeric', 'decimal', 'timestamp'].includes(colInfo.data_type);
+        }).map((col: string) => col.replace(/[^a-zA-Z0-9_]/g, '')); // Sanitizar nombres de columnas
+        
+        if (searchableColumns.length > 0) {
+          const searchConditions = searchableColumns.map(col => `CAST("${col}" AS TEXT) ILIKE $1`).join(' OR ');
+          const whereClause = `WHERE (${searchConditions})`;
+          const dataSql = `SELECT * FROM "${sanitizedTableName}" ${whereClause}`;
+          dataResult = await sqlClient.unsafe(dataSql, [searchValue]);
+        } else {
+          const dataSql = `SELECT * FROM "${sanitizedTableName}"`;
+          dataResult = await sqlClient.unsafe(dataSql);
+        }
+      } else {
+        const dataSql = `SELECT * FROM "${sanitizedTableName}"`;
+        dataResult = await sqlClient.unsafe(dataSql);
+      }
+
+      // Procesar resultados (sqlClient.unsafe devuelve un array directamente)
+      const data = Array.isArray(dataResult) ? dataResult : (dataResult.rows || []);
+
+      // Convertir datos a formato plano para Excel
+      const excelData = data.map((row: any) => {
+        const record: any = {};
+        columnNames.forEach((col: string) => {
+          record[col] = row[col] !== null && row[col] !== undefined ? String(row[col]) : '';
+        });
+        return record;
+      });
+
+      // Enviar como JSON (el frontend se encargará de convertirlo a Excel)
+      res.json({
+        data: excelData,
+        columns: columnNames,
+        tableName,
+        total: excelData.length
+      });
+    } catch (error: any) {
+      console.error("Error exporting table:", error);
+      res.status(500).json({ error: error.message || "Error al exportar tabla" });
     }
   });
 
