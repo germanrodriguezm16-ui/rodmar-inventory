@@ -61,3 +61,16 @@ export const db = new Proxy({} as ReturnType<typeof drizzle>, {
     return getDb()[prop as keyof ReturnType<typeof drizzle>];
   }
 });
+
+// Exportar función para obtener el cliente SQL directo (útil para queries dinámicas)
+function getSqlClientFunction() {
+  if (!sql) {
+    getDb(); // Esto inicializará sql si no está inicializado
+  }
+  if (!sql) {
+    throw new Error('No se pudo inicializar el cliente SQL');
+  }
+  return sql;
+}
+
+export { getSqlClientFunction as getSqlClient };
