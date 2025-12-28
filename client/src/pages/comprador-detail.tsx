@@ -1733,13 +1733,15 @@ function CompradorTransaccionesTab({
     
     // Filtrar transacciones ocultas localmente (solo visual, no afecta BD)
     // Solo filtrar transacciones manuales (las de viajes se manejan diferente)
-    filtered = filtered.filter(t => {
-      if (t.tipo === "Manual" && t.id.toString().startsWith('manual-')) {
-        const realTransactionId = parseInt(t.id.toString().replace('manual-', ''));
-        return !isTransactionHidden(realTransactionId);
-      }
-      return true; // Mantener viajes y temporales visibles
-    });
+    if (isTransactionHidden) {
+      filtered = filtered.filter(t => {
+        if (t.tipo === "Manual" && t.id.toString().startsWith('manual-')) {
+          const realTransactionId = parseInt(t.id.toString().replace('manual-', ''));
+          return !isTransactionHidden(realTransactionId);
+        }
+        return true; // Mantener viajes y temporales visibles
+      });
+    }
     
     return filtered;
   }, [todasTransacciones, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, balanceFilter, isTransactionHidden]);
