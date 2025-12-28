@@ -1573,9 +1573,10 @@ export default function VolqueteroDetail() {
                                     className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-gray-100 shrink-0"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      hideTransactionMutation.mutate(transaccion.originalTransaction.id);
+                                      if (typeof transaccion.originalTransaction.id === 'number') {
+                                        handleHideTransaction(transaccion.originalTransaction.id);
+                                      }
                                     }}
-                                    disabled={hideTransactionMutation.isPending}
                                     title="Ocultar transacción"
                                   >
                                     <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-500" />
