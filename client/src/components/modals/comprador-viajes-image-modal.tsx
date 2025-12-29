@@ -91,7 +91,7 @@ export default function CompradorViajesImageModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto p-2 sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Vista Previa - Viajes de {comprador.nombre}</span>
@@ -135,88 +135,88 @@ export default function CompradorViajesImageModal({
         )}
 
         {/* Contenido de la imagen */}
-        <div ref={imageRef} className="bg-white p-6 rounded-lg">
+        <div ref={imageRef} className="bg-white p-3 sm:p-6 rounded-lg">
           {/* Header */}
-          <div className="text-center mb-6 border-b pb-4">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">RodMar - Historial de Viajes</h2>
-            <h3 className="text-xl font-semibold text-blue-600 mb-2">Comprador: {comprador.nombre}</h3>
-            <div className="flex justify-center gap-4 text-sm text-gray-600">
+          <div className="text-center mb-4 sm:mb-6 border-b pb-2 sm:pb-4">
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-800 mb-1 sm:mb-2">RodMar - Historial de Viajes</h2>
+            <h3 className="text-base sm:text-xl font-semibold text-blue-600 mb-1 sm:mb-2">Comprador: {comprador.nombre}</h3>
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-4 text-[10px] sm:text-sm text-gray-600">
               <span>Filtro: {filterLabel}</span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span>Total Viajes: {viajes.length}</span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span>Fecha: {new Date().toLocaleDateString('es-ES')}</span>
             </div>
           </div>
 
           {/* Resumen Financiero */}
-          <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6 p-2 sm:p-4 bg-gray-50 rounded-lg">
             <div className="text-center">
-              <p className="text-xs text-gray-600 mb-1">VIAJES COMPLETADOS</p>
-              <p className="text-lg font-bold text-blue-600">{viajesCompletados.length}</p>
+              <p className="text-[10px] sm:text-xs text-gray-600 mb-1">VIAJES COMPLETADOS</p>
+              <p className="text-sm sm:text-lg font-bold text-blue-600">{viajesCompletados.length}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-600 mb-1">TOTAL A CONSIGNAR</p>
-              <p className="text-lg font-bold text-green-600">{formatCurrency(totalConsignar)}</p>
+              <p className="text-[10px] sm:text-xs text-gray-600 mb-1">TOTAL A CONSIGNAR</p>
+              <p className="text-sm sm:text-lg font-bold text-green-600">{formatCurrency(totalConsignar)}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-600 mb-1">SALDO ACTUAL</p>
-              <p className={`text-lg font-bold ${parseFloat(comprador.saldo || "0") >= 0 ? "text-green-600" : "text-red-600"}`}>
+              <p className="text-[10px] sm:text-xs text-gray-600 mb-1">SALDO ACTUAL</p>
+              <p className={`text-sm sm:text-lg font-bold ${parseFloat(comprador.saldo || "0") >= 0 ? "text-green-600" : "text-red-600"}`}>
                 {formatCurrency(comprador.saldo || "0")}
               </p>
             </div>
           </div>
 
           {/* Tabla de Viajes */}
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300 text-xs">
+          <div className="overflow-x-auto -mx-1 sm:mx-0">
+            <table className="w-full border-collapse border border-gray-300 text-[9px] sm:text-xs min-w-full">
               <thead>
                 <tr className="bg-blue-600 text-white">
-                  <th className="border border-gray-300 p-2 text-left">ID</th>
-                  <th className="border border-gray-300 p-2 text-left">F. CARGUE</th>
-                  <th className="border border-gray-300 p-2 text-left">F. DESCARGUE</th>
-                  <th className="border border-gray-300 p-2 text-left">CONDUCTOR</th>
-                  <th className="border border-gray-300 p-2 text-left">TIPO CARRO</th>
-                  <th className="border border-gray-300 p-2 text-left">PLACA</th>
-                  <th className="border border-gray-300 p-2 text-left">PESO (Ton)</th>
-                  <th className="border border-gray-300 p-2 text-left">VUT</th>
-                  <th className="border border-gray-300 p-2 text-left">FUT</th>
-                  <th className="border border-gray-300 p-2 text-left">OGF</th>
-                  <th className="border border-gray-300 p-2 text-left">TOTAL VENTA</th>
-                  <th className="border border-gray-300 p-2 text-left">TOTAL FLETE</th>
-                  <th className="border border-gray-300 p-2 text-left">VALOR A CONSIGNAR</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">ID</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">F. CARGUE</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">F. DESCARGUE</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">CONDUCTOR</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">TIPO CARRO</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">PLACA</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">PESO</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">VUT</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">FUT</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">OGF</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">T. VENTA</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">T. FLETE</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">A CONSIGNAR</th>
                 </tr>
               </thead>
               <tbody>
                 {viajes.map((viaje, index) => (
                   <tr key={viaje.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                    <td className="border border-gray-300 p-2 font-medium">{viaje.id}</td>
-                    <td className="border border-gray-300 p-2">
+                    <td className="border border-gray-300 p-1 sm:p-2 font-medium">{viaje.id}</td>
+                    <td className="border border-gray-300 p-1 sm:p-2">
                       {viaje.fechaCargue ? formatDateWithDaySpanish(viaje.fechaCargue) : "-"}
                     </td>
-                    <td className="border border-gray-300 p-2">
+                    <td className="border border-gray-300 p-1 sm:p-2">
                       {viaje.fechaDescargue ? formatDateWithDaySpanish(viaje.fechaDescargue) : "Pendiente"}
                     </td>
-                    <td className="border border-gray-300 p-2">{viaje.conductor}</td>
-                    <td className="border border-gray-300 p-2">{viaje.tipoCarro}</td>
-                    <td className="border border-gray-300 p-2">{viaje.placa}</td>
-                    <td className="border border-gray-300 p-2">{viaje.peso || "-"}</td>
-                    <td className="border border-gray-300 p-2">
+                    <td className="border border-gray-300 p-1 sm:p-2">{viaje.conductor}</td>
+                    <td className="border border-gray-300 p-1 sm:p-2">{viaje.tipoCarro}</td>
+                    <td className="border border-gray-300 p-1 sm:p-2">{viaje.placa}</td>
+                    <td className="border border-gray-300 p-1 sm:p-2">{viaje.peso || "-"}</td>
+                    <td className="border border-gray-300 p-1 sm:p-2">
                       {viaje.vut ? formatCurrency(viaje.vut) : "-"}
                     </td>
-                    <td className="border border-gray-300 p-2">
+                    <td className="border border-gray-300 p-1 sm:p-2">
                       {viaje.fleteTon ? formatCurrency(viaje.fleteTon) : "-"}
                     </td>
-                    <td className="border border-gray-300 p-2">
+                    <td className="border border-gray-300 p-1 sm:p-2">
                       {viaje.otrosGastosFlete ? formatCurrency(viaje.otrosGastosFlete) : "-"}
                     </td>
-                    <td className="border border-gray-300 p-2">
+                    <td className="border border-gray-300 p-1 sm:p-2">
                       {viaje.totalVenta ? formatCurrency(viaje.totalVenta) : "-"}
                     </td>
-                    <td className="border border-gray-300 p-2">
+                    <td className="border border-gray-300 p-1 sm:p-2">
                       {viaje.totalFlete ? formatCurrency(viaje.totalFlete) : "-"}
                     </td>
-                    <td className="border border-gray-300 p-2 font-semibold text-green-600">
+                    <td className="border border-gray-300 p-1 sm:p-2 font-semibold text-green-600">
                       {viaje.valorConsignar ? formatCurrency(viaje.valorConsignar) : "-"}
                     </td>
                   </tr>
@@ -225,17 +225,17 @@ export default function CompradorViajesImageModal({
               {/* Fila de totales */}
               <tfoot>
                 <tr className="bg-green-600 text-white font-bold">
-                  <td className="border border-gray-300 p-2" colSpan={10}>TOTAL</td>
-                  <td className="border border-gray-300 p-2">{formatCurrency(totalVenta)}</td>
-                  <td className="border border-gray-300 p-2">{formatCurrency(totalFlete)}</td>
-                  <td className="border border-gray-300 p-2">{formatCurrency(totalConsignar)}</td>
+                  <td className="border border-gray-300 p-1 sm:p-2" colSpan={10}>TOTAL</td>
+                  <td className="border border-gray-300 p-1 sm:p-2">{formatCurrency(totalVenta)}</td>
+                  <td className="border border-gray-300 p-1 sm:p-2">{formatCurrency(totalFlete)}</td>
+                  <td className="border border-gray-300 p-1 sm:p-2">{formatCurrency(totalConsignar)}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
 
           {/* Footer */}
-          <div className="mt-6 pt-4 border-t text-center text-xs text-gray-500">
+          <div className="mt-4 sm:mt-6 pt-2 sm:pt-4 border-t text-center text-[10px] sm:text-xs text-gray-500">
             <p>Reporte generado por RodMar - Sistema de Gestión de Operaciones Mineras</p>
             <p>Fecha de generación: {new Date().toLocaleString('es-ES')}</p>
           </div>
