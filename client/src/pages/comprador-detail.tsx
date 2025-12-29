@@ -833,7 +833,7 @@ export default function CompradorDetail() {
                   setEndDate={setEndDate}
                   getFilterText={getFilterText}
                   handleClearFilter={handleClearFilter}
-                  setShowImagePreview={setShowTransaccionesImagePreview}
+                  setShowImagePreview={setShowImagePreview}
                   setExcelPreviewData={setExcelPreviewData}
                   setShowExcelPreview={setShowExcelPreview}
                   comprador={comprador}
