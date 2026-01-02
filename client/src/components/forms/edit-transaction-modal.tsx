@@ -584,7 +584,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         queryClient.refetchQueries({ queryKey: ["/api/terceros"] }); // Refetch inmediato
         
         // Invalidar queries específicas del tercero afectado
-        const terceroIdAffected = transaccion.deQuienTipo === 'tercero' ? transaccion.deQuienId : transaccion.paraQuienId;
+        const terceroIdAffected = updatedTransaction.deQuienTipo === 'tercero' ? updatedTransaction.deQuienId : updatedTransaction.paraQuienId;
         if (terceroIdAffected) {
           const affectedId = parseInt(terceroIdAffected);
           if (!isNaN(affectedId)) {
