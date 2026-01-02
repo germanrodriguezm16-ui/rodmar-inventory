@@ -24,6 +24,7 @@ import DeleteTransactionModal from "@/components/forms/delete-transaction-modal"
 import { GestionarTransaccionesModal } from "@/components/modals/gestionar-transacciones-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { PendingListModal } from "@/components/pending-transactions/pending-list-modal";
+import { TerceroTransaccionesImageModal } from "@/components/modals/tercero-transacciones-image-modal";
 
 // Estado para filtros
 interface TransaccionFiltrosState {
@@ -147,7 +148,7 @@ export default function TerceroDetail() {
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
 
-  // Estado para modal de imagen de transacciones (usaremos uno genérico si existe)
+  // Estado para modal de imagen de transacciones
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   // Estados para transacciones temporales
@@ -551,6 +552,17 @@ export default function TerceroDetail() {
                   </Button>
                 ) : null}
                 <Button
+                  onClick={() => setIsImageModalOpen(true)}
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
+                  disabled={transaccionesFiltradas.length === 0}
+                  title={`Descargar imagen (máx. 200 de ${transaccionesFiltradas.length} transacciones)`}
+                >
+                  <Image className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Imagen</span>
+                  <span className="sm:hidden">IMG</span>
+                </Button>
+                <Button
                   onClick={() => setShowTemporalTransaction(true)}
                   variant="outline"
                   size="sm"
@@ -853,6 +865,18 @@ export default function TerceroDetail() {
         }}
         isTemporalMode={true}
       />
+
+      {/* Modal de imagen descargable */}
+      {tercero && (
+        <TerceroTransaccionesImageModal
+          open={isImageModalOpen}
+          onOpenChange={setIsImageModalOpen}
+          transacciones={transaccionesFiltradas}
+          tercero={tercero}
+          filterLabel={FILTROS_FECHA.find(f => f.value === filtros.fechaTipo)?.label || "Todas"}
+          terceroId={terceroId}
+        />
+      )}
 
     </div>
   );
