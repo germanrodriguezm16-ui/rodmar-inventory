@@ -281,8 +281,12 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
           const affectedId = parseInt(terceroIdAffected);
           if (!isNaN(affectedId)) {
             queryClient.invalidateQueries({ 
+              queryKey: [`/api/terceros/${affectedId}/transacciones`]
+            });
+            // Forzar refetch incluso si no está activa (para cuando el usuario vuelva a la página)
+            queryClient.refetchQueries({ 
               queryKey: [`/api/terceros/${affectedId}/transacciones`],
-              refetchType: 'active'
+              type: 'all'
             });
           }
         }

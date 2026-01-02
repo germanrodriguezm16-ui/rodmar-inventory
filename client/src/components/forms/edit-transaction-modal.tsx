@@ -583,18 +583,22 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         queryClient.invalidateQueries({ queryKey: ["/api/terceros"] });
         queryClient.refetchQueries({ queryKey: ["/api/terceros"] }); // Refetch inmediato
         
-        // Invalidar queries específicas del tercero afectado
+        // Invalidar y refetchear queries específicas del tercero afectado
         const terceroIdAffected = updatedTransaction.deQuienTipo === 'tercero' ? updatedTransaction.deQuienId : updatedTransaction.paraQuienId;
         if (terceroIdAffected) {
           const affectedId = parseInt(terceroIdAffected);
           if (!isNaN(affectedId)) {
+            // Invalidar todas las variantes de la query key
             queryClient.invalidateQueries({ 
-              queryKey: ["/api/terceros", affectedId, "transacciones"],
-              refetchType: 'active'
+              queryKey: ["/api/terceros", affectedId, "transacciones"]
             });
             queryClient.invalidateQueries({ 
+              queryKey: [`/api/terceros/${affectedId}/transacciones`]
+            });
+            // Forzar refetch incluso si no está activa (para cuando el usuario vuelva a la página)
+            queryClient.refetchQueries({ 
               queryKey: [`/api/terceros/${affectedId}/transacciones`],
-              refetchType: 'active'
+              type: 'all'
             });
           }
         }
@@ -603,16 +607,19 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         if (originalTransaction) {
           const originalTerceroIdAffected = originalTransaction.deQuienTipo === 'tercero' ? originalTransaction.deQuienId : 
                                            originalTransaction.paraQuienTipo === 'tercero' ? originalTransaction.paraQuienId : null;
-          if (originalTerceroIdAffected && originalTerceroIdAffected !== terceroIdAffected) {
+          if (originalTerceroIdAffected) {
             const originalAffectedId = parseInt(originalTerceroIdAffected);
-            if (!isNaN(originalAffectedId)) {
+            if (!isNaN(originalAffectedId) && originalAffectedId.toString() !== terceroIdAffected) {
               queryClient.invalidateQueries({ 
-                queryKey: ["/api/terceros", originalAffectedId, "transacciones"],
-                refetchType: 'active'
+                queryKey: ["/api/terceros", originalAffectedId, "transacciones"]
               });
               queryClient.invalidateQueries({ 
+                queryKey: [`/api/terceros/${originalAffectedId}/transacciones`]
+              });
+              // Forzar refetch incluso si no está activa
+              queryClient.refetchQueries({ 
                 queryKey: [`/api/terceros/${originalAffectedId}/transacciones`],
-                refetchType: 'active'
+                type: 'all'
               });
             }
           }
