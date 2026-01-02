@@ -104,6 +104,20 @@ export function useSocket() {
         });
       }
 
+      if (affectedEntityTypes.includes("tercero")) {
+        queryClient.invalidateQueries({ queryKey: ["/api/terceros"] });
+        queryClient.refetchQueries({ queryKey: ["/api/terceros"] }); // Refetch inmediato
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            return Array.isArray(queryKey) &&
+              queryKey.length > 0 &&
+              typeof queryKey[0] === "string" &&
+              queryKey[0].startsWith("/api/terceros/");
+          },
+        });
+      }
+
       if (affectedEntityTypes.includes("lcdm")) {
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
         // Invalidar queries de transacciones LCDM (con paginación)

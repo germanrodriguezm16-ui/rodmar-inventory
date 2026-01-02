@@ -368,6 +368,7 @@ function NewTransactionModal({
         }
         if (data.deQuienTipo === 'tercero' || data.paraQuienTipo === 'tercero') {
           queryClient.invalidateQueries({ queryKey: ["/api/terceros"] });
+          queryClient.refetchQueries({ queryKey: ["/api/terceros"] }); // Refetch inmediato
           
           // Invalidar queries específicas del tercero afectado
           const terceroIdAffected = data.deQuienTipo === 'tercero' ? data.deQuienId : data.paraQuienId;

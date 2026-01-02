@@ -266,6 +266,26 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
           queryKey: ["/api/volqueteros"],
           type: 'all' // Refetch todas las queries, no solo las activas
         });
+      }
+
+      if (transaction?.deQuienTipo === 'tercero' || transaction?.paraQuienTipo === 'tercero') {
+        queryClient.invalidateQueries({ queryKey: ["/api/terceros"] });
+        // Forzar refetch incluso si la query no está activa
+        queryClient.refetchQueries({ 
+          queryKey: ["/api/terceros"],
+          type: 'all' // Refetch todas las queries, no solo las activas
+        });
+        // Invalidar queries específicas del tercero afectado
+        const terceroIdAffected = transaction.deQuienTipo === 'tercero' ? transaction.deQuienId : transaction.paraQuienId;
+        if (terceroIdAffected) {
+          const affectedId = parseInt(terceroIdAffected);
+          if (!isNaN(affectedId)) {
+            queryClient.invalidateQueries({ 
+              queryKey: [`/api/terceros/${affectedId}/transacciones`],
+              refetchType: 'active'
+            });
+          }
+        }
         // Invalidar queries específicas de volqueteros
         queryClient.invalidateQueries({ 
           predicate: (query) => {
