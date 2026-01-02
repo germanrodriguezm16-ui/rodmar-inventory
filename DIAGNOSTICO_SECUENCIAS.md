@@ -66,3 +66,5 @@ Después de ejecutar el script, intenta crear:
 
 Deberían crearse sin problemas con IDs secuenciales correctos.
 
+
+

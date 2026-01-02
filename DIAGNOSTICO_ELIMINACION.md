@@ -103,3 +103,5 @@ Implementar la misma lógica que `canDeleteMina`:
 
 Necesito revisar si volqueteros tiene el mismo problema que minas.
 
+
+

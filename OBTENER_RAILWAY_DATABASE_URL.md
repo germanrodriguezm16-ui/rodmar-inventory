@@ -92,3 +92,5 @@ La variable `DATABASE_PUBLIC_URL` que ves probablemente sea la correcta, pero ne
 
 **¿Puedes hacer clic en los tres puntos (`...`) al lado de `DATABASE_PUBLIC_URL` y ver qué muestra?**
 
+
+

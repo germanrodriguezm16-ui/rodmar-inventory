@@ -51,3 +51,5 @@ Sin embargo:
 - El listado principal de cuentas RodMar sigue respetando permisos específicos de cada cuenta.
 - El acceso a transacciones de cuentas RodMar específicas sigue requiriendo el permiso específico de esa cuenta.
 
+
+

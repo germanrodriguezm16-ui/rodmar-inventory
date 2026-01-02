@@ -65,3 +65,5 @@ Ahora necesitas actualizar la variable `DATABASE_URL` en Railway para que apunte
 
 Tu aplicación ahora está usando Railway PostgreSQL en lugar de Supabase.
 
+
+

@@ -39,3 +39,5 @@ Después del fix, deberías ver en los logs:
 - `=== Delete result for mina X: true ===`
 - `200 OK` con "Mina eliminada exitosamente"
 
+
+

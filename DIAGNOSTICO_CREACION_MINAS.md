@@ -56,3 +56,5 @@ Esto asegura que:
 
 El endpoint `POST /api/compradores` también **NO tiene `requireAuth`**, así que tiene el mismo problema potencial. Debería corregirse también para consistencia.
 
+
+

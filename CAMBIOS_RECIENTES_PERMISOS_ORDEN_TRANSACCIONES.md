@@ -258,3 +258,5 @@ app.get("/api/transacciones/pendientes/count", requireAuth, async (req, res) => 
    - Los endpoints ahora verifican permisos antes de filtrar por `userId`.
    - Si el usuario tiene permisos relevantes, se pasa `undefined` como `userId` para ver todas las entidades/transacciones.
 
+
+

@@ -22,3 +22,5 @@ Verificar que las validaciones en DELETE solo consideren:
 - Viajes NO ocultos (estado !== 'oculta')
 - Transacciones NO ocultas y completadas (no pendientes)
 
+
+

@@ -65,3 +65,5 @@
    - Intentar eliminar un comprador con viajes → Debe mostrar error
    - Intentar eliminar un comprador con transacciones → Debe mostrar error
 
+
+

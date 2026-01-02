@@ -834,6 +834,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/terceros/:id/transacciones", async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      if (isNaN(terceroId)) {
+        return res.status(400).json({ error: "Invalid tercero ID" });
+      }
+
+      const transacciones = await storage.getTransaccionesBySocio(
+        "tercero",
+        terceroId,
+      );
+      res.json(transacciones);
+    } catch (error) {
+      console.error("Error fetching transacciones for tercero:", error);
+      res.status(500).json({ error: "Failed to fetch transacciones for tercero" });
+    }
+  });
+
   // Delete comprador (only if no viajes or transacciones)
   app.delete(
     "/api/compradores/:id",

@@ -59,3 +59,5 @@ export function hasModulePermission(userPermissions: string[], module: Module): 
   return userPermissions.includes(requiredPermission);
 }
 
+
+
