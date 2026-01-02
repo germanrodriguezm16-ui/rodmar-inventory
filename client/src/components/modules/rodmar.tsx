@@ -100,6 +100,11 @@ export default function RodMar() {
     staleTime: 30000,
   });
 
+  const { data: terceros = [] } = useQuery({
+    queryKey: ["/api/terceros"],
+    staleTime: 30000,
+  });
+
   // Usar hooks compartidos para balances
   const { resumenFinanciero: resumenVolqueterosOriginal } = useVolqueterosBalance();
   const { resumenFinanciero: resumenCompradoresOriginal } = useCompradoresBalance();
