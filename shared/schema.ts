@@ -160,9 +160,9 @@ export const viajes = pgTable("viajes", {
 export const transacciones = pgTable("transacciones", {
   id: serial("id").primaryKey(),
   // Nuevo sistema: De quién y Para quién (opcionales por ahora para migración)
-  deQuienTipo: text("de_quien_tipo"), // rodmar, comprador, volquetero, mina, banco, lcdm, postobon
+  deQuienTipo: text("de_quien_tipo"), // rodmar, comprador, volquetero, mina, banco, lcdm, postobon, tercero
   deQuienId: text("de_quien_id"), // ID o nombre específico
-  paraQuienTipo: text("para_quien_tipo"), // rodmar, comprador, volquetero, mina, banco, lcdm, postobon
+  paraQuienTipo: text("para_quien_tipo"), // rodmar, comprador, volquetero, mina, banco, lcdm, postobon, tercero
   paraQuienId: text("para_quien_id"), // ID o nombre específico
   // Campo para especificar cuenta de Postobón
   postobonCuenta: text("postobon_cuenta"), // 'santa-rosa', 'cimitarra', 'otras' (solo cuando tipo es 'postobon')
@@ -434,9 +434,9 @@ export const insertInversionSchema = createInsertSchema(inversiones).omit({
 });
 
 export const insertTransaccionSchema = z.object({
-  deQuienTipo: z.enum(["rodmar", "comprador", "volquetero", "mina", "banco", "lcdm", "postobon"]),
+  deQuienTipo: z.enum(["rodmar", "comprador", "volquetero", "mina", "banco", "lcdm", "postobon", "tercero"]),
   deQuienId: z.string().min(1), // Puede ser ID numérico como string o nombre específico
-  paraQuienTipo: z.enum(["rodmar", "comprador", "volquetero", "mina", "banco", "lcdm", "postobon"]),
+  paraQuienTipo: z.enum(["rodmar", "comprador", "volquetero", "mina", "banco", "lcdm", "postobon", "tercero"]),
   paraQuienId: z.string().min(1), // Puede ser ID numérico como string o nombre específico
   postobonCuenta: z.enum(["santa-rosa", "cimitarra", "otras"]).optional(), // Solo para transacciones con Postobón
   concepto: z.string().min(1),
