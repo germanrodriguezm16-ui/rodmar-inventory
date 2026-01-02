@@ -443,7 +443,7 @@ export default function TerceroDetail() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setLocation("/rodmar")}
+              onClick={() => setLocation("/rodmar?tab=terceros")}
               className="p-2"
             >
               <ArrowLeft className="h-4 w-4" />

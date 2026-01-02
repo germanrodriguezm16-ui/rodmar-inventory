@@ -73,6 +73,38 @@ export default function RodMar() {
   const [selectedSubAccount, setSelectedSubAccount] = useState<string>("");
   const [showAddTerceroModal, setShowAddTerceroModal] = useState(false);
 
+  // Leer el query parameter 'tab' de la URL para determinar qué tab mostrar
+  const getInitialTab = () => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const tabParam = searchParams.get('tab');
+    // Validar que el tab existe y el usuario tiene permisos
+    if (tabParam === 'terceros' && has("module.RODMAR.accounts.view")) {
+      return 'terceros';
+    }
+    if (tabParam === 'cuentas' && has("module.RODMAR.accounts.view")) {
+      return 'cuentas';
+    }
+    if (tabParam === 'balances' && has("module.RODMAR.balances.view")) {
+      return 'balances';
+    }
+    if (tabParam === 'financiero' && has("module.RODMAR.balances.view")) {
+      return 'financiero';
+    }
+    if (tabParam === 'ganancias' && has("module.RODMAR.balances.view")) {
+      return 'ganancias';
+    }
+    if (tabParam === 'lcdm' && has("module.RODMAR.LCDM.view")) {
+      return 'lcdm';
+    }
+    if (tabParam === 'postobon' && has("module.RODMAR.Postobon.view")) {
+      return 'postobon';
+    }
+    // Default: cuentas si tiene permisos, sino el primero disponible
+    return has("module.RODMAR.accounts.view") ? 'cuentas' : 'balances';
+  };
+
+  const [activeTab, setActiveTab] = useState<string>(getInitialTab());
+
 
 
 
@@ -411,7 +443,7 @@ export default function RodMar() {
       </Card>
 
       {/* Tabs Section */}
-      <Tabs defaultValue="cuentas" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className={`rodmar-tabs grid w-full gap-1 sm:gap-0 p-1 ${
               (() => {
                 const visibleTabs = [
