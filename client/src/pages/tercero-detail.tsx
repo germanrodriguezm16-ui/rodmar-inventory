@@ -426,7 +426,7 @@ export default function TerceroDetail() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground">Tercero no encontrado</p>
-          <Button onClick={() => setLocation("/rodmar")} className="mt-4">
+          <Button onClick={() => setLocation("/rodmar?tab=terceros")} className="mt-4">
             Volver
           </Button>
         </div>
