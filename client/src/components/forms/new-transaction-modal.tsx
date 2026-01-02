@@ -922,7 +922,8 @@ function NewTransactionModal({
             createdTransaction.paraQuienId,
             minas,
             compradores,
-            volqueteros
+            volqueteros,
+            terceros
           ) || 'Socio'}
           minas={minas}
           compradores={compradores}

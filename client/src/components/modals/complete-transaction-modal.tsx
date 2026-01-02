@@ -451,7 +451,8 @@ export function CompleteTransactionModal({
             completedTransaction.paraQuienId,
             minas,
             compradores,
-            volqueteros
+            volqueteros,
+            terceros
           ) || 'Socio'}
           minas={minas}
           compradores={compradores}

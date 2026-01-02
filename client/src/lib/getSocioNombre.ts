@@ -1,12 +1,13 @@
-import type { Mina, Comprador, Volquetero } from "@shared/schema";
+import type { Mina, Comprador, Volquetero, Tercero } from "@shared/schema";
 
 /**
  * Obtiene el nombre de un socio basado en su tipo e ID
- * @param tipo Tipo del socio (mina, comprador, volquetero, rodmar, banco, lcdm, postobon)
+ * @param tipo Tipo del socio (mina, comprador, volquetero, rodmar, banco, lcdm, postobon, tercero)
  * @param id ID o nombre del socio
  * @param minas Lista de minas (opcional)
  * @param compradores Lista de compradores (opcional)
  * @param volqueteros Lista de volqueteros (opcional)
+ * @param terceros Lista de terceros (opcional)
  * @returns Nombre del socio o null si no se encuentra
  */
 export function getSocioNombre(
@@ -14,7 +15,8 @@ export function getSocioNombre(
   id: string | number | null | undefined,
   minas?: Mina[],
   compradores?: Comprador[],
-  volqueteros?: Volquetero[]
+  volqueteros?: Volquetero[],
+  terceros?: Tercero[]
 ): string | null {
   if (!tipo || !id) return null;
 
@@ -42,6 +44,13 @@ export function getSocioNombre(
       }
       // Si no hay lista, asumir que el ID es el nombre (para volqueteros)
       return idStr;
+    
+    case 'tercero':
+      if (terceros) {
+        const tercero = terceros.find(t => t.id.toString() === idStr);
+        return tercero?.nombre || null;
+      }
+      return null;
     
     case 'rodmar':
       const rodmarOptions: Record<string, string> = {

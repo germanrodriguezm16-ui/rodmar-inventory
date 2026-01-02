@@ -12,7 +12,7 @@ import { getSocioNombre } from "@/lib/getSocioNombre";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import html2canvas from "html2canvas";
-import type { Mina, Comprador, Volquetero } from "@shared/schema";
+import type { Mina, Comprador, Volquetero, Tercero } from "@shared/schema";
 
 interface TransactionDetailModalProps {
   open: boolean;
@@ -48,6 +48,11 @@ export function TransactionDetailModal({
     queryKey: ["/api/volqueteros"],
     enabled: open,
   });
+
+  const { data: terceros = [] } = useQuery<Tercero[]>({
+    queryKey: ["/api/terceros"],
+    enabled: open,
+  });
   
   const socioDestinoNombre = transaction?.paraQuienTipo 
     ? getSocioNombre(
@@ -55,7 +60,8 @@ export function TransactionDetailModal({
         transaction.paraQuienId,
         minas,
         compradores,
-        volqueteros
+        volqueteros,
+        terceros
       ) || 'Socio'
     : 'Socio';
   
