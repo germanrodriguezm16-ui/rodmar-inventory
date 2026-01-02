@@ -736,7 +736,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user!.id;
       const terceros = await storage.getTerceros(userId);
-      res.json(terceros);
+      
+      // Obtener todas las transacciones para calcular balances dinámicamente
+      const transacciones = await storage.getTransacciones();
+      
+      // Calcular balance de cada tercero desde las transacciones (similar a cuentas RodMar)
+      const tercerosConBalance = terceros.map((tercero) => {
+        let positivos = 0;
+        let negativos = 0;
+
+        // Filtrar transacciones que afectan este tercero específico
+        transacciones.forEach((transaccion: any) => {
+          const valor = parseFloat(transaccion.valor || "0");
+          const terceroIdStr = tercero.id.toString();
+
+          // Positivos: Transacciones desde tercero (RodMar le debe al tercero)
+          if (
+            transaccion.deQuienTipo === "tercero" &&
+            transaccion.deQuienId === terceroIdStr
+          ) {
+            positivos += valor;
+          }
+
+          // Negativos: Transacciones hacia tercero (El tercero le debe a RodMar)
+          if (
+            transaccion.paraQuienTipo === "tercero" &&
+            transaccion.paraQuienId === terceroIdStr
+          ) {
+            negativos += valor;
+          }
+        });
+
+        const balance = positivos - negativos;
+
+        return {
+          ...tercero,
+          balance, // Balance calculado dinámicamente
+        };
+      });
+
+      res.json(tercerosConBalance);
     } catch (error: any) {
       console.error("Error fetching terceros:", error.message);
       res.status(500).json({ error: "Failed to fetch terceros" });

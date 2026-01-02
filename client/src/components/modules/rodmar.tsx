@@ -543,10 +543,10 @@ export default function RodMar() {
                             <div className="flex items-center gap-2">
                               <div className="text-right">
                                 <p className={`text-sm font-bold ${
-                                  parseFloat(tercero.saldo || 0) > 0 ? 'text-green-600' : 
-                                  parseFloat(tercero.saldo || 0) < 0 ? 'text-red-600' : 'text-gray-600'
+                                  (tercero.balance || 0) > 0 ? 'text-green-600' : 
+                                  (tercero.balance || 0) < 0 ? 'text-red-600' : 'text-gray-600'
                                 }`}>
-                                  {formatCurrency(parseFloat(tercero.saldo || 0))}
+                                  {formatCurrency(tercero.balance || 0)}
                                 </p>
                               </div>
                               <ChevronRight className="w-4 h-4 text-muted-foreground" />
