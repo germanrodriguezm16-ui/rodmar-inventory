@@ -44,6 +44,7 @@ import DeleteTransactionModal from "@/components/forms/delete-transaction-modal"
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import { useMutation } from "@tanstack/react-query";
 import { useHiddenTransactions } from "@/hooks/useHiddenTransactions";
+import AddTerceroModal from "@/components/modals/add-tercero-modal";
 
 ChartJS.register(
   CategoryScale,
@@ -70,6 +71,7 @@ export default function RodMar() {
   const { has } = usePermissions();
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
   const [selectedSubAccount, setSelectedSubAccount] = useState<string>("");
+  const [showAddTerceroModal, setShowAddTerceroModal] = useState(false);
 
 
 
@@ -408,7 +410,8 @@ export default function RodMar() {
             <TabsList className={`rodmar-tabs grid w-full gap-1 sm:gap-0 p-1 ${
               (() => {
                 const visibleTabs = [
-                  has("module.RODMAR.accounts.view"),
+                  has("module.RODMAR.accounts.view"), // cuentas
+                  has("module.RODMAR.accounts.view"), // terceros
                   has("module.RODMAR.balances.view"),
                   has("module.RODMAR.balances.view"), // financiero usa balances
                   has("module.RODMAR.LCDM.view"),
@@ -423,9 +426,14 @@ export default function RodMar() {
               })()
             }`}>
               {has("module.RODMAR.accounts.view") && (
-                <TabsTrigger value="cuentas" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
-                  Cuentas
-                </TabsTrigger>
+                <>
+                  <TabsTrigger value="cuentas" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
+                    Cuentas
+                  </TabsTrigger>
+                  <TabsTrigger value="terceros" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
+                    Terceros
+                  </TabsTrigger>
+                </>
               )}
               {has("module.RODMAR.balances.view") && (
                 <>
@@ -486,6 +494,63 @@ export default function RodMar() {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Tab: Terceros */}
+            <TabsContent value="terceros" className="mt-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-foreground">Terceros</h3>
+                  </div>
+                  {has("module.RODMAR.accounts.view") && (
+                    <Button 
+                      onClick={() => setShowAddTerceroModal(true)} 
+                      size="sm"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Nuevo Tercero
+                    </Button>
+                  )}
+                </div>
+                
+                {/* Lista de Terceros - Formato Compacto y Uniforme */}
+                <div className="space-y-2">
+                  {terceros.length === 0 ? (
+                    <Card>
+                      <CardContent className="p-6 text-center">
+                        <p className="text-muted-foreground">No hay terceros registrados</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    terceros.map((tercero: any) => (
+                      <Card key={tercero.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                            onClick={() => setLocation(`/terceros/${tercero.id}`)}>
+                        <CardContent className="p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-blue-600" />
+                              <h4 className="font-medium text-foreground text-sm">{tercero.nombre}</h4>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-right">
+                                <p className={`text-sm font-bold ${
+                                  parseFloat(tercero.saldo || 0) > 0 ? 'text-green-600' : 
+                                  parseFloat(tercero.saldo || 0) < 0 ? 'text-red-600' : 'text-gray-600'
+                                }`}>
+                                  {formatCurrency(parseFloat(tercero.saldo || 0))}
+                                </p>
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -878,6 +943,12 @@ export default function RodMar() {
           setSelectedSubAccount("");
         }}
         subpestana={selectedSubAccount}
+      />
+
+      {/* Modal para crear nuevo tercero */}
+      <AddTerceroModal 
+        open={showAddTerceroModal} 
+        onOpenChange={setShowAddTerceroModal}
       />
     </div>
   );

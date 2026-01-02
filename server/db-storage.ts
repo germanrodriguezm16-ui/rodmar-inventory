@@ -3,6 +3,7 @@ import {
   minas,
   compradores,
   volqueteros,
+  terceros,
   viajes,
   transacciones,
   inversiones,
@@ -16,6 +17,8 @@ import {
   type InsertComprador,
   type Volquetero,
   type InsertVolquetero,
+  type Tercero,
+  type InsertTercero,
   type Viaje,
   type InsertViaje,
   type UpdateViaje,
@@ -255,6 +258,82 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .returning();
     return updatedComprador;
+  }
+
+  // Terceros operations
+  async getTerceros(userId?: string): Promise<Tercero[]> {
+    return wrapDbOperation(async () => {
+      const query = db.select().from(terceros).orderBy(desc(terceros.createdAt));
+      
+      if (userId) {
+        return await query.where(eq(terceros.userId, userId));
+      }
+      
+      return await query;
+    });
+  }
+
+  async getTerceroById(id: number, userId?: string): Promise<Tercero | undefined> {
+    const conditions = [eq(terceros.id, id)];
+    if (userId) {
+      conditions.push(eq(terceros.userId, userId));
+    }
+    
+    const [tercero] = await db.select().from(terceros).where(and(...conditions));
+    return tercero;
+  }
+
+  async createTercero(tercero: InsertTercero & { userId?: string }): Promise<Tercero> {
+    return wrapDbOperation(async () => {
+      const [newTercero] = await db.insert(terceros).values({
+        ...tercero,
+        userId: tercero.userId || 'main_user',
+      }).returning();
+      return newTercero;
+    });
+  }
+
+  async updateTercero(id: number, updates: Partial<InsertTercero>, userId?: string): Promise<Tercero | undefined> {
+    const conditions = [eq(terceros.id, id)];
+    if (userId) {
+      conditions.push(eq(terceros.userId, userId));
+    }
+
+    const [updatedTercero] = await db
+      .update(terceros)
+      .set(updates)
+      .where(and(...conditions))
+      .returning();
+    return updatedTercero;
+  }
+
+  async deleteTercero(id: number, userId?: string): Promise<boolean> {
+    try {
+      const conditions = [eq(terceros.id, id)];
+      if (userId) {
+        conditions.push(eq(terceros.userId, userId));
+      }
+
+      const deleted = await db.delete(terceros).where(and(...conditions)).returning();
+      return deleted.length > 0;
+    } catch (error) {
+      console.error(`❌ [deleteTercero] Error deleting tercero ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async updateTerceroNombre(id: number, nombre: string, userId?: string): Promise<Tercero | undefined> {
+    const conditions = [eq(terceros.id, id)];
+    if (userId) {
+      conditions.push(eq(terceros.userId, userId));
+    }
+
+    const [updatedTercero] = await db
+      .update(terceros)
+      .set({ nombre })
+      .where(and(...conditions))
+      .returning();
+    return updatedTercero;
   }
 
   // Volqueteros operations

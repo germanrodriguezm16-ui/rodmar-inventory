@@ -112,6 +112,18 @@ export const volqueteros = pgTable("volqueteros", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Terceros (Third Parties - External accounts)
+export const terceros = pgTable("terceros", {
+  id: serial("id").primaryKey(),
+  nombre: text("nombre").notNull(),
+  saldo: decimal("saldo", { precision: 15, scale: 2 }).default("0"),
+  balanceCalculado: decimal("balance_calculado", { precision: 15, scale: 2 }).default("0"),
+  balanceDesactualizado: boolean("balance_desactualizado").default(false).notNull(),
+  ultimoRecalculo: timestamp("ultimo_recalculo").defaultNow(),
+  userId: varchar("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Viajes (Trips)
 export const viajes = pgTable("viajes", {
   id: text("id").primaryKey(), // TRP001, TRP002, etc.
@@ -235,6 +247,12 @@ export const insertCompradorSchema = createInsertSchema(compradores).omit({
 });
 
 export const insertVolqueteroSchema = createInsertSchema(volqueteros).omit({
+  id: true,
+  saldo: true,
+  createdAt: true,
+});
+
+export const insertTerceroSchema = createInsertSchema(terceros).omit({
   id: true,
   saldo: true,
   createdAt: true,
@@ -443,6 +461,10 @@ export const updateVolqueteroNombreSchema = z.object({
   nombre: z.string().min(1, "El nombre no puede estar vacío").trim(),
 });
 
+export const updateTerceroNombreSchema = z.object({
+  nombre: z.string().min(1, "El nombre no puede estar vacío").trim(),
+});
+
 // Fusion schemas
 export const fusionSchema = z.object({
   origenId: z.number().min(1, "ID origen requerido"),
@@ -481,6 +503,9 @@ export type Volquetero = typeof volqueteros.$inferSelect;
 export type InsertVolquetero = z.infer<typeof insertVolqueteroSchema>;
 export type VolqueteroWithViajes = Volquetero & { viajesCount: number };
 
+export type Tercero = typeof terceros.$inferSelect;
+export type InsertTercero = z.infer<typeof insertTerceroSchema>;
+
 export type VolqueteroConPlacas = {
   id: number;
   nombre: string;
@@ -506,6 +531,7 @@ export type InsertInversion = z.infer<typeof insertInversionSchema>;
 export type UpdateMinaNombre = z.infer<typeof updateMinaNombreSchema>;
 export type UpdateCompradorNombre = z.infer<typeof updateCompradorNombreSchema>;
 export type UpdateVolqueteroNombre = z.infer<typeof updateVolqueteroNombreSchema>;
+export type UpdateTerceroNombre = z.infer<typeof updateTerceroNombreSchema>;
 
 export type FusionBackup = typeof fusionBackups.$inferSelect;
 export type FusionRequest = z.infer<typeof fusionSchema>;

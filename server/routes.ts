@@ -14,6 +14,7 @@ import {
   insertMinaSchema,
   insertCompradorSchema,
   insertVolqueteroSchema,
+  insertTerceroSchema,
   insertViajeSchema,
   excelImportViajeSchema,
   updateViajeSchema,
@@ -22,6 +23,7 @@ import {
   updateMinaNombreSchema,
   updateCompradorNombreSchema,
   updateVolqueteroNombreSchema,
+  updateTerceroNombreSchema,
   fusionSchema,
   revertFusionSchema,
 } from "@shared/schema";
@@ -726,6 +728,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res
         .status(500)
         .json({ error: "Failed to fetch transacciones for comprador" });
+    }
+  });
+
+  // Terceros routes
+  app.get("/api/terceros", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const terceros = await storage.getTerceros(userId);
+      res.json(terceros);
+    } catch (error: any) {
+      console.error("Error fetching terceros:", error.message);
+      res.status(500).json({ error: "Failed to fetch terceros" });
+    }
+  });
+
+  app.get("/api/terceros/:id", async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      if (isNaN(terceroId)) {
+        return res.status(400).json({ error: "Invalid tercero ID" });
+      }
+
+      const tercero = await storage.getTerceroById(terceroId);
+      if (!tercero) {
+        return res.status(404).json({ error: "Tercero not found" });
+      }
+
+      res.json(tercero);
+    } catch (error: any) {
+      console.error("Error fetching tercero:", error);
+      res.status(500).json({ error: "Failed to fetch tercero" });
+    }
+  });
+
+  app.post("/api/terceros", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const data = insertTerceroSchema.parse(req.body);
+      const tercero = await storage.createTercero({ ...data, userId });
+      res.json(tercero);
+    } catch (error: any) {
+      console.error("Error creating tercero:", error.message);
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || 
+          error.code === 'ETIMEDOUT' || error.code === 'DB_CONNECTION_ERROR' ||
+          error.code === 'XX000' || error.code === 'NO_DATABASE_URL' || 
+          error.message?.includes('DATABASE_URL') || error.message?.includes('getaddrinfo') || 
+          error.message?.includes('connect') || error.message?.includes('Tenant or user not found')) {
+        res.status(503).json({ 
+          error: "Base de datos no disponible", 
+          details: "No se pudo conectar a la base de datos." 
+        });
+      } else if (error.name === 'ZodError' || error.message?.includes('parse')) {
+        res.status(400).json({ error: "Invalid tercero data", details: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to create tercero", details: error.message });
+      }
+    }
+  });
+
+  app.patch("/api/terceros/:id/nombre", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      if (isNaN(terceroId)) {
+        return res.status(400).json({ error: "Invalid tercero ID" });
+      }
+
+      const userId = req.user!.id;
+      const data = updateTerceroNombreSchema.parse(req.body);
+      const tercero = await storage.updateTerceroNombre(terceroId, data.nombre, userId);
+
+      if (!tercero) {
+        return res.status(404).json({ error: "Tercero not found" });
+      }
+
+      res.json(tercero);
+    } catch (error: any) {
+      console.error("Error updating tercero nombre:", error);
+      if (error.name === 'ZodError') {
+        res.status(400).json({ error: "Invalid data", details: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to update tercero nombre" });
+      }
+    }
+  });
+
+  app.delete("/api/terceros/:id", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      if (isNaN(terceroId)) {
+        return res.status(400).json({ error: "Invalid tercero ID" });
+      }
+
+      const userId = req.user!.id;
+      const deleted = await storage.deleteTercero(terceroId, userId);
+
+      if (!deleted) {
+        return res.status(404).json({ error: "Tercero not found" });
+      }
+
+      res.json({ success: true, message: "Tercero deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting tercero:", error);
+      res.status(500).json({ error: "Failed to delete tercero" });
     }
   });
 
