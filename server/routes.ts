@@ -3758,7 +3758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalPages,
           hasMore: validPage < totalPages,
         },
-        hiddenCount: hiddenPostobonCount,
+        hiddenCount: 0, // El ocultamiento ahora se maneja localmente en el frontend
       });
     } catch (error) {
       console.error("[Postobón] Error fetching Postobón transactions:", error);
