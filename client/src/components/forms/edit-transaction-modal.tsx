@@ -15,7 +15,7 @@ import { X, Edit3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useVouchers } from "@/hooks/useVouchers";
 import { apiUrl } from "@/lib/api";
-import type { TransaccionWithSocio, Mina, Comprador, Volquetero } from "@shared/schema";
+import type { TransaccionWithSocio, Mina, Comprador, Volquetero, Tercero } from "@shared/schema";
 
 // Exactamente el mismo schema que new-transaction-modal.tsx
 const editTransactionSchema = z.object({
@@ -117,6 +117,11 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
     enabled: isOpen,
   });
 
+  const { data: terceros = [] } = useQuery<Tercero[]>({
+    queryKey: ["/api/terceros"],
+    enabled: isOpen,
+  });
+
   // Función para obtener la fecha local en formato YYYY-MM-DD
   const getTodayLocalDate = () => {
     const today = new Date();
@@ -169,6 +174,8 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         return compradores.map(comprador => ({ value: comprador.id.toString(), label: comprador.nombre }));
       case "volquetero":
         return volqueteros.map(volquetero => ({ value: volquetero.id.toString(), label: volquetero.nombre }));
+      case "tercero":
+        return terceros.map(tercero => ({ value: tercero.id.toString(), label: tercero.nombre }));
       case "rodmar":
         return rodmarOptions;
       case "banco":
@@ -191,6 +198,8 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         return compradores.find(comprador => comprador.id.toString() === id)?.nombre || "Desconocido";
       case "volquetero":
         return volqueteros.find(volquetero => volquetero.id.toString() === id)?.nombre || "Desconocido";
+      case "tercero":
+        return terceros.find(tercero => tercero.id.toString() === id)?.nombre || "Desconocido";
       case "rodmar":
         return rodmarOptions.find(option => option.value === id)?.label || "Efectivo";
       case "banco":
@@ -570,6 +579,44 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
           }
         });
       }
+      if (affectedEntityTypes.has('tercero')) {
+        queryClient.invalidateQueries({ queryKey: ["/api/terceros"] });
+        
+        // Invalidar queries específicas del tercero afectado
+        const terceroIdAffected = transaccion.deQuienTipo === 'tercero' ? transaccion.deQuienId : transaccion.paraQuienId;
+        if (terceroIdAffected) {
+          const affectedId = parseInt(terceroIdAffected);
+          if (!isNaN(affectedId)) {
+            queryClient.invalidateQueries({ 
+              queryKey: ["/api/terceros", affectedId, "transacciones"],
+              refetchType: 'active'
+            });
+            queryClient.invalidateQueries({ 
+              queryKey: [`/api/terceros/${affectedId}/transacciones`],
+              refetchType: 'active'
+            });
+          }
+        }
+        
+        // Si la transacción original también tenía tercero, invalidar también
+        if (originalTransaction) {
+          const originalTerceroIdAffected = originalTransaction.deQuienTipo === 'tercero' ? originalTransaction.deQuienId : 
+                                           originalTransaction.paraQuienTipo === 'tercero' ? originalTransaction.paraQuienId : null;
+          if (originalTerceroIdAffected && originalTerceroIdAffected !== terceroIdAffected) {
+            const originalAffectedId = parseInt(originalTerceroIdAffected);
+            if (!isNaN(originalAffectedId)) {
+              queryClient.invalidateQueries({ 
+                queryKey: ["/api/terceros", originalAffectedId, "transacciones"],
+                refetchType: 'active'
+              });
+              queryClient.invalidateQueries({ 
+                queryKey: [`/api/terceros/${originalAffectedId}/transacciones`],
+                refetchType: 'active'
+              });
+            }
+          }
+        }
+      }
       
       // 5. Invalidar queries específicas para LCDM/Postobón
       if (affectedEntityTypes.has('lcdm') || affectedEntityTypes.has('postobon')) {
@@ -754,6 +801,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
                       <SelectItem value="comprador">Comprador</SelectItem>
                       <SelectItem value="mina">Mina</SelectItem>
                       <SelectItem value="volquetero">Volquetero</SelectItem>
+                      <SelectItem value="tercero">Tercero</SelectItem>
                       <SelectItem value="lcdm">LCDM</SelectItem>
                       <SelectItem value="postobon">Postobón</SelectItem>
                     </SelectContent>
@@ -794,7 +842,8 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
                   <FormItem>
                     <FormLabel className="text-gray-700 font-semibold">
                       {watchedDeQuienTipo === "comprador" ? "Comprador" :
-                       watchedDeQuienTipo === "volquetero" ? "Volquetero" : "Mina"}
+                       watchedDeQuienTipo === "volquetero" ? "Volquetero" :
+                       watchedDeQuienTipo === "tercero" ? "Tercero" : "Mina"}
                     </FormLabel>
                     <FormControl>
                       <SearchableSelect
@@ -802,7 +851,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
                         value={field.value}
                         onValueChange={field.onChange}
                         placeholder="Seleccionar..."
-                        searchPlaceholder={`Buscar ${watchedDeQuienTipo === "comprador" ? "comprador" : watchedDeQuienTipo === "volquetero" ? "volquetero" : "mina"}...`}
+                        searchPlaceholder={`Buscar ${watchedDeQuienTipo === "comprador" ? "comprador" : watchedDeQuienTipo === "volquetero" ? "volquetero" : watchedDeQuienTipo === "tercero" ? "tercero" : "mina"}...`}
                         emptyMessage="No se encontraron resultados"
                       />
                     </FormControl>
@@ -863,6 +912,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
                       <SelectItem value="mina">Mina</SelectItem>
                       <SelectItem value="volquetero">Volquetero</SelectItem>
                       <SelectItem value="comprador">Comprador</SelectItem>
+                      <SelectItem value="tercero">Tercero</SelectItem>
                       <SelectItem value="rodmar">RodMar</SelectItem>
                       <SelectItem value="banco">Banco</SelectItem>
                       <SelectItem value="lcdm">LCDM</SelectItem>
@@ -905,7 +955,8 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
                   <FormItem>
                     <FormLabel className="text-gray-700 font-semibold">
                       {watchedParaQuienTipo === "comprador" ? "Comprador" :
-                       watchedParaQuienTipo === "volquetero" ? "Volquetero" : "Mina"}
+                       watchedParaQuienTipo === "volquetero" ? "Volquetero" :
+                       watchedParaQuienTipo === "tercero" ? "Tercero" : "Mina"}
                     </FormLabel>
                     <FormControl>
                       <SearchableSelect
@@ -913,7 +964,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
                         value={field.value}
                         onValueChange={field.onChange}
                         placeholder="Seleccionar..."
-                        searchPlaceholder={`Buscar ${watchedParaQuienTipo === "comprador" ? "comprador" : watchedParaQuienTipo === "volquetero" ? "volquetero" : "mina"}...`}
+                        searchPlaceholder={`Buscar ${watchedParaQuienTipo === "comprador" ? "comprador" : watchedParaQuienTipo === "volquetero" ? "volquetero" : watchedParaQuienTipo === "tercero" ? "tercero" : "mina"}...`}
                         emptyMessage="No se encontraron resultados"
                       />
                     </FormControl>

@@ -2805,6 +2805,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tipoSocio = "volquetero";
           socioId = parseInt(data.paraQuienId);
           break;
+        case "tercero":
+          tipoSocio = "tercero";
+          socioId = parseInt(data.paraQuienId);
+          break;
         case "rodmar":
           // For RodMar, we'll use a special handling - but map to mina for now
           tipoSocio = "mina"; // Temporary mapping
@@ -2952,6 +2956,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           socioId = volquetero.id;
           break;
+        case "tercero":
+          socioId = parseInt(data.paraQuienId);
+          break;
         default:
           tipoSocio = "mina";
           socioId = 1;
@@ -2973,6 +2980,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             break;
           case "volquetero":
             nombreDestino = data.paraQuienId; // Ya es el nombre
+            break;
+          case "tercero":
+            const tercero = await storage.getTerceroById(parseInt(data.paraQuienId));
+            nombreDestino = tercero?.nombre || data.paraQuienId;
             break;
           case "rodmar":
             const rodmarOptions: Record<string, string> = {

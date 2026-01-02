@@ -15,7 +15,7 @@ import { X, FileText } from "lucide-react";
 import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import type { Mina, Comprador, Volquetero } from "@shared/schema";
+import type { Mina, Comprador, Volquetero, Tercero } from "@shared/schema";
 
 const solicitarSchema = z.object({
   paraQuienTipo: z.string().min(1, "Debe seleccionar para quién es la transacción"),
@@ -175,6 +175,11 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
     enabled: open,
   });
 
+  const { data: terceros = [] } = useQuery<Tercero[]>({
+    queryKey: ["/api/terceros"],
+    enabled: open,
+  });
+
   const form = useForm<z.infer<typeof solicitarSchema>>({
     resolver: zodResolver(solicitarSchema),
     defaultValues: {
@@ -221,6 +226,8 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
         return compradores.map(comprador => ({ value: comprador.id.toString(), label: comprador.nombre }));
       case "volquetero":
         return volqueteros.map(volquetero => ({ value: volquetero.id.toString(), label: volquetero.nombre }));
+      case "tercero":
+        return terceros.map(tercero => ({ value: tercero.id.toString(), label: tercero.nombre }));
       case "rodmar":
         return rodmarOptions;
       case "banco":
@@ -523,6 +530,7 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
                       <SelectItem value="mina">Mina</SelectItem>
                       <SelectItem value="volquetero">Volquetero</SelectItem>
                       <SelectItem value="comprador">Comprador</SelectItem>
+                      <SelectItem value="tercero">Tercero</SelectItem>
                       <SelectItem value="rodmar">RodMar</SelectItem>
                       <SelectItem value="banco">Banco</SelectItem>
                       <SelectItem value="lcdm">LCDM</SelectItem>
@@ -571,7 +579,8 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
                   <FormItem>
                     <FormLabel className="text-sm font-semibold">
                       {watchedParaQuienTipo === "comprador" ? "Comprador" :
-                       watchedParaQuienTipo === "volquetero" ? "Volquetero" : "Mina"}
+                       watchedParaQuienTipo === "volquetero" ? "Volquetero" :
+                       watchedParaQuienTipo === "tercero" ? "Tercero" : "Mina"}
                     </FormLabel>
                     <FormControl>
                       <SearchableSelect
@@ -579,7 +588,7 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
                         value={field.value}
                         onValueChange={field.onChange}
                         placeholder="Seleccionar..."
-                        searchPlaceholder={`Buscar ${watchedParaQuienTipo === "comprador" ? "comprador" : watchedParaQuienTipo === "volquetero" ? "volquetero" : "mina"}...`}
+                        searchPlaceholder={`Buscar ${watchedParaQuienTipo === "comprador" ? "comprador" : watchedParaQuienTipo === "volquetero" ? "volquetero" : watchedParaQuienTipo === "tercero" ? "tercero" : "mina"}...`}
                         emptyMessage="No se encontraron resultados"
                       />
                     </FormControl>

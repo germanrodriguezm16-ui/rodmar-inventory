@@ -20,7 +20,7 @@ import { TransactionReceiptModal } from "@/components/modals/transaction-receipt
 import { getSocioNombre } from "@/lib/getSocioNombre";
 // import { useOptimalMobileForm } from "@/hooks/useOptimalMobileForm";
 
-import type { Mina, Comprador, Volquetero } from "@shared/schema";
+import type { Mina, Comprador, Volquetero, Tercero } from "@shared/schema";
 
 // Schema base - campos opcionales para permitir solicitudes
 const formSchema = z.object({
@@ -106,6 +106,11 @@ function NewTransactionModal({
     enabled: open,
   });
 
+  const { data: terceros = [] } = useQuery<Tercero[]>({
+    queryKey: ["/api/terceros"],
+    enabled: open,
+  });
+
   // Función para obtener la fecha local en formato YYYY-MM-DD
   const getTodayLocalDate = () => {
     const today = new Date();
@@ -143,6 +148,8 @@ function NewTransactionModal({
         return compradores.map(comprador => ({ value: comprador.id.toString(), label: comprador.nombre }));
       case "volquetero":
         return volqueteros.map(volquetero => ({ value: volquetero.id.toString(), label: volquetero.nombre }));
+      case "tercero":
+        return terceros.map(tercero => ({ value: tercero.id.toString(), label: tercero.nombre }));
       case "rodmar":
         return rodmarOptions;
       case "banco":
@@ -165,6 +172,8 @@ function NewTransactionModal({
         return compradores.find(comprador => comprador.id.toString() === id)?.nombre || "Desconocido";
       case "volquetero":
         return volqueteros.find(volquetero => volquetero.id.toString() === id)?.nombre || "Desconocido";
+      case "tercero":
+        return terceros.find(tercero => tercero.id.toString() === id)?.nombre || "Desconocido";
       case "rodmar":
         return rodmarOptions.find(option => option.value === id)?.label || "Efectivo";
       case "banco":
@@ -357,6 +366,20 @@ function NewTransactionModal({
             // React Query refetchea automáticamente si la query está activa
           }
         }
+        if (data.deQuienTipo === 'tercero' || data.paraQuienTipo === 'tercero') {
+          queryClient.invalidateQueries({ queryKey: ["/api/terceros"] });
+          
+          // Invalidar queries específicas del tercero afectado
+          const terceroIdAffected = data.deQuienTipo === 'tercero' ? data.deQuienId : data.paraQuienId;
+          if (terceroIdAffected) {
+            const affectedId = parseInt(terceroIdAffected);
+            queryClient.invalidateQueries({ 
+              queryKey: [`/api/terceros/${affectedId}/transacciones`],
+              refetchType: 'active'
+            });
+            // React Query refetchea automáticamente si la query está activa
+          }
+        }
         
         // Invalidar queries de LCDM/Postobón si están involucradas
         if (data.deQuienTipo === 'lcdm' || data.paraQuienTipo === 'lcdm') {
@@ -498,6 +521,7 @@ function NewTransactionModal({
                       <SelectItem value="comprador">Comprador</SelectItem>
                       <SelectItem value="volquetero">Volquetero</SelectItem>
                       <SelectItem value="mina">Mina</SelectItem>
+                      <SelectItem value="tercero">Tercero</SelectItem>
                       <SelectItem value="lcdm">LCDM</SelectItem>
                       <SelectItem value="postobon">Postobón</SelectItem>
                     </SelectContent>
@@ -592,7 +616,8 @@ function NewTransactionModal({
                   <FormItem>
                     <FormLabel>
                       {watchedDeQuienTipo === "comprador" ? "Comprador" :
-                       watchedDeQuienTipo === "volquetero" ? "Volquetero" : "Mina"}
+                       watchedDeQuienTipo === "volquetero" ? "Volquetero" :
+                       watchedDeQuienTipo === "tercero" ? "Tercero" : "Mina"}
                     </FormLabel>
                     <FormControl>
                       <SearchableSelect
@@ -600,7 +625,7 @@ function NewTransactionModal({
                         value={field.value}
                         onValueChange={field.onChange}
                         placeholder="Seleccionar..."
-                        searchPlaceholder={`Buscar ${watchedDeQuienTipo === "comprador" ? "comprador" : watchedDeQuienTipo === "volquetero" ? "volquetero" : "mina"}...`}
+                        searchPlaceholder={`Buscar ${watchedDeQuienTipo === "comprador" ? "comprador" : watchedDeQuienTipo === "volquetero" ? "volquetero" : watchedDeQuienTipo === "tercero" ? "tercero" : "mina"}...`}
                         emptyMessage="No se encontraron resultados"
                       />
                     </FormControl>
@@ -633,6 +658,7 @@ function NewTransactionModal({
                       <SelectItem value="mina">Mina</SelectItem>
                       <SelectItem value="volquetero">Volquetero</SelectItem>
                       <SelectItem value="comprador">Comprador</SelectItem>
+                      <SelectItem value="tercero">Tercero</SelectItem>
                       <SelectItem value="rodmar">RodMar</SelectItem>
                       <SelectItem value="banco">Banco</SelectItem>
                       <SelectItem value="lcdm">LCDM</SelectItem>
@@ -729,7 +755,8 @@ function NewTransactionModal({
                   <FormItem>
                     <FormLabel>
                       {watchedParaQuienTipo === "comprador" ? "Comprador" :
-                       watchedParaQuienTipo === "volquetero" ? "Volquetero" : "Mina"}
+                       watchedParaQuienTipo === "volquetero" ? "Volquetero" :
+                       watchedParaQuienTipo === "tercero" ? "Tercero" : "Mina"}
                     </FormLabel>
                     <FormControl>
                       <SearchableSelect
@@ -737,7 +764,7 @@ function NewTransactionModal({
                         value={field.value}
                         onValueChange={field.onChange}
                         placeholder="Seleccionar..."
-                        searchPlaceholder={`Buscar ${watchedParaQuienTipo === "comprador" ? "comprador" : watchedParaQuienTipo === "volquetero" ? "volquetero" : "mina"}...`}
+                        searchPlaceholder={`Buscar ${watchedParaQuienTipo === "comprador" ? "comprador" : watchedParaQuienTipo === "volquetero" ? "volquetero" : watchedParaQuienTipo === "tercero" ? "tercero" : "mina"}...`}
                         emptyMessage="No se encontraron resultados"
                       />
                     </FormControl>

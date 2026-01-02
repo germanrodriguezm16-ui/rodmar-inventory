@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { TransactionReceiptModal } from "@/components/modals/transaction-receipt-modal";
 import { getSocioNombre } from "@/lib/getSocioNombre";
-import type { Mina, Comprador, Volquetero } from "@shared/schema";
+import type { Mina, Comprador, Volquetero, Tercero } from "@shared/schema";
 
 const completeSchema = z.object({
   deQuienTipo: z.string().min(1, "Debe seleccionar el origen"),
@@ -87,6 +87,11 @@ export function CompleteTransactionModal({
     enabled: open,
   });
 
+  const { data: terceros = [] } = useQuery<Tercero[]>({
+    queryKey: ["/api/terceros"],
+    enabled: open,
+  });
+
   const form = useForm<z.infer<typeof completeSchema>>({
     resolver: zodResolver(completeSchema),
     defaultValues: {
@@ -122,6 +127,8 @@ export function CompleteTransactionModal({
         return compradores.map(comprador => ({ value: comprador.id.toString(), label: comprador.nombre }));
       case "volquetero":
         return volqueteros.map(volquetero => ({ value: volquetero.id.toString(), label: volquetero.nombre }));
+      case "tercero":
+        return terceros.map(tercero => ({ value: tercero.id.toString(), label: tercero.nombre }));
       case "rodmar":
         return rodmarOptions;
       case "banco":
@@ -279,6 +286,7 @@ export function CompleteTransactionModal({
                       <SelectItem value="comprador">Comprador</SelectItem>
                       <SelectItem value="volquetero">Volquetero</SelectItem>
                       <SelectItem value="mina">Mina</SelectItem>
+                      <SelectItem value="tercero">Tercero</SelectItem>
                       <SelectItem value="lcdm">LCDM</SelectItem>
                       <SelectItem value="postobon">Postobón</SelectItem>
                     </SelectContent>
@@ -325,7 +333,8 @@ export function CompleteTransactionModal({
                   <FormItem>
                     <FormLabel className="text-sm font-semibold">
                       {watchedDeQuienTipo === "comprador" ? "Comprador" :
-                       watchedDeQuienTipo === "volquetero" ? "Volquetero" : "Mina"}
+                       watchedDeQuienTipo === "volquetero" ? "Volquetero" :
+                       watchedDeQuienTipo === "tercero" ? "Tercero" : "Mina"}
                     </FormLabel>
                     <FormControl>
                       <SearchableSelect
@@ -333,7 +342,7 @@ export function CompleteTransactionModal({
                         value={field.value}
                         onValueChange={field.onChange}
                         placeholder="Seleccionar..."
-                        searchPlaceholder={`Buscar ${watchedDeQuienTipo === "comprador" ? "comprador" : watchedDeQuienTipo === "volquetero" ? "volquetero" : "mina"}...`}
+                        searchPlaceholder={`Buscar ${watchedDeQuienTipo === "comprador" ? "comprador" : watchedDeQuienTipo === "volquetero" ? "volquetero" : watchedDeQuienTipo === "tercero" ? "tercero" : "mina"}...`}
                         emptyMessage="No se encontraron resultados"
                       />
                     </FormControl>
