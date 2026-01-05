@@ -5659,6 +5659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 2. Normalizar el nombre (mayúsculas y trim)
       const normalizedNombre = nombre.toUpperCase().trim();
+      const normalizedCurrentNombre = (currentRole.nombre || "").toUpperCase().trim();
 
       // 3. Construir objeto de actualización condicionalmente
       const updateData: { nombre?: string; descripcion: string | null; updatedAt: Date } = {
@@ -5666,8 +5667,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: new Date(),
       };
 
-      // 4. Solo actualizar el nombre si realmente cambió
-      if (normalizedNombre !== currentRole.nombre) {
+      // 4. Solo actualizar el nombre si realmente cambió (comparando ambos normalizados)
+      if (normalizedNombre !== normalizedCurrentNombre) {
         // Verificar que no exista otro rol con ese nombre
         const [existingRole] = await db
           .select()
@@ -5704,8 +5705,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedRole);
     } catch (error: any) {
       console.error("Error updating role:", error);
+      console.error("Error details:", {
+        code: error.code,
+        constraint: error.constraint,
+        message: error.message,
+        detail: error.detail,
+      });
       if (error.code === "23505") {
-        res.status(400).json({ error: "Ya existe un rol con ese nombre" });
+        // Verificar si es un error de nombre duplicado o de permisos
+        if (error.constraint === "roles_nombre_unique" || error.constraint?.includes("nombre")) {
+          res.status(400).json({ error: "Ya existe un rol con ese nombre" });
+        } else {
+          // Podría ser un error de permisos duplicados
+          res.status(400).json({ error: error.message || "Error al actualizar rol: violación de restricción única" });
+        }
       } else {
         res.status(500).json({ error: "Error al actualizar rol" });
       }
