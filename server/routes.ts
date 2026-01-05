@@ -5646,22 +5646,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "El nombre del rol es requerido" });
       }
 
-      // Actualizar el rol
-      const [updatedRole] = await db
-        .update(roles)
-        .set({
-          nombre: nombre.toUpperCase(),
-          descripcion: descripcion || null,
-          updatedAt: new Date(),
-        })
+      // 1. Obtener el rol actual
+      const [currentRole] = await db
+        .select()
+        .from(roles)
         .where(eq(roles.id, roleId))
-        .returning();
+        .limit(1);
 
-      if (!updatedRole) {
+      if (!currentRole) {
         return res.status(404).json({ error: "Rol no encontrado" });
       }
 
-      // Actualizar permisos: eliminar todos y crear los nuevos
+      // 2. Normalizar el nombre (mayúsculas y trim)
+      const normalizedNombre = nombre.toUpperCase().trim();
+
+      // 3. Construir objeto de actualización condicionalmente
+      const updateData: { nombre?: string; descripcion: string | null; updatedAt: Date } = {
+        descripcion: descripcion || null,
+        updatedAt: new Date(),
+      };
+
+      // 4. Solo actualizar el nombre si realmente cambió
+      if (normalizedNombre !== currentRole.nombre) {
+        // Verificar que no exista otro rol con ese nombre
+        const [existingRole] = await db
+          .select()
+          .from(roles)
+          .where(eq(roles.nombre, normalizedNombre))
+          .limit(1);
+
+        if (existingRole && existingRole.id !== roleId) {
+          return res.status(400).json({ error: "Ya existe un rol con ese nombre" });
+        }
+
+        updateData.nombre = normalizedNombre;
+      }
+
+      // 5. Actualizar el rol (solo con los campos que cambiaron)
+      const [updatedRole] = await db
+        .update(roles)
+        .set(updateData)
+        .where(eq(roles.id, roleId))
+        .returning();
+
+      // 6. Actualizar permisos: eliminar todos y crear los nuevos
       await db.delete(rolePermissions).where(eq(rolePermissions.roleId, roleId));
 
       if (Array.isArray(permissionIds) && permissionIds.length > 0) {
