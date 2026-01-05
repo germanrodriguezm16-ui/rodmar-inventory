@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ArrowLeftRight, Plus, Download, Filter, Edit, Trash2, CheckSquare, Square, CalendarDays, DollarSign, ArrowUp, ArrowDown } from "lucide-react";
 // Formateo de fechas se maneja directamente en el componente
 import { formatDate, formatCurrency, highlightText, highlightValue } from "@/lib/utils";
+import { getDateRangeFromFilter, type DateFilterType } from "@/lib/date-filter-utils";
 import TransactionModal from "@/components/forms/transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
@@ -294,56 +295,9 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
   };
 
   // Helper function to get date ranges for filtering (retorna strings ISO para el servidor)
+  // Usar función centralizada de date-filter-utils
   const getDateRange = (type: string, fechaEspecifica?: string, fechaInicio?: string, fechaFin?: string): { start: string; end: string } | null => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    const formatDate = (date: Date): string => {
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    };
-    
-    switch (type) {
-      case "hoy":
-        return { start: formatDate(today), end: formatDate(today) };
-      case "ayer":
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        return { start: formatDate(yesterday), end: formatDate(yesterday) };
-      case "esta-semana":
-        const startOfWeek = new Date(today);
-        startOfWeek.setDate(today.getDate() - today.getDay());
-        return { start: formatDate(startOfWeek), end: formatDate(today) };
-      case "semana-pasada":
-        const startOfLastWeek = new Date(today);
-        startOfLastWeek.setDate(today.getDate() - today.getDay() - 7);
-        const endOfLastWeek = new Date(startOfLastWeek);
-        endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
-        return { start: formatDate(startOfLastWeek), end: formatDate(endOfLastWeek) };
-      case "este-mes":
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        return { start: formatDate(startOfMonth), end: formatDate(today) };
-      case "mes-pasado":
-        const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-        return { start: formatDate(startOfLastMonth), end: formatDate(endOfLastMonth) };
-      case "este-año":
-        const startOfYear = new Date(today.getFullYear(), 0, 1);
-        return { start: formatDate(startOfYear), end: formatDate(today) };
-      case "año-pasado":
-        const startOfLastYear = new Date(today.getFullYear() - 1, 0, 1);
-        const endOfLastYear = new Date(today.getFullYear() - 1, 11, 31);
-        return { start: formatDate(startOfLastYear), end: formatDate(endOfLastYear) };
-      case "exactamente":
-        return fechaEspecifica ? { start: fechaEspecifica, end: fechaEspecifica } : null;
-      case "entre":
-        return fechaInicio && fechaFin ? { start: fechaInicio, end: fechaFin } : null;
-      case "despues-de":
-        return fechaEspecifica ? { start: fechaEspecifica, end: "9999-12-31" } : null;
-      case "antes-de":
-        return fechaEspecifica ? { start: "1900-01-01", end: fechaEspecifica } : null;
-      default:
-        return null;
-    }
+    return getDateRangeFromFilter(type as DateFilterType, fechaEspecifica, fechaFin);
   };
 
   // Calcular fechaDesde y fechaHasta para enviar al servidor
