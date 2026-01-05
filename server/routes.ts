@@ -5690,22 +5690,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(roles.id, roleId))
         .returning();
 
-      // 6. Actualizar permisos: eliminar todos y crear los nuevos
-      await db.delete(rolePermissions).where(eq(rolePermissions.roleId, roleId));
+      // 6. Actualizar permisos: eliminar todos y crear los nuevos (en una transacción)
+      await db.transaction(async (tx) => {
+        // Eliminar todos los permisos existentes del rol
+        await tx.delete(rolePermissions).where(eq(rolePermissions.roleId, roleId));
 
-      if (Array.isArray(permissionIds) && permissionIds.length > 0) {
-        // Eliminar duplicados de permissionIds antes de insertar
-        const uniquePermissionIds = Array.from(new Set(permissionIds.filter((id: any) => typeof id === 'number' && !isNaN(id))));
-        
-        if (uniquePermissionIds.length > 0) {
-          const rolePerms = uniquePermissionIds.map((permissionId: number) => ({
-            roleId: roleId,
-            permissionId,
-          }));
+        // Insertar los nuevos permisos (si hay)
+        if (Array.isArray(permissionIds) && permissionIds.length > 0) {
+          // Eliminar duplicados de permissionIds antes de insertar
+          const uniquePermissionIds = Array.from(new Set(permissionIds.filter((id: any) => typeof id === 'number' && !isNaN(id))));
+          
+          if (uniquePermissionIds.length > 0) {
+            const rolePerms = uniquePermissionIds.map((permissionId: number) => ({
+              roleId: roleId,
+              permissionId,
+            }));
 
-          await db.insert(rolePermissions).values(rolePerms);
+            await tx.insert(rolePermissions).values(rolePerms);
+          }
         }
-      }
+      });
 
       res.json(updatedRole);
     } catch (error: any) {
