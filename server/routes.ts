@@ -5690,24 +5690,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(roles.id, roleId))
         .returning();
 
-      // 6. Actualizar permisos: eliminar todos y crear los nuevos (en una transacción)
+      // 6. Actualizar permisos: calcular diferencias y actualizar solo lo necesario (en una transacción)
       await db.transaction(async (tx) => {
-        // Eliminar todos los permisos existentes del rol
-        await tx.delete(rolePermissions).where(eq(rolePermissions.roleId, roleId));
+        // Obtener permisos actuales del rol
+        const currentPerms = await tx
+          .select({ permissionId: rolePermissions.permissionId })
+          .from(rolePermissions)
+          .where(eq(rolePermissions.roleId, roleId));
 
-        // Insertar los nuevos permisos (si hay)
-        if (Array.isArray(permissionIds) && permissionIds.length > 0) {
-          // Eliminar duplicados de permissionIds antes de insertar
-          const uniquePermissionIds = Array.from(new Set(permissionIds.filter((id: any) => typeof id === 'number' && !isNaN(id))));
-          
-          if (uniquePermissionIds.length > 0) {
-            const rolePerms = uniquePermissionIds.map((permissionId: number) => ({
-              roleId: roleId,
-              permissionId,
-            }));
+        const currentPermissionIds = new Set(currentPerms.map(p => p.permissionId));
 
-            await tx.insert(rolePermissions).values(rolePerms);
-          }
+        // Procesar permissionIds del request
+        const newPermissionIds = Array.isArray(permissionIds) 
+          ? Array.from(new Set(permissionIds.filter((id: any) => typeof id === 'number' && !isNaN(id))))
+          : [];
+        const newPermissionIdsSet = new Set(newPermissionIds);
+
+        // Encontrar permisos a eliminar (están en current pero no en new)
+        const toDelete = Array.from(currentPermissionIds).filter(id => !newPermissionIdsSet.has(id));
+        
+        // Encontrar permisos a insertar (están en new pero no en current)
+        const toInsert = newPermissionIds.filter(id => !currentPermissionIds.has(id));
+
+        // Eliminar permisos que ya no están en la nueva lista
+        if (toDelete.length > 0) {
+          await tx
+            .delete(rolePermissions)
+            .where(
+              and(
+                eq(rolePermissions.roleId, roleId),
+                inArray(rolePermissions.permissionId, toDelete)
+              )
+            );
+        }
+
+        // Insertar nuevos permisos
+        if (toInsert.length > 0) {
+          const rolePerms = toInsert.map((permissionId: number) => ({
+            roleId: roleId,
+            permissionId,
+          }));
+
+          await tx.insert(rolePermissions).values(rolePerms);
         }
       });
 
