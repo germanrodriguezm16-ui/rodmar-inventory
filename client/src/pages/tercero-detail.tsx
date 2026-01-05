@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, highlightText } from "@/lib/utils";
+import { calculateTerceroBalance } from "@/lib/calculations";
 import { ArrowLeft, X, Image, Plus, Edit, Search, Trash2, Eye } from "lucide-react";
 import { TransaccionWithSocio } from "@shared/schema";
 import { getDateRangeFromFilter, filterTransactionsByDateRange } from "@/lib/date-filter-utils";
