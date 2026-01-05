@@ -248,32 +248,10 @@ export default function TerceroDetail() {
     });
   }, [todasTransacciones, hiddenTransactions]);
 
-  // Calcular balances dinámicos - Lógica igual que minas/compradores
-  const calcularBalances = () => {
-    let positivos = 0;
-    let negativos = 0;
-
-    transaccionesFiltradas.forEach((transaccion: any) => {
-      const valor = parseFloat(transaccion.valor.replace ? transaccion.valor.replace(/[$,]/g, '') : transaccion.valor);
-      
-      // Lógica para terceros (igual que minas/compradores):
-      // Positivos: desde tercero (RodMar le debe al tercero)
-      // Negativos: hacia tercero (el tercero le debe a RodMar)
-      if (transaccion.deQuienTipo === 'tercero' && transaccion.deQuienId === terceroId.toString()) {
-        positivos += valor; // Positivo: desde tercero (origen)
-      } else if (transaccion.paraQuienTipo === 'tercero' && transaccion.paraQuienId === terceroId.toString()) {
-        negativos += valor; // Negativo: hacia tercero (destino)
-      }
-    });
-
-    return {
-      positivos,
-      negativos,
-      balance: positivos - negativos
-    };
-  };
-
-  const balances = calcularBalances();
+  // Calcular balances dinámicos usando función centralizada
+  const balances = useMemo(() => {
+    return calculateTerceroBalance(transaccionesFiltradas, terceroId);
+  }, [transaccionesFiltradas, terceroId]);
 
   const limpiarFiltros = () => {
     setFiltros({

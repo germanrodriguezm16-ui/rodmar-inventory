@@ -159,6 +159,114 @@ export function calculateVolqueteroBalance(transacciones: any[]) {
   return (totalPagos + totalPrestamos) * -1 + saldosAFavor;
 }
 
+/**
+ * Resultado de cálculo de balance con desglose de positivos y negativos
+ */
+export interface BalanceResult {
+  positivos: number;
+  negativos: number;
+  balance: number;
+}
+
+/**
+ * Calcula el balance de una entidad tipo tercero
+ * 
+ * @param transactions - Array de transacciones
+ * @param terceroId - ID del tercero
+ * @returns BalanceResult con positivos, negativos y balance total
+ * 
+ * Lógica:
+ * - Positivos: desde tercero (deQuienTipo='tercero' y deQuienId=terceroId) → RodMar le debe al tercero
+ * - Negativos: hacia tercero (paraQuienTipo='tercero' y paraQuienId=terceroId) → El tercero le debe a RodMar
+ */
+export function calculateTerceroBalance(
+  transactions: any[],
+  terceroId: string | number
+): BalanceResult {
+  let positivos = 0;
+  let negativos = 0;
+
+  transactions.forEach((transaccion: any) => {
+    const valor = parseFloat(
+      typeof transaccion.valor === 'string' 
+        ? transaccion.valor.replace(/[$,]/g, '') 
+        : transaccion.valor || '0'
+    );
+
+    if (transaccion.deQuienTipo === 'tercero' && transaccion.deQuienId === terceroId.toString()) {
+      positivos += valor; // Positivo: desde tercero (origen)
+    } else if (transaccion.paraQuienTipo === 'tercero' && transaccion.paraQuienId === terceroId.toString()) {
+      negativos += valor; // Negativo: hacia tercero (destino)
+    }
+  });
+
+  return {
+    positivos,
+    negativos,
+    balance: positivos - negativos
+  };
+}
+
+/**
+ * Calcula el balance de una cuenta RodMar específica
+ * 
+ * @param transactions - Array de transacciones
+ * @param cuentaId - ID de la cuenta RodMar (ej: 'bemovil', 'efectivo', etc.)
+ * @returns BalanceResult con positivos, negativos y balance total
+ * 
+ * Lógica:
+ * - Positivos: ingresos a la cuenta (paraQuienTipo='rodmar' y paraQuienId=cuentaId) o inversiones positivas
+ * - Negativos: egresos de la cuenta (deQuienTipo='rodmar' y deQuienId=cuentaId) o inversiones negativas
+ */
+export function calculateRodMarCuentaBalance(
+  transactions: any[],
+  cuentaId: string
+): BalanceResult {
+  let positivos = 0;
+  let negativos = 0;
+
+  transactions.forEach((transaccion: any) => {
+    const valor = parseFloat(
+      typeof transaccion.valor === 'string' 
+        ? transaccion.valor.replace(/[$,]/g, '') 
+        : transaccion.valor || '0'
+    );
+
+    // Lógica específica para inversiones
+    if (transaccion.esInversion) {
+      if (transaccion.esPositiva) {
+        positivos += valor;
+      } else {
+        negativos += valor;
+      }
+      return;
+    }
+
+    const esIngresoACuenta = transaccion.paraQuienTipo === 'rodmar' && 
+                             transaccion.paraQuienId && 
+                             transaccion.paraQuienId === cuentaId;
+
+    const esEgresoDeEstaCuenta = transaccion.deQuienTipo === 'rodmar' && 
+                                 transaccion.deQuienId && 
+                                 transaccion.deQuienId === cuentaId;
+
+    // Para transacciones temporales con origen en esta cuenta: siempre contar como negativo
+    if (transaccion.esTemporal && transaccion.deQuienTipo === 'rodmar' && transaccion.deQuienId === cuentaId) {
+      negativos += valor;
+    } else if (esIngresoACuenta) {
+      positivos += valor;
+    } else if (esEgresoDeEstaCuenta) {
+      negativos += valor;
+    }
+  });
+
+  return {
+    positivos,
+    negativos,
+    balance: positivos - negativos
+  };
+}
+
 // Re-exportar funciones de formateo desde format-utils.ts para mantener compatibilidad hacia atrás
 // TODO: Migrar gradualmente los imports a @/lib/format-utils
 export {

@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
+import { calculateRodMarCuentaBalance } from "@/lib/calculations";
 import { ArrowLeft, TrendingUp, TrendingDown, Filter, X, Download, Image, Plus, Edit, Search, Trash2, Eye } from "lucide-react";
 import { TransaccionWithSocio } from "@shared/schema";
 import { getDateRangeFromFilter, filterTransactionsByDateRange } from "@/lib/date-filter-utils";
