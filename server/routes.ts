@@ -5724,14 +5724,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
             );
         }
 
-        // Insertar nuevos permisos
+        // Insertar nuevos permisos (verificando que no existan antes)
         if (toInsert.length > 0) {
-          const rolePerms = toInsert.map((permissionId: number) => ({
-            roleId: roleId,
-            permissionId,
-          }));
+          // Verificar que los permisos realmente no existan (por si acaso)
+          const existingCheck = await tx
+            .select({ permissionId: rolePermissions.permissionId })
+            .from(rolePermissions)
+            .where(
+              and(
+                eq(rolePermissions.roleId, roleId),
+                inArray(rolePermissions.permissionId, toInsert)
+              )
+            );
+          
+          const existingPermissionIds = new Set(existingCheck.map(p => p.permissionId));
+          const actuallyToInsert = toInsert.filter(id => !existingPermissionIds.has(id));
 
-          await tx.insert(rolePermissions).values(rolePerms);
+          if (actuallyToInsert.length > 0) {
+            // Insertar uno por uno para evitar problemas con la secuencia
+            for (const permissionId of actuallyToInsert) {
+              try {
+                await tx.insert(rolePermissions).values({
+                  roleId: roleId,
+                  permissionId,
+                });
+              } catch (insertError: any) {
+                // Si hay un error de clave primaria duplicada, ignorarlo
+                // (puede pasar si hay condiciones de carrera)
+                if (insertError.code !== '23505' || !insertError.constraint_name?.includes('pkey')) {
+                  throw insertError;
+                }
+                console.warn(`⚠️  Permiso ${permissionId} ya existe para rol ${roleId}, omitiendo inserción`);
+              }
+            }
+          }
         }
       });
 
