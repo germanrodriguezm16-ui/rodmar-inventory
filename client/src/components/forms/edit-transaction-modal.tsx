@@ -249,25 +249,28 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
           console.log("=== EditTransactionModal - Final formatted valor:", valorStr);
         }
         
-        // Cargar voucher si la transacción tiene voucher y no está cargado
+        // Cargar voucher - siempre intentar cargarlo si no está en cache (similar a transaction-detail-modal)
+        // Solo para transacciones manuales (IDs numéricos), no para transacciones de viaje
         let voucherValue = "";
-        if (currentTransaction.hasVoucher && !isVoucherLoaded(currentTransaction.id)) {
-          try {
-            console.log("=== EditTransactionModal - Loading voucher for transaction ID:", currentTransaction.id);
-            await loadVoucher(currentTransaction.id);
-            const loadedVoucher = getVoucherFromCache(currentTransaction.id);
-            if (loadedVoucher) {
-              voucherValue = loadedVoucher;
-              console.log("=== EditTransactionModal - Voucher loaded successfully");
+        if (currentTransaction.id && typeof currentTransaction.id === 'number') {
+          if (!isVoucherLoaded(currentTransaction.id)) {
+            try {
+              console.log("=== EditTransactionModal - Loading voucher for transaction ID:", currentTransaction.id);
+              await loadVoucher(currentTransaction.id);
+              const loadedVoucher = getVoucherFromCache(currentTransaction.id);
+              if (loadedVoucher) {
+                voucherValue = loadedVoucher;
+                console.log("=== EditTransactionModal - Voucher loaded successfully");
+              }
+            } catch (error) {
+              console.error("=== EditTransactionModal - Error loading voucher:", error);
             }
-          } catch (error) {
-            console.error("=== EditTransactionModal - Error loading voucher:", error);
-          }
-        } else if (isVoucherLoaded(currentTransaction.id)) {
-          const cachedVoucher = getVoucherFromCache(currentTransaction.id);
-          if (cachedVoucher) {
-            voucherValue = cachedVoucher;
-            console.log("=== EditTransactionModal - Using cached voucher");
+          } else {
+            const cachedVoucher = getVoucherFromCache(currentTransaction.id);
+            if (cachedVoucher) {
+              voucherValue = cachedVoucher;
+              console.log("=== EditTransactionModal - Using cached voucher");
+            }
           }
         }
         
