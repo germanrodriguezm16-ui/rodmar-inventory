@@ -65,7 +65,6 @@ const getNumericValue = (formattedValue: string): string => {
 export default function EditTransactionModal({ isOpen, onClose, transaction }: EditTransactionModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { loadVoucher, getVoucherFromCache, isVoucherLoaded } = useVouchers();
   
   // Fetch the latest transaction data when modal opens - with no cache
   const { data: latestTransaction, refetch: refetchTransaction } = useQuery({

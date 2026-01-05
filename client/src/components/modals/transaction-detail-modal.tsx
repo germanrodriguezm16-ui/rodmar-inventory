@@ -6,7 +6,7 @@ import { Calendar, DollarSign, FileText, Receipt, MessageSquare, Eye, EyeOff, Do
 import { formatCurrency } from "@/lib/utils";
 import { formatDateWithDaySpanish } from "@/lib/date-utils";
 import { VoucherViewer } from "@/components/ui/voucher-viewer";
-import { useVouchers } from "@/hooks/useVouchers";
+import { useTransactionVoucher } from "@/hooks/useTransactionVoucher";
 import { TransactionReceiptModal } from "@/components/modals/transaction-receipt-modal";
 import { getSocioNombre } from "@/lib/getSocioNombre";
 import { useQuery } from "@tanstack/react-query";
@@ -28,7 +28,9 @@ export function TransactionDetailModal({
   relatedTrip 
 }: TransactionDetailModalProps) {
   
-  const { loadVoucher, getVoucherFromCache, isVoucherLoading } = useVouchers();
+  // Hook para cargar voucher de la transacción
+  const transactionIdForVoucher = transaction?.id && typeof transaction.id === 'number' ? transaction.id : undefined;
+  const { voucher: loadedVoucher, isLoading: isLoadingVoucher } = useTransactionVoucher(transactionIdForVoucher);
   
   // Estado para modal de comprobante
   const [showReceiptModal, setShowReceiptModal] = useState(false);
@@ -65,32 +67,8 @@ export function TransactionDetailModal({
       ) || 'Socio'
     : 'Socio';
   
-  // Log para debugging
-  useEffect(() => {
-    if (transaction && open) {
-      console.log("🔍 TRANSACTION DETAIL MODAL - Transaction data:", {
-        id: transaction.id,
-        voucher: transaction.voucher,
-        voucherType: typeof transaction.voucher,
-        voucherLength: transaction.voucher?.length,
-        hasVoucher: !!transaction.voucher
-      });
-      
-      // Si no tiene voucher en los datos iniciales, intentar cargarlo
-      // Solo para transacciones manuales (IDs numéricos), no para transacciones de viaje
-      if (!transaction.voucher && transaction.id && typeof transaction.id === 'number') {
-        console.log("🔄 Loading voucher for transaction:", transaction.id);
-        loadVoucher(transaction.id);
-      } else if (typeof transaction.id === 'string' && transaction.id.startsWith('viaje-')) {
-        console.log("⏭️ Skipping voucher load for trip transaction:", transaction.id);
-      }
-    }
-  }, [transaction, open, loadVoucher]);
-  
-  // Obtener voucher del cache o de los datos iniciales
-  // Solo para transacciones manuales (IDs numéricos)
-  const currentVoucher = transaction?.voucher || (typeof transaction?.id === 'number' ? getVoucherFromCache(transaction.id) : null);
-  const isLoadingVoucher = typeof transaction?.id === 'number' ? isVoucherLoading(transaction.id) : false;
+  // Obtener voucher: primero de los datos de la transacción, luego del hook
+  const currentVoucher = transaction?.voucher || loadedVoucher;
   
   const [showFullVoucher, setShowFullVoucher] = useState(false);
   const [showFullTripVoucher, setShowFullTripVoucher] = useState(false);
