@@ -8,7 +8,7 @@ import { canViewRodMarAccount } from "./rodmar-account-permissions";
 import { emitTransactionUpdate } from "./socket";
 import { db } from "./db";
 import { roles, permissions, rolePermissions, users, userPermissionsOverride } from "../shared/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { findUserByPhone, verifyPassword, updateLastLogin, hashPassword, generateToken, verifyToken } from "./middleware/auth-helpers";
 import {
   insertMinaSchema,
