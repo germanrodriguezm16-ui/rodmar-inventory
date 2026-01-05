@@ -5694,12 +5694,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db.delete(rolePermissions).where(eq(rolePermissions.roleId, roleId));
 
       if (Array.isArray(permissionIds) && permissionIds.length > 0) {
-        const rolePerms = permissionIds.map((permissionId: number) => ({
-          roleId: roleId,
-          permissionId,
-        }));
+        // Eliminar duplicados de permissionIds antes de insertar
+        const uniquePermissionIds = Array.from(new Set(permissionIds.filter((id: any) => typeof id === 'number' && !isNaN(id))));
+        
+        if (uniquePermissionIds.length > 0) {
+          const rolePerms = uniquePermissionIds.map((permissionId: number) => ({
+            roleId: roleId,
+            permissionId,
+          }));
 
-        await db.insert(rolePermissions).values(rolePerms);
+          await db.insert(rolePermissions).values(rolePerms);
+        }
       }
 
       res.json(updatedRole);
