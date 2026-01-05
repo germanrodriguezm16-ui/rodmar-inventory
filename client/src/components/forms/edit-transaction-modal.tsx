@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Textarea } from "@/components/ui/textarea";
 import { X, Edit3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useVouchers } from "@/hooks/useVouchers";
+import { useTransactionVoucher } from "@/hooks/useTransactionVoucher";
 import { apiUrl } from "@/lib/api";
 import type { TransaccionWithSocio, Mina, Comprador, Volquetero, Tercero } from "@shared/schema";
 
@@ -99,6 +99,9 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
   
   // Use latest data if available, fallback to prop
   const currentTransaction = latestTransaction || transaction;
+  
+  // Hook para cargar voucher de la transacción
+  const { voucher: loadedVoucher } = useTransactionVoucher(currentTransaction?.id);
 
   // Fetch entities - exactamente igual que new-transaction-modal.tsx
   const { data: minas = [] } = useQuery<Mina[]>({
@@ -248,30 +251,8 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
           console.log("=== EditTransactionModal - Final formatted valor:", valorStr);
         }
         
-        // Cargar voucher - siempre intentar cargarlo si no está en cache (similar a transaction-detail-modal)
-        // Solo para transacciones manuales (IDs numéricos), no para transacciones de viaje
-        let voucherValue = "";
-        if (currentTransaction.id && typeof currentTransaction.id === 'number') {
-          if (!isVoucherLoaded(currentTransaction.id)) {
-            try {
-              console.log("=== EditTransactionModal - Loading voucher for transaction ID:", currentTransaction.id);
-              await loadVoucher(currentTransaction.id);
-              const loadedVoucher = getVoucherFromCache(currentTransaction.id);
-              if (loadedVoucher) {
-                voucherValue = loadedVoucher;
-                console.log("=== EditTransactionModal - Voucher loaded successfully");
-              }
-            } catch (error) {
-              console.error("=== EditTransactionModal - Error loading voucher:", error);
-            }
-          } else {
-            const cachedVoucher = getVoucherFromCache(currentTransaction.id);
-            if (cachedVoucher) {
-              voucherValue = cachedVoucher;
-              console.log("=== EditTransactionModal - Using cached voucher");
-            }
-          }
-        }
+        // El voucher se carga automáticamente mediante useTransactionVoucher hook
+        const voucherValue = loadedVoucher || "";
         
         const formData = {
           deQuienTipo: currentTransaction.deQuienTipo || "",
@@ -324,7 +305,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
     };
 
     loadTransactionData();
-  }, [isOpen, currentTransaction?.id, currentTransaction?.valor, currentTransaction?.fecha, currentTransaction?.deQuienTipo, currentTransaction?.paraQuienTipo, form, loadVoucher, getVoucherFromCache, isVoucherLoaded]);
+  }, [isOpen, currentTransaction?.id, currentTransaction?.valor, currentTransaction?.fecha, currentTransaction?.deQuienTipo, currentTransaction?.paraQuienTipo, form, loadedVoucher]);
 
   const updateTransactionMutation = useMutation({
     mutationFn: async (data: EditTransactionFormData) => {

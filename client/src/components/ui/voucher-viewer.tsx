@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useVouchers } from '@/hooks/useVouchers';
+import { useTransactionVoucher } from '@/hooks/useTransactionVoucher';
 
 interface VoucherViewerProps {
   transactionId: number;
@@ -11,24 +11,13 @@ interface VoucherViewerProps {
 
 export function VoucherViewer({ transactionId, hasVoucher = false, className = "" }: VoucherViewerProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const { loadVoucher, getVoucherFromCache, isVoucherLoading, isVoucherLoaded } = useVouchers();
+  // El hook carga el voucher automáticamente
+  const { voucher: rawVoucher, isLoading } = useTransactionVoucher(transactionId);
 
-  const handleToggleVoucher = async () => {
+  const handleToggleVoucher = () => {
     if (!hasVoucher) return;
-
-    if (!isVisible) {
-      // Cargar voucher si no está cargado
-      if (!isVoucherLoaded(transactionId)) {
-        await loadVoucher(transactionId);
-      }
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
-    }
+    setIsVisible(!isVisible);
   };
-
-  const rawVoucher = getVoucherFromCache(transactionId);
-  const isLoading = isVoucherLoading(transactionId);
 
   // Procesar el voucher para remover prefijos
   const processVoucher = (voucherData: string | null): string | null => {
