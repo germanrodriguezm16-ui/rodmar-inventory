@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { apiUrl } from "@/lib/api";
-import { formatCurrency } from "@/lib/calculations";
+import { formatCurrency } from "@/lib/utils";
 import type { TransaccionWithSocio } from "@shared/schema";
 
 interface DeleteTransactionModalProps {

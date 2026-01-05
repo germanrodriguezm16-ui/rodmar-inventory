@@ -159,28 +159,10 @@ export function calculateVolqueteroBalance(transacciones: any[]) {
   return (totalPagos + totalPrestamos) * -1 + saldosAFavor;
 }
 
-export function formatCurrency(amount: number | string, locale = 'es-CO', currency = 'COP') {
-  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(numericAmount);
-}
-
-export function formatNumber(amount: number | string, locale = 'es-CO') {
-  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(numericAmount);
-}
-
-export function parseNumericInput(value: string): number {
-  // Remove currency symbols and parse
-  const cleanValue = value.replace(/[^\d.-]/g, '');
-  return parseFloat(cleanValue) || 0;
-}
+// Re-exportar funciones de formateo desde format-utils.ts para mantener compatibilidad hacia atrás
+// TODO: Migrar gradualmente los imports a @/lib/format-utils
+export {
+  formatCurrency,
+  formatNumber,
+  parseNumericInput
+} from './format-utils';

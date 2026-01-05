@@ -6,61 +6,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(amount: number | string, locale = 'es-CO', currency = 'COP') {
-  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  
-  if (isNaN(numericAmount)) return '$0';
-  
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(numericAmount);
-}
-
-export function formatNumber(amount: number | string, locale = 'es-CO') {
-  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  
-  if (isNaN(numericAmount)) return '0';
-  
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(numericAmount);
-}
-
-export function formatDate(date: string | Date | null, format = 'short'): string {
-  if (!date) return 'N/A';
-  
-  const d = new Date(date);
-  
-  if (format === 'short') {
-    return d.toLocaleDateString('es-CO', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  }
-  
-  if (format === 'long') {
-    return d.toLocaleDateString('es-CO', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }
-  
-  return d.toLocaleDateString('es-CO');
-}
-
-export function parseNumericInput(value: string): number {
-  // Remove currency symbols, spaces, and other non-numeric characters except decimals
-  const cleanValue = value.replace(/[^\d.-]/g, '');
-  const parsed = parseFloat(cleanValue);
-  return isNaN(parsed) ? 0 : parsed;
-}
+// Re-exportar funciones de formateo desde format-utils.ts para mantener compatibilidad hacia atrás
+// TODO: Migrar gradualmente los imports a @/lib/format-utils
+export {
+  formatCurrency,
+  formatNumber,
+  formatDate,
+  parseNumericInput
+} from './format-utils';
 
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
