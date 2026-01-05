@@ -18,6 +18,7 @@ import {
 import { useLocation } from "wouter";
 import type { Mina, TransaccionWithSocio, ViajeWithDetails } from "@shared/schema";
 import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
+import { getDateRangeFromFilter, filterTransactionsByDateRange, type DateFilterType as SharedDateFilterType } from "@/lib/date-filter-utils";
 import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -49,8 +50,8 @@ import { TransaccionesImageModal } from "@/components/modals/transacciones-image
 import ViajesImageModal from "@/components/modals/viajes-image-modal";
 import ExcelPreviewModal from '@/components/modals/excel-preview-modal';
 
-// Filtro de fechas (tipos válidos)
-type DateFilterType = "todos" | "exactamente" | "entre" | "despues-de" | "antes-de" | "hoy" | "ayer" | "esta-semana" | "semana-pasada" | "este-mes" | "mes-pasado" | "este-año" | "año-pasado";
+// Usar el tipo DateFilterType de date-filter-utils
+type DateFilterType = SharedDateFilterType;
 
 export default function MinaDetail() {
   const [, params] = useRoute("/minas/:id");
@@ -421,164 +422,18 @@ export default function MinaDetail() {
       });
   }, [viajes, transacciones, transaccionesTemporales, minaId, mina?.nombre]);
 
-  // Función para obtener el rango de fechas según el filtro
+  // Usar función centralizada de date-filter-utils
   const getDateRange = useCallback((filterType: DateFilterType, filterValue: string, filterValueEnd: string) => {
-    const today = new Date();
-    const todayStr = today.getFullYear() + '-' + 
-      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-      String(today.getDate()).padStart(2, '0');
-
-    switch (filterType) {
-      case "exactamente":
-        return filterValue ? { start: filterValue, end: filterValue } : null;
-      
-      case "entre":
-        return (filterValue && filterValueEnd) ? { start: filterValue, end: filterValueEnd } : null;
-      
-      case "despues-de":
-        return filterValue ? { start: filterValue, end: null } : null;
-      
-      case "antes-de":
-        return filterValue ? { start: null, end: filterValue } : null;
-      
-      case "hoy":
-        return { start: todayStr, end: todayStr };
-      
-      case "ayer": {
-        const ayer = new Date(today);
-        ayer.setDate(today.getDate() - 1);
-        const ayerStr = ayer.getFullYear() + '-' + 
-          String(ayer.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(ayer.getDate()).padStart(2, '0');
-        return { start: ayerStr, end: ayerStr };
-      }
-      
-      case "esta-semana": {
-        const inicioSemana = new Date(today);
-        inicioSemana.setDate(today.getDate() - today.getDay());
-        const finSemana = new Date(inicioSemana);
-        finSemana.setDate(inicioSemana.getDate() + 6);
-        
-        const inicioStr = inicioSemana.getFullYear() + '-' + 
-          String(inicioSemana.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(inicioSemana.getDate()).padStart(2, '0');
-        const finStr = finSemana.getFullYear() + '-' + 
-          String(finSemana.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(finSemana.getDate()).padStart(2, '0');
-        
-        return { start: inicioStr, end: finStr };
-      }
-      
-      case "semana-pasada": {
-        const inicioSemana = new Date(today);
-        inicioSemana.setDate(today.getDate() - today.getDay() - 7);
-        const finSemana = new Date(inicioSemana);
-        finSemana.setDate(inicioSemana.getDate() + 6);
-        
-        const inicioStr = inicioSemana.getFullYear() + '-' + 
-          String(inicioSemana.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(inicioSemana.getDate()).padStart(2, '0');
-        const finStr = finSemana.getFullYear() + '-' + 
-          String(finSemana.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(finSemana.getDate()).padStart(2, '0');
-        
-        return { start: inicioStr, end: finStr };
-      }
-      
-      case "este-mes": {
-        const inicioMes = new Date(today.getFullYear(), today.getMonth(), 1);
-        const finMes = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        
-        const inicioStr = inicioMes.getFullYear() + '-' + 
-          String(inicioMes.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(inicioMes.getDate()).padStart(2, '0');
-        const finStr = finMes.getFullYear() + '-' + 
-          String(finMes.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(finMes.getDate()).padStart(2, '0');
-        
-        return { start: inicioStr, end: finStr };
-      }
-      
-      case "mes-pasado": {
-        const inicioMes = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const finMes = new Date(today.getFullYear(), today.getMonth(), 0);
-        
-        const inicioStr = inicioMes.getFullYear() + '-' + 
-          String(inicioMes.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(inicioMes.getDate()).padStart(2, '0');
-        const finStr = finMes.getFullYear() + '-' + 
-          String(finMes.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(finMes.getDate()).padStart(2, '0');
-        
-        return { start: inicioStr, end: finStr };
-      }
-      
-      case "este-año": {
-        const inicioAño = new Date(today.getFullYear(), 0, 1);
-        const finAño = new Date(today.getFullYear(), 11, 31);
-        
-        const inicioStr = inicioAño.getFullYear() + '-' + 
-          String(inicioAño.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(inicioAño.getDate()).padStart(2, '0');
-        const finStr = finAño.getFullYear() + '-' + 
-          String(finAño.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(finAño.getDate()).padStart(2, '0');
-        
-        return { start: inicioStr, end: finStr };
-      }
-      
-      case "año-pasado": {
-        const inicioAño = new Date(today.getFullYear() - 1, 0, 1);
-        const finAño = new Date(today.getFullYear() - 1, 11, 31);
-        
-        const inicioStr = inicioAño.getFullYear() + '-' + 
-          String(inicioAño.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(inicioAño.getDate()).padStart(2, '0');
-        const finStr = finAño.getFullYear() + '-' + 
-          String(finAño.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(finAño.getDate()).padStart(2, '0');
-        
-        return { start: inicioStr, end: finStr };
-      }
-      
-      default:
-        return null;
-    }
+    return getDateRangeFromFilter(filterType, filterValue, filterValueEnd);
   }, []);
 
-  // Función para filtrar transacciones por fecha
+  // Usar función centralizada de date-filter-utils
   const filterTransaccionesByDate = useCallback((transacciones: TransaccionWithSocio[], filterType: DateFilterType, filterValue: string, filterValueEnd: string) => {
     if (filterType === "todos") return transacciones;
     
-    const range = getDateRange(filterType, filterValue, filterValueEnd);
-    if (!range) return transacciones;
-
-    return transacciones.filter(transaction => {
-      if (!transaction.fecha) return false;
-      
-      // Adaptarse al formato de fecha existente - puede ser string o Date
-      let transactionDate: string;
-      if (typeof transaction.fecha === 'string') {
-        // Si es string, extraer solo la parte de fecha (YYYY-MM-DD)
-        transactionDate = transaction.fecha.includes('T') 
-          ? transaction.fecha.split('T')[0] 
-          : transaction.fecha;
-      } else {
-        // Si es Date object, convertir a string
-        transactionDate = transaction.fecha.toISOString().split('T')[0];
-      }
-      
-      if (range.start && range.end) {
-        return transactionDate >= range.start && transactionDate <= range.end;
-      } else if (range.start) {
-        return transactionDate >= range.start;
-      } else if (range.end) {
-        return transactionDate <= range.end;
-      }
-      
-      return true;
-    });
-  }, [getDateRange]);
+    const range = getDateRangeFromFilter(filterType, filterValue, filterValueEnd);
+    return filterTransactionsByDateRange(transacciones, range);
+  }, []);
 
   // Función para filtrar viajes por fecha
   const filterViajesByDate = useCallback((viajes: ViajeWithDetails[], filterType: DateFilterType, filterValue: string, filterValueEnd: string) => {
