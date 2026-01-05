@@ -132,12 +132,22 @@ export default function TerceroDetail() {
 
   // Calcular fechaDesde y fechaHasta usando función centralizada (ya devuelve strings YYYY-MM-DD)
   const dateRange = useMemo(() => {
-    return getDateRangeFromFilter(
-      filtros.fechaTipo as any,
-      filtros.fechaEspecifica || undefined,
-      filtros.fechaFin || undefined
-    );
-  }, [filtros.fechaTipo, filtros.fechaEspecifica, filtros.fechaFin]);
+    if (filtros.fechaTipo === "entre") {
+      // Para "entre", usar fechaInicio (inicio) y fechaFin (fin)
+      return getDateRangeFromFilter(
+        filtros.fechaTipo as any,
+        filtros.fechaInicio || undefined,
+        filtros.fechaFin || undefined
+      );
+    } else {
+      // Para otros tipos, usar fechaEspecifica
+      return getDateRangeFromFilter(
+        filtros.fechaTipo as any,
+        filtros.fechaEspecifica || undefined,
+        undefined
+      );
+    }
+  }, [filtros.fechaTipo, filtros.fechaEspecifica, filtros.fechaInicio, filtros.fechaFin]);
 
   // Obtener transacciones de este tercero
   const { 
