@@ -294,15 +294,25 @@ export default function Transacciones({ onOpenTransaction, hideBottomNav = false
     }
   };
 
-  // Helper function to get date ranges for filtering (retorna strings ISO para el servidor)
-  // Usar función centralizada de date-filter-utils
-  const getDateRange = (type: string, fechaEspecifica?: string, fechaInicio?: string, fechaFin?: string): { start: string; end: string } | null => {
-    return getDateRangeFromFilter(type as DateFilterType, fechaEspecifica, fechaFin);
-  };
-
-  // Calcular fechaDesde y fechaHasta para enviar al servidor
+  // Calcular fechaDesde y fechaHasta usando función centralizada
+  // Para "entre": fechaFilterValue = inicio, fechaFilterValueEnd = fin
+  // Para otros: fechaFilterValue = fecha específica
   const dateRange = useMemo(() => {
-    return getDateRange(fechaFilterType, fechaFilterValue, fechaFilterValue, fechaFilterValueEnd);
+    if (fechaFilterType === "entre") {
+      // Para "entre", necesitamos fechaFilterValue (inicio) y fechaFilterValueEnd (fin)
+      return getDateRangeFromFilter(
+        fechaFilterType as DateFilterType,
+        fechaFilterValue, // inicio
+        fechaFilterValueEnd // fin
+      );
+    } else {
+      // Para otros tipos, fechaFilterValue es la fecha específica
+      return getDateRangeFromFilter(
+        fechaFilterType as DateFilterType,
+        fechaFilterValue, // fecha específica
+        undefined // no se necesita fecha fin
+      );
+    }
   }, [fechaFilterType, fechaFilterValue, fechaFilterValueEnd]);
 
   // Query paginada de transacciones (sin filtros - solo paginación)

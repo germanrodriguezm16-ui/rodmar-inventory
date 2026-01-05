@@ -1992,39 +1992,10 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
 
-  // Usar función centralizada de date-filter-utils
-  const getDateRange = useCallback((filterType: DateFilterType) => {
-    return getDateRangeFromFilter(filterType, fechaFilterValue, fechaFilterValueEnd);
-  }, [fechaFilterValue, fechaFilterValueEnd]);
-
+  // Usar función centralizada directamente (ya devuelve strings YYYY-MM-DD)
   const dateRange = useMemo(() => {
-    if (fechaFilterType === "exactamente" && fechaFilterValue) {
-      return { start: fechaFilterValue, end: fechaFilterValue };
-    } else if (fechaFilterType === "entre" && fechaFilterValue && fechaFilterValueEnd) {
-      return { start: fechaFilterValue, end: fechaFilterValueEnd };
-    } else if (fechaFilterType === "despues-de" && fechaFilterValue) {
-      return { start: fechaFilterValue, end: "9999-12-31" };
-    } else if (fechaFilterType === "antes-de" && fechaFilterValue) {
-      return { start: "1900-01-01", end: fechaFilterValue };
-    } else if (fechaFilterType !== "todos") {
-      const range = getDateRange(fechaFilterType);
-      if (range) {
-        // Si range ya devuelve strings, usarlos directamente
-        if (typeof range.start === 'string' && typeof range.end === 'string') {
-          return range;
-        }
-        // Si devuelve Date objects, formatearlos
-        const formatDate = (date: Date): string => {
-          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        };
-        return {
-          start: formatDate(range.start),
-          end: formatDate(range.end)
-        };
-      }
-    }
-    return null;
-  }, [fechaFilterType, fechaFilterValue, fechaFilterValueEnd, getDateRange]);
+    return getDateRangeFromFilter(fechaFilterType, fechaFilterValue, fechaFilterValueEnd);
+  }, [fechaFilterType, fechaFilterValue, fechaFilterValueEnd]);
 
   // Obtener transacciones de LCDM con paginación del servidor (sin filtros)
   const { 
