@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, highlightText } from "@/lib/utils";
 import { ArrowLeft, X, Image, Plus, Edit, Search, Trash2, Eye } from "lucide-react";
 import { TransaccionWithSocio } from "@shared/schema";
-import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subWeeks, subMonths, subYears } from "date-fns";
+import { getDateRangeFromFilter, filterTransactionsByDateRange } from "@/lib/date-filter-utils";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
@@ -50,82 +50,7 @@ const FILTROS_FECHA = [
   { value: "año-pasado", label: "Año pasado" },
 ];
 
-const getDateRange = (tipo: string, fechaEspecifica?: Date, fechaInicio?: Date, fechaFin?: Date) => {
-  const hoy = new Date();
-  
-  switch (tipo) {
-    case "exactamente":
-      if (!fechaEspecifica) return null;
-      return {
-        inicio: startOfDay(fechaEspecifica),
-        fin: endOfDay(fechaEspecifica)
-      };
-    case "entre":
-      if (!fechaInicio || !fechaFin) return null;
-      return {
-        inicio: startOfDay(fechaInicio),
-        fin: endOfDay(fechaFin)
-      };
-    case "despues-de":
-      if (!fechaEspecifica) return null;
-      return {
-        inicio: startOfDay(fechaEspecifica),
-        fin: new Date(2099, 11, 31)
-      };
-    case "antes-de":
-      if (!fechaEspecifica) return null;
-      return {
-        inicio: new Date(1900, 0, 1),
-        fin: endOfDay(fechaEspecifica)
-      };
-    case "hoy":
-      return {
-        inicio: startOfDay(hoy),
-        fin: endOfDay(hoy)
-      };
-    case "ayer":
-      const ayer = subDays(hoy, 1);
-      return {
-        inicio: startOfDay(ayer),
-        fin: endOfDay(ayer)
-      };
-    case "esta-semana":
-      return {
-        inicio: startOfWeek(hoy, { weekStartsOn: 1 }),
-        fin: endOfWeek(hoy, { weekStartsOn: 1 })
-      };
-    case "semana-pasada":
-      const semanaAnterior = subWeeks(hoy, 1);
-      return {
-        inicio: startOfWeek(semanaAnterior, { weekStartsOn: 1 }),
-        fin: endOfWeek(semanaAnterior, { weekStartsOn: 1 })
-      };
-    case "este-mes":
-      return {
-        inicio: startOfMonth(hoy),
-        fin: endOfMonth(hoy)
-      };
-    case "mes-pasado":
-      const mesAnterior = subMonths(hoy, 1);
-      return {
-        inicio: startOfMonth(mesAnterior),
-        fin: endOfMonth(mesAnterior)
-      };
-    case "este-año":
-      return {
-        inicio: startOfYear(hoy),
-        fin: endOfYear(hoy)
-      };
-    case "año-pasado":
-      const añoAnterior = subYears(hoy, 1);
-      return {
-        inicio: startOfYear(añoAnterior),
-        fin: endOfYear(añoAnterior)
-      };
-    default:
-      return null;
-  }
-};
+// Usar función centralizada de date-filter-utils (ya no necesitamos date-fns)
 
 export default function TerceroDetail() {
   const params = useParams();
@@ -205,35 +130,14 @@ export default function TerceroDetail() {
     });
   };
 
-  // Calcular fechaDesde y fechaHasta para enviar al servidor
-  // IMPORTANTE: Crear fechas en hora local para evitar problemas de zona horaria (Colombia UTC-5)
+  // Calcular fechaDesde y fechaHasta usando función centralizada (ya devuelve strings YYYY-MM-DD)
   const dateRange = useMemo(() => {
-    // Función helper para crear Date en hora local desde string YYYY-MM-DD
-    const createLocalDate = (dateString: string): Date => {
-      const [year, month, day] = dateString.split('-').map(Number);
-      // Crear fecha en hora local (no UTC) usando new Date(year, month - 1, day)
-      return new Date(year, month - 1, day);
-    };
-    
-    const rango = getDateRange(
-      filtros.fechaTipo,
-      filtros.fechaEspecifica ? createLocalDate(filtros.fechaEspecifica) : undefined,
-      filtros.fechaInicio ? createLocalDate(filtros.fechaInicio) : undefined,
-      filtros.fechaFin ? createLocalDate(filtros.fechaFin) : undefined
+    return getDateRangeFromFilter(
+      filtros.fechaTipo as any,
+      filtros.fechaEspecifica || undefined,
+      filtros.fechaFin || undefined
     );
-    if (!rango) return null;
-    
-    // Convertir Date objects a strings ISO (YYYY-MM-DD) usando métodos locales
-    const formatDate = (date: Date): string => {
-      // Usar getFullYear(), getMonth(), getDate() que devuelven valores en hora local
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    };
-    
-    return {
-      start: formatDate(rango.inicio),
-      end: formatDate(rango.fin)
-    };
-  }, [filtros.fechaTipo, filtros.fechaEspecifica, filtros.fechaInicio, filtros.fechaFin]);
+  }, [filtros.fechaTipo, filtros.fechaEspecifica, filtros.fechaFin]);
 
   // Obtener transacciones de este tercero
   const { 
@@ -286,27 +190,9 @@ export default function TerceroDetail() {
       });
     }
 
-    // Filtro de fecha - Comparar solo la parte de fecha (sin hora) para evitar problemas de zona horaria
+    // Filtro de fecha usando función centralizada
     if (dateRange) {
-      filtered = filtered.filter(t => {
-        // Extraer solo la parte de fecha como string (YYYY-MM-DD) de la transacción usando métodos locales
-        let fechaTransStr: string;
-        if (typeof t.fecha === 'string') {
-          // Si es string ISO, tomar solo la parte de fecha
-          fechaTransStr = t.fecha.split('T')[0];
-        } else {
-          // Si es Date, usar métodos locales para evitar problemas de zona horaria
-          const date = new Date(t.fecha);
-          fechaTransStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        }
-        
-        // dateRange.start y dateRange.end ya son strings en formato YYYY-MM-DD
-        const fechaInicio = dateRange.start;
-        const fechaFin = dateRange.end;
-        
-        // Comparar strings directamente (YYYY-MM-DD) para evitar problemas de zona horaria
-        return fechaTransStr >= fechaInicio && fechaTransStr <= fechaFin;
-      });
+      filtered = filterTransactionsByDateRange(filtered, dateRange);
     }
 
     return filtered;

@@ -18,10 +18,11 @@ import { User, Calculator, Building2, ShoppingCart, DollarSign, Banknote, Search
 
 import { formatDateWithDaySpanish } from "@/lib/date-utils";
 import { highlightText, highlightValue } from "@/lib/utils";
+import { getDateRangeFromFilter, filterTransactionsByDateRange, type DateFilterType as SharedDateFilterType } from "@/lib/date-filter-utils";
 import { usePermissions } from "@/hooks/usePermissions";
 
-// Tipo para los filtros de fecha (idéntico a Minas)
-type DateFilterType = "todos" | "exactamente" | "entre" | "despues-de" | "antes-de" | "hoy" | "ayer" | "esta-semana" | "semana-pasada" | "este-mes" | "mes-pasado" | "este-año" | "año-pasado";
+// Usar el tipo DateFilterType de date-filter-utils
+type DateFilterType = SharedDateFilterType;
 
 import { Bar } from "react-chartjs-2";
 import {
@@ -1991,54 +1992,9 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
 
-  // Función para obtener rangos de fecha (debe estar antes de su uso en useMemo)
+  // Usar función centralizada de date-filter-utils
   const getDateRange = useCallback((filterType: DateFilterType) => {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    
-    switch (filterType) {
-      case "hoy":
-        return { start: today, end: today };
-      case "ayer":
-        const yesterday = new Date(now);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-        return { start: yesterdayStr, end: yesterdayStr };
-      case "esta-semana":
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        return { start: startOfWeek.toISOString().split('T')[0], end: today };
-      case "semana-pasada":
-        const lastWeekStart = new Date(now);
-        lastWeekStart.setDate(now.getDate() - now.getDay() - 7);
-        const lastWeekEnd = new Date(lastWeekStart);
-        lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
-        return { start: lastWeekStart.toISOString().split('T')[0], end: lastWeekEnd.toISOString().split('T')[0] };
-      case "este-mes":
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        return { start: startOfMonth.toISOString().split('T')[0], end: today };
-      case "mes-pasado":
-        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-        return { start: lastMonthStart.toISOString().split('T')[0], end: lastMonthEnd.toISOString().split('T')[0] };
-      case "este-año":
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        return { start: startOfYear.toISOString().split('T')[0], end: today };
-      case "año-pasado":
-        const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
-        const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31);
-        return { start: lastYearStart.toISOString().split('T')[0], end: lastYearEnd.toISOString().split('T')[0] };
-      case "exactamente":
-        return fechaFilterValue ? { start: fechaFilterValue, end: fechaFilterValue } : null;
-      case "entre":
-        return fechaFilterValue && fechaFilterValueEnd ? { start: fechaFilterValue, end: fechaFilterValueEnd } : null;
-      case "despues-de":
-        return fechaFilterValue ? { start: fechaFilterValue, end: "9999-12-31" } : null;
-      case "antes-de":
-        return fechaFilterValue ? { start: "1900-01-01", end: fechaFilterValue } : null;
-      default:
-        return null;
-    }
+    return getDateRangeFromFilter(filterType, fechaFilterValue, fechaFilterValueEnd);
   }, [fechaFilterValue, fechaFilterValueEnd]);
 
   const dateRange = useMemo(() => {
@@ -2158,27 +2114,9 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
       });
     }
 
-    // Filtro de fecha - Comparar solo la parte de fecha (sin hora) para evitar problemas de zona horaria
+    // Filtro de fecha usando función centralizada
     if (dateRange) {
-      filtered = filtered.filter(t => {
-        // Extraer solo la parte de fecha como string (YYYY-MM-DD) de la transacción usando métodos locales
-        let fechaTransStr: string;
-        if (typeof t.fecha === 'string') {
-          // Si es string ISO, tomar solo la parte de fecha
-          fechaTransStr = t.fecha.split('T')[0];
-        } else {
-          // Si es Date, usar métodos locales para evitar problemas de zona horaria
-          const date = new Date(t.fecha);
-          fechaTransStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        }
-        
-        // dateRange.start y dateRange.end ya son strings en formato YYYY-MM-DD
-        const fechaInicio = dateRange.start;
-        const fechaFin = dateRange.end;
-        
-        // Comparar strings directamente (YYYY-MM-DD) para evitar problemas de zona horaria
-        return fechaTransStr >= fechaInicio && fechaTransStr <= fechaFin;
-      });
+      filtered = filterTransactionsByDateRange(filtered, dateRange);
     }
 
     // Ordenamiento
