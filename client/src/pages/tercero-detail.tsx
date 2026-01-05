@@ -289,10 +289,16 @@ export default function TerceroDetail() {
     // Filtro de fecha - Comparar solo la parte de fecha (sin hora) para evitar problemas de zona horaria
     if (dateRange) {
       filtered = filtered.filter(t => {
-        // Extraer solo la parte de fecha como string (YYYY-MM-DD) de la transacción
-        const fechaTransStr = typeof t.fecha === 'string' 
-          ? t.fecha.split('T')[0]  // Si es string ISO, tomar solo la parte de fecha
-          : new Date(t.fecha).toISOString().split('T')[0]; // Si es Date, convertir a ISO y tomar solo fecha
+        // Extraer solo la parte de fecha como string (YYYY-MM-DD) de la transacción usando métodos locales
+        let fechaTransStr: string;
+        if (typeof t.fecha === 'string') {
+          // Si es string ISO, tomar solo la parte de fecha
+          fechaTransStr = t.fecha.split('T')[0];
+        } else {
+          // Si es Date, usar métodos locales para evitar problemas de zona horaria
+          const date = new Date(t.fecha);
+          fechaTransStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
         
         // dateRange.start y dateRange.end ya son strings en formato YYYY-MM-DD
         const fechaInicio = dateRange.start;
