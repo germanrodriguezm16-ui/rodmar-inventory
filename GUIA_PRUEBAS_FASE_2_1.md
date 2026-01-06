@@ -175,3 +175,5 @@ Se creó un hook centralizado (`useTransactionVoucher`) que maneja automáticame
 
 Si después de probar todo funciona correctamente, significa que la refactorización fue exitosa y el código está mejor organizado sin romper funcionalidad.
 
+
+

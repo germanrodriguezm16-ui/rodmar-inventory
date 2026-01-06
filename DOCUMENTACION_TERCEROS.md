@@ -449,3 +449,4 @@ El uso de query parameters para controlar el tab activo permite:
 - [ ] Agregar reportes específicos para terceros
 - [ ] Implementar exportación a Excel de transacciones de terceros
 
+

@@ -231,3 +231,5 @@ Dado que esta es una fase de **riesgo medio-alto**, se recomienda:
 - Requiere **testing exhaustivo** en cada paso
 - Si algo falla, los balances y listados **no se actualizarían** correctamente
 
+
+

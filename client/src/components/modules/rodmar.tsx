@@ -46,6 +46,14 @@ import { TransactionDetailModal } from "@/components/modals/transaction-detail-m
 import { useMutation } from "@tanstack/react-query";
 import { useHiddenTransactions } from "@/hooks/useHiddenTransactions";
 import AddTerceroModal from "@/components/modals/add-tercero-modal";
+import EditTerceroModal from "@/components/modals/edit-tercero-modal";
+import DeleteTerceroModal from "@/components/modals/delete-tercero-modal";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 ChartJS.register(
   CategoryScale,
@@ -565,28 +573,55 @@ export default function RodMar() {
                     </Card>
                   ) : (
                     terceros.map((tercero: any) => (
-                      <Card key={tercero.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                            onClick={() => setLocation(`/terceros/${tercero.id}`)}>
-                        <CardContent className="p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-blue-600" />
-                              <h4 className="font-medium text-foreground text-sm">{tercero.nombre}</h4>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="text-right">
-                                <p className={`text-sm font-bold ${
-                                  (tercero.balance || 0) > 0 ? 'text-green-600' : 
-                                  (tercero.balance || 0) < 0 ? 'text-red-600' : 'text-gray-600'
-                                }`}>
-                                  {formatCurrency(tercero.balance || 0)}
-                                </p>
+                      <ContextMenu key={tercero.id}>
+                        <ContextMenuTrigger asChild>
+                          <Card className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                                onClick={() => setLocation(`/terceros/${tercero.id}`)}>
+                            <CardContent className="p-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 text-blue-600" />
+                                  <h4 className="font-medium text-foreground text-sm">{tercero.nombre}</h4>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-right">
+                                    <p className={`text-sm font-bold ${
+                                      (tercero.balance || 0) > 0 ? 'text-green-600' : 
+                                      (tercero.balance || 0) < 0 ? 'text-red-600' : 'text-gray-600'
+                                    }`}>
+                                      {formatCurrency(tercero.balance || 0)}
+                                    </p>
+                                  </div>
+                                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                                </div>
                               </div>
-                              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                            </CardContent>
+                          </Card>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTercero(tercero);
+                              setShowEditTerceroModal(true);
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar nombre
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTercero(tercero);
+                              setShowDeleteTerceroModal(true);
+                            }}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
                     ))
                   )}
                 </div>
@@ -987,6 +1022,20 @@ export default function RodMar() {
       <AddTerceroModal 
         open={showAddTerceroModal} 
         onOpenChange={setShowAddTerceroModal}
+      />
+
+      {/* Modal para editar tercero */}
+      <EditTerceroModal
+        open={showEditTerceroModal}
+        onOpenChange={setShowEditTerceroModal}
+        tercero={selectedTercero}
+      />
+
+      {/* Modal para eliminar tercero */}
+      <DeleteTerceroModal
+        open={showDeleteTerceroModal}
+        onOpenChange={setShowDeleteTerceroModal}
+        tercero={selectedTercero}
       />
     </div>
   );

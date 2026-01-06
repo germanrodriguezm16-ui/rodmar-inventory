@@ -171,3 +171,4 @@ Esta consulta debe devolver 1 fila con `column_name = 'oculta'` y `data_type = '
 
 
 
+

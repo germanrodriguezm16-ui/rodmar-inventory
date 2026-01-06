@@ -184,3 +184,5 @@ Esta fase es más visual. Simplemente verifica que:
 - **Balances**: 10-15 minutos
 - **Total**: ~30-40 minutos
 
+
+

@@ -860,13 +860,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const userId = req.user!.id;
+
+      // Verificar primero si el tercero existe
+      const tercero = await storage.getTerceroById(terceroId);
+      if (!tercero) {
+        return res.status(404).json({ error: "Tercero no encontrado" });
+      }
+
+      // Verificar si el tercero tiene transacciones asociadas
+      const transacciones = await storage.getTransacciones();
+      const terceroIdStr = terceroId.toString();
+      
+      const tieneTransacciones = transacciones.some((transaccion: any) => 
+        (transaccion.deQuienTipo === "tercero" && transaccion.deQuienId === terceroIdStr) ||
+        (transaccion.paraQuienTipo === "tercero" && transaccion.paraQuienId === terceroIdStr)
+      );
+
+      if (tieneTransacciones) {
+        return res.status(400).json({
+          error: "No se puede eliminar el tercero porque tiene transacciones asociadas",
+        });
+      }
+
+      // Si no tiene transacciones, proceder con la eliminación
       const deleted = await storage.deleteTercero(terceroId, userId);
 
       if (!deleted) {
         return res.status(404).json({ error: "Tercero not found" });
       }
 
-      res.json({ success: true, message: "Tercero deleted successfully" });
+      res.json({ success: true, message: "Tercero eliminado exitosamente" });
     } catch (error: any) {
       console.error("Error deleting tercero:", error);
       res.status(500).json({ error: "Failed to delete tercero" });

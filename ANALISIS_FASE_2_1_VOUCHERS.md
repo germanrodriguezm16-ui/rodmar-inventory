@@ -244,3 +244,5 @@ const handleToggleVoucher = () => {
 4. **Más fácil de testear**: El hook se puede testear independientemente
 5. **Más fácil de extender**: Si necesitas agregar lógica, solo la agregas en un lugar
 
+
+

@@ -184,3 +184,4 @@ Después de aplicar la solución, verificar:
 - La validación previa es más eficiente que depender solo del manejo de errores de PostgreSQL.
 - El código actual funciona para crear roles (POST), pero necesita esta mejora para actualizar (PUT).
 
+
