@@ -81,6 +81,9 @@ export default function RodMar() {
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
   const [selectedSubAccount, setSelectedSubAccount] = useState<string>("");
   const [showAddTerceroModal, setShowAddTerceroModal] = useState(false);
+  const [showEditTerceroModal, setShowEditTerceroModal] = useState(false);
+  const [showDeleteTerceroModal, setShowDeleteTerceroModal] = useState(false);
+  const [selectedTercero, setSelectedTercero] = useState<any>(null);
 
   // Leer el query parameter 'tab' de la URL para determinar qué tab mostrar
   const getInitialTab = () => {
