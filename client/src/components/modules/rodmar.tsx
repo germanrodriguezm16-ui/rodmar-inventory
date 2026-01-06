@@ -79,7 +79,7 @@ export default function RodMar() {
     const searchParams = new URLSearchParams(window.location.search);
     const tabParam = searchParams.get('tab');
     // Validar que el tab existe y el usuario tiene permisos
-    if (tabParam === 'terceros' && has("module.RODMAR.accounts.view")) {
+    if (tabParam === 'terceros' && has("module.RODMAR.tab.TERCEROS.view")) {
       return 'terceros';
     }
     if (tabParam === 'cuentas' && has("module.RODMAR.accounts.view")) {
@@ -449,7 +449,7 @@ export default function RodMar() {
               (() => {
                 const visibleTabs = [
                   has("module.RODMAR.accounts.view"), // cuentas
-                  has("module.RODMAR.accounts.view"), // terceros
+                  has("module.RODMAR.tab.TERCEROS.view"), // terceros
                   has("module.RODMAR.balances.view"),
                   has("module.RODMAR.balances.view"), // financiero usa balances
                   has("module.RODMAR.LCDM.view"),
