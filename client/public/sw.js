@@ -119,35 +119,36 @@ async function handleNavigationRequest(request) {
   }
   
   try {
-    // Intentar obtener index.html desde cache primero
+    // Para requests de navegación, hacer fetch de la URL original
+    // Vercel aplicará el rewrite automáticamente para servir index.html
+    // Esto permite que Vercel maneje el routing correctamente
+    const response = await fetch(request);
+    
+    // Si la respuesta es exitosa (200), guardarla en cache
+    if (response.ok) {
+      const cache = await caches.open(STATIC_CACHE);
+      // Guardar con la URL original como clave para futuras navegaciones
+      cache.put(request, response.clone());
+      return response;
+    }
+    
+    // Si la respuesta no es exitosa, intentar servir index.html desde cache
     const cache = await caches.open(STATIC_CACHE);
     const cachedIndex = await cache.match('/');
-    
     if (cachedIndex) {
-      logAndSend('info', 'SERVICE_WORKER', 'Sirviendo index.html desde cache para navegación', { url: url.pathname });
+      logAndSend('warn', 'SERVICE_WORKER', 'Usando index.html desde cache como fallback', { url: url.pathname, status: response.status });
       return cachedIndex;
     }
     
-    // Si no está en cache, hacer fetch de index.html
-    logAndSend('info', 'SERVICE_WORKER', 'Fetching index.html para navegación', { url: url.pathname });
+    // Si no hay cache, intentar fetch de index.html directamente
     const indexResponse = await fetch('/');
-    
     if (indexResponse.ok) {
-      // Guardar en cache para próximas veces
       cache.put('/', indexResponse.clone());
       return indexResponse;
     }
     
-    // Si falla, intentar servir desde cache dinámico como fallback
-    const dynamicCache = await caches.open(DYNAMIC_CACHE);
-    const cachedFallback = await dynamicCache.match('/');
-    if (cachedFallback) {
-      logAndSend('warn', 'SERVICE_WORKER', 'Usando fallback de cache dinámico para navegación', { url: url.pathname });
-      return cachedFallback;
-    }
-    
-    // Último recurso: devolver la respuesta original
-    return indexResponse;
+    // Último recurso: devolver la respuesta original (puede ser 404, pero es mejor que nada)
+    return response;
   } catch (error) {
     logAndSend('error', 'SERVICE_WORKER', 'Error manejando request de navegación', { url: url.pathname, error: error.message });
     

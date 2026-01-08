@@ -6,22 +6,8 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/:path*",
-      "destination": "/index.html",
-      "has": [
-        {
-          "type": "header",
-          "key": "accept",
-          "value": "text/html"
-        }
-      ],
-      "missing": [
-        {
-          "type": "header",
-          "key": "x-vercel-static",
-          "value": "1"
-        }
-      ]
+      "source": "/((?!manifest\\.json|.*\\.(png|ico|svg|jpg|jpeg|css|js|woff|woff2|ttf|eot|json)|sw\\.js|assets/).*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
