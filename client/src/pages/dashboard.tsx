@@ -83,6 +83,34 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     }
   }, [initialModule, permissions, permissionsLoading, location, setLocation]);
 
+  // Sincronizar la ruta del navegador cuando cambia el módulo activo
+  useEffect(() => {
+    // Solo actualizar la ruta si no estamos en una página de detalle
+    // (las rutas de detalle tienen formato /modulo/:id o /rodmar/cuenta/:slug)
+    const isDetailPage = /^\/(minas|compradores|volqueteros|terceros)\/\d+/.test(location) ||
+                         /^\/rodmar\/cuenta\/.+/.test(location);
+    
+    if (!isDetailPage) {
+      // Mapear el módulo activo a su ruta correspondiente
+      const moduleRoutes: Record<Module, string> = {
+        principal: "/principal",
+        minas: "/minas",
+        compradores: "/compradores",
+        volqueteros: "/volqueteros",
+        transacciones: "/transacciones",
+        rodmar: "/rodmar",
+      };
+
+      const expectedRoute = moduleRoutes[activeModule] || "/";
+      
+      // Solo actualizar la ruta si no coincide con la esperada
+      // (evitar actualizar si ya estamos en la ruta correcta o en una subruta válida)
+      if (location !== expectedRoute && !location.startsWith(`${expectedRoute}/`)) {
+        setLocation(expectedRoute);
+      }
+    }
+  }, [activeModule, location, setLocation]);
+
   // Consultar el conteo de transacciones pendientes
   const { data: pendingCount = 0 } = useQuery<number>({
     queryKey: ["/api/transacciones/pendientes/count"],
