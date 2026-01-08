@@ -9,8 +9,11 @@ export function useSocket() {
 
   useEffect(() => {
     // Conectar al servidor Socket.io
-    // En producción usa VITE_API_URL, en desarrollo usa window.location.origin
-    const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    // En desarrollo usa window.location.origin (el proxy de Vite lo manejará)
+    // En producción usa VITE_API_URL
+    const apiUrl = import.meta.env.PROD 
+      ? (import.meta.env.VITE_API_URL || window.location.origin)
+      : window.location.origin;
     
     // Solo conectar si tenemos una URL válida
     if (!apiUrl) {
@@ -40,7 +43,7 @@ export function useSocket() {
       affectedAccounts?: string[];
       timestamp: string;
     }) => {
-      console.log("📡 Evento recibido: transaction-updated", data);
+      // Debug logging removido para mejor rendimiento
 
       const { affectedEntityTypes, affectedAccounts } = data;
 
@@ -55,11 +58,10 @@ export function useSocket() {
       }
 
       // Invalidar queries específicas según entidades afectadas
+      // OPTIMIZACIÓN: Solo invalidar, no forzar refetch. React Query refetchea automáticamente las queries activas
       if (affectedEntityTypes.includes("mina")) {
         queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
-        // Invalidar endpoint de balances para actualizar listados
         queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
-        queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] }); // Refetch inmediato
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -73,9 +75,7 @@ export function useSocket() {
 
       if (affectedEntityTypes.includes("comprador")) {
         queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
-        // Invalidar endpoint de balances para actualizar listados
         queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
-        queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -89,9 +89,7 @@ export function useSocket() {
 
       if (affectedEntityTypes.includes("volquetero")) {
         queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
-        // Invalidar endpoint de balances para actualizar listados
         queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
-        queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -106,7 +104,6 @@ export function useSocket() {
 
       if (affectedEntityTypes.includes("tercero")) {
         queryClient.invalidateQueries({ queryKey: ["/api/terceros"] });
-        queryClient.refetchQueries({ queryKey: ["/api/terceros"] }); // Refetch inmediato
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -120,7 +117,7 @@ export function useSocket() {
 
       if (affectedEntityTypes.includes("lcdm")) {
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
-        // Invalidar queries de transacciones LCDM (con paginación)
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/rodmar"] });
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -134,7 +131,7 @@ export function useSocket() {
 
       if (affectedEntityTypes.includes("postobon")) {
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
-        // Invalidar queries de transacciones Postobón (con paginación)
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/rodmar"] });
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -158,7 +155,6 @@ export function useSocket() {
             otros: "Otros",
           };
           const accountName = accountNames[accountId] || accountId;
-          // Invalidar todas las queries que empiecen con este patrón (incluye paginación y filtros)
           queryClient.invalidateQueries({
             predicate: (query) => {
               const queryKey = query.queryKey;
@@ -170,6 +166,7 @@ export function useSocket() {
           });
         });
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/rodmar"] });
       }
 
       // React Query refetchea automáticamente las queries activas cuando se invalidan
@@ -182,7 +179,7 @@ export function useSocket() {
       if (eventName.startsWith('transaccionActualizada:')) {
         const { socioTipo, socioId } = data;
         
-        console.log(`📡 [WebSocket] transaccionActualizada recibida para ${socioTipo}:${socioId}`);
+      // Debug logging removido para mejor rendimiento
         
         // Invalidar queries de transacciones del socio (usando patrones específicos)
         queryClient.invalidateQueries({
@@ -209,21 +206,8 @@ export function useSocket() {
           queryKey: ['transacciones', socioTipo, socioId]
         });
         
-        // Forzar refetch de las queries de transacciones del socio para actualización inmediata
-        queryClient.refetchQueries({
-          predicate: (query) => {
-            const queryKey = query.queryKey;
-            if (Array.isArray(queryKey) && queryKey.length > 0) {
-              const firstKey = queryKey[0] as string;
-              return (
-                firstKey === `/api/transacciones/socio/${socioTipo}/${socioId}` ||
-                firstKey === `/api/transacciones/socio/${socioTipo}/${socioId}/all` ||
-                (socioTipo === 'comprador' && firstKey === '/api/transacciones/comprador' && queryKey[1] === socioId)
-              );
-            }
-            return false;
-          },
-        });
+        // React Query refetchea automáticamente las queries activas cuando se invalidan
+        // No es necesario forzar refetch aquí
       } else if (eventName.startsWith('balanceActualizado:')) {
         const { socioTipo, socioId } = data;
         
@@ -242,13 +226,10 @@ export function useSocket() {
         // También invalidar el endpoint de balances agregados
         if (tipo === 'mina') {
           queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
-          queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] });
         } else if (tipo === 'comprador') {
           queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
-          queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] });
         } else if (tipo === 'volquetero') {
           queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
-          queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] });
         }
       } else if (eventName.startsWith('tarjetaActualizada:')) {
         const { socioTipo, socioId } = data;
@@ -265,15 +246,12 @@ export function useSocket() {
         if (socioTipo === 'mina') {
           queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
           queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
-          queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] });
         } else if (socioTipo === 'comprador') {
           queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
           queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
-          queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] });
         } else if (socioTipo === 'volquetero') {
           queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
           queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
-          queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] });
         }
       }
     });

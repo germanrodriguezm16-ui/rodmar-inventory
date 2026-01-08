@@ -13,7 +13,8 @@ export default defineConfig({
     ssl: (process.env.DATABASE_URL?.includes('supabase') || 
           process.env.DATABASE_URL?.includes('pooler') || 
           process.env.DATABASE_URL?.includes('rlwy.net') ||
-          process.env.DATABASE_URL?.includes('railway'))
+          process.env.DATABASE_URL?.includes('railway') ||
+          process.env.DATABASE_URL?.includes('gondola.proxy'))
       ? { rejectUnauthorized: false } 
       : undefined,
   },

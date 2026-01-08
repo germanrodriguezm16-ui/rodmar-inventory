@@ -124,6 +124,18 @@ export const terceros = pgTable("terceros", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Cuentas RodMar (RodMar Accounts)
+export const rodmarCuentas = pgTable("rodmar_cuentas", {
+  id: serial("id").primaryKey(),
+  nombre: text("nombre").notNull(),
+  codigo: varchar("codigo", { length: 50 }).notNull().unique(), // Código único persistente para permisos (ej: "BEMOVIL")
+  userId: varchar("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_rodmar_cuentas_codigo").on(table.codigo),
+]);
+
 // Viajes (Trips)
 export const viajes = pgTable("viajes", {
   id: text("id").primaryKey(), // TRP001, TRP002, etc.
@@ -465,6 +477,16 @@ export const updateTerceroNombreSchema = z.object({
   nombre: z.string().min(1, "El nombre no puede estar vacío").trim(),
 });
 
+// RodMar Cuentas schemas
+// Schema simplificado solo para creación (código se auto-genera en el backend)
+export const insertRodmarCuentaSchema = z.object({
+  nombre: z.string().min(1, "El nombre no puede estar vacío").trim(),
+});
+
+export const updateRodmarCuentaNombreSchema = z.object({
+  nombre: z.string().min(1, "El nombre no puede estar vacío").trim(),
+});
+
 // Fusion schemas
 export const fusionSchema = z.object({
   origenId: z.number().min(1, "ID origen requerido"),
@@ -505,6 +527,10 @@ export type VolqueteroWithViajes = Volquetero & { viajesCount: number };
 
 export type Tercero = typeof terceros.$inferSelect;
 export type InsertTercero = z.infer<typeof insertTerceroSchema>;
+
+export type RodmarCuenta = typeof rodmarCuentas.$inferSelect;
+export type InsertRodmarCuenta = z.infer<typeof insertRodmarCuentaSchema>;
+export type UpdateRodmarCuentaNombre = z.infer<typeof updateRodmarCuentaNombreSchema>;
 
 export type VolqueteroConPlacas = {
   id: number;

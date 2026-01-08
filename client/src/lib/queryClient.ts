@@ -83,8 +83,9 @@ export const getQueryFn: <T>(options: {
     const url = queryKey[0] as string;
     const fullUrl = apiUrl(url);
     
-    // Debug solo en desarrollo y solo para algunas peticiones
-    if (isDev && (queryKey[0] === '/api/transacciones' || queryKey[0] === '/api/minas' || queryKey[0] === '/api/compradores')) {
+    // Debug solo si está habilitado explícitamente
+    const DEBUG_QUERIES = import.meta.env.VITE_DEBUG_QUERIES === 'true';
+    if (isDev && DEBUG_QUERIES && (queryKey[0] === '/api/transacciones' || queryKey[0] === '/api/minas' || queryKey[0] === '/api/compradores')) {
       console.log('🌐 API Request:', {
         originalUrl: url,
         fullUrl,
@@ -101,10 +102,10 @@ export const getQueryFn: <T>(options: {
     
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-      if (isDev) {
+      if (isDev && DEBUG_QUERIES) {
         console.log('🔑 [QUERY] Token incluido en petición:', url.substring(0, 50));
       }
-    } else if (isDev) {
+    } else if (isDev && DEBUG_QUERIES) {
       console.warn('⚠️ [QUERY] No hay token disponible para:', url.substring(0, 50));
     }
     

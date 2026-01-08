@@ -5,16 +5,19 @@ const isDev = import.meta.env.DEV;
  * En producción usa VITE_API_URL, en desarrollo usa URL relativa
  */
 export function getApiUrl(): string {
-  const baseUrl = import.meta.env.VITE_API_URL || '';
+  // En desarrollo, NO usar VITE_API_URL (usar proxy de Vite)
+  // Solo usar VITE_API_URL en producción
+  const baseUrl = import.meta.env.PROD ? (import.meta.env.VITE_API_URL || '') : '';
   
-  // Debug solo en desarrollo
-  if (isDev) {
+  // Debug solo si está habilitado explícitamente
+  if (isDev && import.meta.env.VITE_DEBUG_API_URL === 'true') {
     console.log('🔍 DEBUG getApiUrl:', {
       VITE_API_URL: import.meta.env.VITE_API_URL,
       baseUrl,
       PROD: import.meta.env.PROD,
       MODE: import.meta.env.MODE,
-      windowOrigin: window.location.origin
+      windowOrigin: window.location.origin,
+      usingProxy: !baseUrl && isDev
     });
   }
   

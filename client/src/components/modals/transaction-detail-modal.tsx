@@ -56,6 +56,11 @@ export function TransactionDetailModal({
     enabled: open,
   });
   
+  const { data: rodmarCuentas = [] } = useQuery({
+    queryKey: ["/api/rodmar-cuentas"],
+    enabled: open,
+  });
+  
   const socioDestinoNombre = transaction?.paraQuienTipo 
     ? getSocioNombre(
         transaction.paraQuienTipo,
@@ -63,7 +68,8 @@ export function TransactionDetailModal({
         minas,
         compradores,
         volqueteros,
-        terceros
+        terceros,
+        rodmarCuentas
       ) || 'Socio'
     : 'Socio';
   

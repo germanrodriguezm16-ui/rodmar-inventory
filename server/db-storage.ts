@@ -9,6 +9,7 @@ import {
   inversiones,
   fusionBackups,
   pushSubscriptions,
+  rodmarCuentas,
   type User,
   type UpsertUser,
   type Mina,
@@ -911,10 +912,10 @@ export class DatabaseStorage implements IStorage {
   async getTransacciones(userId?: string): Promise<TransaccionWithSocio[]> {
     return wrapDbOperation(async () => {
       const startTime = Date.now();
-      console.log('');
-      console.log('🔵 ===========================================================');
-      console.log('🔵 [PERF] getTransacciones() - INICIANDO');
-      console.log('🔵 ===========================================================');
+      const DEBUG_TRANSACCIONES = process.env.DEBUG_TRANSACCIONES === 'true';
+      if (DEBUG_TRANSACCIONES) {
+        console.log('🔵 [PERF] getTransacciones() - INICIANDO');
+      }
       
       const conditions: any[] = [];
       if (userId) {
@@ -955,33 +956,85 @@ export class DatabaseStorage implements IStorage {
         .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna));
 
       const queryTime = Date.now() - queryStart;
-      console.log(`⏱️  [PERF] Query de transacciones: ${queryTime}ms (${results.length} registros)`);
+      if (DEBUG_TRANSACCIONES) {
+        console.log(`⏱️  [PERF] Query de transacciones: ${queryTime}ms (${results.length} registros)`);
+      }
 
-      // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 3 queries en lugar de N queries
+      // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 5 queries en lugar de N queries
       const batchStart = Date.now();
-      console.log('🚀 Optimización: Cargando nombres en batch...');
-      const [allMinas, allCompradores, allVolqueteros] = await Promise.all([
+      const [allMinas, allCompradores, allVolqueteros, allTerceros, allRodmarCuentas] = await Promise.all([
         db.select({ id: minas.id, nombre: minas.nombre }).from(minas),
         db.select({ id: compradores.id, nombre: compradores.nombre }).from(compradores),
         db.select({ id: volqueteros.id, nombre: volqueteros.nombre }).from(volqueteros),
+        db.select({ id: terceros.id, nombre: terceros.nombre }).from(terceros),
+        db.select({ id: rodmarCuentas.id, nombre: rodmarCuentas.nombre, codigo: rodmarCuentas.codigo }).from(rodmarCuentas),
       ]);
 
       const batchTime = Date.now() - batchStart;
-      console.log(`⏱️  [PERF] Batch loading de nombres: ${batchTime}ms`);
+      if (DEBUG_TRANSACCIONES) {
+        console.log(`⏱️  [PERF] Batch loading de nombres: ${batchTime}ms`);
+      }
 
       // Crear Maps para lookup O(1)
       const mapStart = Date.now();
       const minasMap = new Map<number, string>();
       const compradoresMap = new Map<number, string>();
       const volqueterosMap = new Map<number, string>();
+      const tercerosMap = new Map<number, string>();
+      // Mapa de cuentas RodMar: clave puede ser ID (numérico), código, o slug legacy
+      const rodmarCuentasMap = new Map<string, string>();
 
       allMinas.forEach(m => minasMap.set(m.id, m.nombre));
       allCompradores.forEach(c => compradoresMap.set(c.id, c.nombre));
       allVolqueteros.forEach(v => volqueterosMap.set(v.id, v.nombre));
+      allTerceros.forEach(t => tercerosMap.set(t.id, t.nombre));
+      
+      // Mapear cuentas RodMar por ID, código y slug legacy
+      // También mapear nombres antiguos conocidos para compatibilidad con transacciones antiguas
+      const nombresAntiguosMap: Record<string, string> = {
+        'bemovil': 'BEMOVIL',
+        'corresponsal': 'CORRESPONSAL',
+        'efectivo': 'EFECTIVO',
+        'cuentas-german': 'CUENTAS_GERMAN',
+        'cuentas-german': 'CUENTAS_GERMAN',
+        'cuentas jhon': 'CUENTAS_JHON',
+        'cuentas-jhon': 'CUENTAS_JHON',
+        'otros': 'OTROS'
+      };
+      
+      allRodmarCuentas.forEach(c => {
+        rodmarCuentasMap.set(c.id.toString(), c.nombre);
+        rodmarCuentasMap.set(c.codigo.toLowerCase(), c.nombre);
+        rodmarCuentasMap.set(c.codigo.toUpperCase(), c.nombre);
+        // Slug legacy para compatibilidad
+        const slugLegacy = c.codigo.toLowerCase().replace(/_/g, '-');
+        rodmarCuentasMap.set(slugLegacy, c.nombre);
+        
+        // Mapear nombres antiguos conocidos al nombre actual
+        const codigoLower = c.codigo.toLowerCase();
+        if (codigoLower === 'bemovil' || codigoLower === 'corresponsal' || codigoLower === 'efectivo' || 
+            codigoLower === 'cuentas_german' || codigoLower === 'cuentas_jhon' || codigoLower === 'otros') {
+          // Mapear variaciones del nombre antiguo al nombre nuevo
+          rodmarCuentasMap.set('Bemovil', c.nombre);
+          rodmarCuentasMap.set('bemovil', c.nombre);
+          rodmarCuentasMap.set('Corresponsal', c.nombre);
+          rodmarCuentasMap.set('corresponsal', c.nombre);
+          rodmarCuentasMap.set('Efectivo', c.nombre);
+          rodmarCuentasMap.set('efectivo', c.nombre);
+          rodmarCuentasMap.set('Cuentas German', c.nombre);
+          rodmarCuentasMap.set('cuentas german', c.nombre);
+          rodmarCuentasMap.set('Cuentas Jhon', c.nombre);
+          rodmarCuentasMap.set('cuentas jhon', c.nombre);
+          rodmarCuentasMap.set('Otros', c.nombre);
+          rodmarCuentasMap.set('otros', c.nombre);
+        }
+      });
 
       const mapTime = Date.now() - mapStart;
-      console.log(`✅ Nombres cargados: ${minasMap.size} minas, ${compradoresMap.size} compradores, ${volqueterosMap.size} volqueteros`);
-      console.log(`⏱️  [PERF] Creación de Maps: ${mapTime}ms`);
+      if (DEBUG_TRANSACCIONES) {
+        console.log(`✅ Nombres cargados: ${minasMap.size} minas, ${compradoresMap.size} compradores, ${volqueterosMap.size} volqueteros, ${rodmarCuentasMap.size} referencias RodMar`);
+        console.log(`⏱️  [PERF] Creación de Maps: ${mapTime}ms`);
+      }
 
       // Resolver nombres de socios y actualizar conceptos dinámicamente (usando Maps en lugar de queries)
       const processStart = Date.now();
@@ -997,7 +1050,7 @@ export class DatabaseStorage implements IStorage {
         }
 
         // Actualizar concepto dinámicamente con nombres actuales (usando Maps)
-        conceptoActualizado = this.updateConceptoWithCurrentNamesSync(t, minasMap, compradoresMap, volqueterosMap);
+        conceptoActualizado = this.updateConceptoWithCurrentNamesSync(t, minasMap, compradoresMap, volqueterosMap, tercerosMap, rodmarCuentasMap);
         
         return {
           ...t,
@@ -1009,8 +1062,10 @@ export class DatabaseStorage implements IStorage {
 
       const processTime = Date.now() - processStart;
       const totalTime = Date.now() - startTime;
-      console.log(`⏱️  [PERF] Procesamiento de ${results.length} transacciones: ${processTime}ms`);
-      console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getTransacciones: ${totalTime}ms (Query: ${queryTime}ms, Batch: ${batchTime}ms, Maps: ${mapTime}ms, Process: ${processTime}ms)`);
+      if (DEBUG_TRANSACCIONES) {
+        console.log(`⏱️  [PERF] Procesamiento de ${results.length} transacciones: ${processTime}ms`);
+        console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getTransacciones: ${totalTime}ms (Query: ${queryTime}ms, Batch: ${batchTime}ms, Maps: ${mapTime}ms, Process: ${processTime}ms)`);
+      }
 
       return resultsWithUpdatedData;
     });
@@ -1136,12 +1191,14 @@ export class DatabaseStorage implements IStorage {
       const queryTime = Date.now() - queryStart;
       console.log(`⏱️  [PERF] Query paginada de transacciones: ${queryTime}ms (${results.length} registros)`);
 
-      // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 3 queries
+      // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 5 queries
       const batchStart = Date.now();
-      const [allMinas, allCompradores, allVolqueteros] = await Promise.all([
+      const [allMinas, allCompradores, allVolqueteros, allTerceros, allRodmarCuentas] = await Promise.all([
         db.select({ id: minas.id, nombre: minas.nombre }).from(minas),
         db.select({ id: compradores.id, nombre: compradores.nombre }).from(compradores),
         db.select({ id: volqueteros.id, nombre: volqueteros.nombre }).from(volqueteros),
+        db.select({ id: terceros.id, nombre: terceros.nombre }).from(terceros),
+        db.select({ id: rodmarCuentas.id, nombre: rodmarCuentas.nombre, codigo: rodmarCuentas.codigo }).from(rodmarCuentas),
       ]);
 
       const batchTime = Date.now() - batchStart;
@@ -1152,10 +1209,40 @@ export class DatabaseStorage implements IStorage {
       const minasMap = new Map<number, string>();
       const compradoresMap = new Map<number, string>();
       const volqueterosMap = new Map<number, string>();
+      const tercerosMap = new Map<number, string>();
+      const rodmarCuentasMap = new Map<string, string>();
 
       allMinas.forEach(m => minasMap.set(m.id, m.nombre));
       allCompradores.forEach(c => compradoresMap.set(c.id, c.nombre));
       allVolqueteros.forEach(v => volqueterosMap.set(v.id, v.nombre));
+      allTerceros.forEach(t => tercerosMap.set(t.id, t.nombre));
+      
+      // Mapear cuentas RodMar por ID, código y slug legacy
+      allRodmarCuentas.forEach(c => {
+        rodmarCuentasMap.set(c.id.toString(), c.nombre);
+        rodmarCuentasMap.set(c.codigo.toLowerCase(), c.nombre);
+        rodmarCuentasMap.set(c.codigo.toUpperCase(), c.nombre);
+        const slugLegacy = c.codigo.toLowerCase().replace(/_/g, '-');
+        rodmarCuentasMap.set(slugLegacy, c.nombre);
+        
+        // Mapear nombres antiguos conocidos al nombre actual
+        const codigoLower = c.codigo.toLowerCase();
+        if (codigoLower === 'bemovil' || codigoLower === 'corresponsal' || codigoLower === 'efectivo' || 
+            codigoLower === 'cuentas_german' || codigoLower === 'cuentas_jhon' || codigoLower === 'otros') {
+          rodmarCuentasMap.set('Bemovil', c.nombre);
+          rodmarCuentasMap.set('bemovil', c.nombre);
+          rodmarCuentasMap.set('Corresponsal', c.nombre);
+          rodmarCuentasMap.set('corresponsal', c.nombre);
+          rodmarCuentasMap.set('Efectivo', c.nombre);
+          rodmarCuentasMap.set('efectivo', c.nombre);
+          rodmarCuentasMap.set('Cuentas German', c.nombre);
+          rodmarCuentasMap.set('cuentas german', c.nombre);
+          rodmarCuentasMap.set('Cuentas Jhon', c.nombre);
+          rodmarCuentasMap.set('cuentas jhon', c.nombre);
+          rodmarCuentasMap.set('Otros', c.nombre);
+          rodmarCuentasMap.set('otros', c.nombre);
+        }
+      });
 
       const mapTime = Date.now() - mapStart;
       console.log(`✅ Nombres cargados: ${minasMap.size} minas, ${compradoresMap.size} compradores, ${volqueterosMap.size} volqueteros`);
@@ -1175,7 +1262,7 @@ export class DatabaseStorage implements IStorage {
         }
 
         // Actualizar concepto dinámicamente con nombres actuales
-        conceptoActualizado = this.updateConceptoWithCurrentNamesSync(t, minasMap, compradoresMap, volqueterosMap);
+        conceptoActualizado = this.updateConceptoWithCurrentNamesSync(t, minasMap, compradoresMap, volqueterosMap, tercerosMap, rodmarCuentasMap);
         
         return {
           ...t,
@@ -1425,21 +1512,53 @@ export class DatabaseStorage implements IStorage {
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna));
 
-      // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 3 queries
-      const [allMinas, allCompradores, allVolqueteros] = await Promise.all([
+      // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 5 queries
+      const [allMinas, allCompradores, allVolqueteros, allTerceros, allRodmarCuentas] = await Promise.all([
         db.select({ id: minas.id, nombre: minas.nombre }).from(minas),
         db.select({ id: compradores.id, nombre: compradores.nombre }).from(compradores),
         db.select({ id: volqueteros.id, nombre: volqueteros.nombre }).from(volqueteros),
+        db.select({ id: terceros.id, nombre: terceros.nombre }).from(terceros),
+        db.select({ id: rodmarCuentas.id, nombre: rodmarCuentas.nombre, codigo: rodmarCuentas.codigo }).from(rodmarCuentas),
       ]);
 
       // Crear Maps para lookup O(1)
       const minasMap = new Map<number, string>();
       const compradoresMap = new Map<number, string>();
       const volqueterosMap = new Map<number, string>();
+      const tercerosMap = new Map<number, string>();
+      const rodmarCuentasMap = new Map<string, string>();
 
       allMinas.forEach(m => minasMap.set(m.id, m.nombre));
       allCompradores.forEach(c => compradoresMap.set(c.id, c.nombre));
       allVolqueteros.forEach(v => volqueterosMap.set(v.id, v.nombre));
+      allTerceros.forEach(t => tercerosMap.set(t.id, t.nombre));
+      
+      // Mapear cuentas RodMar por ID, código y slug legacy
+      allRodmarCuentas.forEach(c => {
+        rodmarCuentasMap.set(c.id.toString(), c.nombre);
+        rodmarCuentasMap.set(c.codigo.toLowerCase(), c.nombre);
+        rodmarCuentasMap.set(c.codigo.toUpperCase(), c.nombre);
+        const slugLegacy = c.codigo.toLowerCase().replace(/_/g, '-');
+        rodmarCuentasMap.set(slugLegacy, c.nombre);
+        
+        // Mapear nombres antiguos conocidos al nombre actual
+        const codigoLower = c.codigo.toLowerCase();
+        if (codigoLower === 'bemovil' || codigoLower === 'corresponsal' || codigoLower === 'efectivo' || 
+            codigoLower === 'cuentas_german' || codigoLower === 'cuentas_jhon' || codigoLower === 'otros') {
+          rodmarCuentasMap.set('Bemovil', c.nombre);
+          rodmarCuentasMap.set('bemovil', c.nombre);
+          rodmarCuentasMap.set('Corresponsal', c.nombre);
+          rodmarCuentasMap.set('corresponsal', c.nombre);
+          rodmarCuentasMap.set('Efectivo', c.nombre);
+          rodmarCuentasMap.set('efectivo', c.nombre);
+          rodmarCuentasMap.set('Cuentas German', c.nombre);
+          rodmarCuentasMap.set('cuentas german', c.nombre);
+          rodmarCuentasMap.set('Cuentas Jhon', c.nombre);
+          rodmarCuentasMap.set('cuentas jhon', c.nombre);
+          rodmarCuentasMap.set('Otros', c.nombre);
+          rodmarCuentasMap.set('otros', c.nombre);
+        }
+      });
 
       // Procesar resultados para incluir info de socios
       const processedResults = results.map((t) => {
@@ -1453,7 +1572,7 @@ export class DatabaseStorage implements IStorage {
         }
 
         // Actualizar concepto dinámicamente con nombres actuales
-        const conceptoActualizado = this.updateConceptoWithCurrentNamesSync(t, minasMap, compradoresMap, volqueterosMap);
+        const conceptoActualizado = this.updateConceptoWithCurrentNamesSync(t, minasMap, compradoresMap, volqueterosMap, tercerosMap, rodmarCuentasMap);
         
         return {
           ...t,
@@ -2124,21 +2243,53 @@ export class DatabaseStorage implements IStorage {
         return dateB - dateA; // Más reciente primero
       });
 
-      // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 3 queries en lugar de N queries
-      const [allMinas, allCompradores, allVolqueteros] = await Promise.all([
+      // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 5 queries en lugar de N queries
+      const [allMinas, allCompradores, allVolqueteros, allTerceros, allRodmarCuentas] = await Promise.all([
         db.select({ id: minas.id, nombre: minas.nombre }).from(minas),
         db.select({ id: compradores.id, nombre: compradores.nombre }).from(compradores),
         db.select({ id: volqueteros.id, nombre: volqueteros.nombre }).from(volqueteros),
+        db.select({ id: terceros.id, nombre: terceros.nombre }).from(terceros),
+        db.select({ id: rodmarCuentas.id, nombre: rodmarCuentas.nombre, codigo: rodmarCuentas.codigo }).from(rodmarCuentas),
       ]);
 
       // Crear Maps para lookup O(1)
       const minasMap = new Map<number, string>();
       const compradoresMap = new Map<number, string>();
       const volqueterosMap = new Map<number, string>();
+      const tercerosMap = new Map<number, string>();
+      const rodmarCuentasMap = new Map<string, string>();
 
       allMinas.forEach(m => minasMap.set(m.id, m.nombre));
       allCompradores.forEach(c => compradoresMap.set(c.id, c.nombre));
       allVolqueteros.forEach(v => volqueterosMap.set(v.id, v.nombre));
+      allTerceros.forEach(t => tercerosMap.set(t.id, t.nombre));
+      
+      // Mapear cuentas RodMar por ID, código y slug legacy
+      allRodmarCuentas.forEach(c => {
+        rodmarCuentasMap.set(c.id.toString(), c.nombre);
+        rodmarCuentasMap.set(c.codigo.toLowerCase(), c.nombre);
+        rodmarCuentasMap.set(c.codigo.toUpperCase(), c.nombre);
+        const slugLegacy = c.codigo.toLowerCase().replace(/_/g, '-');
+        rodmarCuentasMap.set(slugLegacy, c.nombre);
+        
+        // Mapear nombres antiguos conocidos al nombre actual
+        const codigoLower = c.codigo.toLowerCase();
+        if (codigoLower === 'bemovil' || codigoLower === 'corresponsal' || codigoLower === 'efectivo' || 
+            codigoLower === 'cuentas_german' || codigoLower === 'cuentas_jhon' || codigoLower === 'otros') {
+          rodmarCuentasMap.set('Bemovil', c.nombre);
+          rodmarCuentasMap.set('bemovil', c.nombre);
+          rodmarCuentasMap.set('Corresponsal', c.nombre);
+          rodmarCuentasMap.set('corresponsal', c.nombre);
+          rodmarCuentasMap.set('Efectivo', c.nombre);
+          rodmarCuentasMap.set('efectivo', c.nombre);
+          rodmarCuentasMap.set('Cuentas German', c.nombre);
+          rodmarCuentasMap.set('cuentas german', c.nombre);
+          rodmarCuentasMap.set('Cuentas Jhon', c.nombre);
+          rodmarCuentasMap.set('cuentas jhon', c.nombre);
+          rodmarCuentasMap.set('Otros', c.nombre);
+          rodmarCuentasMap.set('otros', c.nombre);
+        }
+      });
 
       // Obtener el nombre del socio una vez (usando Map)
       const socioNombre = this.getSocioNombreFromMap(tipoSocio, socioId, minasMap, compradoresMap, volqueterosMap);
@@ -2146,7 +2297,7 @@ export class DatabaseStorage implements IStorage {
       // Aplicar actualización de conceptos y nombres de socios a cada transacción (usando Maps)
       const updatedResults = uniqueResults.map((t) => {
         // Actualizar concepto dinámicamente con nombres actuales (versión síncrona)
-        const conceptoActualizado = this.updateConceptoWithCurrentNamesSync(t, minasMap, compradoresMap, volqueterosMap);
+        const conceptoActualizado = this.updateConceptoWithCurrentNamesSync(t, minasMap, compradoresMap, volqueterosMap, tercerosMap, rodmarCuentasMap);
         
         return {
           ...t,
@@ -2268,7 +2419,9 @@ export class DatabaseStorage implements IStorage {
     transaccion: any,
     minasMap: Map<number, string>,
     compradoresMap: Map<number, string>,
-    volqueterosMap: Map<number, string>
+    volqueterosMap: Map<number, string>,
+    tercerosMap?: Map<number, string>,
+    rodmarCuentasMap?: Map<string, string>
   ): string {
     let conceptoActualizado = transaccion.concepto;
 
@@ -2280,8 +2433,8 @@ export class DatabaseStorage implements IStorage {
 
     // OPTIMIZACIÓN: Pre-compilar regex una vez (fuera del loop si fuera posible, pero aquí mantenemos compatibilidad)
     // Solo procesar si realmente hay tipos de socio que necesitan actualización
-    const needsUpdate = (transaccion.deQuienTipo && ['mina', 'comprador', 'volquetero'].includes(transaccion.deQuienTipo)) ||
-                       (transaccion.paraQuienTipo && ['mina', 'comprador', 'volquetero'].includes(transaccion.paraQuienTipo));
+    const needsUpdate = (transaccion.deQuienTipo && ['mina', 'comprador', 'volquetero', 'tercero', 'rodmar'].includes(transaccion.deQuienTipo)) ||
+                       (transaccion.paraQuienTipo && ['mina', 'comprador', 'volquetero', 'tercero', 'rodmar'].includes(transaccion.paraQuienTipo));
     
     if (!needsUpdate) {
       return conceptoActualizado;
@@ -2289,49 +2442,137 @@ export class DatabaseStorage implements IStorage {
 
     try {
       // Actualizar nombre en deQuien (origen) - para casos como "Transferencia de Comprador (Jamer)"
-      if (transaccion.deQuienTipo && transaccion.deQuienId && ['mina', 'comprador', 'volquetero'].includes(transaccion.deQuienTipo)) {
-        const nombreActual = this.getSocioNombreFromMap(transaccion.deQuienTipo, parseInt(transaccion.deQuienId), minasMap, compradoresMap, volqueterosMap);
+      if (transaccion.deQuienTipo && transaccion.deQuienId && ['mina', 'comprador', 'volquetero', 'tercero'].includes(transaccion.deQuienTipo)) {
+        // Obtener nombre actual según el tipo
+        let nombreActual: string;
+        if (transaccion.deQuienTipo === 'tercero' && tercerosMap) {
+          nombreActual = tercerosMap.get(parseInt(transaccion.deQuienId)) || transaccion.deQuienId;
+        } else {
+          nombreActual = this.getSocioNombreFromMap(transaccion.deQuienTipo, parseInt(transaccion.deQuienId), minasMap, compradoresMap, volqueterosMap);
+        }
         
         // OPTIMIZACIÓN: Solo ejecutar regex si el concepto contiene el tipo de socio
-        const tipoCapitalizado = transaccion.deQuienTipo === 'mina' ? 'Mina' : transaccion.deQuienTipo === 'comprador' ? 'Comprador' : 'Volquetero';
+        const tipoCapitalizado = transaccion.deQuienTipo === 'mina' ? 'Mina' : 
+                                 transaccion.deQuienTipo === 'comprador' ? 'Comprador' : 
+                                 transaccion.deQuienTipo === 'volquetero' ? 'Volquetero' : 
+                                 'Tercero';
         if (conceptoActualizado.includes(tipoCapitalizado)) {
           // Patrones para encontrar y reemplazar nombres de origen (pre-compilados)
           const patronesOrigen: Record<string, RegExp> = {
             'mina': /(?:de|desde)\s+Mina\s*\(([^)]+)\)/i,
             'comprador': /(?:de|desde)\s+Comprador\s*\(([^)]+)\)/i,
-            'volquetero': /(?:de|desde)\s+Volquetero\s*\(([^)]+)\)/i
+            'volquetero': /(?:de|desde)\s+Volquetero\s*\(([^)]+)\)/i,
+            'tercero': /(?:de|desde)\s+Tercero\s*\(([^)]+)\)/i
           };
           
           const patron = patronesOrigen[transaccion.deQuienTipo];
           if (patron) {
             const match = conceptoActualizado.match(patron);
-            if (match && match[1] !== nombreActual) {
+            if (match && match[1] && match[1].trim() !== nombreActual.trim()) {
               conceptoActualizado = conceptoActualizado.replace(patron, `de ${tipoCapitalizado} (${nombreActual})`);
             }
           }
         }
       }
 
+      // Actualizar nombres de cuentas RodMar en el concepto (origen)
+      if (transaccion.deQuienTipo === 'rodmar' && transaccion.deQuienId) {
+        const cuentaIdRaw = transaccion.deQuienId.toString();
+        const cuentaId = cuentaIdRaw.toLowerCase();
+        let nombreActual: string | undefined;
+        
+        // Intentar obtener el nombre actual desde el mapa de cuentas
+        // Probar múltiples formatos: ID numérico, código, slug con guiones, slug con guiones bajos
+        if (rodmarCuentasMap && rodmarCuentasMap.size > 0) {
+          nombreActual = rodmarCuentasMap.get(cuentaId) || 
+                        rodmarCuentasMap.get(cuentaIdRaw) || // ID numérico como string
+                        rodmarCuentasMap.get(cuentaId.replace(/-/g, '_')) ||
+                        rodmarCuentasMap.get(cuentaId.replace(/_/g, '-')) ||
+                        rodmarCuentasMap.get(cuentaIdRaw.replace(/-/g, '_')) ||
+                        rodmarCuentasMap.get(cuentaIdRaw.replace(/_/g, '-'));
+        }
+        
+        // Si no se encontró, usar el ID como fallback
+        if (!nombreActual) {
+          nombreActual = cuentaIdRaw;
+        }
+        
+        // Buscar y reemplazar "de Rodmar (cualquierNombre)" con "de Rodmar (nombreActual)"
+        // Esto reemplazará cualquier nombre antiguo (ej: "Bemovil") con el nombre actual (ej: "Refacil")
+        if (nombreActual && conceptoActualizado.includes('Rodmar')) {
+          const patronRodmarOrigen = /(?:de|desde)\s+Rodmar\s*\(([^)]+)\)/i;
+          const match = conceptoActualizado.match(patronRodmarOrigen);
+          if (match && match[1] && match[1].trim() !== nombreActual.trim()) {
+            // Reemplazar el nombre antiguo con el nombre actual
+            conceptoActualizado = conceptoActualizado.replace(patronRodmarOrigen, `de Rodmar (${nombreActual})`);
+          }
+        }
+      }
+
       // Actualizar nombre en paraQuien (destino) - más común
-      if (transaccion.paraQuienTipo && transaccion.paraQuienId && ['mina', 'comprador', 'volquetero'].includes(transaccion.paraQuienTipo)) {
-        const nombreActual = this.getSocioNombreFromMap(transaccion.paraQuienTipo, parseInt(transaccion.paraQuienId), minasMap, compradoresMap, volqueterosMap);
+      if (transaccion.paraQuienTipo && transaccion.paraQuienId && ['mina', 'comprador', 'volquetero', 'tercero'].includes(transaccion.paraQuienTipo)) {
+        // Obtener nombre actual según el tipo
+        let nombreActual: string;
+        if (transaccion.paraQuienTipo === 'tercero' && tercerosMap) {
+          nombreActual = tercerosMap.get(parseInt(transaccion.paraQuienId)) || transaccion.paraQuienId;
+        } else {
+          nombreActual = this.getSocioNombreFromMap(transaccion.paraQuienTipo, parseInt(transaccion.paraQuienId), minasMap, compradoresMap, volqueterosMap);
+        }
         
         // OPTIMIZACIÓN: Solo ejecutar regex si el concepto contiene el tipo de socio
-        const tipoCapitalizado = transaccion.paraQuienTipo === 'mina' ? 'Mina' : transaccion.paraQuienTipo === 'comprador' ? 'Comprador' : 'Volquetero';
+        const tipoCapitalizado = transaccion.paraQuienTipo === 'mina' ? 'Mina' : 
+                                 transaccion.paraQuienTipo === 'comprador' ? 'Comprador' : 
+                                 transaccion.paraQuienTipo === 'volquetero' ? 'Volquetero' : 
+                                 'Tercero';
         if (conceptoActualizado.includes(tipoCapitalizado)) {
           // Patrones para encontrar y reemplazar nombres de destino (pre-compilados)
           const patronesDestino: Record<string, RegExp> = {
             'mina': /(?:a|hacia)\s+Mina\s*\(([^)]+)\)/i,
             'comprador': /(?:a|hacia)\s+Comprador\s*\(([^)]+)\)/i,
-            'volquetero': /(?:a|hacia)\s+Volquetero\s*\(([^)]+)\)/i
+            'volquetero': /(?:a|hacia)\s+Volquetero\s*\(([^)]+)\)/i,
+            'tercero': /(?:a|hacia)\s+Tercero\s*\(([^)]+)\)/i
           };
           
           const patron = patronesDestino[transaccion.paraQuienTipo];
           if (patron) {
             const match = conceptoActualizado.match(patron);
-            if (match && match[1] !== nombreActual) {
+            if (match && match[1] && match[1].trim() !== nombreActual.trim()) {
               conceptoActualizado = conceptoActualizado.replace(patron, `a ${tipoCapitalizado} (${nombreActual})`);
             }
+          }
+        }
+      }
+
+      // Actualizar nombre en paraQuien si es RodMar
+      if (transaccion.paraQuienTipo === 'rodmar' && transaccion.paraQuienId) {
+        const cuentaIdRaw = transaccion.paraQuienId.toString();
+        const cuentaId = cuentaIdRaw.toLowerCase();
+        let nombreActual: string | undefined;
+        
+        // Intentar obtener el nombre actual desde el mapa de cuentas
+        // Probar múltiples formatos: ID numérico, código, slug con guiones, slug con guiones bajos
+        if (rodmarCuentasMap && rodmarCuentasMap.size > 0) {
+          nombreActual = rodmarCuentasMap.get(cuentaId) || 
+                        rodmarCuentasMap.get(cuentaIdRaw) || // ID numérico como string
+                        rodmarCuentasMap.get(cuentaId.replace(/-/g, '_')) ||
+                        rodmarCuentasMap.get(cuentaId.replace(/_/g, '-')) ||
+                        rodmarCuentasMap.get(cuentaIdRaw.replace(/-/g, '_')) ||
+                        rodmarCuentasMap.get(cuentaIdRaw.replace(/_/g, '-'));
+        }
+        
+        // Si no se encontró, usar el ID como fallback
+        if (!nombreActual) {
+          nombreActual = cuentaIdRaw;
+        }
+        
+        // Buscar y reemplazar "a Rodmar (cualquierNombre)" con "a Rodmar (nombreActual)"
+        // Esto reemplazará cualquier nombre antiguo (ej: "Bemovil") con el nombre actual (ej: "Refacil")
+        if (nombreActual && conceptoActualizado.includes('Rodmar')) {
+          const patronRodmarDestino = /(?:a|hacia)\s+Rodmar\s*\(([^)]+)\)/i;
+          const match = conceptoActualizado.match(patronRodmarDestino);
+          if (match && match[1] && match[1].trim() !== nombreActual.trim()) {
+            // Reemplazar el nombre antiguo con el nombre actual
+            conceptoActualizado = conceptoActualizado.replace(patronRodmarDestino, `a Rodmar (${nombreActual})`);
           }
         }
       }
@@ -4749,6 +4990,531 @@ export class DatabaseStorage implements IStorage {
       //   console.log(`🔍 [getVolqueterosBalances] VERIFICACIÓN Willian Ruiz (ID: 169):`);
       //   console.log(`   - Balance en resultado: ${balanceWillian?.balance || 'NO ENCONTRADO'}`);
       // }
+      
+      return balances;
+    });
+  }
+
+  // Obtener balances y estadísticas de todas las cuentas RodMar sin cargar todas las transacciones
+  async getRodMarBalances(userId?: string): Promise<Record<string, { balance: number; transaccionesCount: number }>> {
+    return wrapDbOperation(async () => {
+      const startTime = Date.now();
+      const DEBUG_RODMAR = process.env.DEBUG_RODMAR === 'true';
+      if (DEBUG_RODMAR) {
+        console.log('🔵 [PERF] getRodMarBalances() - INICIANDO (OPTIMIZADO)');
+      }
+
+      // Obtener todas las cuentas RodMar desde la BD
+      const allCuentas = await db.select().from(rodmarCuentas).orderBy(rodmarCuentas.nombre);
+      const balances: Record<string, { balance: number; transaccionesCount: number }> = {};
+
+      if (allCuentas.length === 0) {
+        if (DEBUG_RODMAR) {
+          console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getRodMarBalances: ${Date.now() - startTime}ms (0 cuentas)`);
+        }
+        return balances;
+      }
+
+      // Crear map de referencias posibles por cuenta (ID numérico, código, slug legacy)
+      const codigoToSlug: Record<string, string> = {
+        'BEMOVIL': 'bemovil',
+        'CORRESPONSAL': 'corresponsal',
+        'EFECTIVO': 'efectivo',
+        'CUENTAS_GERMAN': 'cuentas-german',
+        'CUENTAS_JHON': 'cuentas-jhon',
+        'OTROS': 'otros',
+      };
+
+      // Para cada cuenta, crear lista de referencias posibles para matching
+      const cuentaReferencias = allCuentas.map(cuenta => {
+        const referencias: string[] = [
+          cuenta.id.toString(),
+          cuenta.codigo,
+        ];
+        const slugLegacy = codigoToSlug[cuenta.codigo];
+        if (slugLegacy) {
+          referencias.push(slugLegacy);
+        }
+        return { cuenta, referencias };
+      });
+
+      // Obtener todas las referencias únicas para la query
+      const todasLasReferencias = cuentaReferencias.flatMap(cr => cr.referencias);
+      
+      // Query optimizada: Transacciones agregadas para TODAS las cuentas RodMar en una sola query
+      const transaccionesStart = Date.now();
+      
+      // EXCLUIR transacciones pendientes (no afectan balances)
+      const condicionesBase = [
+        or(
+          eq(transacciones.estado, 'completada'),
+          isNull(transacciones.estado) // Incluir transacciones antiguas sin estado
+        )
+      ];
+      
+      if (userId) {
+        condicionesBase.push(eq(transacciones.userId, userId));
+      }
+
+      // 1. Transacciones donde RodMar es origen (deQuienTipo = 'rodmar') - EGRESO (negativo)
+      const transaccionesDesdeRodMar = await db
+        .select({
+          cuentaRef: transacciones.deQuienId,
+          totalEgresos: sql<number>`COALESCE(SUM(CAST(${transacciones.valor} AS NUMERIC)), 0)`,
+          count: sql<number>`COUNT(*)::int`
+        })
+        .from(transacciones)
+        .where(and(
+          eq(transacciones.deQuienTipo, 'rodmar'),
+          inArray(transacciones.deQuienId, todasLasReferencias),
+          ...condicionesBase
+        ))
+        .groupBy(transacciones.deQuienId);
+
+      // 2. Transacciones donde RodMar es destino (paraQuienTipo = 'rodmar') - INGRESO (positivo)
+      const transaccionesHaciaRodMar = await db
+        .select({
+          cuentaRef: transacciones.paraQuienId,
+          totalIngresos: sql<number>`COALESCE(SUM(CAST(${transacciones.valor} AS NUMERIC)), 0)`,
+          count: sql<number>`COUNT(*)::int`
+        })
+        .from(transacciones)
+        .where(and(
+          eq(transacciones.paraQuienTipo, 'rodmar'),
+          inArray(transacciones.paraQuienId, todasLasReferencias),
+          ...condicionesBase
+        ))
+        .groupBy(transacciones.paraQuienId);
+
+      const transaccionesTime = Date.now() - transaccionesStart;
+      if (DEBUG_RODMAR) {
+        console.log(`⏱️  [PERF] Query agregada de transacciones: ${transaccionesTime}ms (${transaccionesDesdeRodMar.length + transaccionesHaciaRodMar.length} grupos)`);
+      }
+
+      // Crear map de balances por referencia
+      const balancePorReferencia = new Map<string, { egresos: number; ingresos: number; count: number }>();
+      
+      // Procesar transacciones desde RodMar (egresos)
+      transaccionesDesdeRodMar.forEach(t => {
+        if (t.cuentaRef) {
+          const egresos = typeof t.totalEgresos === 'number' ? t.totalEgresos : parseFloat(String(t.totalEgresos || 0));
+          const count = typeof t.count === 'number' ? t.count : parseInt(String(t.count || 0));
+          const actual = balancePorReferencia.get(t.cuentaRef) || { egresos: 0, ingresos: 0, count: 0 };
+          balancePorReferencia.set(t.cuentaRef, {
+            egresos: actual.egresos + (isNaN(egresos) ? 0 : egresos),
+            ingresos: actual.ingresos,
+            count: actual.count + count
+          });
+        }
+      });
+
+      // Procesar transacciones hacia RodMar (ingresos)
+      transaccionesHaciaRodMar.forEach(t => {
+        if (t.cuentaRef) {
+          const ingresos = typeof t.totalIngresos === 'number' ? t.totalIngresos : parseFloat(String(t.totalIngresos || 0));
+          const count = typeof t.count === 'number' ? t.count : parseInt(String(t.count || 0));
+          const actual = balancePorReferencia.get(t.cuentaRef) || { egresos: 0, ingresos: 0, count: 0 };
+          balancePorReferencia.set(t.cuentaRef, {
+            egresos: actual.egresos,
+            ingresos: actual.ingresos + (isNaN(ingresos) ? 0 : ingresos),
+            count: actual.count + count
+          });
+        }
+      });
+
+      // Construir resultado final: mapear balances por cuenta (usando código como key)
+      for (const { cuenta, referencias } of cuentaReferencias) {
+        let egresosTotal = 0;
+        let ingresosTotal = 0;
+        let transaccionesCountTotal = 0;
+
+        // Sumar balances de todas las referencias posibles (ID, código, slug)
+        for (const ref of referencias) {
+          const balance = balancePorReferencia.get(ref);
+          if (balance) {
+            egresosTotal += balance.egresos;
+            ingresosTotal += balance.ingresos;
+            transaccionesCountTotal += balance.count;
+          }
+        }
+
+        const balance = ingresosTotal - egresosTotal;
+        balances[cuenta.codigo] = {
+          balance: isNaN(balance) ? 0 : balance,
+          transaccionesCount: transaccionesCountTotal
+        };
+      }
+
+      const endTime = Date.now();
+      if (DEBUG_RODMAR) {
+        console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getRodMarBalances: ${endTime - startTime}ms (${allCuentas.length} cuentas)`);
+      }
+      return balances;
+    });
+  }
+
+  // Optimización: Obtener transacciones LCDM con query SQL directa (sin cargar todas las transacciones)
+  async getTransaccionesForLCDM(userId?: string, options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    fechaDesde?: string;
+    fechaHasta?: string;
+    includeHidden?: boolean;
+  }): Promise<{
+    data: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
+  }> {
+    return wrapDbOperation(async () => {
+      const startTime = Date.now();
+      const page = options?.page || 1;
+      const limit = options?.limit || 50;
+      const search = options?.search || '';
+      const fechaDesde = options?.fechaDesde || '';
+      const fechaHasta = options?.fechaHasta || '';
+      
+      // Construir condiciones WHERE para SQL
+      const conditions = [
+        or(
+          eq(transacciones.deQuienTipo, 'lcdm'),
+          eq(transacciones.paraQuienTipo, 'lcdm')
+        )
+      ];
+      
+      if (userId) {
+        conditions.push(eq(transacciones.userId, userId));
+      }
+      
+      if (fechaDesde) {
+        conditions.push(sql`${transacciones.fecha} >= ${fechaDesde}::date`);
+      }
+      
+      if (fechaHasta) {
+        conditions.push(sql`${transacciones.fecha} <= ${fechaHasta}::date`);
+      }
+      
+      // Query principal con paginación en SQL
+      const offset = (page - 1) * limit;
+      
+      // Query para obtener total de registros
+      const [totalResult] = await db
+        .select({ count: sql<number>`COUNT(*)::int` })
+        .from(transacciones)
+        .where(and(...conditions));
+      
+      const total = totalResult?.count || 0;
+      
+      // Query para obtener los datos paginados
+      let query = db
+        .select({
+          id: transacciones.id,
+          deQuienTipo: transacciones.deQuienTipo,
+          deQuienId: transacciones.deQuienId,
+          paraQuienTipo: transacciones.paraQuienTipo,
+          paraQuienId: transacciones.paraQuienId,
+          postobonCuenta: transacciones.postobonCuenta,
+          concepto: transacciones.concepto,
+          valor: transacciones.valor,
+          fecha: transacciones.fecha,
+          horaInterna: transacciones.horaInterna,
+          formaPago: transacciones.formaPago,
+          comentario: transacciones.comentario,
+          tipoTransaccion: transacciones.tipoTransaccion,
+          estado: transacciones.estado,
+          detalle_solicitud: transacciones.detalle_solicitud,
+          codigo_solicitud: transacciones.codigo_solicitud,
+          tiene_voucher: transacciones.tiene_voucher,
+          userId: transacciones.userId,
+        })
+        .from(transacciones)
+        .where(and(...conditions))
+        .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna))
+        .limit(limit)
+        .offset(offset);
+      
+      let data = await query;
+      
+      // Aplicar filtro de búsqueda en memoria (si es necesario)
+      // Nota: Idealmente esto también debería estar en SQL, pero por simplicidad lo hacemos aquí
+      if (search.trim()) {
+        const searchLower = search.toLowerCase();
+        data = data.filter((t: any) => {
+          const fechaString = String(t.fecha);
+          const fechaDirecta = t.fecha instanceof Date 
+            ? t.fecha.toISOString().split('T')[0]
+            : fechaString.includes('T') 
+                ? fechaString.split('T')[0] 
+                : fechaString;
+          
+          return (
+            t.concepto?.toLowerCase().includes(searchLower) ||
+            t.comentario?.toLowerCase().includes(searchLower) ||
+            t.valor?.toString().includes(searchLower) ||
+            fechaDirecta.includes(searchLower)
+          );
+        });
+      }
+      
+      const endTime = Date.now();
+      console.log(`⏱️  [PERF] ⚡ getTransaccionesForLCDM: ${endTime - startTime}ms (${data.length} transacciones, página ${page})`);
+      
+      return {
+        data,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasMore: page < Math.ceil(total / limit),
+        },
+      };
+    });
+  }
+
+  // Optimización: Obtener transacciones Postobon con query SQL directa (sin cargar todas las transacciones)
+  async getTransaccionesForPostobon(userId?: string, options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    fechaDesde?: string;
+    fechaHasta?: string;
+    filterType?: 'todas' | 'santa-rosa' | 'cimitarra';
+    includeHidden?: boolean;
+  }): Promise<{
+    data: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
+    hiddenCount: number;
+  }> {
+    return wrapDbOperation(async () => {
+      const startTime = Date.now();
+      const page = options?.page || 1;
+      const limit = options?.limit || 50;
+      const search = options?.search || '';
+      const fechaDesde = options?.fechaDesde || '';
+      const fechaHasta = options?.fechaHasta || '';
+      const filterType = options?.filterType || 'todas';
+      
+      // Construir condiciones WHERE para SQL
+      const conditions = [
+        or(
+          eq(transacciones.deQuienTipo, 'postobon'),
+          eq(transacciones.paraQuienTipo, 'postobon')
+        )
+      ];
+      
+      if (userId) {
+        conditions.push(eq(transacciones.userId, userId));
+      }
+      
+      // Filtrar por cuenta específica si se especifica
+      if (filterType === 'santa-rosa') {
+        conditions.push(eq(transacciones.postobonCuenta, 'santa-rosa'));
+      } else if (filterType === 'cimitarra') {
+        conditions.push(eq(transacciones.postobonCuenta, 'cimitarra'));
+      }
+      
+      if (fechaDesde) {
+        conditions.push(sql`${transacciones.fecha} >= ${fechaDesde}::date`);
+      }
+      
+      if (fechaHasta) {
+        conditions.push(sql`${transacciones.fecha} <= ${fechaHasta}::date`);
+      }
+      
+      // Query principal con paginación en SQL
+      const offset = (page - 1) * limit;
+      
+      // Query para obtener total de registros
+      const [totalResult] = await db
+        .select({ count: sql<number>`COUNT(*)::int` })
+        .from(transacciones)
+        .where(and(...conditions));
+      
+      const total = totalResult?.count || 0;
+      
+      // Query para obtener los datos paginados
+      let query = db
+        .select({
+          id: transacciones.id,
+          deQuienTipo: transacciones.deQuienTipo,
+          deQuienId: transacciones.deQuienId,
+          paraQuienTipo: transacciones.paraQuienTipo,
+          paraQuienId: transacciones.paraQuienId,
+          postobonCuenta: transacciones.postobonCuenta,
+          concepto: transacciones.concepto,
+          valor: transacciones.valor,
+          fecha: transacciones.fecha,
+          horaInterna: transacciones.horaInterna,
+          formaPago: transacciones.formaPago,
+          comentario: transacciones.comentario,
+          tipoTransaccion: transacciones.tipoTransaccion,
+          estado: transacciones.estado,
+          detalle_solicitud: transacciones.detalle_solicitud,
+          codigo_solicitud: transacciones.codigo_solicitud,
+          tiene_voucher: transacciones.tiene_voucher,
+          userId: transacciones.userId,
+        })
+        .from(transacciones)
+        .where(and(...conditions))
+        .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna))
+        .limit(limit)
+        .offset(offset);
+      
+      let data = await query;
+      
+      // Aplicar filtro de búsqueda en memoria (si es necesario)
+      if (search.trim()) {
+        const searchLower = search.toLowerCase();
+        data = data.filter((t: any) => {
+          const fechaString = String(t.fecha);
+          const fechaDirecta = t.fecha instanceof Date 
+            ? t.fecha.toISOString().split('T')[0]
+            : fechaString.includes('T') 
+                ? fechaString.split('T')[0] 
+                : fechaString;
+          
+          return (
+            t.concepto?.toLowerCase().includes(searchLower) ||
+            t.comentario?.toLowerCase().includes(searchLower) ||
+            t.valor?.toString().includes(searchLower) ||
+            fechaDirecta.includes(searchLower)
+          );
+        });
+      }
+      
+      const endTime = Date.now();
+      console.log(`⏱️  [PERF] ⚡ getTransaccionesForPostobon: ${endTime - startTime}ms (${data.length} transacciones, página ${page})`);
+      
+      return {
+        data,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasMore: page < Math.ceil(total / limit),
+        },
+        hiddenCount: 0, // El ocultamiento ahora se maneja localmente en el frontend
+      };
+    });
+  }
+
+  // Optimización: Calcular balances de cuentas RodMar usando agregación SQL
+  async getRodMarAccountsBalances(userId?: string, accountIds?: string[]): Promise<Array<{
+    id: number;
+    cuenta: string;
+    codigo: string;
+    ingresos: number;
+    egresos: number;
+    balance: number;
+  }>> {
+    return wrapDbOperation(async () => {
+      const startTime = Date.now();
+      
+      // Obtener todas las cuentas (o solo las especificadas)
+      let cuentasQuery = db.select().from(rodmarCuentas);
+      if (accountIds && accountIds.length > 0) {
+        const numericIds = accountIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+        if (numericIds.length > 0) {
+          cuentasQuery = db.select().from(rodmarCuentas).where(inArray(rodmarCuentas.id, numericIds));
+        }
+      }
+      const cuentas = await cuentasQuery;
+      
+      if (cuentas.length === 0) {
+        return [];
+      }
+      
+      // Mapeo de código a slug legacy (para compatibilidad con transacciones antiguas)
+      const codigoToSlug: Record<string, string> = {
+        'BEMOVIL': 'bemovil',
+        'CORRESPONSAL': 'corresponsal',
+        'EFECTIVO': 'efectivo',
+        'CUENTAS_GERMAN': 'cuentas-german',
+        'CUENTAS_JHON': 'cuentas-jhon',
+        'OTROS': 'otros',
+      };
+      
+      // Para cada cuenta, calcular ingresos y egresos usando SQL agregado
+      const balances = await Promise.all(cuentas.map(async (cuenta) => {
+        const slugLegacy = codigoToSlug[cuenta.codigo];
+        const idString = cuenta.id.toString();
+        
+        // Construir array de referencias posibles
+        const referenciasPosibles = [idString, cuenta.codigo];
+        if (slugLegacy) {
+          referenciasPosibles.push(slugLegacy);
+        }
+        
+        // Query para EGRESOS (transacciones donde esta cuenta es origen)
+        const egresosConditions: any[] = [
+          eq(transacciones.deQuienTipo, 'rodmar'),
+        ];
+        
+        // Si hay múltiples referencias, usar inArray, si solo una, usar eq
+        if (referenciasPosibles.length > 1) {
+          egresosConditions.push(inArray(transacciones.deQuienId, referenciasPosibles));
+        } else if (referenciasPosibles.length === 1) {
+          egresosConditions.push(eq(transacciones.deQuienId, referenciasPosibles[0]));
+        }
+        
+        if (userId) {
+          egresosConditions.push(eq(transacciones.userId, userId));
+        }
+        
+        const [egresosResult] = await db
+          .select({ total: sql<number>`COALESCE(SUM(CAST(${transacciones.valor} AS NUMERIC)), 0)` })
+          .from(transacciones)
+          .where(and(...egresosConditions));
+        
+        // Query para INGRESOS (transacciones donde esta cuenta es destino)
+        const ingresosConditions: any[] = [
+          eq(transacciones.paraQuienTipo, 'rodmar'),
+        ];
+        
+        // Si hay múltiples referencias, usar inArray, si solo una, usar eq
+        if (referenciasPosibles.length > 1) {
+          ingresosConditions.push(inArray(transacciones.paraQuienId, referenciasPosibles));
+        } else if (referenciasPosibles.length === 1) {
+          ingresosConditions.push(eq(transacciones.paraQuienId, referenciasPosibles[0]));
+        }
+        
+        if (userId) {
+          ingresosConditions.push(eq(transacciones.userId, userId));
+        }
+        
+        const [ingresosResult] = await db
+          .select({ total: sql<number>`COALESCE(SUM(CAST(${transacciones.valor} AS NUMERIC)), 0)` })
+          .from(transacciones)
+          .where(and(...ingresosConditions));
+        
+        const ingresos = typeof ingresosResult?.total === 'number' ? ingresosResult.total : parseFloat(String(ingresosResult?.total || 0));
+        const egresos = typeof egresosResult?.total === 'number' ? egresosResult.total : parseFloat(String(egresosResult?.total || 0));
+        
+        return {
+          id: cuenta.id,
+          cuenta: cuenta.nombre,
+          codigo: cuenta.codigo,
+          ingresos: isNaN(ingresos) ? 0 : ingresos,
+          egresos: isNaN(egresos) ? 0 : egresos,
+          balance: (isNaN(ingresos) ? 0 : ingresos) - (isNaN(egresos) ? 0 : egresos),
+        };
+      }));
+      
+      const endTime = Date.now();
+      console.log(`⏱️  [PERF] ⚡ getRodMarAccountsBalances: ${endTime - startTime}ms (${cuentas.length} cuentas)`);
       
       return balances;
     });

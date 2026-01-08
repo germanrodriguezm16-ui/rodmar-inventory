@@ -57,3 +57,5 @@ if (normalizedNombre !== normalizedCurrentNombre) {
 Pero el usuario dice que "el problema parece ser otro". Necesito más información sobre qué comportamiento específico está viendo.
 
 
+
+

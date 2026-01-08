@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, highlightText, highlightValue } from "@/lib/utils";
 import { calculateRodMarCuentaBalance } from "@/lib/calculations";
 import { ArrowLeft, TrendingUp, TrendingDown, Filter, X, Download, Image, Plus, Edit, Search, Trash2, Eye } from "lucide-react";
-import { TransaccionWithSocio } from "@shared/schema";
+import { TransaccionWithSocio, RodmarCuenta } from "@shared/schema";
 import { getDateRangeFromFilter, filterTransactionsByDateRange } from "@/lib/date-filter-utils";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import { RodMarCuentasImageModal } from "@/components/modals/rodmar-cuentas-image-modal";
@@ -98,8 +98,44 @@ export default function RodMarCuentaDetail() {
   const params = useParams<RouteParams>();
   const [, setLocation] = useLocation();
   const cuentaSlug = params.cuentaSlug || '';
-  const cuentaNombre = slugToCuentaName(cuentaSlug);
   const { has } = usePermissions();
+  
+  // Obtener cuentas RodMar desde la API para buscar el nombre correcto
+  const { data: rodmarCuentas = [] } = useQuery<RodmarCuenta[]>({
+    queryKey: ["/api/rodmar-cuentas"],
+  });
+  
+  // Buscar la cuenta por ID numérico, código, o slug legacy
+  const cuentaEncontrada = useMemo(() => {
+    if (!cuentaSlug || rodmarCuentas.length === 0) {
+      return null;
+    }
+    
+    // Intentar buscar por ID numérico
+    const cuentaIdNum = parseInt(cuentaSlug);
+    if (!isNaN(cuentaIdNum)) {
+      const porId = rodmarCuentas.find(c => c.id === cuentaIdNum);
+      if (porId) return porId;
+    }
+    
+    // Intentar buscar por código
+    const porCodigo = rodmarCuentas.find(c => 
+      c.codigo.toLowerCase() === cuentaSlug.toLowerCase()
+    );
+    if (porCodigo) return porCodigo;
+    
+    // Intentar buscar por slug legacy
+    const porSlug = rodmarCuentas.find(c => {
+      const slugLegacy = slugToCuentaName(c.codigo).toLowerCase().replace(/\s+/g, '-');
+      return slugLegacy === cuentaSlug.toLowerCase();
+    });
+    if (porSlug) return porSlug;
+    
+    return null;
+  }, [cuentaSlug, rodmarCuentas]);
+  
+  // Usar el nombre de la cuenta encontrada, o el mapeo legacy como fallback
+  const cuentaNombre = cuentaEncontrada?.nombre || slugToCuentaName(cuentaSlug);
   
   // Estados para filtros
   const [filtros, setFiltros] = useState<TransaccionFiltrosState>({
@@ -364,9 +400,7 @@ export default function RodMarCuentaDetail() {
     }));
 
     // Convertir inversiones a formato de transacciones para visualización
-    const inversionesComoDemostraciones = inversionesReales.map((inversion: any) => {
-      const cuentaId = cuentaNameToId(cuentaNombre);
-      
+    const inversionesComoDemostraciones = (inversionesReales as any[]).map((inversion: any) => {
       // Determinar colores y dirección basado en origen/destino
       let tipo = "Inversión";
       let color = "amarillo"; // Color distintivo para inversiones
@@ -374,10 +408,10 @@ export default function RodMarCuentaDetail() {
       
       // Si la cuenta actual es el ORIGEN de la inversión → ROJO (egreso)
       // Si la cuenta actual es el DESTINO de la inversión → VERDE (ingreso)
-      if (inversion.origen === 'rodmar' && inversion.origenDetalle === cuentaId) {
+      if (inversion.origen === 'rodmar' && coincideConCuenta(inversion.origenDetalle)) {
         color = "rojo";
         esPositiva = false;
-      } else if (inversion.destino === 'rodmar' && inversion.destinoDetalle === cuentaId) {
+      } else if (inversion.destino === 'rodmar' && coincideConCuenta(inversion.destinoDetalle)) {
         color = "verde";
         esPositiva = true;
       }
@@ -395,9 +429,9 @@ export default function RodMarCuentaDetail() {
         voucher: inversion.voucher,
         observaciones: inversion.observaciones,
         // Campos necesarios para compatibilidad con el sistema existente
-        deQuienTipo: inversion.origen === 'rodmar' && inversion.origenDetalle === cuentaId ? 'rodmar' : 'externa',
+        deQuienTipo: inversion.origen === 'rodmar' && coincideConCuenta(inversion.origenDetalle) ? 'rodmar' : 'externa',
         deQuienId: inversion.origen === 'rodmar' ? inversion.origenDetalle : inversion.origen,
-        paraQuienTipo: inversion.destino === 'rodmar' && inversion.destinoDetalle === cuentaId ? 'rodmar' : 'externa',
+        paraQuienTipo: inversion.destino === 'rodmar' && coincideConCuenta(inversion.destinoDetalle) ? 'rodmar' : 'externa',
         paraQuienId: inversion.destino === 'rodmar' ? inversion.destinoDetalle : inversion.destino
       };
     });
@@ -426,11 +460,48 @@ export default function RodMarCuentaDetail() {
     });
   }, [todasTransacciones, hiddenTransactions]);
 
+  // Obtener todos los identificadores posibles de la cuenta (para comparación flexible)
+  const cuentaIdentificadores = useMemo(() => {
+    const ids: string[] = [];
+    
+    if (cuentaEncontrada) {
+      // ID numérico como string
+      if (cuentaEncontrada.id) {
+        ids.push(cuentaEncontrada.id.toString());
+      }
+      // Código (ej: 'BEMOVIL')
+      if (cuentaEncontrada.codigo) {
+        ids.push(cuentaEncontrada.codigo);
+        ids.push(cuentaEncontrada.codigo.toLowerCase());
+        ids.push(cuentaEncontrada.codigo.toUpperCase());
+      }
+      // Nombre como fallback
+      if (cuentaEncontrada.nombre) {
+        ids.push(cuentaEncontrada.nombre);
+        ids.push(cuentaEncontrada.nombre.toLowerCase());
+      }
+    } else {
+      // Fallback: usar lógica legacy si no se encontró la cuenta
+      const legacyId = cuentaNameToId(cuentaNombre);
+      ids.push(legacyId);
+      ids.push(legacyId.toLowerCase());
+      ids.push(legacyId.toUpperCase());
+    }
+    
+    return ids;
+  }, [cuentaEncontrada, cuentaNombre]);
+
+  // Función helper para verificar si un ID coincide con la cuenta
+  const coincideConCuenta = (id: string | number | null | undefined): boolean => {
+    if (!id) return false;
+    const idStr = id.toString().toLowerCase();
+    return cuentaIdentificadores.some(cuentaId => cuentaId.toLowerCase() === idStr);
+  };
+
   // Calcular balances dinámicos
   const calcularBalances = () => {
     let positivos = 0;
     let negativos = 0;
-    const cuentaId = cuentaNameToId(cuentaNombre);
 
     transaccionesFiltradas.forEach((transaccion: any) => {
       const valor = parseFloat(transaccion.valor.replace ? transaccion.valor.replace(/[$,]/g, '') : transaccion.valor);
@@ -450,20 +521,13 @@ export default function RodMarCuentaDetail() {
       // Si la transacción tiene ORIGEN esta cuenta específica → negativo (egreso)
       
       const esIngresoACuenta = transaccion.paraQuienTipo === 'rodmar' && 
-                               transaccion.paraQuienId && 
-                               transaccion.paraQuienId === cuentaId;
+                               coincideConCuenta(transaccion.paraQuienId);
       
       const esEgresoDeEstaCuenta = transaccion.deQuienTipo === 'rodmar' && 
-                                   transaccion.deQuienId && 
-                                   transaccion.deQuienId === cuentaId;
-      
-      // Para transacciones temporales: si el origen es esta cuenta, contar como egreso
-      const esEgresoTemporal = transaccion.esTemporal && 
-                               transaccion.deQuienTipo === 'rodmar' && 
-                               transaccion.deQuienId === cuentaId;
+                                   coincideConCuenta(transaccion.deQuienId);
       
       // Para transacciones temporales con origen en esta cuenta: siempre contar como negativo
-      if (transaccion.esTemporal && transaccion.deQuienTipo === 'rodmar' && transaccion.deQuienId === cuentaId) {
+      if (transaccion.esTemporal && transaccion.deQuienTipo === 'rodmar' && coincideConCuenta(transaccion.deQuienId)) {
         negativos += valor;
       } else if (esIngresoACuenta) {
         positivos += valor;
@@ -497,25 +561,24 @@ export default function RodMarCuentaDetail() {
 
   // Funciones para transacciones temporales
   const crearTransaccionTemporal = (transaccionData: any) => {
-    const nuevaTransaccionTemporal: TransaccionWithSocio = {
-      id: `temp-${Date.now()}`,
+    const nuevaTransaccionTemporal: any = {
+      id: `temp-${Date.now()}` as any, // Temporal ID como string para transacciones temporales
       concepto: transaccionData.concepto,
       valor: transaccionData.valor,
       fecha: transaccionData.fecha,
       deQuienTipo: transaccionData.deQuienTipo,
       deQuienId: transaccionData.deQuienId,
       paraQuienTipo: "rodmar",
-      paraQuienId: cuentaNameToId(cuentaNombre),
+      paraQuienId: cuentaEncontrada?.codigo || cuentaEncontrada?.id?.toString() || cuentaNameToId(cuentaNombre),
       formaPago: transaccionData.formaPago || "Efectivo",
       voucher: transaccionData.voucher || null,
       comentario: transaccionData.comentario || null,
       horaInterna: new Date(new Date().setHours(0, 0, 1, 0)), // Hora fija 00:00:01
-      oculta: false,
       userId: "main_user",
       createdAt: new Date(),
       socioNombre: cuentaNombre,
       tipoSocio: "rodmar" as const,
-      socioId: cuentaNameToId(cuentaNombre),
+      socioId: (cuentaEncontrada?.codigo || cuentaEncontrada?.id?.toString() || cuentaNameToId(cuentaNombre)) as any,
       tipo: "Temporal" as const,
       esTemporal: true
     };
@@ -523,9 +586,9 @@ export default function RodMarCuentaDetail() {
     setTransaccionesTemporales(prev => [...prev, nuevaTransaccionTemporal]);
   };
 
-  const eliminarTransaccionTemporal = (transaccionId: string) => {
+  const eliminarTransaccionTemporal = (transaccionId: string | number) => {
     setTransaccionesTemporales(prev => 
-      prev.filter(t => t.id !== transaccionId)
+      prev.filter(t => String(t.id) !== String(transaccionId))
     );
   };
 
@@ -707,23 +770,20 @@ export default function RodMarCuentaDetail() {
       <div className="px-4 space-y-2">
         {transaccionesFiltradas.map((transaccion: any) => {
           const valor = parseFloat(transaccion.valor.replace(/[$,]/g, ''));
-          const cuentaId = cuentaNameToId(cuentaNombre);
           
           // Nueva lógica específica para cuentas RodMar individuales:
           // Verde: dinero que entra a esta cuenta específica
           // Rojo: dinero que sale de esta cuenta específica
           const esIngresoACuenta = transaccion.paraQuienTipo === 'rodmar' && 
-                                   transaccion.paraQuienId && 
-                                   transaccion.paraQuienId === cuentaId;
+                                   coincideConCuenta(transaccion.paraQuienId);
           
           const esEgresoDeEstaCuenta = transaccion.deQuienTipo === 'rodmar' && 
-                                       transaccion.deQuienId && 
-                                       transaccion.deQuienId === cuentaId;
+                                       coincideConCuenta(transaccion.deQuienId);
           
           // Para transacciones temporales: si el origen es esta cuenta, mostrar como egreso (rojo/negativo)
           const esEgresoTemporal = transaccion.esTemporal && 
                                    transaccion.deQuienTipo === 'rodmar' && 
-                                   transaccion.deQuienId === cuentaId;
+                                   coincideConCuenta(transaccion.deQuienId);
           
           return (
             <Card 
@@ -807,7 +867,7 @@ export default function RodMarCuentaDetail() {
                         transaccion.colorInversion === 'rojo' ? 'text-red-600' : 'text-yellow-600'
                       ) :
                       // Para transacciones temporales: si origen = esta cuenta → rojo/negativo
-                      (transaccion.esTemporal && transaccion.deQuienTipo === 'rodmar' && transaccion.deQuienId === cuentaId) ? 'text-red-600' :
+                      (transaccion.esTemporal && transaccion.deQuienTipo === 'rodmar' && coincideConCuenta(transaccion.deQuienId)) ? 'text-red-600' :
                       esIngresoACuenta ? 'text-green-600' : 
                       (esEgresoDeEstaCuenta || esEgresoTemporal) ? 'text-red-600' : 'text-gray-600'
                     }`}>
@@ -817,7 +877,7 @@ export default function RodMarCuentaDetail() {
                           return (transaccion.esPositiva ? '+' : '-') + '$ ' + valor.toLocaleString();
                         }
                         // Para transacciones temporales: si origen = esta cuenta → signo negativo
-                        if (transaccion.esTemporal && transaccion.deQuienTipo === 'rodmar' && transaccion.deQuienId === cuentaId) {
+                        if (transaccion.esTemporal && transaccion.deQuienTipo === 'rodmar' && coincideConCuenta(transaccion.deQuienId)) {
                           return `-$ ${valor.toLocaleString()}`;
                         }
                         return esIngresoACuenta ? `+$ ${valor.toLocaleString()}` : 
@@ -1025,10 +1085,6 @@ export default function RodMarCuentaDetail() {
       <PendingListModal
         open={showPendingModal}
         onClose={() => setShowPendingModal(false)}
-        onSelectTransaction={(transaction) => {
-          setSelectedTransaction(transaction);
-          setShowPendingModal(false);
-        }}
       />
 
       {/* Modal para nueva transacción */}

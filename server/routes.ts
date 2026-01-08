@@ -7,7 +7,7 @@ import { getUserPermissions, requirePermission, invalidateUserPermissionsCache }
 import { canViewRodMarAccount } from "./rodmar-account-permissions";
 import { emitTransactionUpdate } from "./socket";
 import { db } from "./db";
-import { roles, permissions, rolePermissions, users, userPermissionsOverride } from "../shared/schema";
+import { roles, permissions, rolePermissions, users, userPermissionsOverride, transacciones } from "../shared/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { findUserByPhone, verifyPassword, updateLastLogin, hashPassword, generateToken, verifyToken } from "./middleware/auth-helpers";
 import {
@@ -24,11 +24,21 @@ import {
   updateCompradorNombreSchema,
   updateVolqueteroNombreSchema,
   updateTerceroNombreSchema,
+  insertRodmarCuentaSchema,
+  updateRodmarCuentaNombreSchema,
   fusionSchema,
   revertFusionSchema,
+  rodmarCuentas,
 } from "@shared/schema";
+import { createRodMarAccountPermission, assignPermissionToAdminRole } from "./rodmar-account-permissions";
 import { parseColombiaDate } from "@shared/date-colombia";
 import { ViajeIdGenerator } from "./id-generator";
+import { normalizeNombreToCodigo, nombreToCodigoMap } from "./rodmar-utils";
+import { or } from "drizzle-orm";
+
+// Variable de debug - activar solo cuando se necesite diagnóstico
+const DEBUG = process.env.DEBUG_ROUTES === 'true';
+const debugLog = (...args: any[]) => DEBUG && console.log(...args);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware global para prevenir caché del navegador
@@ -41,17 +51,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Middleware de debug para rutas de transacciones - DEBE estar ANTES de todas las rutas
+  // Middleware de debug para rutas de transacciones - Solo cuando DEBUG está activo
   app.use((req, res, next) => {
-    if (req.path.includes('/transacciones') && req.method === 'PATCH') {
-      console.log(`🔍 [ROUTE DEBUG] ===== INICIO PATCH TRANSACCIONES =====`);
-      console.log(`🔍 [ROUTE DEBUG] Method: ${req.method}`);
-      console.log(`🔍 [ROUTE DEBUG] Path: ${req.path}`);
-      console.log(`🔍 [ROUTE DEBUG] Original URL: ${req.originalUrl}`);
-      console.log(`🔍 [ROUTE DEBUG] Base URL: ${req.baseUrl}`);
-      console.log(`🔍 [ROUTE DEBUG] Params ANTES de rutas:`, req.params);
-      console.log(`🔍 [ROUTE DEBUG] Query:`, req.query);
-      console.log(`🔍 [ROUTE DEBUG] ===== FIN DEBUG =====`);
+    if (DEBUG && req.path.includes('/transacciones') && req.method === 'PATCH') {
+      debugLog(`🔍 [ROUTE DEBUG] ===== INICIO PATCH TRANSACCIONES =====`);
+      debugLog(`🔍 [ROUTE DEBUG] Method: ${req.method}, Path: ${req.path}`);
+      debugLog(`🔍 [ROUTE DEBUG] ===== FIN DEBUG =====`);
     }
     next();
   });
@@ -63,58 +68,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Login - Iniciar sesión con celular y contraseña
   app.post("/api/auth/login", async (req, res) => {
     try {
-      console.log("🔐 [LOGIN] Intento de login recibido");
+      debugLog("🔐 [LOGIN] Intento de login recibido");
       const { phone, password } = req.body;
 
       if (!phone || !password) {
-        console.log("❌ [LOGIN] Faltan credenciales");
         return res.status(400).json({ error: "Celular y contraseña son requeridos" });
       }
 
-      console.log("🔍 [LOGIN] Buscando usuario con celular:", phone.substring(0, 3) + "***");
       // Buscar usuario por celular
       const user = await findUserByPhone(phone);
 
       if (!user) {
-        console.log("❌ [LOGIN] Usuario no encontrado");
         return res.status(401).json({ error: "Credenciales inválidas" });
       }
 
-      console.log("✅ [LOGIN] Usuario encontrado:", user.id);
-
       if (!user.passwordHash) {
-        console.log("❌ [LOGIN] Usuario sin contraseña configurada");
         return res.status(401).json({ error: "Usuario no tiene contraseña configurada" });
       }
 
       // Verificar contraseña
-      console.log("🔐 [LOGIN] Verificando contraseña...");
       const isValidPassword = await verifyPassword(password, user.passwordHash);
 
       if (!isValidPassword) {
-        console.log("❌ [LOGIN] Contraseña inválida");
         return res.status(401).json({ error: "Credenciales inválidas" });
       }
-
-      console.log("✅ [LOGIN] Contraseña válida, generando token JWT...");
 
       // Actualizar último login
       await updateLastLogin(user.id);
 
       // Generar token JWT
       const token = generateToken(user.id);
-      console.log("✅ [LOGIN] Token JWT generado para usuario:", user.id);
 
       // Obtener permisos del usuario
       const permissions = await getUserPermissions(user.id);
-      console.log("✅ [LOGIN] Login exitoso, permisos:", permissions.length);
 
       // Asegurar que los headers CORS estén configurados antes de enviar la respuesta
       const origin = req.headers.origin;
       if (origin) {
         res.setHeader("Access-Control-Allow-Origin", origin);
         res.setHeader("Access-Control-Allow-Credentials", "true");
-        console.log("🌐 [LOGIN] CORS headers configurados para origin:", origin);
       }
 
       res.json({
@@ -139,7 +131,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/logout", requireAuth, (req, res) => {
     // Con JWT, el logout es principalmente del lado del cliente
     // El token se elimina del localStorage en el frontend
-    console.log("🔓 [LOGOUT] Usuario cerrando sesión:", req.user?.id);
     res.json({ success: true });
   });
 
@@ -263,9 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireAuth,
     async (req, res) => {
       try {
-        console.log(
-          "🔄 Iniciando recálculo manual de balances desde endpoint...",
-        );
+        debugLog("🔄 Iniciando recálculo manual de balances desde endpoint...");
         await storage.recalculateAllBalances();
         res.json({
           success: true,
@@ -322,9 +311,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/balances/volqueteros", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
-      console.log(`🔍 [ROUTE] /api/balances/volqueteros - INICIANDO (userId: ${userId})`);
+      debugLog(`🔍 [ROUTE] /api/balances/volqueteros - INICIANDO (userId: ${userId})`);
       const balances = await storage.getVolqueterosBalances(userId);
-      console.log(`🔍 [ROUTE] /api/balances/volqueteros - COMPLETADO (${Object.keys(balances).length} volqueteros con balance)`);
+      debugLog(`🔍 [ROUTE] /api/balances/volqueteros - COMPLETADO (${Object.keys(balances).length} volqueteros con balance)`);
       res.json(balances);
     } catch (error: any) {
       console.error("❌ [ROUTE] Error fetching volqueteros balances:", error.message);
@@ -338,6 +327,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({});
       } else {
         res.status(500).json({ error: "Failed to fetch volqueteros balances" });
+      }
+    }
+  });
+
+  app.get("/api/balances/rodmar", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const balances = await storage.getRodMarBalances(userId);
+      res.json(balances);
+    } catch (error: any) {
+      console.error("Error fetching RodMar balances:", error.message);
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || 
+          error.code === 'ETIMEDOUT' || error.code === 'DB_CONNECTION_ERROR' ||
+          error.code === 'XX000' || error.code === 'NO_DATABASE_URL' || 
+          error.message?.includes('DATABASE_URL') || error.message?.includes('getaddrinfo') || 
+          error.message?.includes('connect') || error.message?.includes('Tenant or user not found')) {
+        console.warn("⚠️  Base de datos no disponible, retornando objeto vacío");
+        res.json({});
+      } else {
+        res.status(500).json({ error: "Failed to fetch RodMar balances" });
       }
     }
   });
@@ -497,7 +506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Verificar primero si la mina existe (sin filtrar por userId)
         const mina = await storage.getMinaById(minaId);
         if (!mina) {
-          console.log(`=== Mina ${minaId} not found ===`);
+          debugLog(`=== Mina ${minaId} not found ===`);
           return res.status(404).json({ error: "Mina no encontrada" });
         }
 
@@ -505,7 +514,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Solo contar viajes NO ocultos
         const viajes = await storage.getViajesByMina(minaId);
         const viajesVisibles = viajes.filter(v => !v.oculta);
-        console.log(`=== Found ${viajes.length} viajes totales, ${viajesVisibles.length} visibles for mina ${minaId} ===`);
         if (viajesVisibles.length > 0) {
           return res.status(400).json({
             error: "No se puede eliminar la mina porque tiene viajes asociados",
@@ -518,9 +526,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "mina",
           minaId,
         );
-        console.log(
-          `=== Found ${transacciones.length} transacciones visibles for mina ${minaId} ===`,
-        );
         if (transacciones.length > 0) {
           return res.status(400).json({
             error:
@@ -530,19 +535,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Eliminar sin filtrar por userId (similar a compradores)
         const deleteResult = await storage.deleteMina(minaId);
-        console.log(
-          `=== Delete result for mina ${minaId}: ${deleteResult} ===`,
-        );
 
         if (deleteResult) {
           res.json({ message: "Mina eliminada exitosamente" });
         } else {
-          // Si deleteResult es false pero la mina existe, puede ser un error de permisos o base de datos
-          console.error(`=== Failed to delete mina ${minaId} (mina exists but delete returned false) ===`);
           res.status(500).json({ error: "Error al eliminar la mina" });
         }
       } catch (error) {
-        console.error("=== Error deleting mina:", error);
+        console.error("Error deleting mina:", error);
         res.status(500).json({ error: "Failed to delete mina" });
       }
     },
@@ -694,10 +694,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Debug específico para comprador 97
       if (compradorId === 97) {
-        console.log("🔍 DEBUG COMPRADOR 97 - Total viajes:", viajes.length);
+        debugLog("🔍 DEBUG COMPRADOR 97 - Total viajes:", viajes.length);
         const g24 = viajes.find((v) => v.id === "G24");
         if (g24) {
-          console.log("🔍 DEBUG G24:", {
+          debugLog("🔍 DEBUG G24:", {
             id: g24.id,
             valorConsignar: g24.valorConsignar,
             totalVenta: g24.totalVenta,
@@ -705,7 +705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             quienPagaFlete: g24.quienPagaFlete,
           });
         } else {
-          console.log("🔍 DEBUG: G24 not found for comprador 97");
+          debugLog("🔍 DEBUG: G24 not found for comprador 97");
         }
       }
 
@@ -1138,7 +1138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return a.id - b.id;
         });
 
-        console.log("=== VOLQUETEROS ENDPOINT DEBUG ===");
+        debugLog("=== VOLQUETEROS ENDPOINT DEBUG ===");
         console.log(
           "Volqueteros con IDs reales:",
           volqueterosConPlacas
@@ -1374,7 +1374,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Volquetero no encontrado" });
       }
       
-      console.log(`🔍 [GET /api/volqueteros/:id/viajes] Volquetero encontrado: ID=${volqueteroId}, nombre="${volqueteroNombre}"`);
+      // Logging condicional para reducir overhead
+      const DEBUG_VOLQUETEROS = process.env.DEBUG_VOLQUETEROS === 'true';
+      if (DEBUG_VOLQUETEROS) {
+        debugLog(`🔍 [GET /api/volqueteros/:id/viajes] Volquetero encontrado: ID=${volqueteroId}, nombre="${volqueteroNombre}"`);
+      }
       
       const includeHidden = req.query.includeHidden === 'true';
       
@@ -1384,7 +1388,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? await storage.getViajesByVolquetero(volqueteroNombre) // Sin userId = todos los viajes
         : await storage.getViajesByVolquetero(volqueteroNombre, userId); // Con userId = solo los del usuario
       
-      console.log(`🔍 [GET /api/volqueteros/:id/viajes] Viajes encontrados: ${viajes.length} viajes con conductor="${volqueteroNombre}"`);
+      if (DEBUG_VOLQUETEROS) {
+        debugLog(`🔍 [GET /api/volqueteros/:id/viajes] Viajes encontrados: ${viajes.length} viajes con conductor="${volqueteroNombre}"`);
+      }
       
       // Filtrar solo los completados (mostrar todos los viajes, independientemente de quién paga el flete)
       const viajesFiltrados = viajes.filter(v => 
@@ -1392,16 +1398,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         v.fechaDescargue
       );
       
-      console.log(`🔍 [GET /api/volqueteros/:id/viajes] Viajes completados con fechaDescargue: ${viajesFiltrados.length}`);
+      if (DEBUG_VOLQUETEROS) {
+        debugLog(`🔍 [GET /api/volqueteros/:id/viajes] Viajes completados con fechaDescargue: ${viajesFiltrados.length}`);
+      }
       
       // Si includeHidden es false, filtrar viajes ocultos (comportamiento por defecto)
       const viajesFinales = includeHidden 
         ? viajesFiltrados 
         : viajesFiltrados.filter(v => !v.oculta);
       
-      console.log(`🔍 [GET /api/volqueteros/:id/viajes] Viajes finales (includeHidden=${includeHidden}): ${viajesFinales.length}`);
-      if (viajesFinales.length === 0 && viajes.length > 0) {
-        console.log(`⚠️ [GET /api/volqueteros/:id/viajes] ADVERTENCIA: Hay ${viajes.length} viajes pero ninguno pasó los filtros. Ejemplo:`, {
+      if (DEBUG_VOLQUETEROS) {
+        debugLog(`🔍 [GET /api/volqueteros/:id/viajes] Viajes finales (includeHidden=${includeHidden}): ${viajesFinales.length}`);
+      }
+      if (viajesFinales.length === 0 && viajes.length > 0 && DEBUG_VOLQUETEROS) {
+        debugLog(`⚠️ [GET /api/volqueteros/:id/viajes] ADVERTENCIA: Hay ${viajes.length} viajes pero ninguno pasó los filtros. Ejemplo:`, {
           primerViaje: viajes[0] ? {
             id: viajes[0].id,
             conductor: viajes[0].conductor,
@@ -1601,7 +1611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const page = pageParam ? parseInt(pageParam as string, 10) : 1;
         const limit = limitParam ? parseInt(limitParam as string, 10) : 100;
         
-        console.log(`=== GET /api/viajes - Paginado (page: ${page}, limit: ${limit}) ===`);
+        debugLog(`=== GET /api/viajes - Paginado (page: ${page}, limit: ${limit}) ===`);
         
         const result = await storage.getViajesPaginated(userId, page, limit);
         res.json(result);
@@ -1649,9 +1659,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const userId = req.user!.id;
-        console.log(`=== GET /api/viajes/pendientes - userId: ${userId}`);
+        debugLog(`=== GET /api/viajes/pendientes - userId: ${userId}`);
         const viajes = await storage.getViajesPendientes(userId);
-        console.log(`=== Found ${viajes.length} pending viajes`);
+        debugLog(`=== Found ${viajes.length} pending viajes`);
         res.json(viajes);
       } catch (error) {
         console.error("Error fetching pending viajes:", error);
@@ -1680,9 +1690,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/viajes/mina/:minaId", async (req, res) => {
     try {
       const minaId = parseInt(req.params.minaId);
-      console.log("API: Fetching viajes for mina:", minaId);
+      debugLog("API: Fetching viajes for mina:", minaId);
       const viajes = await storage.getViajesByMina(minaId);
-      console.log("API: Found viajes:", viajes.length);
+      debugLog("API: Found viajes:", viajes.length);
       res.json(viajes);
     } catch (error) {
       console.error("API: Error fetching viajes for mina:", error);
@@ -1694,7 +1704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/viajes-bulk-delete", async (req, res) => {
     try {
       const { viajeIds } = req.body;
-      console.log("=== DELETE /api/viajes/bulk - Request body:", req.body);
+      debugLog("=== DELETE /api/viajes/bulk - Request body:", req.body);
 
       if (!Array.isArray(viajeIds) || viajeIds.length === 0) {
         return res
@@ -1709,7 +1719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           await storage.deleteViaje(viajeId);
           deletedCount++;
-          console.log(`=== Deleted viaje: ${viajeId}`);
+          debugLog(`=== Deleted viaje: ${viajeId}`);
         } catch (error) {
           console.error(`=== Error deleting viaje ${viajeId}:`, error);
           errors.push({ id: viajeId, error: String(error) });
@@ -1735,11 +1745,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/viajes/:id", async (req, res) => {
     try {
       const viajeId = req.params.id;
-      console.log("=== DELETE /api/viajes/:id - Deleting viaje:", viajeId);
+      debugLog("=== DELETE /api/viajes/:id - Deleting viaje:", viajeId);
 
       await storage.deleteViaje(viajeId);
 
-      console.log("=== DELETE /api/viajes/:id - Success");
+      debugLog("=== DELETE /api/viajes/:id - Success");
       res.json({ success: true, message: "Viaje deleted successfully" });
     } catch (error) {
       console.error("=== DELETE /api/viajes/:id - Error:", error);
@@ -1776,7 +1786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if viaje exists first
         const existingViaje = await storage.getViaje(viajeId);
         if (!existingViaje) {
-          console.log(`=== PATCH /api/viajes/:id - Viaje ${viajeId} not found`);
+          debugLog(`=== PATCH /api/viajes/:id - Viaje ${viajeId} not found`);
           return res.status(404).json({
             error: "Failed to update viaje",
             details: `Viaje ${viajeId} not found. This may be an imported trip that was lost after server restart.`,
@@ -1847,7 +1857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const viaje = await storage.updateViaje(viajeId, processedData);
 
-        console.log("=== PATCH /api/viajes/:id - Success:", viaje);
+        debugLog("=== PATCH /api/viajes/:id - Success:", viaje);
         res.json(viaje);
       } catch (error: any) {
         console.error("=== PATCH /api/viajes/:id - Error:", error);
@@ -1862,14 +1872,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bulk import endpoint for faster Excel processing
   app.post("/api/viajes/bulk-import", async (req, res) => {
     try {
-      console.log("=== BULK IMPORT STARTED ===");
+      debugLog("=== BULK IMPORT STARTED ===");
       const { viajes, replaceExisting = false } = req.body;
 
       if (!Array.isArray(viajes) || viajes.length === 0) {
         return res.status(400).json({ error: "No viajes data provided" });
       }
 
-      console.log(`Processing ${viajes.length} viajes in bulk mode`);
+      debugLog(`Processing ${viajes.length} viajes in bulk mode`);
       console.log(
         `=== VIAJES IDs RECEIVED ===`,
         viajes.map((v: any) => v.id),
@@ -1916,7 +1926,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (replaceExisting === false) {
                 const existing = await storage.getViaje(viajeData.id);
                 if (existing) {
-                  console.log(`⏭️ SKIPPING existing viaje: ${viajeData.id}`);
+                  debugLog(`⏭️ SKIPPING existing viaje: ${viajeData.id}`);
                   results.skipped.push(viajeData.id);
                   results.errors.push(
                     `Fila ${globalIndex + 1}: Viaje ${viajeData.id} ya existe`,
@@ -1926,11 +1936,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
 
               // Parse and validate data using Excel-specific schema
-              console.log(`=== PROCESSING VIAJE ${globalIndex + 1} ===`);
-              console.log("Raw data:", JSON.stringify(viajeData, null, 2));
+              debugLog(`=== PROCESSING VIAJE ${globalIndex + 1} ===`);
+              debugLog("Raw data:", JSON.stringify(viajeData, null, 2));
 
               const parsedData = excelImportViajeSchema.parse(viajeData);
-              console.log("Parsed data:", JSON.stringify(parsedData, null, 2));
+              debugLog("Parsed data:", JSON.stringify(parsedData, null, 2));
               let minaId = parsedData.minaId;
               let compradorId = parsedData.compradorId;
 
@@ -2057,7 +2067,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     );
                     parsedData[key] = new Date();
                   } else {
-                    console.log(`🔧 FIXING ${key}: "${parsedData[key]}" → "0"`);
+                    debugLog(`🔧 FIXING ${key}: "${parsedData[key]}" → "0"`);
                     parsedData[key] = "0";
                   }
                 }
@@ -2099,7 +2109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // DEBUG: Log ALL data before creating viaje for problematic ones
               const potentiallyProblematic = ["G12", "G13", "G14", "G15"];
               if (potentiallyProblematic.includes(viajeData.id)) {
-                console.log(`🚨 DEBUGGING PROBLEMATIC VIAJE ${viajeData.id}:`, {
+                debugLog(`🚨 DEBUGGING PROBLEMATIC VIAJE ${viajeData.id}:`, {
                   peso: parsedData.peso,
                   cut: parsedData.cut,
                   vut: parsedData.vut,
@@ -2141,16 +2151,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      console.log(`=== BULK IMPORT COMPLETED ===`);
-      console.log(`✅ Success: ${results.success}`);
-      console.log(`❌ Errors: ${results.errors.length}`);
-      console.log(`⏭️ Skipped: ${results.skipped.length}`);
+      debugLog(`=== BULK IMPORT COMPLETED ===`);
+      debugLog(`✅ Success: ${results.success}`);
+      debugLog(`❌ Errors: ${results.errors.length}`);
+      debugLog(`⏭️ Skipped: ${results.skipped.length}`);
       console.log(
         `📊 Total processed: ${results.success + results.errors.length + results.skipped.length}`,
       );
 
       if (results.skipped.length > 0) {
-        console.log(`🔍 Skipped viajes:`, results.skipped);
+        debugLog(`🔍 Skipped viajes:`, results.skipped);
       }
 
       // Add total count for modal display
@@ -2169,7 +2179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/viajes", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
-      console.log("Received viaje data:", req.body);
+      debugLog("Received viaje data:", req.body);
 
       // If this request includes a fileHash, register it to prevent future duplicates
       if (req.body.fileHash) {
@@ -2183,7 +2193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const data = insertViajeSchema.parse(req.body);
-      console.log("Parsed viaje data:", data);
+      debugLog("Parsed viaje data:", data);
 
       // Auto-crear volquetero si el conductor no existe
       if (data.conductor) {
@@ -2206,7 +2216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Si viene nombre de mina desde Excel, buscar o crear la mina
       if ((data as any).minaNombre) {
         const minaNombre = (data as any).minaNombre;
-        console.log(`=== Processing mina by name: "${minaNombre}"`);
+        debugLog(`=== Processing mina by name: "${minaNombre}"`);
 
         // Normalizar nombre para búsqueda consistente
         const nombreNormalizado = minaNombre.trim().toLowerCase();
@@ -2224,7 +2234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
 
           if (!mina) {
-            console.log(`=== Creating new mina: "${minaNombre}"`);
+            debugLog(`=== Creating new mina: "${minaNombre}"`);
             mina = await storage.createMina({
               nombre: minaNombre.trim(), // Eliminar espacios extras
             });
@@ -2248,7 +2258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Si viene nombre de comprador desde Excel, buscar o crear el comprador
       if ((data as any).compradorNombre) {
         const compradorNombre = (data as any).compradorNombre;
-        console.log(`=== Processing comprador by name: "${compradorNombre}"`);
+        debugLog(`=== Processing comprador by name: "${compradorNombre}"`);
 
         // Normalizar nombre para búsqueda consistente
         const nombreNormalizado = compradorNombre.trim().toLowerCase();
@@ -2266,7 +2276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
 
           if (!comprador) {
-            console.log(`=== Creating new comprador: "${compradorNombre}"`);
+            debugLog(`=== Creating new comprador: "${compradorNombre}"`);
             comprador = await storage.createComprador({
               nombre: compradorNombre.trim(), // Eliminar espacios extras
             });
@@ -2311,12 +2321,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!viajeId) {
         // Generar nuevo ID consecutivo automáticamente
         viajeId = await ViajeIdGenerator.getNextAvailableId(userId);
-        console.log(`=== GENERATED NEW ID: ${viajeId} for new viaje`);
+        debugLog(`=== GENERATED NEW ID: ${viajeId} for new viaje`);
       } else {
         // Verificar conflictos si ID viene desde Excel
         const existingViaje = await storage.getViaje(data.id);
         if (existingViaje) {
-          console.log(`=== CONFLICT DETECTED: Viaje ${data.id} already exists`);
+          debugLog(`=== CONFLICT DETECTED: Viaje ${data.id} already exists`);
           return res.status(409).json({
             error: "Conflict detected",
             message: `Viaje with ID ${data.id} already exists`,
@@ -2347,8 +2357,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const viajeId = req.params.id;
       const viaje = await storage.getViaje(viajeId);
 
-      console.log("=== DEBUG VIAJE:", viajeId);
-      console.log("=== Raw viaje data:", JSON.stringify(viaje, null, 2));
+      debugLog("=== DEBUG VIAJE:", viajeId);
+      debugLog("=== Raw viaje data:", JSON.stringify(viaje, null, 2));
 
       if (viaje) {
         console.log(
@@ -2400,7 +2410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Clean duplicates endpoint
   app.post("/api/clean-duplicates", async (req, res) => {
     try {
-      console.log("=== MANUAL CLEANUP: Starting duplicate removal");
+      debugLog("=== MANUAL CLEANUP: Starting duplicate removal");
       storage.forcedCleanupDuplicates();
       res.json({ message: "Duplicates cleaned successfully" });
     } catch (error) {
@@ -2418,13 +2428,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "IDs must be an array" });
       }
 
-      console.log("=== CONFLICT CHECK: Checking IDs:", ids);
-      console.log("=== CONFLICT CHECK: File hash:", fileHash);
+      debugLog("=== CONFLICT CHECK: Checking IDs:", ids);
+      debugLog("=== CONFLICT CHECK: File hash:", fileHash);
 
       // Check for duplicate file hash first
       let isDuplicateFile = false;
       if (fileHash && storage.isFileHashRecent(fileHash)) {
-        console.log("=== CONFLICT CHECK: Duplicate file detected!");
+        debugLog("=== CONFLICT CHECK: Duplicate file detected!");
         isDuplicateFile = true;
       }
 
@@ -2432,8 +2442,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingIds = existingViajes.map((v) => v.id);
       const conflicts = ids.filter((id) => existingIds.includes(id));
 
-      console.log("=== CONFLICT CHECK: Existing IDs:", existingIds);
-      console.log("=== CONFLICT CHECK: Conflicts found:", conflicts);
+      debugLog("=== CONFLICT CHECK: Existing IDs:", existingIds);
+      debugLog("=== CONFLICT CHECK: Conflicts found:", conflicts);
 
       res.json({
         conflicts,
@@ -2469,15 +2479,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const page = req.query.page ? parseInt(req.query.page as string) : undefined;
         const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
 
-        console.log('');
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log(`⏱️  [PERF] GET /api/transacciones - Iniciando request...`);
-        console.log(`   Usuario: ${userId}`);
-        console.log(`   Permisos de transacciones: ${hasTransactionPermissions ? 'SÍ' : 'NO'}`);
-        console.log(`   Filtrando por userId: ${effectiveUserId || 'NINGUNO (todas las transacciones)'}`);
-        console.log(`   Paginación: ${page ? `page=${page}, limit=${limit}` : 'sin paginación'}`);
-        console.log(`   Timestamp: ${new Date().toISOString()}`);
-        console.log('═══════════════════════════════════════════════════════════');
+        // Logging condicional para reducir overhead (solo en debug)
+        const DEBUG_TRANSACCIONES = process.env.DEBUG_TRANSACCIONES === 'true';
+        if (DEBUG_TRANSACCIONES) {
+          console.log('');
+          console.log('═══════════════════════════════════════════════════════════');
+          console.log(`⏱️  [PERF] GET /api/transacciones - Iniciando request...`);
+          console.log(`   Usuario: ${userId}`);
+          console.log(`   Permisos de transacciones: ${hasTransactionPermissions ? 'SÍ' : 'NO'}`);
+          console.log(`   Filtrando por userId: ${effectiveUserId || 'NINGUNO (todas las transacciones)'}`);
+          console.log(`   Paginación: ${page ? `page=${page}, limit=${limit}` : 'sin paginación'}`);
+          console.log(`   Timestamp: ${new Date().toISOString()}`);
+          console.log('═══════════════════════════════════════════════════════════');
+        }
         
         // Leer parámetros de filtro
         const search = req.query.search as string || '';
@@ -2491,7 +2505,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Si hay parámetros de paginación, usar método con filtros
         if (page && limit) {
-          console.log(`=== GET /api/transacciones - Paginado (page: ${page}, limit: ${limit}) ===`);
+          if (DEBUG_TRANSACCIONES) {
+            debugLog(`=== GET /api/transacciones - Paginado (page: ${page}, limit: ${limit}) ===`);
+          }
           
           // Obtener todas las transacciones para aplicar filtros
           const allTransacciones = await storage.getTransacciones(effectiveUserId);
@@ -2634,7 +2650,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const totalPages = Math.ceil(total / validLimit);
 
           const totalRouteTime = Date.now() - routeStartTime;
-          console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL RUTA /api/transacciones: ${totalRouteTime}ms`);
+          if (DEBUG_TRANSACCIONES) {
+            debugLog(`⏱️  [PERF] ⚡ TIEMPO TOTAL RUTA /api/transacciones: ${totalRouteTime}ms`);
+          }
 
           res.json({
             data: paginatedData,
@@ -2774,7 +2792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Usar getTransaccionesForModule con el módulo correcto en lugar de getTransaccionesBySocio
-        console.log(`🔍 [DEBUG] getTransaccionesForModule - tipoSocio: ${tipoSocio}, socioId: ${socioId}, modulo: ${modulo}, includeHidden: ${includeHidden === "true"}, effectiveUserId: ${effectiveUserId || 'ALL'}`);
+        debugLog(`🔍 [DEBUG] getTransaccionesForModule - tipoSocio: ${tipoSocio}, socioId: ${socioId}, modulo: ${modulo}, includeHidden: ${includeHidden === "true"}, effectiveUserId: ${effectiveUserId || 'ALL'}`);
         const transacciones = await storage.getTransaccionesForModule(
           tipoSocio as string,
           parseInt(socioId as string),
@@ -2782,7 +2800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           includeHidden === "true",
           modulo,
         );
-        console.log(`✅ [DEBUG] getTransaccionesForModule - Retornando ${transacciones.length} transacciones`);
+        debugLog(`✅ [DEBUG] getTransaccionesForModule - Retornando ${transacciones.length} transacciones`);
         res.json(transacciones);
       } catch (error: any) {
         console.error("❌ [ERROR] Error fetching transacciones by socio:", error);
@@ -2846,7 +2864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse using new schema
       const data = insertTransaccionSchema.parse(req.body);
-      console.log("Parsed transaction data:", data);
+      debugLog("Parsed transaction data:", data);
 
       // Create backwards compatibility data for storage
       // We'll determine tipoSocio and socioId based on the new "para quién" field
@@ -2920,7 +2938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the transaction
       const transaccion = await storage.createTransaccion(finalData);
 
-      console.log(`✅ Transaction created successfully:`, transaccion);
+      debugLog(`✅ Transaction created successfully:`, transaccion);
       console.log(
         `📊 Automatic balance recalculation triggered by storage.createTransaccion()`,
       );
@@ -3118,7 +3136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Crear la transacción pendiente
       const transaccion = await storage.createTransaccionPendiente(finalData);
 
-      console.log(`✅ Solicitud de transacción creada exitosamente:`, transaccion);
+      debugLog(`✅ Solicitud de transacción creada exitosamente:`, transaccion);
 
       // Emitir evento Socket.io para invalidar caché en otros clientes
       const affectedEntityTypes = new Set<string>();
@@ -3179,7 +3197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         auth: subscription.keys.auth
       });
 
-      console.log(`✅ Suscripción push registrada para usuario ${userId}`);
+      debugLog(`✅ Suscripción push registrada para usuario ${userId}`);
       res.json({ success: true, subscription: savedSubscription });
     } catch (error) {
       console.error("Error registering push subscription:", error);
@@ -3205,7 +3223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deleted = await storage.deletePushSubscription(userId, endpoint);
       
       if (deleted) {
-        console.log(`✅ Suscripción push eliminada para usuario ${userId}`);
+        debugLog(`✅ Suscripción push eliminada para usuario ${userId}`);
         res.json({ success: true });
       } else {
         res.status(404).json({ error: "Subscription not found" });
@@ -3335,7 +3353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`✅ Transacción ${id} completada exitosamente`);
+      debugLog(`✅ Transacción ${id} completada exitosamente`);
 
       // Emitir evento WebSocket para invalidar caché en otros clientes (crítico multi-usuario)
       // Debe invalidar:
@@ -3575,19 +3593,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
-      
-      console.log(`[LCDM] Request recibido - userId: ${userId}, permisos de transacciones: ${hasTransactionPermissions ? 'SÍ' : 'NO'}, effectiveUserId: ${effectiveUserId || 'ALL'}, page: ${page}, limit: ${limit}`);
-      
-      // Leer parámetros de filtro
       const search = req.query.search as string || '';
       const fechaDesde = req.query.fechaDesde as string || '';
       const fechaHasta = req.query.fechaHasta as string || '';
       const includeHidden = req.query.includeHidden === 'true';
       
-      console.log(`[LCDM] Obteniendo transacciones para effectiveUserId: ${effectiveUserId || 'ALL'}, includeHidden: ${includeHidden}`);
-      
-      // Si includeHidden=true, devolver todas las transacciones sin paginación
+      // OPTIMIZACIÓN: Usar método optimizado con queries SQL directas
       if (includeHidden) {
+        // Para includeHidden, usar método antiguo por compatibilidad
         const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(effectiveUserId);
         const lcdmTransactions = allTransaccionesIncludingHidden.filter((t: any) => 
           t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm'
@@ -3595,83 +3608,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(lcdmTransactions);
       }
       
-      const allTransacciones = await storage.getTransacciones(effectiveUserId);
-      console.log(`[LCDM] Total transacciones obtenidas: ${allTransacciones.length}`);
-      
-      // Nota: El ocultamiento de transacciones ahora se maneja localmente en el frontend
-      // (ver useHiddenTransactions hook). Ya no hay columnas oculta* en la BD.
-      
-      // Filtrar transacciones de LCDM (origen o destino)
-      let lcdmTransactions = allTransacciones.filter((t: any) => 
-        t.deQuienTipo === 'lcdm' || t.paraQuienTipo === 'lcdm'
-      );
-      console.log(`[LCDM] Transacciones filtradas por LCDM: ${lcdmTransactions.length}`);
-
-      // Aplicar filtro de búsqueda
-      if (search.trim()) {
-        const searchLower = search.toLowerCase();
-        lcdmTransactions = lcdmTransactions.filter((t: any) => {
-          const fechaString = String(t.fecha);
-          const fechaDirecta = t.fecha instanceof Date 
-            ? t.fecha.toISOString().split('T')[0]
-            : fechaString.includes('T') 
-                ? fechaString.split('T')[0] 
-                : fechaString;
-          
-          return (
-            t.concepto?.toLowerCase().includes(searchLower) ||
-            t.comentario?.toLowerCase().includes(searchLower) ||
-            t.valor?.toString().includes(searchLower) ||
-            fechaDirecta.includes(searchLower)
-          );
-        });
-      }
-
-      // Aplicar filtro de fecha
-      if (fechaDesde || fechaHasta) {
-        lcdmTransactions = lcdmTransactions.filter((t: any) => {
-          const fechaString = String(t.fecha);
-          const fechaDirecta = t.fecha instanceof Date 
-            ? t.fecha.toISOString().split('T')[0]
-            : fechaString.includes('T') 
-                ? fechaString.split('T')[0] 
-                : fechaString;
-          
-          if (fechaDesde && fechaHasta) {
-            return fechaDirecta >= fechaDesde && fechaDirecta <= fechaHasta;
-          } else if (fechaDesde) {
-            return fechaDirecta >= fechaDesde;
-          } else if (fechaHasta) {
-            return fechaDirecta <= fechaHasta;
-          }
-          return true;
-        });
-      }
-
-      // Ordenar por fecha descendente
-      lcdmTransactions.sort(
-        (a: any, b: any) =>
-          new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
-      );
-
-      // Aplicar paginación
-      const total = lcdmTransactions.length;
-      const validPage = Math.max(1, Math.floor(page));
-      const validLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
-      const offset = (validPage - 1) * validLimit;
-      const paginatedData = lcdmTransactions.slice(offset, offset + validLimit);
-      const totalPages = Math.ceil(total / validLimit);
-
-      res.json({
-        data: paginatedData,
-        pagination: {
-          page: validPage,
-          limit: validLimit,
-          total,
-          totalPages,
-          hasMore: validPage < totalPages,
-        },
+      // Usar método optimizado con queries SQL
+      const result = await storage.getTransaccionesForLCDM(effectiveUserId, {
+        page,
+        limit,
+        search,
+        fechaDesde,
+        fechaHasta,
+        includeHidden: false,
       });
+      
+      res.json(result);
     } catch (error) {
       console.error("[LCDM] Error fetching LCDM transactions:", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -3709,25 +3656,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 50;
       const filterType = req.query.filterType as string || 'todas'; // todas, santa-rosa, cimitarra
       
-      console.log(`[Postobón] Request recibido - userId: ${userId}, permisos de transacciones: ${hasTransactionPermissions ? 'SÍ' : 'NO'}, effectiveUserId: ${effectiveUserId || 'ALL'}, page: ${page}, limit: ${limit}, filterType: ${filterType}`);
+      // Logging condicional para reducir overhead en desarrollo
+      if (process.env.DEBUG_RODMAR === 'true') {
+        console.log(`[Postobón] Request recibido - userId: ${userId}, permisos de transacciones: ${hasTransactionPermissions ? 'SÍ' : 'NO'}, effectiveUserId: ${effectiveUserId || 'ALL'}, page: ${page}, limit: ${limit}, filterType: ${filterType}`);
+      }
       
       // Leer parámetros de filtro
       const search = req.query.search as string || '';
       const fechaDesde = req.query.fechaDesde as string || '';
       const fechaHasta = req.query.fechaHasta as string || '';
       
-      console.log(`[Postobón] Obteniendo transacciones para effectiveUserId: ${effectiveUserId || 'ALL'}`);
-      const allTransacciones = await storage.getTransacciones(effectiveUserId);
-      console.log(`[Postobón] Total transacciones obtenidas: ${allTransacciones.length}`);
-      
-      // Nota: El ocultamiento de transacciones ahora se maneja localmente en el frontend
-      // (ver useHiddenTransactions hook). Ya no hay columnas oculta* en la BD.
-      
       // Verificar si se deben incluir transacciones ocultas (para compatibilidad con frontend)
       const includeHidden = req.query.includeHidden === 'true';
       
-      // Si includeHidden=true, devolver todas las transacciones sin paginación
+      // OPTIMIZACIÓN: Usar método optimizado con queries SQL directas
       if (includeHidden) {
+        // Para includeHidden, usar método antiguo por compatibilidad
         const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(userId);
         let postobonTransactions = allTransaccionesIncludingHidden.filter((t: any) => 
           t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon'
@@ -3747,92 +3691,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(postobonTransactions);
       }
       
-      // Si se solicitan todas (incluyendo ocultas), usar getTransaccionesIncludingHidden
-      const sourceTransacciones = allTransacciones;
-      
-      // Filtrar transacciones de Postobón (origen o destino)
-      let postobonTransactions = sourceTransacciones.filter((t: any) => 
-        t.deQuienTipo === 'postobon' || t.paraQuienTipo === 'postobon'
-      );
-      console.log(`[Postobón] Transacciones filtradas por Postobón: ${postobonTransactions.length}`);
-
-      // Filtrar por cuenta específica si se especifica
-      if (filterType === 'santa-rosa') {
-        postobonTransactions = postobonTransactions.filter((t: any) => 
-          t.postobonCuenta === 'santa-rosa'
-        );
-      } else if (filterType === 'cimitarra') {
-        postobonTransactions = postobonTransactions.filter((t: any) => 
-          t.postobonCuenta === 'cimitarra'
-        );
-      }
-
-      // Aplicar filtro de búsqueda
-      if (search.trim()) {
-        const searchLower = search.toLowerCase();
-        postobonTransactions = postobonTransactions.filter((t: any) => {
-          const fechaString = String(t.fecha);
-          const fechaDirecta = t.fecha instanceof Date 
-            ? t.fecha.toISOString().split('T')[0]
-            : fechaString.includes('T') 
-                ? fechaString.split('T')[0] 
-                : fechaString;
-          
-          return (
-            t.concepto?.toLowerCase().includes(searchLower) ||
-            t.comentario?.toLowerCase().includes(searchLower) ||
-            t.valor?.toString().includes(searchLower) ||
-            fechaDirecta.includes(searchLower)
-          );
-        });
-      }
-
-      // Aplicar filtro de fecha
-      if (fechaDesde || fechaHasta) {
-        postobonTransactions = postobonTransactions.filter((t: any) => {
-          const fechaString = String(t.fecha);
-          const fechaDirecta = t.fecha instanceof Date 
-            ? t.fecha.toISOString().split('T')[0]
-            : fechaString.includes('T') 
-                ? fechaString.split('T')[0] 
-                : fechaString;
-          
-          if (fechaDesde && fechaHasta) {
-            return fechaDirecta >= fechaDesde && fechaDirecta <= fechaHasta;
-          } else if (fechaDesde) {
-            return fechaDirecta >= fechaDesde;
-          } else if (fechaHasta) {
-            return fechaDirecta <= fechaHasta;
-          }
-          return true;
-        });
-      }
-
-      // Ordenar por fecha descendente
-      postobonTransactions.sort(
-        (a: any, b: any) =>
-          new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
-      );
-
-      // Aplicar paginación
-      const total = postobonTransactions.length;
-      const validPage = Math.max(1, Math.floor(page));
-      const validLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
-      const offset = (validPage - 1) * validLimit;
-      const paginatedData = postobonTransactions.slice(offset, offset + validLimit);
-      const totalPages = Math.ceil(total / validLimit);
-
-      res.json({
-        data: paginatedData,
-        pagination: {
-          page: validPage,
-          limit: validLimit,
-          total,
-          totalPages,
-          hasMore: validPage < totalPages,
-        },
-        hiddenCount: 0, // El ocultamiento ahora se maneja localmente en el frontend
+      // Usar método optimizado con queries SQL
+      const result = await storage.getTransaccionesForPostobon(effectiveUserId, {
+        page,
+        limit,
+        search,
+        fechaDesde,
+        fechaHasta,
+        filterType: filterType as 'todas' | 'santa-rosa' | 'cimitarra',
+        includeHidden: false,
       });
+      
+      res.json(result);
     } catch (error) {
       console.error("[Postobón] Error fetching Postobón transactions:", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -3895,11 +3765,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ruta principal de hide - múltiples variantes para asegurar que funcione
   hideRouter.patch("/:id", async (req, res) => {
     try {
-      console.log("✅ [HIDE-ROUTER] ===== RUTA /api/transacciones/hide/:id ALCANZADA =====");
-      console.log("✅ [HIDE-ROUTER] Method:", req.method);
-      console.log("✅ [HIDE-ROUTER] Path:", req.path);
-      console.log("✅ [HIDE-ROUTER] Original URL:", req.originalUrl);
-      console.log("✅ [HIDE-ROUTER] Params:", req.params);
+      debugLog("✅ [HIDE-ROUTER] ===== RUTA /api/transacciones/hide/:id ALCANZADA =====");
+      debugLog("✅ [HIDE-ROUTER] Method:", req.method);
+      debugLog("✅ [HIDE-ROUTER] Path:", req.path);
+      debugLog("✅ [HIDE-ROUTER] Original URL:", req.originalUrl);
+      debugLog("✅ [HIDE-ROUTER] Params:", req.params);
       
       const userId = req.user?.id || "main_user";
       const transactionId = parseInt(req.params.id);
@@ -3909,9 +3779,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "ID de transacción inválido" });
       }
 
-      console.log("✅ [HIDE-ROUTER] Ocultando transacción:", transactionId, "User:", userId);
+      debugLog("✅ [HIDE-ROUTER] Ocultando transacción:", transactionId, "User:", userId);
       const success = await storage.hideTransaccion(transactionId, userId);
-      console.log("✅ [HIDE-ROUTER] Resultado:", success);
+      debugLog("✅ [HIDE-ROUTER] Resultado:", success);
 
       if (success) {
         res.json({
@@ -3933,29 +3803,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mantener ruta antigua por compatibilidad - DEBE estar ANTES de /api/transacciones/:id
   app.patch("/api/transacciones/:id/hide", requireAuth, requirePermission("action.TRANSACCIONES.hide"), async (req, res) => {
     try {
-      console.log("✅ [HIDE-OLD] ===== RUTA /api/transacciones/:id/hide ALCANZADA =====");
-      console.log("✅ [HIDE-OLD] Method:", req.method);
-      console.log("✅ [HIDE-OLD] Path:", req.path);
-      console.log("✅ [HIDE-OLD] Original URL:", req.originalUrl);
-      console.log("✅ [HIDE-OLD] Params:", req.params);
-      console.log("✅ [HIDE-OLD] Query:", req.query);
+      debugLog("✅ [HIDE-OLD] ===== RUTA /api/transacciones/:id/hide ALCANZADA =====");
+      debugLog("✅ [HIDE-OLD] Method:", req.method);
+      debugLog("✅ [HIDE-OLD] Path:", req.path);
+      debugLog("✅ [HIDE-OLD] Original URL:", req.originalUrl);
+      debugLog("✅ [HIDE-OLD] Params:", req.params);
+      debugLog("✅ [HIDE-OLD] Query:", req.query);
       
       const userId = req.user?.id || "main_user";
       const transactionId = parseInt(req.params.id);
 
-      console.log("✅ [HIDE-OLD] Transaction ID parsed:", transactionId, "User ID:", userId);
+      debugLog("✅ [HIDE-OLD] Transaction ID parsed:", transactionId, "User ID:", userId);
 
       if (isNaN(transactionId)) {
         console.error("❌ [HIDE-OLD] ID inválido:", req.params.id);
         return res.status(400).json({ error: "ID de transacción inválido" });
       }
 
-      console.log("✅ [HIDE-OLD] Ocultando transacción:", transactionId);
+      debugLog("✅ [HIDE-OLD] Ocultando transacción:", transactionId);
       const success = await storage.hideTransaccion(transactionId, userId);
-      console.log("✅ [HIDE-OLD] Resultado:", success);
+      debugLog("✅ [HIDE-OLD] Resultado:", success);
 
       if (success) {
-        console.log("✅ [HIDE-OLD] Transacción ocultada exitosamente");
+        debugLog("✅ [HIDE-OLD] Transacción ocultada exitosamente");
         res.json({
           success: true,
           message: "Transacción ocultada correctamente",
@@ -4120,9 +3990,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const id = parseInt(req.params.id);
 
-      console.log("=== PATCH /api/transacciones/:id - Request body:", req.body);
-      console.log("=== PATCH /api/transacciones/:id - Permisos de transacciones:", hasTransactionPermissions ? 'SÍ' : 'NO');
-      console.log("=== PATCH /api/transacciones/:id - effectiveUserId:", effectiveUserId || 'NINGUNO (todas las transacciones)');
+      debugLog("=== PATCH /api/transacciones/:id - Request body:", req.body);
+      debugLog("=== PATCH /api/transacciones/:id - Permisos de transacciones:", hasTransactionPermissions ? 'SÍ' : 'NO');
+      debugLog("=== PATCH /api/transacciones/:id - effectiveUserId:", effectiveUserId || 'NINGUNO (todas las transacciones)');
 
       // Obtener transacción original PRIMERO para comparar fechas y preservar horaInterna
       const originalTransaction = await storage.getTransaccion(id);
@@ -4194,10 +4064,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Si la fecha NO cambió, preservar horaInterna original para mantener el orden
       if (!fechaCambio && originalTransaction.horaInterna) {
         updateData.horaInterna = originalTransaction.horaInterna;
-        console.log("=== PATCH /api/transacciones/:id - Preservando horaInterna original:", originalTransaction.horaInterna);
-        console.log("=== PATCH /api/transacciones/:id - Fecha NO cambió, manteniendo orden original");
+        debugLog("=== PATCH /api/transacciones/:id - Preservando horaInterna original:", originalTransaction.horaInterna);
+        debugLog("=== PATCH /api/transacciones/:id - Fecha NO cambió, manteniendo orden original");
       } else if (fechaCambio) {
-        console.log("=== PATCH /api/transacciones/:id - Fecha cambió, horaInterna se actualizará automáticamente");
+        debugLog("=== PATCH /api/transacciones/:id - Fecha cambió, horaInterna se actualizará automáticamente");
       }
 
       console.log(
@@ -4388,7 +4258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user?.sub || req.user?.id || "main_user";
 
-      console.log("=== INDIVIDUAL DELETE ENDPOINT CALLED ===");
+      debugLog("=== INDIVIDUAL DELETE ENDPOINT CALLED ===");
       console.log("Request params:", req.params);
       console.log("Transaction ID raw:", req.params.id);
       console.log("User ID:", userId);
@@ -4532,11 +4402,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ocultar viaje individual (afecta transacciones de minas y volqueteros)
   app.patch("/api/viajes/:id/hide", async (req, res) => {
     try {
-      console.log("✅ [HIDE-VIAJE] ===== RUTA /api/viajes/:id/hide ALCANZADA =====");
-      console.log("✅ [HIDE-VIAJE] Method:", req.method);
-      console.log("✅ [HIDE-VIAJE] Path:", req.path);
-      console.log("✅ [HIDE-VIAJE] Original URL:", req.originalUrl);
-      console.log("✅ [HIDE-VIAJE] Params:", req.params);
+      debugLog("✅ [HIDE-VIAJE] ===== RUTA /api/viajes/:id/hide ALCANZADA =====");
+      debugLog("✅ [HIDE-VIAJE] Method:", req.method);
+      debugLog("✅ [HIDE-VIAJE] Path:", req.path);
+      debugLog("✅ [HIDE-VIAJE] Original URL:", req.originalUrl);
+      debugLog("✅ [HIDE-VIAJE] Params:", req.params);
       
       const userId = req.user?.id || "main_user";
       const viajeId = req.params.id;
@@ -4546,12 +4416,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "ID de viaje inválido" });
       }
 
-      console.log("✅ [HIDE-VIAJE] Ocultando viaje:", viajeId, "User:", userId);
+      debugLog("✅ [HIDE-VIAJE] Ocultando viaje:", viajeId, "User:", userId);
       const success = await storage.hideViaje(viajeId, userId);
-      console.log("✅ [HIDE-VIAJE] Resultado:", success);
+      debugLog("✅ [HIDE-VIAJE] Resultado:", success);
 
       if (success) {
-        console.log("✅ [HIDE-VIAJE] Viaje ocultado exitosamente");
+        debugLog("✅ [HIDE-VIAJE] Viaje ocultado exitosamente");
         res.json({ success: true, message: "Viaje ocultado correctamente" });
       } else {
         console.warn("⚠️ [HIDE-VIAJE] Viaje no encontrado:", viajeId);
@@ -4616,68 +4486,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       // Función para verificar si el usuario tiene permiso para ver una cuenta específica
-      // NOTA: El permiso general module.RODMAR.accounts.view solo habilita la pestaña,
-      // pero NO otorga acceso a las cuentas. Solo los permisos específicos dan acceso.
-      const tienePermisoCuenta = (nombreCuenta: string): boolean => {
-        const permisoCuenta = `module.RODMAR.account.${nombreCuenta}.view`;
+      // Ahora soporta tanto códigos nuevos como nombres antiguos (compatibilidad)
+      const tienePermisoCuenta = (codigoCuenta: string, nombreCuenta?: string): boolean => {
+        const permisoPorCodigo = `module.RODMAR.account.${codigoCuenta}.view`;
         
-        // PRIMERO: Verificar si tiene un override "deny" para esta cuenta específica
-        if (deniedPermissions.has(permisoCuenta)) {
+        // PRIMERO: Verificar si tiene un override "deny" por código
+        if (deniedPermissions.has(permisoPorCodigo)) {
           return false;
         }
         
-        // SEGUNDO: Verificar si tiene el permiso específico de esta cuenta
-        // (El permiso general NO otorga acceso automático)
-        return userPermissions.includes(permisoCuenta);
+        // SEGUNDO: Verificar permiso por código (nuevo sistema)
+        if (userPermissions.includes(permisoPorCodigo)) {
+          return true;
+        }
+        
+        // TERCERO: Verificar permiso por nombre (compatibilidad con cuentas antiguas)
+        if (nombreCuenta) {
+          const permisoPorNombre = `module.RODMAR.account.${nombreCuenta}.view`;
+          if (deniedPermissions.has(permisoPorNombre)) {
+            return false;
+          }
+          if (userPermissions.includes(permisoPorNombre)) {
+            return true;
+          }
+        }
+        
+        // CUARTO: Si tiene permiso general, permitir (para nuevas cuentas sin permiso específico aún)
+        const tienePermisoGeneral = userPermissions.includes('module.RODMAR.accounts.view');
+        if (tienePermisoGeneral) {
+          return true;
+        }
+        
+        return false;
       };
 
       const { cuentaNombre } = req.params;
       
-      // Convertir slug a nombre de cuenta (ej: "cuentas-german" -> "Cuentas German")
-      const cuentaNameFromSlug = (slug: string): string => {
-        const map: Record<string, string> = {
-          'bemovil': 'Bemovil',
-          'corresponsal': 'Corresponsal',
-          'efectivo': 'Efectivo',
-          'cuentas-german': 'Cuentas German',
-          'cuentas-jhon': 'Cuentas Jhon',
-          'otros': 'Otros'
+      // Detectar si el parámetro es un ID numérico o un nombre/slug
+      const cuentaIdParam = parseInt(cuentaNombre);
+      const esIdNumerico = !isNaN(cuentaIdParam);
+      
+      let cuentaEncontrada: any = null;
+      let codigoCuenta = '';
+      let nombreCuenta = '';
+      
+      if (esIdNumerico) {
+        // Si es un ID numérico, buscar la cuenta en la BD
+        const [cuenta] = await db
+          .select()
+          .from(rodmarCuentas)
+          .where(eq(rodmarCuentas.id, cuentaIdParam))
+          .limit(1);
+        
+        if (!cuenta) {
+          return res.status(404).json({ error: "Cuenta no encontrada" });
+        }
+        
+        cuentaEncontrada = cuenta;
+        codigoCuenta = cuenta.codigo;
+        nombreCuenta = cuenta.nombre;
+      } else {
+        // Si es un nombre/slug, buscar en la BD primero (para nuevas cuentas)
+        // Convertir slug a nombre (para búsqueda)
+        const cuentaNameFromSlug = (slug: string): string => {
+          const map: Record<string, string> = {
+            'bemovil': 'Bemovil',
+            'corresponsal': 'Corresponsal',
+            'efectivo': 'Efectivo',
+            'cuentas-german': 'Cuentas German',
+            'cuentas-jhon': 'Cuentas Jhon',
+            'otros': 'Otros'
+          };
+          return map[slug.toLowerCase()] || slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         };
-        return map[slug.toLowerCase()] || slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-      };
 
-      const nombreCuentaReal = cuentaNameFromSlug(cuentaNombre);
+        const nombreBuscar = cuentaNameFromSlug(cuentaNombre);
+        
+        // Buscar por nombre o código
+        const cuentas = await db.select().from(rodmarCuentas);
+        cuentaEncontrada = cuentas.find(c => 
+          c.nombre.toLowerCase() === nombreBuscar.toLowerCase() || 
+          c.codigo.toLowerCase() === cuentaNombre.toLowerCase()
+        );
+        
+        if (cuentaEncontrada) {
+          codigoCuenta = cuentaEncontrada.codigo;
+          nombreCuenta = cuentaEncontrada.nombre;
+        } else {
+          // Fallback: usar el nombre del slug para compatibilidad con cuentas hardcodeadas antiguas
+          codigoCuenta = nombreBuscar.toUpperCase().replace(/\s+/g, '_');
+          nombreCuenta = nombreBuscar;
+        }
+      }
 
-      // Verificar permisos
-      if (!tienePermisoCuenta(nombreCuentaReal)) {
+      // Verificar permisos usando código (y nombre para compatibilidad)
+      if (!tienePermisoCuenta(codigoCuenta, nombreCuenta)) {
         return res.status(403).json({
           error: "No tienes permiso para ver esta cuenta",
-          requiredPermission: `module.RODMAR.account.${nombreCuentaReal}.view`,
+          requiredPermission: `module.RODMAR.account.${codigoCuenta}.view`,
         });
       }
+      
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       
-      // Función helper para mapear nombre de cuenta a ID
-      const cuentaNameToId = (nombre: string): string => {
-        const map: Record<string, string> = {
-          'Bemovil': 'bemovil',
-          'bemovil': 'bemovil',
-          'Corresponsal': 'corresponsal',
-          'corresponsal': 'corresponsal',
-          'Efectivo': 'efectivo',
-          'efectivo': 'efectivo',
-          'Cuentas German': 'cuentas-german',
-          'cuentas-german': 'cuentas-german',
-          'Cuentas Jhon': 'cuentas-jhon',
-          'cuentas-jhon': 'cuentas-jhon',
-          'Otros': 'otros',
-          'otros': 'otros'
+      // Mapear código/nombre a IDs de referencia para filtrar transacciones
+      const referenciasPosibles: string[] = [];
+      
+      if (cuentaEncontrada) {
+        // Usar ID numérico, código y slug legacy
+        referenciasPosibles.push(cuentaEncontrada.id.toString());
+        referenciasPosibles.push(cuentaEncontrada.codigo);
+        
+        // Agregar slug legacy si existe
+        const codigoToSlug: Record<string, string> = {
+          'BEMOVIL': 'bemovil',
+          'CORRESPONSAL': 'corresponsal',
+          'EFECTIVO': 'efectivo',
+          'CUENTAS_GERMAN': 'cuentas-german',
+          'CUENTAS_JHON': 'cuentas-jhon',
+          'OTROS': 'otros',
         };
-        return map[nombre] || nombre.toLowerCase().replace(/\s+/g, '-');
-      };
+        const slugLegacy = codigoToSlug[cuentaEncontrada.codigo];
+        if (slugLegacy) {
+          referenciasPosibles.push(slugLegacy);
+        }
+      } else {
+        // Fallback: usar el nombre convertido
+        const cuentaNameToId = (nombre: string): string => {
+          const map: Record<string, string> = {
+            'Bemovil': 'bemovil',
+            'bemovil': 'bemovil',
+            'Corresponsal': 'corresponsal',
+            'corresponsal': 'corresponsal',
+            'Efectivo': 'efectivo',
+            'efectivo': 'efectivo',
+            'Cuentas German': 'cuentas-german',
+            'cuentas-german': 'cuentas-german',
+            'Cuentas Jhon': 'cuentas-jhon',
+            'cuentas-jhon': 'cuentas-jhon',
+            'Otros': 'otros',
+            'otros': 'otros'
+          };
+          return map[nombre] || nombre.toLowerCase().replace(/\s+/g, '-');
+        };
+        referenciasPosibles.push(cuentaNameToId(cuentaNombre));
+      }
 
-      const cuentaId = cuentaNameToId(cuentaNombre);
+      const cuentaId = referenciasPosibles[0] || cuentaNombre;
       
       // Leer parámetros de filtro
       const search = req.query.search as string || '';
@@ -4692,17 +4648,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allTransacciones = await storage.getTransacciones();
 
       // Filtrar transacciones que involucren esta cuenta específica
+      // Usar todas las referencias posibles (ID, código, slug legacy) para encontrar transacciones
       let transaccionesCuenta = allTransacciones.filter((t: any) => {
+        const deQuienIdLower = t.deQuienId?.toLowerCase() || '';
+        const paraQuienIdLower = t.paraQuienId?.toLowerCase() || '';
+        const referenciasLower = referenciasPosibles.map(r => r.toLowerCase());
+        
         // Si la transacción viene de RodMar (deQuienTipo === 'rodmar') y tiene esta cuenta específica
         // O si va hacia RodMar (paraQuienTipo === 'rodmar') y tiene esta cuenta específica
-        return (
-          (t.deQuienTipo === "rodmar" &&
-            t.deQuienId &&
-            t.deQuienId.toLowerCase() === cuentaId.toLowerCase()) ||
-          (t.paraQuienTipo === "rodmar" &&
-            t.paraQuienId &&
-            t.paraQuienId.toLowerCase() === cuentaId.toLowerCase())
-        );
+        const esDeQuien = t.deQuienTipo === "rodmar" && 
+          deQuienIdLower && 
+          referenciasLower.includes(deQuienIdLower);
+        
+        const esParaQuien = t.paraQuienTipo === "rodmar" && 
+          paraQuienIdLower && 
+          referenciasLower.includes(paraQuienIdLower);
+        
+        return esDeQuien || esParaQuien;
       });
 
       // Aplicar filtro de búsqueda
@@ -4785,7 +4747,384 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Balances de cuentas RodMar
+  // ========== ENDPOINTS CRUD PARA CUENTAS RODMAR ==========
+
+  // GET todas las cuentas RodMar (para administración)
+  app.get("/api/rodmar-cuentas", requireAuth, requirePermission("module.RODMAR.accounts.view"), async (req, res) => {
+    try {
+      const todasLasCuentas = await db.select().from(rodmarCuentas).orderBy(rodmarCuentas.nombre);
+      res.json(todasLasCuentas);
+    } catch (error: any) {
+      console.error("Error fetching RodMar cuentas:", error);
+      res.status(500).json({ error: "Failed to fetch RodMar cuentas" });
+    }
+  });
+
+  // POST crear nueva cuenta RodMar
+  app.post("/api/rodmar-cuentas", requireAuth, requirePermission("module.RODMAR.accounts.view"), async (req, res) => {
+    try {
+      console.log(`[RODMAR-CREATE] Request body:`, req.body);
+      const userId = req.user!.id;
+      console.log(`[RODMAR-CREATE] User ID:`, userId);
+      const data = insertRodmarCuentaSchema.parse(req.body);
+      console.log(`[RODMAR-CREATE] Validated data:`, data);
+
+      // Auto-generar código desde el nombre
+      const codigoAutoGenerado = normalizeNombreToCodigo(data.nombre);
+
+      // Validar que el código no exista
+      const existing = await db
+        .select()
+        .from(rodmarCuentas)
+        .where(eq(rodmarCuentas.codigo, codigoAutoGenerado))
+        .limit(1);
+
+      if (existing.length > 0) {
+        return res.status(400).json({ error: `Ya existe una cuenta con el código generado: ${codigoAutoGenerado}` });
+      }
+
+      // Crear la cuenta con el código auto-generado
+      const [nuevaCuenta] = await db
+        .insert(rodmarCuentas)
+        .values({
+          nombre: data.nombre,
+          codigo: codigoAutoGenerado,
+          userId,
+        })
+        .returning();
+
+      // Crear el permiso automáticamente
+      await createRodMarAccountPermission(nuevaCuenta.codigo, nuevaCuenta.nombre);
+      await assignPermissionToAdminRole(`module.RODMAR.account.${nuevaCuenta.codigo}.view`);
+
+      res.status(201).json(nuevaCuenta);
+    } catch (error: any) {
+      console.error("Error creating RodMar cuenta:", error);
+      if (error.name === 'ZodError') {
+        console.error("ZodError details:", JSON.stringify(error.errors, null, 2));
+        res.status(400).json({ 
+          error: "Invalid data", 
+          details: error.message,
+          zodErrors: error.errors 
+        });
+      } else if (error.message?.includes('No se pudo generar')) {
+        res.status(400).json({ error: error.message });
+      } else {
+        console.error("Full error:", error);
+        res.status(500).json({ error: "Failed to create RodMar cuenta", details: error.message });
+      }
+    }
+  });
+
+  // PATCH actualizar nombre de cuenta RodMar (actualiza código y migra transacciones)
+  app.patch("/api/rodmar-cuentas/:id/nombre", requireAuth, requirePermission("module.RODMAR.accounts.view"), async (req, res) => {
+    try {
+      const cuentaId = parseInt(req.params.id);
+      if (isNaN(cuentaId)) {
+        return res.status(400).json({ error: "Invalid cuenta ID" });
+      }
+
+      const data = updateRodmarCuentaNombreSchema.parse(req.body);
+
+      // Obtener la cuenta actual
+      const [cuentaActual] = await db
+        .select()
+        .from(rodmarCuentas)
+        .where(eq(rodmarCuentas.id, cuentaId))
+        .limit(1);
+
+      if (!cuentaActual) {
+        return res.status(404).json({ error: "Cuenta not found" });
+      }
+
+      // Generar nuevo código desde el nuevo nombre
+      const nuevoCodigo = normalizeNombreToCodigo(data.nombre);
+      const codigoAnterior = cuentaActual.codigo;
+      const idString = cuentaId.toString();
+
+      // Mapeo de código antiguo a slug legacy (para compatibilidad)
+      const codigoToSlug: Record<string, string> = {
+        'BEMOVIL': 'bemovil',
+        'CORRESPONSAL': 'corresponsal',
+        'EFECTIVO': 'efectivo',
+        'CUENTAS_GERMAN': 'cuentas-german',
+        'CUENTAS_JHON': 'cuentas-jhon',
+        'OTROS': 'otros',
+      };
+      const slugLegacy = codigoToSlug[codigoAnterior] || codigoAnterior.toLowerCase();
+
+      // Si el código cambió, migrar transacciones y permisos
+      if (nuevoCodigo !== codigoAnterior) {
+        // Verificar que el nuevo código no esté en uso
+        const codigoEnUso = await db
+          .select()
+          .from(rodmarCuentas)
+          .where(
+            and(
+              eq(rodmarCuentas.codigo, nuevoCodigo),
+              sql`${rodmarCuentas.id} != ${cuentaId}`
+            )
+          )
+          .limit(1);
+
+        if (codigoEnUso.length > 0) {
+          return res.status(400).json({ error: `El código generado "${nuevoCodigo}" ya está en uso por otra cuenta` });
+        }
+
+        // Migrar dentro de una transacción
+        await db.transaction(async (tx) => {
+          // 1. Actualizar el nombre y código de la cuenta
+          await tx
+            .update(rodmarCuentas)
+            .set({
+              nombre: data.nombre,
+              codigo: nuevoCodigo,
+              updatedAt: new Date(),
+            })
+            .where(eq(rodmarCuentas.id, cuentaId));
+
+          // 2. Migrar transacciones: actualizar referencias antiguas al nuevo código
+          // Buscar todas las transacciones que referencian esta cuenta en cualquier formato
+          const referenciasAntiguas = [codigoAnterior, slugLegacy, idString];
+          
+          // Obtener el nombre anterior y nuevo para actualizar el concepto
+          const nombreAnterior = cuentaActual.nombre;
+          const nombreNuevo = data.nombre;
+
+          // OPTIMIZACIÓN: Migrar transacciones con bulk updates en lugar de uno por uno
+          // Actualizar deQuienId donde aplica (bulk update)
+          const condicionesDeQuien = referenciasAntiguas.map(ref => 
+            sql`LOWER(CAST(${transacciones.deQuienId} AS TEXT)) = LOWER(${ref})`
+          );
+          
+          if (condicionesDeQuien.length > 0) {
+            await tx
+              .update(transacciones)
+              .set({ deQuienId: nuevoCodigo })
+              .where(
+                and(
+                  eq(transacciones.deQuienTipo, 'rodmar'),
+                  or(...condicionesDeQuien)
+                )
+              );
+          }
+
+          // Actualizar paraQuienId donde aplica (bulk update)
+          const condicionesParaQuien = referenciasAntiguas.map(ref => 
+            sql`LOWER(CAST(${transacciones.paraQuienId} AS TEXT)) = LOWER(${ref})`
+          );
+          
+          if (condicionesParaQuien.length > 0) {
+            await tx
+              .update(transacciones)
+              .set({ paraQuienId: nuevoCodigo })
+              .where(
+                and(
+                  eq(transacciones.paraQuienTipo, 'rodmar'),
+                  or(...condicionesParaQuien)
+                )
+              );
+          }
+
+          // Actualizar concepto donde contiene el nombre anterior (bulk update con REPLACE SQL)
+          // Solo actualizar si el concepto realmente contiene el nombre anterior
+          if (nombreAnterior && nombreNuevo && nombreAnterior !== nombreNuevo) {
+            await tx
+              .update(transacciones)
+              .set({
+                concepto: sql`REPLACE(${transacciones.concepto}, ${nombreAnterior}, ${nombreNuevo})`
+              })
+              .where(
+                and(
+                  sql`${transacciones.concepto} IS NOT NULL`,
+                  sql`LOWER(CAST(${transacciones.concepto} AS TEXT)) LIKE ${'%' + nombreAnterior.toLowerCase() + '%'}`
+                )
+              );
+          }
+
+          // 3. Migrar permiso: crear nuevo permiso con el nuevo código
+          const permisoAnteriorKey = `module.RODMAR.account.${codigoAnterior}.view`;
+          const permisoNuevoKey = `module.RODMAR.account.${nuevoCodigo}.view`;
+
+          // Buscar el permiso antiguo
+          const [permisoAnterior] = await tx
+            .select()
+            .from(permissions)
+            .where(eq(permissions.key, permisoAnteriorKey))
+            .limit(1);
+
+          if (permisoAnterior) {
+            // Crear nuevo permiso
+            const [nuevoPermiso] = await tx
+              .insert(permissions)
+              .values({
+                key: permisoNuevoKey,
+                descripcion: `Ver cuenta RodMar: ${data.nombre}`,
+                categoria: 'account',
+              })
+              .returning();
+
+            // Migrar asignaciones de roles: copiar del permiso antiguo al nuevo
+            const asignacionesAntiguas = await tx
+              .select()
+              .from(rolePermissions)
+              .where(eq(rolePermissions.permissionId, permisoAnterior.id));
+
+            if (asignacionesAntiguas.length > 0) {
+              const nuevasAsignaciones = asignacionesAntiguas.map(a => ({
+                roleId: a.roleId,
+                permissionId: nuevoPermiso.id,
+              }));
+
+              // Insertar nuevas asignaciones (evitar duplicados con try-catch)
+              for (const asignacion of nuevasAsignaciones) {
+                try {
+                  await tx.insert(rolePermissions).values(asignacion);
+                } catch (error: any) {
+                  // Si ya existe (23505), ignorar
+                  if (error.code !== '23505') {
+                    throw error;
+                  }
+                }
+              }
+            }
+
+            // Eliminar asignaciones del permiso antiguo
+            await tx
+              .delete(rolePermissions)
+              .where(eq(rolePermissions.permissionId, permisoAnterior.id));
+
+            // Eliminar el permiso antiguo
+            await tx
+              .delete(permissions)
+              .where(eq(permissions.id, permisoAnterior.id));
+
+            debugLog(`✅ Permiso migrado y eliminado: ${permisoAnteriorKey} → ${permisoNuevoKey}`);
+          } else {
+            // Si no existe permiso antiguo, crear uno nuevo
+            await createRodMarAccountPermission(nuevoCodigo, data.nombre);
+            await assignPermissionToAdminRole(permisoNuevoKey);
+          }
+        });
+
+        debugLog(`✅ Cuenta migrada: ${codigoAnterior} → ${nuevoCodigo}`);
+      } else {
+        // Si el código no cambió, solo actualizar nombre y descripción del permiso
+        await db
+          .update(rodmarCuentas)
+          .set({
+            nombre: data.nombre,
+            updatedAt: new Date(),
+          })
+          .where(eq(rodmarCuentas.id, cuentaId));
+
+        const permisoKey = `module.RODMAR.account.${codigoAnterior}.view`;
+        await db
+          .update(permissions)
+          .set({ descripcion: `Ver cuenta RodMar: ${data.nombre}` })
+          .where(eq(permissions.key, permisoKey));
+      }
+
+      // Obtener la cuenta actualizada
+      const [updated] = await db
+        .select()
+        .from(rodmarCuentas)
+        .where(eq(rodmarCuentas.id, cuentaId))
+        .limit(1);
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating RodMar cuenta nombre:", error);
+      if (error.name === 'ZodError') {
+        res.status(400).json({ error: "Invalid data", details: error.message });
+      } else if (error.message?.includes('No se pudo generar')) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to update RodMar cuenta" });
+      }
+    }
+  });
+
+  // DELETE eliminar cuenta RodMar (solo si no tiene transacciones)
+  app.delete("/api/rodmar-cuentas/:id", requireAuth, requirePermission("module.RODMAR.accounts.view"), async (req, res) => {
+    try {
+      const cuentaId = parseInt(req.params.id);
+      if (isNaN(cuentaId)) {
+        return res.status(400).json({ error: "Invalid cuenta ID" });
+      }
+
+      // Verificar que la cuenta existe
+      const cuenta = await db
+        .select()
+        .from(rodmarCuentas)
+        .where(eq(rodmarCuentas.id, cuentaId))
+        .limit(1);
+
+      if (cuenta.length === 0) {
+        return res.status(404).json({ error: "Cuenta not found" });
+      }
+
+      // Verificar si tiene transacciones asociadas
+      const transacciones = await storage.getTransacciones();
+      const cuentaString = cuentaId.toString();
+      const codigoToSlug: Record<string, string> = {
+        'BEMOVIL': 'bemovil',
+        'CORRESPONSAL': 'corresponsal',
+        'EFECTIVO': 'efectivo',
+        'CUENTAS_GERMAN': 'cuentas-german',
+        'CUENTAS_JHON': 'cuentas-jhon',
+        'OTROS': 'otros',
+      };
+      const slugLegacy = codigoToSlug[cuenta[0].codigo] || cuenta[0].codigo.toLowerCase();
+
+      const tieneTransacciones = transacciones.some((t: any) => {
+        return (
+          (t.deQuienTipo === "rodmar" && (t.deQuienId === cuentaString || t.deQuienId === slugLegacy)) ||
+          (t.paraQuienTipo === "rodmar" && (t.paraQuienId === cuentaString || t.paraQuienId === slugLegacy))
+        );
+      });
+
+      if (tieneTransacciones) {
+        return res.status(400).json({
+          error: "No se puede eliminar esta cuenta porque tiene transacciones asociadas",
+        });
+      }
+
+      // Eliminar permiso y asignaciones de roles antes de eliminar la cuenta
+      const permisoKey = `module.RODMAR.account.${cuenta[0].codigo}.view`;
+      
+      // Buscar el permiso
+      const [permiso] = await db
+        .select()
+        .from(permissions)
+        .where(eq(permissions.key, permisoKey))
+        .limit(1);
+
+      if (permiso) {
+        // Eliminar asignaciones de roles primero (foreign key constraint)
+        await db
+          .delete(rolePermissions)
+          .where(eq(rolePermissions.permissionId, permiso.id));
+
+        // Eliminar el permiso
+        await db
+          .delete(permissions)
+          .where(eq(permissions.id, permiso.id));
+
+        debugLog(`✅ Permiso eliminado: ${permisoKey}`);
+      }
+
+      // Eliminar la cuenta
+      await db.delete(rodmarCuentas).where(eq(rodmarCuentas.id, cuentaId));
+
+      res.json({ success: true, message: "Cuenta eliminada exitosamente" });
+    } catch (error: any) {
+      console.error("Error deleting RodMar cuenta:", error);
+      res.status(500).json({ error: "Failed to delete RodMar cuenta" });
+    }
+  });
+
+  // Balances de cuentas RodMar (LEE DE BD)
   app.get("/api/rodmar-accounts", requireAuth, async (req, res) => {
     try {
       if (!req.user?.id) {
@@ -4795,15 +5134,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Obtener permisos del usuario
       const userPermissions = await getUserPermissions(req.user.id);
       
-      console.log(`[RODMAR-ACCOUNTS] Usuario: ${req.user.id}`);
-      console.log(`[RODMAR-ACCOUNTS] Permisos del usuario (${userPermissions.length}):`, userPermissions.filter(p => p.includes('RODMAR')));
+      // Logs solo en modo debug (reducir overhead en producción)
+      if (process.env.DEBUG_RODMAR === 'true') {
+        console.log(`[RODMAR-ACCOUNTS] Usuario: ${req.user.id}`);
+        console.log(`[RODMAR-ACCOUNTS] Permisos del usuario (${userPermissions.length}):`, userPermissions.filter(p => p.includes('RODMAR')));
+      }
 
       const transacciones = await storage.getTransacciones();
-
-      // Función para mapear nombre de cuenta a ID (igual que en frontend)
-      const cuentaNameToId = (nombre: string): string => {
-        return nombre.toLowerCase().replace(/\s+/g, "-");
-      };
 
       // Obtener overrides del usuario para verificar denegaciones específicas
       const userOverrides = await db
@@ -4819,75 +5156,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey)
       );
       
-      // Función para verificar si el usuario tiene permiso para ver una cuenta específica
-      // NOTA: El permiso general module.RODMAR.accounts.view solo habilita la pestaña,
-      // pero NO otorga acceso a las cuentas. Solo los permisos específicos dan acceso.
-      const tienePermisoCuenta = (nombreCuenta: string): boolean => {
-        const permisoCuenta = `module.RODMAR.account.${nombreCuenta}.view`;
+      // Obtener TODAS las cuentas de la BD
+      const todasLasCuentas = await db.select().from(rodmarCuentas);
+
+      // Filtrar cuentas según permisos del usuario (usando código, no nombre)
+      // Si tiene el permiso general module.RODMAR.accounts.view, puede ver todas las cuentas
+      // Si tiene el permiso específico module.RODMAR.account.{CODIGO}.view, puede ver esa cuenta específica
+      const tienePermisoGeneral = userPermissions.includes('module.RODMAR.accounts.view');
+      
+      const cuentasRodMar = todasLasCuentas.filter((cuenta) => {
+        const permisoCuenta = `module.RODMAR.account.${cuenta.codigo}.view`;
         
-        // PRIMERO: Verificar si tiene un override "deny" para esta cuenta específica
-        if (deniedPermissions.has(permisoCuenta)) {
-          console.log(`[RODMAR-ACCOUNTS] Cuenta "${nombreCuenta}": DENEGADA por override`);
-          return false;
-        }
-        
-        // SEGUNDO: Verificar si tiene el permiso específico de esta cuenta
-        // (El permiso general NO otorga acceso automático)
-        if (userPermissions.includes(permisoCuenta)) {
-          console.log(`[RODMAR-ACCOUNTS] Cuenta "${nombreCuenta}": PERMITIDA por permiso específico`);
+        // Si tiene permiso general, permitir todas las cuentas (excepto si hay override deny)
+        if (tienePermisoGeneral) {
+          if (deniedPermissions.has(permisoCuenta)) {
+            if (process.env.DEBUG_RODMAR === 'true') {
+              console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): DENEGADA por override (a pesar de permiso general)`);
+            }
+            return false;
+          }
+          if (process.env.DEBUG_RODMAR === 'true') {
+            console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): PERMITIDA (permiso general)`);
+          }
           return true;
         }
         
-        console.log(`[RODMAR-ACCOUNTS] Cuenta "${nombreCuenta}": DENEGADA (sin permiso específico)`);
+        // Verificar si tiene un override "deny"
+        if (deniedPermissions.has(permisoCuenta)) {
+          if (process.env.DEBUG_RODMAR === 'true') {
+            console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): DENEGADA por override`);
+          }
+          return false;
+        }
+        
+        // Verificar si tiene el permiso específico con el código nuevo
+        if (userPermissions.includes(permisoCuenta)) {
+          if (process.env.DEBUG_RODMAR === 'true') {
+            console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): PERMITIDA (permiso específico por código)`);
+          }
+          return true;
+        }
+        
+        // Verificar permisos antiguos (por nombre) - mapeo de compatibilidad
+        const permisoAntiguoPorNombre = `module.RODMAR.account.${cuenta.nombre}.view`;
+        if (userPermissions.includes(permisoAntiguoPorNombre)) {
+          if (process.env.DEBUG_RODMAR === 'true') {
+            console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): PERMITIDA (permiso antiguo por nombre - mapeado)`);
+          }
+          return true;
+        }
+        
+        // Verificar mapeo de nombres antiguos a códigos
+        const codigoMapeado = nombreToCodigoMap[cuenta.nombre];
+        if (codigoMapeado && cuenta.codigo === codigoMapeado) {
+          const permisoMapeado = `module.RODMAR.account.${cuenta.nombre}.view`;
+          if (userPermissions.includes(permisoMapeado)) {
+            if (process.env.DEBUG_RODMAR === 'true') {
+              console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): PERMITIDA (permiso mapeado)`);
+            }
+            return true;
+          }
+        }
+        
+        if (process.env.DEBUG_RODMAR === 'true') {
+          console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): DENEGADA (sin permiso)`);
+        }
         return false;
-      };
-
-      // Mapeo de cuentas de RodMar con sus identificadores (usando mismo mapeo que frontend)
-      const todasLasCuentas = [
-        { nombre: "Bemovil", id: cuentaNameToId("Bemovil") },
-        { nombre: "Corresponsal", id: cuentaNameToId("Corresponsal") },
-        { nombre: "Efectivo", id: cuentaNameToId("Efectivo") },
-        { nombre: "Cuentas German", id: cuentaNameToId("Cuentas German") },
-        { nombre: "Cuentas Jhon", id: cuentaNameToId("Cuentas Jhon") },
-        { nombre: "Otros", id: cuentaNameToId("Otros") },
-      ];
-
-      // Filtrar cuentas según permisos del usuario
-      const cuentasRodMar = todasLasCuentas.filter((cuenta) =>
-        tienePermisoCuenta(cuenta.nombre)
-      );
+      });
       
-      console.log(`[RODMAR-ACCOUNTS] Total cuentas: ${todasLasCuentas.length}, Cuentas permitidas: ${cuentasRodMar.length}`);
-      console.log(`[RODMAR-ACCOUNTS] Cuentas permitidas:`, cuentasRodMar.map(c => c.nombre));
+      // Logs solo en modo debug
+      if (process.env.DEBUG_RODMAR === 'true') {
+        console.log(`[RODMAR-ACCOUNTS] Total cuentas: ${todasLasCuentas.length}, Cuentas permitidas: ${cuentasRodMar.length}`);
+        console.log(`[RODMAR-ACCOUNTS] Cuentas permitidas:`, cuentasRodMar.map(c => c.nombre));
+      }
 
       // Calcular balance de cada cuenta permitida
+      // NOTA: Las transacciones existentes pueden usar slugs ("bemovil"), IDs numéricos ("1"), o códigos nuevos ("BEMOVIL")
+      // Necesitamos soportar todos los formatos durante la migración
       const balancesCuentas = cuentasRodMar.map((cuenta) => {
         let ingresos = 0;
         let egresos = 0;
+
+        // Mapeo de código a slug legacy (para compatibilidad con transacciones antiguas)
+        const codigoToSlug: Record<string, string> = {
+          'BEMOVIL': 'bemovil',
+          'CORRESPONSAL': 'corresponsal',
+          'EFECTIVO': 'efectivo',
+          'CUENTAS_GERMAN': 'cuentas-german',
+          'CUENTAS_JHON': 'cuentas-jhon',
+          'OTROS': 'otros',
+        };
+        const slugLegacy = codigoToSlug[cuenta.codigo];
+        const idString = cuenta.id.toString();
+        
+        // Array de valores posibles que pueden referenciar esta cuenta
+        const referenciasPosibles = [
+          idString,              // ID numérico: "1", "2", etc.
+          cuenta.codigo,         // Código nuevo: "BEMOVIL", "LUZ", etc.
+        ];
+        
+        // Agregar slug legacy solo si existe (para cuentas antiguas)
+        if (slugLegacy) {
+          referenciasPosibles.push(slugLegacy);
+        }
 
         // Filtrar transacciones que afectan esta cuenta específica
         transacciones.forEach((transaccion: any) => {
           const valor = parseFloat(transaccion.valor || "0");
 
-          // Si la transacción sale de RodMar desde esta cuenta específica, es un egreso
-          if (
-            transaccion.deQuienTipo === "rodmar" &&
-            transaccion.deQuienId === cuenta.id
-          ) {
-            egresos += valor;
+          // Verificar si la transacción sale de RodMar desde esta cuenta específica (EGRESO)
+          // Debe verificar solo deQuienId, no usar || paraQuienId
+          if (transaccion.deQuienTipo === "rodmar" && transaccion.deQuienId) {
+            if (referenciasPosibles.includes(transaccion.deQuienId)) {
+              egresos += valor;
+            }
           }
 
-          // Si la transacción llega a RodMar a esta cuenta específica, es un ingreso
-          if (
-            transaccion.paraQuienTipo === "rodmar" &&
-            transaccion.paraQuienId === cuenta.id
-          ) {
-            ingresos += valor;
+          // Verificar si la transacción llega a RodMar a esta cuenta específica (INGRESO)
+          // Debe verificar solo paraQuienId, no usar || deQuienId
+          if (transaccion.paraQuienTipo === "rodmar" && transaccion.paraQuienId) {
+            if (referenciasPosibles.includes(transaccion.paraQuienId)) {
+              ingresos += valor;
+            }
           }
         });
 
         return {
+          id: cuenta.id,
           cuenta: cuenta.nombre,
+          codigo: cuenta.codigo,
           ingresos,
           egresos,
           balance: ingresos - egresos,
@@ -4926,7 +5323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const viaje = await storage.getViaje(tripId);
       if (!viaje || !viaje.recibo) {
-        console.log(`❌ Viaje ${tripId} no encontrado o sin recibo`);
+        debugLog(`❌ Viaje ${tripId} no encontrado o sin recibo`);
         return res.status(404).json({ error: "Recibo no encontrado" });
       }
 
@@ -4936,7 +5333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verificar si el recibo es una imagen base64
       if (!recibo.startsWith("data:image/")) {
-        console.log(`❌ Recibo de ${tripId} no es una imagen válida`);
+        debugLog(`❌ Recibo de ${tripId} no es una imagen válida`);
         return res.status(400).json({ error: "Formato de imagen no válido" });
       }
 
@@ -4945,7 +5342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         /^data:image\/([a-zA-Z]+);base64,(.+)$/,
       );
       if (!matches) {
-        console.log(`❌ Formato base64 inválido para ${tripId}`);
+        debugLog(`❌ Formato base64 inválido para ${tripId}`);
         return res.status(400).json({ error: "Formato base64 no válido" });
       }
 
@@ -5361,7 +5758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endTime = Date.now();
       const duration = endTime - startTime;
 
-      console.log(`✅ Recálculo masivo completado en ${duration}ms`);
+      debugLog(`✅ Recálculo masivo completado en ${duration}ms`);
 
       res.json({
         success: true,

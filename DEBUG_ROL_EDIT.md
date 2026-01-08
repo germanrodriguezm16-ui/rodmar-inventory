@@ -31,3 +31,5 @@ Sin embargo, el error 23505 se está capturando en el catch, lo que significa qu
 3. ¿El error viene realmente del UPDATE del nombre o de otra operación?
 
 
+
+

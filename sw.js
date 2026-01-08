@@ -82,7 +82,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Estrategia según tipo de recurso
+  // DETECTAR REQUESTS DE NAVEGACIÓN
+  // Las requests de navegación tienen request.mode === 'navigate' o son HTML
+  const isNavigationRequest = request.mode === 'navigate' || 
+                               (request.headers.get('accept') && request.headers.get('accept').includes('text/html'));
+  
+  // Si es una request de navegación, SIEMPRE servir index.html
+  if (isNavigationRequest) {
+    event.respondWith(handleNavigationRequest(request));
+    return;
+  }
+  
+  // Estrategia según tipo de recurso (para recursos estáticos y APIs)
   if (url.pathname.startsWith('/api/')) {
     // APIs: Network first con fallback a cache
     event.respondWith(handleApiRequest(request));
@@ -97,6 +108,60 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(handleGeneralRequest(request));
   }
 });
+
+// Manejar requests de navegación - SIEMPRE servir index.html
+async function handleNavigationRequest(request) {
+  const url = new URL(request.url);
+  
+  // Solo manejar requests del mismo origen (evitar errores CORS)
+  if (url.origin !== self.location.origin) {
+    return fetch(request);
+  }
+  
+  try {
+    // Intentar obtener index.html desde cache primero
+    const cache = await caches.open(STATIC_CACHE);
+    const cachedIndex = await cache.match('/');
+    
+    if (cachedIndex) {
+      console.log('RodMar PWA: Sirviendo index.html desde cache para navegación', url.pathname);
+      return cachedIndex;
+    }
+    
+    // Si no está en cache, hacer fetch de index.html
+    console.log('RodMar PWA: Fetching index.html para navegación', url.pathname);
+    const indexResponse = await fetch('/');
+    
+    if (indexResponse.ok) {
+      // Guardar en cache para próximas veces
+      cache.put('/', indexResponse.clone());
+      return indexResponse;
+    }
+    
+    // Si falla, intentar servir desde cache dinámico como fallback
+    const dynamicCache = await caches.open(DYNAMIC_CACHE);
+    const cachedFallback = await dynamicCache.match('/');
+    if (cachedFallback) {
+      console.log('RodMar PWA: Usando fallback de cache dinámico para navegación', url.pathname);
+      return cachedFallback;
+    }
+    
+    // Último recurso: devolver la respuesta original
+    return indexResponse;
+  } catch (error) {
+    console.error('RodMar PWA: Error manejando request de navegación', url.pathname, error);
+    
+    // Intentar servir desde cache como último recurso
+    const cache = await caches.open(STATIC_CACHE);
+    const cached = await cache.match('/');
+    if (cached) {
+      return cached;
+    }
+    
+    // Si todo falla, hacer fetch normal (puede fallar, pero es mejor que nada)
+    return fetch(request);
+  }
+}
 
 // Network first para APIs con fallback offline
 async function handleApiRequest(request) {

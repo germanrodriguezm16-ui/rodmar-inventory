@@ -452,7 +452,8 @@ export function CompleteTransactionModal({
             minas,
             compradores,
             volqueteros,
-            terceros
+            terceros,
+            []
           ) || 'Socio'}
           minas={minas}
           compradores={compradores}

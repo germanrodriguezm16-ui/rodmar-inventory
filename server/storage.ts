@@ -129,6 +129,53 @@ export interface IStorage {
   getMinasBalances(userId?: string): Promise<Record<number, { balance: number; viajesCount: number; viajesUltimoMes: number }>>;
   getCompradoresBalances(userId?: string): Promise<Record<number, { balance: number; viajesCount: number; viajesUltimoMes: number }>>;
   getVolqueterosBalances(userId?: string): Promise<Record<number, { balance: number; viajesCount: number; viajesUltimoMes: number }>>;
+  getRodMarBalances(userId?: string): Promise<Record<string, { balance: number; transaccionesCount: number }>>;
+  
+  // Optimizaciones para RodMar
+  getTransaccionesForLCDM(userId?: string, options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    fechaDesde?: string;
+    fechaHasta?: string;
+    includeHidden?: boolean;
+  }): Promise<{
+    data: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
+  }>;
+  getTransaccionesForPostobon(userId?: string, options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    fechaDesde?: string;
+    fechaHasta?: string;
+    filterType?: 'todas' | 'santa-rosa' | 'cimitarra';
+    includeHidden?: boolean;
+  }): Promise<{
+    data: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
+    hiddenCount: number;
+  }>;
+  getRodMarAccountsBalances(userId?: string, accountIds?: string[]): Promise<Array<{
+    id: number;
+    cuenta: string;
+    codigo: string;
+    ingresos: number;
+    egresos: number;
+    balance: number;
+  }>>;
 
   // Fusion methods
   mergeVolqueteros(origenId: number, destinoId: number, userId?: string): Promise<{ fusionId: number; transaccionesTransferidas: number; viajesTransferidos: number; }>;

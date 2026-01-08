@@ -1,4 +1,4 @@
-import type { Mina, Comprador, Volquetero, Tercero } from "@shared/schema";
+import type { Mina, Comprador, Volquetero, Tercero, RodmarCuenta } from "@shared/schema";
 
 /**
  * Obtiene el nombre de un socio basado en su tipo e ID
@@ -8,6 +8,7 @@ import type { Mina, Comprador, Volquetero, Tercero } from "@shared/schema";
  * @param compradores Lista de compradores (opcional)
  * @param volqueteros Lista de volqueteros (opcional)
  * @param terceros Lista de terceros (opcional)
+ * @param rodmarCuentas Lista de cuentas RodMar (opcional)
  * @returns Nombre del socio o null si no se encuentra
  */
 export function getSocioNombre(
@@ -16,7 +17,8 @@ export function getSocioNombre(
   minas?: Mina[],
   compradores?: Comprador[],
   volqueteros?: Volquetero[],
-  terceros?: Tercero[]
+  terceros?: Tercero[],
+  rodmarCuentas?: RodmarCuenta[]
 ): string | null {
   if (!tipo || !id) return null;
 
@@ -53,7 +55,26 @@ export function getSocioNombre(
       return null;
     
     case 'rodmar':
-      const rodmarOptions: Record<string, string> = {
+      // Buscar en cuentas RodMar de la API (por ID, código, o slug legacy)
+      if (rodmarCuentas) {
+        const cuenta = rodmarCuentas.find((c: any) => 
+          c.id?.toString() === idStr || 
+          c.codigo?.toUpperCase() === idStr.toUpperCase() || 
+          c.codigo === idStr ||
+          // Compatibilidad con slugs legacy hardcodeados
+          (c.codigo === 'BEMOVIL' && idStr.toLowerCase() === 'bemovil') ||
+          (c.codigo === 'CORRESPONSAL' && idStr.toLowerCase() === 'corresponsal') ||
+          (c.codigo === 'EFECTIVO' && idStr.toLowerCase() === 'efectivo') ||
+          (c.codigo === 'CUENTAS_GERMAN' && idStr.toLowerCase() === 'cuentas-german') ||
+          (c.codigo === 'CUENTAS_JHON' && idStr.toLowerCase() === 'cuentas-jhon') ||
+          (c.codigo === 'OTROS' && idStr.toLowerCase() === 'otros')
+        );
+        if (cuenta) {
+          return cuenta.nombre || null;
+        }
+      }
+      // Fallback a nombres hardcodeados solo si no hay lista disponible
+      const rodmarOptionsFallback: Record<string, string> = {
         'bemovil': 'Bemovil',
         'corresponsal': 'Corresponsal',
         'efectivo': 'Efectivo',
@@ -61,7 +82,7 @@ export function getSocioNombre(
         'cuentas-jhon': 'Cuentas Jhon',
         'otras': 'Otras',
       };
-      return rodmarOptions[idStr] || idStr;
+      return rodmarOptionsFallback[idStr.toLowerCase()] || idStr;
     
     case 'banco':
       return 'Banco';

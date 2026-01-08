@@ -20,7 +20,7 @@ import { TransactionReceiptModal } from "@/components/modals/transaction-receipt
 import { getSocioNombre } from "@/lib/getSocioNombre";
 // import { useOptimalMobileForm } from "@/hooks/useOptimalMobileForm";
 
-import type { Mina, Comprador, Volquetero, Tercero } from "@shared/schema";
+import type { Mina, Comprador, Volquetero, Tercero, RodmarCuenta } from "@shared/schema";
 
 // Schema base - campos opcionales para permitir solicitudes
 const formSchema = z.object({
@@ -46,15 +46,7 @@ interface TransactionModalProps {
   onTemporalSubmit?: (transaccion: any) => void;
 }
 
-// Opciones para RodMar
-const rodmarOptions = [
-  { value: "bemovil", label: "Bemovil" },
-  { value: "corresponsal", label: "Corresponsal" },
-  { value: "efectivo", label: "Efectivo" },
-  { value: "cuentas-german", label: "Cuentas German" },
-  { value: "cuentas-jhon", label: "Cuentas Jhon" },
-  { value: "otras", label: "Otras" },
-];
+// Las opciones de RodMar se obtienen de la API (ver más abajo)
 
 // Función para formatear números con separadores de miles
 const formatNumber = (value: string): string => {
@@ -111,6 +103,11 @@ function NewTransactionModal({
     enabled: open,
   });
 
+  const { data: rodmarCuentas = [] } = useQuery<RodmarCuenta[]>({
+    queryKey: ["/api/rodmar-cuentas"],
+    enabled: open,
+  });
+
   // Función para obtener la fecha local en formato YYYY-MM-DD
   const getTodayLocalDate = () => {
     const today = new Date();
@@ -151,7 +148,11 @@ function NewTransactionModal({
       case "tercero":
         return terceros.map(tercero => ({ value: tercero.id.toString(), label: tercero.nombre }));
       case "rodmar":
-        return rodmarOptions;
+        // Usar cuentas de la API (ID numérico como value)
+        return rodmarCuentas.map((cuenta: any) => ({
+          value: cuenta.id?.toString() || cuenta.codigo || "",
+          label: cuenta.nombre || cuenta.cuenta || ""
+        }));
       case "banco":
         return [{ value: "banco", label: "Banco" }];
       case "lcdm":
@@ -175,7 +176,11 @@ function NewTransactionModal({
       case "tercero":
         return terceros.find(tercero => tercero.id.toString() === id)?.nombre || "Desconocido";
       case "rodmar":
-        return rodmarOptions.find(option => option.value === id)?.label || "Efectivo";
+        // Buscar en cuentas de la API (por ID o código legacy)
+        const cuentaRodmar = rodmarCuentas.find((cuenta: any) => 
+          cuenta.id?.toString() === id || cuenta.codigo === id || cuenta.cuenta?.toLowerCase().replace(/\s+/g, '-') === id
+        );
+        return cuentaRodmar?.nombre || cuentaRodmar?.cuenta || "Cuenta RodMar";
       case "banco":
         return "Banco";
       case "lcdm":
@@ -385,8 +390,10 @@ function NewTransactionModal({
         // Invalidar queries de LCDM/Postobón si están involucradas
         if (data.deQuienTipo === 'lcdm' || data.paraQuienTipo === 'lcdm') {
           queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/rodmar"] });
           // Refetch inmediato para actualizar balances de tarjetas
           queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/rodmar"] });
           queryClient.invalidateQueries({
             predicate: (query) => {
               const queryKey = query.queryKey;
@@ -399,8 +406,10 @@ function NewTransactionModal({
         }
         if (data.deQuienTipo === 'postobon' || data.paraQuienTipo === 'postobon') {
           queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/rodmar"] });
           // Refetch inmediato para actualizar balances de tarjetas
           queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/rodmar"] });
           queryClient.invalidateQueries({
             predicate: (query) => {
               const queryKey = query.queryKey;
@@ -412,16 +421,16 @@ function NewTransactionModal({
           });
         }
         
-        // Invalidar queries de cuentas RodMar si están involucradas
-        const rodmarAccountIds = ['bemovil', 'corresponsal', 'efectivo', 'cuentas-german', 'cuentas-jhon', 'otros'];
+        // Invalidar queries de cuentas RodMar si están involucradas (soporta IDs numéricos y slugs legacy)
         const hasRodmarAccount = 
-          (data.deQuienTipo === 'rodmar' && rodmarAccountIds.includes(data.deQuienId || '')) ||
-          (data.paraQuienTipo === 'rodmar' && rodmarAccountIds.includes(data.paraQuienId || ''));
+          data.deQuienTipo === 'rodmar' || data.paraQuienTipo === 'rodmar';
         
         if (hasRodmarAccount) {
           queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/rodmar"] });
           // Refetch inmediato para actualizar balances de tarjetas
           queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/rodmar"] });
           queryClient.invalidateQueries({
             predicate: (query) => {
               const queryKey = query.queryKey;
@@ -734,7 +743,7 @@ function NewTransactionModal({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {rodmarOptions.map((option) => (
+                        {getEntityOptions(watchedParaQuienTipo).map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -923,7 +932,8 @@ function NewTransactionModal({
             minas,
             compradores,
             volqueteros,
-            terceros
+            terceros,
+            rodmarCuentas
           ) || 'Socio'}
           minas={minas}
           compradores={compradores}

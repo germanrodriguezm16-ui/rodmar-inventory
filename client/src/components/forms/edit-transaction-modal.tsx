@@ -39,15 +39,7 @@ interface EditTransactionModalProps {
   transaction: TransaccionWithSocio | null;
 }
 
-// Exactamente las mismas opciones que new-transaction-modal.tsx
-const rodmarOptions = [
-  { value: "bemovil", label: "Bemovil" },
-  { value: "corresponsal", label: "Corresponsal" },
-  { value: "efectivo", label: "Efectivo" },
-  { value: "cuentas-german", label: "Cuentas German" },
-  { value: "cuentas-jhon", label: "Cuentas Jhon" },
-  { value: "otras", label: "Otras" },
-];
+// Las opciones de RodMar se obtienen de la API (ver más abajo)
 
 // Función para formatear números con separadores de miles (sin decimales)
 const formatNumber = (value: string): string => {
@@ -124,6 +116,12 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
     enabled: isOpen,
   });
 
+  // Obtener cuentas RodMar desde la API
+  const { data: rodmarCuentas = [] } = useQuery({
+    queryKey: ["/api/rodmar-cuentas"],
+    enabled: isOpen,
+  });
+
   // Función para obtener la fecha local en formato YYYY-MM-DD
   const getTodayLocalDate = () => {
     const today = new Date();
@@ -179,7 +177,11 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       case "tercero":
         return terceros.map(tercero => ({ value: tercero.id.toString(), label: tercero.nombre }));
       case "rodmar":
-        return rodmarOptions;
+        // Usar cuentas de la API (ID numérico como value)
+        return rodmarCuentas.map((cuenta: any) => ({
+          value: cuenta.id?.toString() || cuenta.codigo || "",
+          label: cuenta.nombre || cuenta.cuenta || ""
+        }));
       case "banco":
         return [{ value: "banco", label: "Banco" }];
       case "lcdm":
@@ -203,7 +205,11 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       case "tercero":
         return terceros.find(tercero => tercero.id.toString() === id)?.nombre || "Desconocido";
       case "rodmar":
-        return rodmarOptions.find(option => option.value === id)?.label || "Efectivo";
+        // Buscar en cuentas de la API (por ID o código legacy)
+        const cuentaRodmar = rodmarCuentas.find((cuenta: any) => 
+          cuenta.id?.toString() === id || cuenta.codigo === id || cuenta.cuenta?.toLowerCase().replace(/\s+/g, '-') === id
+        );
+        return cuentaRodmar?.nombre || cuentaRodmar?.cuenta || "Cuenta RodMar";
       case "banco":
         return "Banco";
       case "lcdm":
@@ -613,8 +619,10 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       if (affectedEntityTypes.has('lcdm') || affectedEntityTypes.has('postobon')) {
         // Invalidar queries de cuentas RodMar
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/rodmar"] });
         // Refetch inmediato para actualizar balances de tarjetas
         queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/rodmar"] });
         
         // Invalidar queries específicas de LCDM (con paginación)
         if (affectedEntityTypes.has('lcdm')) {
@@ -650,8 +658,10 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       if (affectedEntityTypes.has('rodmar-cuenta')) {
         // Invalidar queries de cuentas RodMar
         queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/rodmar"] });
         // Refetch inmediato para actualizar balances de tarjetas
         queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/rodmar"] });
         
         // Invalidar queries específicas de transacciones por cuenta
         queryClient.invalidateQueries({ 
@@ -867,7 +877,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {rodmarOptions.map((option) => (
+                        {getEntityOptions(watchedDeQuienTipo).map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -980,7 +990,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {rodmarOptions.map((option) => (
+                        {getEntityOptions(watchedDeQuienTipo).map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>

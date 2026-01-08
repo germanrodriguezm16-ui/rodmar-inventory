@@ -48,6 +48,9 @@ import { useHiddenTransactions } from "@/hooks/useHiddenTransactions";
 import AddTerceroModal from "@/components/modals/add-tercero-modal";
 import EditTerceroModal from "@/components/modals/edit-tercero-modal";
 import DeleteTerceroModal from "@/components/modals/delete-tercero-modal";
+import AddRodmarCuentaModal from "@/components/modals/add-rodmar-cuenta-modal";
+import EditRodmarCuentaModal from "@/components/modals/edit-rodmar-cuenta-modal";
+import DeleteRodmarCuentaModal from "@/components/modals/delete-rodmar-cuenta-modal";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -84,6 +87,12 @@ export default function RodMar() {
   const [showEditTerceroModal, setShowEditTerceroModal] = useState(false);
   const [showDeleteTerceroModal, setShowDeleteTerceroModal] = useState(false);
   const [selectedTercero, setSelectedTercero] = useState<any>(null);
+  
+  // Estados para modales de cuentas RodMar
+  const [showAddCuentaModal, setShowAddCuentaModal] = useState(false);
+  const [showEditCuentaModal, setShowEditCuentaModal] = useState(false);
+  const [showDeleteCuentaModal, setShowDeleteCuentaModal] = useState(false);
+  const [selectedCuenta, setSelectedCuenta] = useState<any>(null);
 
   // Leer el query parameter 'tab' de la URL para determinar qué tab mostrar
   const getInitialTab = () => {
@@ -146,7 +155,10 @@ export default function RodMar() {
 
   const { data: terceros = [] } = useQuery({
     queryKey: ["/api/terceros"],
-    staleTime: 30000,
+    staleTime: 300000, // 5 minutos - datos frescos por más tiempo (consistente con otros módulos)
+    refetchOnMount: false, // No recargar al montar
+    refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
+    enabled: activeTab === 'terceros' || has("module.RODMAR.tab.TERCEROS.view"), // Solo cargar cuando se necesita
   });
 
   // Usar hooks compartidos para balances
@@ -259,10 +271,24 @@ export default function RodMar() {
   });
   const postobonTransactions = postobonTransactionsData || [];
 
-  const { data: cuentasRodMar = [] } = useQuery({
+  // Obtener cuentas RodMar con balances calculados
+  const { data: cuentasRodMar = [], isLoading: isLoadingCuentas, error: errorCuentas } = useQuery({
     queryKey: ["/api/rodmar-accounts"],
-    staleTime: 30000,
+    staleTime: 300000, // 5 minutos - datos frescos por más tiempo (consistente con otros módulos)
+    refetchOnMount: false, // No recargar al montar
+    refetchOnWindowFocus: false, // No recargar al cambiar de pestaña
+    enabled: activeTab === 'cuentas' || has("module.RODMAR.accounts.view"), // Solo cargar cuando se necesita
   });
+
+  // Debug: verificar qué cuentas se están cargando
+  useEffect(() => {
+    if (cuentasRodMar) {
+      console.log('🔍 [RODMAR] Cuentas cargadas:', cuentasRodMar.length, cuentasRodMar);
+    }
+    if (errorCuentas) {
+      console.error('❌ [RODMAR] Error al cargar cuentas:', errorCuentas);
+    }
+  }, [cuentasRodMar, errorCuentas]);
 
   // Función para calcular balance neto de una mina (igual que en minas.tsx)
   const calcularBalanceNetoMina = (minaId: number): number => {
@@ -512,37 +538,87 @@ export default function RodMar() {
             {/* Tab: Cuentas */}
             <TabsContent value="cuentas" className="mt-6">
               <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <User className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-lg font-semibold text-foreground">Cuentas RodMar</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-foreground">Cuentas RodMar</h3>
+                  </div>
+                  {has("module.RODMAR.accounts.view") && (
+                    <Button 
+                      onClick={() => setShowAddCuentaModal(true)} 
+                      size="sm"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Nueva Cuenta
+                    </Button>
+                  )}
                 </div>
                 
                 {/* Lista de Cuentas - Formato Compacto y Uniforme */}
                 <div className="space-y-2">
-                  {cuentasRodMar.map((cuenta: any) => (
-                    <Card key={cuenta.cuenta} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                          onClick={() => setLocation(`/rodmar/cuenta/${encodeURIComponent(cuenta.cuenta.toLowerCase().replace(/\s+/g, '-'))}`)}>
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-blue-600" />
-                            <h4 className="font-medium text-foreground text-sm">{cuenta.cuenta}</h4>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-right">
-                              <p className={`text-sm font-bold ${
-                                cuenta.balance > 0 ? 'text-green-600' : 
-                                cuenta.balance < 0 ? 'text-red-600' : 'text-gray-600'
-                              }`}>
-                                {formatCurrency(cuenta.balance)}
-                              </p>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                          </div>
-                        </div>
+                  {cuentasRodMar.length === 0 ? (
+                    <Card>
+                      <CardContent className="p-6 text-center">
+                        <p className="text-muted-foreground">No hay cuentas registradas</p>
                       </CardContent>
                     </Card>
-                  ))}
+                  ) : (
+                    cuentasRodMar.map((cuenta: any) => (
+                      <ContextMenu key={cuenta.id || cuenta.cuenta}>
+                        <ContextMenuTrigger asChild>
+                          <Card className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                                onClick={() => {
+                                  // Usar ID si está disponible, sino usar nombre legacy
+                                  const cuentaId = cuenta.id || cuenta.cuenta.toLowerCase().replace(/\s+/g, '-');
+                                  setLocation(`/rodmar/cuenta/${encodeURIComponent(cuentaId)}`);
+                                }}>
+                            <CardContent className="p-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 text-blue-600" />
+                                  <h4 className="font-medium text-foreground text-sm">{cuenta.cuenta || cuenta.nombre}</h4>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-right">
+                                    <p className={`text-sm font-bold ${
+                                      (cuenta.balance || 0) > 0 ? 'text-green-600' : 
+                                      (cuenta.balance || 0) < 0 ? 'text-red-600' : 'text-gray-600'
+                                    }`}>
+                                      {formatCurrency(cuenta.balance || 0)}
+                                    </p>
+                                  </div>
+                                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCuenta(cuenta);
+                              setShowEditCuentaModal(true);
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar nombre
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCuenta(cuenta);
+                              setShowDeleteCuentaModal(true);
+                            }}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    ))
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -1039,6 +1115,24 @@ export default function RodMar() {
         open={showDeleteTerceroModal}
         onOpenChange={setShowDeleteTerceroModal}
         tercero={selectedTercero}
+      />
+
+      {/* Modales para cuentas RodMar */}
+      <AddRodmarCuentaModal
+        open={showAddCuentaModal}
+        onOpenChange={setShowAddCuentaModal}
+      />
+
+      <EditRodmarCuentaModal
+        open={showEditCuentaModal}
+        onOpenChange={setShowEditCuentaModal}
+        cuenta={selectedCuenta}
+      />
+
+      <DeleteRodmarCuentaModal
+        open={showDeleteCuentaModal}
+        onOpenChange={setShowDeleteCuentaModal}
+        cuenta={selectedCuenta}
       />
     </div>
   );
