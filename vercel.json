@@ -6,7 +6,7 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/((?!manifest\\.json|.*\\.(png|ico|svg|jpg|jpeg|css|js|woff|woff2|ttf|eot|json)|sw\\.js|assets/).*)",
+      "source": "/:path*",
       "destination": "/index.html"
     }
   ],
