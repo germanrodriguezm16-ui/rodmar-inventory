@@ -89,6 +89,7 @@ export default function Finanzas({ onOpenTransaction, hideBottomNav = false }: F
   const [fechaFilterType, setFechaFilterType] = useState<string>("todos");
   const [fechaFilterValue, setFechaFilterValue] = useState("");
   const [fechaFilterValueEnd, setFechaFilterValueEnd] = useState("");
+  const [balanceFilter, setBalanceFilter] = useState<'all' | 'positivos' | 'negativos'>('all');
 
   // Funciones para manejar los tres estados de ordenamiento (ninguno -> asc -> desc -> ninguno)
   const toggleSortFecha = () => {
@@ -454,6 +455,31 @@ export default function Finanzas({ onOpenTransaction, hideBottomNav = false }: F
       });
     }
 
+    // Filtro de balance (positivos/negativos) - usando la misma lógica que balanceCalculations
+    if (balanceFilter !== 'all') {
+      filtered = filtered.filter(t => {
+        const valor = Math.abs(t.valor || 0);
+        const isFromPartner = t.deQuienTipo === 'mina' || 
+                              t.deQuienTipo === 'comprador' || 
+                              t.deQuienTipo === 'volquetero';
+        const isToRodMar = t.paraQuienTipo === 'rodmar';
+        const isToPartner = t.paraQuienTipo === 'mina' || 
+                           t.paraQuienTipo === 'comprador' || 
+                           t.paraQuienTipo === 'volquetero';
+        const isToBanco = t.paraQuienTipo === 'banco';
+        const isRodMarToRodMar = t.deQuienTipo === 'rodmar' && t.paraQuienTipo === 'rodmar';
+
+        if (balanceFilter === 'positivos') {
+          // Positivos: desde socios (mina/comprador/volquetero) o hacia RodMar (excepto RodMar→RodMar)
+          return isFromPartner || (isToRodMar && !isRodMarToRodMar);
+        } else if (balanceFilter === 'negativos') {
+          // Negativos: hacia socios o banco (excepto desde socios o RodMar→RodMar)
+          return (isToPartner || isToBanco) && !isFromPartner && !isRodMarToRodMar;
+        }
+        return true;
+      });
+    }
+
     // Ordenamiento
     if (sortByFecha !== "ninguno") {
       filtered.sort((a, b) => {
@@ -472,7 +498,7 @@ export default function Finanzas({ onOpenTransaction, hideBottomNav = false }: F
     }
 
     return filtered;
-  }, [allTransactions, searchTerm, dateRange, valorFilterType, valorFilterValue, valorFilterValueEnd, sortByFecha, sortByValor]);
+  }, [allTransactions, searchTerm, dateRange, valorFilterType, valorFilterValue, valorFilterValueEnd, sortByFecha, sortByValor, balanceFilter]);
 
   const transactions = filteredAndSortedTransactions;
 
@@ -1163,25 +1189,44 @@ export default function Finanzas({ onOpenTransaction, hideBottomNav = false }: F
           </span>
         </div>
         
-        {/* Balance General - Formato compacto */}
+        {/* Balance General - Formato compacto con filtros clickeables */}
         <div className="grid grid-cols-3 gap-1.5 text-xs">
-          <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-1.5 border border-green-200 dark:border-green-800">
+          <div 
+            className={`bg-green-50 dark:bg-green-950/20 rounded-lg p-1.5 border border-green-200 dark:border-green-800 cursor-pointer transition-all hover:shadow-md ${
+              balanceFilter === 'positivos' ? 'ring-2 ring-green-400 shadow-md border-green-400 dark:ring-green-500' : ''
+            }`}
+            onClick={() => setBalanceFilter('positivos')}
+          >
             <div className="text-muted-foreground text-[10px] mb-0.5 leading-tight">Positivos</div>
             <div className="text-green-600 dark:text-green-400 font-semibold break-words leading-tight text-xs sm:text-sm">
               ${formatCurrency(balanceCalculations.positivos.toString()).replace('$', '')}
             </div>
           </div>
-          <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-1.5 border border-red-200 dark:border-red-800">
+          <div 
+            className={`bg-red-50 dark:bg-red-950/20 rounded-lg p-1.5 border border-red-200 dark:border-red-800 cursor-pointer transition-all hover:shadow-md ${
+              balanceFilter === 'negativos' ? 'ring-2 ring-red-400 shadow-md border-red-400 dark:ring-red-500' : ''
+            }`}
+            onClick={() => setBalanceFilter('negativos')}
+          >
             <div className="text-muted-foreground text-[10px] mb-0.5 leading-tight">Negativos</div>
             <div className="text-red-600 dark:text-red-400 font-semibold break-words leading-tight text-xs sm:text-sm">
               ${formatCurrency(balanceCalculations.negativos.toString()).replace('$', '')}
             </div>
           </div>
-          <div className={`rounded-lg p-1.5 border ${
-            balanceCalculations.balance >= 0
-              ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-              : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
-          }`}>
+          <div 
+            className={`rounded-lg p-1.5 border cursor-pointer transition-all hover:shadow-md ${
+              balanceCalculations.balance >= 0
+                ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+            } ${
+              balanceFilter === 'all' 
+                ? balanceCalculations.balance >= 0
+                  ? 'ring-2 ring-green-400 shadow-md border-green-400 dark:ring-green-500'
+                  : 'ring-2 ring-red-400 shadow-md border-red-400 dark:ring-red-500'
+                : ''
+            }`}
+            onClick={() => setBalanceFilter('all')}
+          >
             <div className="text-muted-foreground text-[10px] mb-0.5 leading-tight">Balance</div>
             <div className={`font-semibold break-words leading-tight text-xs sm:text-sm ${
               balanceCalculations.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"

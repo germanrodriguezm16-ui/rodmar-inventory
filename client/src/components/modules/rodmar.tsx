@@ -907,6 +907,7 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
   const [fechaFilterValueEnd, setFechaFilterValueEnd] = useState("");
   const [sortByFecha, setSortByFecha] = useState<"ninguno" | "asc" | "desc">("desc");
   const [sortByValor, setSortByValor] = useState<"ninguno" | "asc" | "desc">("ninguno");
+  const [balanceFilter, setBalanceFilter] = useState<'all' | 'positivos' | 'negativos'>('all');
 
   // Estado para modal de imagen
   const [showImageModal, setShowImageModal] = useState(false);
@@ -1120,6 +1121,18 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
       });
     }
 
+    // Filtro de balance (positivos/negativos) - Postobón: positivos = desde Postobón, negativos = hacia Postobón
+    if (balanceFilter !== 'all') {
+      filtered = filtered.filter(t => {
+        if (balanceFilter === 'positivos') {
+          return t.deQuienTipo === 'postobon';
+        } else if (balanceFilter === 'negativos') {
+          return t.paraQuienTipo === 'postobon';
+        }
+        return true;
+      });
+    }
+
     // Ordenamiento
     if (sortByFecha !== "ninguno") {
       filtered.sort((a, b) => {
@@ -1138,7 +1151,7 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
     }
 
     return filtered;
-  }, [allBaseFilteredTransactions, searchTerm, dateRange, sortByFecha, sortByValor]);
+  }, [allBaseFilteredTransactions, searchTerm, dateRange, sortByFecha, sortByValor, balanceFilter]);
 
   // Prefetching automático en segundo plano (solo si no está en modo "todo")
   useEffect(() => {
@@ -1462,19 +1475,38 @@ function PostobonTransactionsTab({ title, filterType, transactions, onOpenInvest
           <Card className="border-gray-200 bg-gray-50">
             <CardContent className="p-1.5 sm:p-2">
               <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center">
-                <div className="bg-green-50 rounded px-2 py-1">
+                <div 
+                  className={`bg-green-50 rounded px-2 py-1 cursor-pointer transition-all hover:shadow-md ${
+                    balanceFilter === 'positivos' ? 'ring-2 ring-green-400 shadow-md' : ''
+                  }`}
+                  onClick={() => setBalanceFilter('positivos')}
+                >
                   <div className="text-green-600 text-xs font-medium">Positivos</div>
                   <div className="text-green-700 text-xs sm:text-sm font-semibold">
                     +{positivos.length} {formatMoney(sumPositivos)}
                   </div>
                 </div>
-                <div className="bg-red-50 rounded px-2 py-1">
+                <div 
+                  className={`bg-red-50 rounded px-2 py-1 cursor-pointer transition-all hover:shadow-md ${
+                    balanceFilter === 'negativos' ? 'ring-2 ring-red-400 shadow-md' : ''
+                  }`}
+                  onClick={() => setBalanceFilter('negativos')}
+                >
                   <div className="text-red-600 text-xs font-medium">Negativos</div>
                   <div className="text-red-700 text-xs sm:text-sm font-semibold">
                     -{negativos.length} {formatMoney(sumNegativos)}
                   </div>
                 </div>
-                <div className={`rounded px-2 py-1 ${balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                <div 
+                  className={`rounded px-2 py-1 cursor-pointer transition-all hover:shadow-md ${balance >= 0 ? 'bg-green-100' : 'bg-red-100'} ${
+                    balanceFilter === 'all' 
+                      ? balance >= 0
+                        ? 'ring-2 ring-green-400 shadow-md'
+                        : 'ring-2 ring-red-400 shadow-md'
+                      : ''
+                  }`}
+                  onClick={() => setBalanceFilter('all')}
+                >
                   <div className={`text-xs font-medium ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>Balance</div>
                   <div className={`text-xs sm:text-sm font-bold ${balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                     {balance >= 0 ? '+' : '-'}{formatMoney(Math.abs(balance))}
@@ -1862,6 +1894,7 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
   const [fechaFilterValueEnd, setFechaFilterValueEnd] = useState("");
   const [sortByFecha, setSortByFecha] = useState<"asc" | "desc" | "ninguno">("desc");
   const [sortByValor, setSortByValor] = useState<"asc" | "desc" | "ninguno">("ninguno");
+  const [balanceFilter, setBalanceFilter] = useState<'all' | 'positivos' | 'negativos'>('all');
   
   // Paginación con memoria en localStorage
   const { currentPage, setCurrentPage, pageSize, setPageSize, getLimitForServer } = usePagination({
@@ -1991,6 +2024,18 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
       filtered = filterTransactionsByDateRange(filtered, dateRange);
     }
 
+    // Filtro de balance (positivos/negativos) - LCDM: positivos = desde LCDM, negativos = hacia LCDM
+    if (balanceFilter !== 'all') {
+      filtered = filtered.filter(t => {
+        if (balanceFilter === 'positivos') {
+          return t.deQuienTipo === 'lcdm';
+        } else if (balanceFilter === 'negativos') {
+          return t.paraQuienTipo === 'lcdm';
+        }
+        return true;
+      });
+    }
+
     // Ordenamiento
     if (sortByFecha !== "ninguno") {
       filtered.sort((a, b) => {
@@ -2009,7 +2054,7 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
     }
 
     return filtered;
-  }, [allLcdmTransactions, searchTerm, dateRange, sortByFecha, sortByValor]);
+  }, [allLcdmTransactions, searchTerm, dateRange, sortByFecha, sortByValor, balanceFilter]);
 
   // Prefetching automático en segundo plano (solo si no está en modo "todo")
   useEffect(() => {
@@ -2319,19 +2364,38 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
           <Card className="border-gray-200 bg-gray-50">
             <CardContent className="p-1.5 sm:p-2">
               <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center">
-                <div className="bg-green-50 rounded px-2 py-1">
+                <div 
+                  className={`bg-green-50 rounded px-2 py-1 cursor-pointer transition-all hover:shadow-md ${
+                    balanceFilter === 'positivos' ? 'ring-2 ring-green-400 shadow-md' : ''
+                  }`}
+                  onClick={() => setBalanceFilter('positivos')}
+                >
                   <div className="text-green-600 text-xs font-medium">Positivos</div>
                   <div className="text-green-700 text-xs sm:text-sm font-semibold">
                     +{positivos.length} {formatMoney(sumPositivos)}
                   </div>
                 </div>
-                <div className="bg-red-50 rounded px-2 py-1">
+                <div 
+                  className={`bg-red-50 rounded px-2 py-1 cursor-pointer transition-all hover:shadow-md ${
+                    balanceFilter === 'negativos' ? 'ring-2 ring-red-400 shadow-md' : ''
+                  }`}
+                  onClick={() => setBalanceFilter('negativos')}
+                >
                   <div className="text-red-600 text-xs font-medium">Negativos</div>
                   <div className="text-red-700 text-xs sm:text-sm font-semibold">
                     -{negativos.length} {formatMoney(sumNegativos)}
                   </div>
                 </div>
-                <div className={`rounded px-2 py-1 ${balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                <div 
+                  className={`rounded px-2 py-1 cursor-pointer transition-all hover:shadow-md ${balance >= 0 ? 'bg-green-100' : 'bg-red-100'} ${
+                    balanceFilter === 'all' 
+                      ? balance >= 0
+                        ? 'ring-2 ring-green-400 shadow-md'
+                        : 'ring-2 ring-red-400 shadow-md'
+                      : ''
+                  }`}
+                  onClick={() => setBalanceFilter('all')}
+                >
                   <div className={`text-xs font-medium ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>Balance</div>
                   <div className={`text-xs sm:text-sm font-bold ${balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                     {balance >= 0 ? '+' : '-'}{formatMoney(Math.abs(balance))}
@@ -2587,6 +2651,7 @@ function BancoTransactionsTab({ transactions }: { transactions: any[] }) {
   const [fechaFilterValueEnd, setFechaFilterValueEnd] = useState("");
   const [sortByFecha, setSortByFecha] = useState<"asc" | "desc" | "ninguno">("desc");
   const [sortByValor, setSortByValor] = useState<"asc" | "desc" | "ninguno">("ninguno");
+  const [balanceFilter, setBalanceFilter] = useState<'all' | 'positivos' | 'negativos'>('all');
   
   // Paginación con memoria en localStorage
   const { currentPage, setCurrentPage, pageSize, setPageSize, getLimitForServer } = usePagination({
@@ -2716,6 +2781,18 @@ function BancoTransactionsTab({ transactions }: { transactions: any[] }) {
       filtered = filterTransactionsByDateRange(filtered, dateRange);
     }
 
+    // Filtro de balance (positivos/negativos) - Banco: positivos = desde Banco, negativos = hacia Banco
+    if (balanceFilter !== 'all') {
+      filtered = filtered.filter(t => {
+        if (balanceFilter === 'positivos') {
+          return t.deQuienTipo === 'banco';
+        } else if (balanceFilter === 'negativos') {
+          return t.paraQuienTipo === 'banco';
+        }
+        return true;
+      });
+    }
+
     // Ordenamiento
     if (sortByFecha !== "ninguno") {
       filtered.sort((a, b) => {
@@ -2734,7 +2811,7 @@ function BancoTransactionsTab({ transactions }: { transactions: any[] }) {
     }
 
     return filtered;
-  }, [allBancoTransactions, searchTerm, dateRange, sortByFecha, sortByValor]);
+  }, [allBancoTransactions, searchTerm, dateRange, sortByFecha, sortByValor, balanceFilter]);
 
   // Prefetching automático en segundo plano (solo si no está en modo "todo")
   useEffect(() => {
@@ -3044,19 +3121,38 @@ function BancoTransactionsTab({ transactions }: { transactions: any[] }) {
           <Card className="border-gray-200 bg-gray-50">
             <CardContent className="p-1.5 sm:p-2">
               <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center">
-                <div className="bg-green-50 rounded px-2 py-1">
+                <div 
+                  className={`bg-green-50 rounded px-2 py-1 cursor-pointer transition-all hover:shadow-md ${
+                    balanceFilter === 'positivos' ? 'ring-2 ring-green-400 shadow-md' : ''
+                  }`}
+                  onClick={() => setBalanceFilter('positivos')}
+                >
                   <div className="text-green-600 text-xs font-medium">Positivos</div>
                   <div className="text-green-700 text-xs sm:text-sm font-semibold">
                     +{positivos.length} {formatMoney(sumPositivos)}
                   </div>
                 </div>
-                <div className="bg-red-50 rounded px-2 py-1">
+                <div 
+                  className={`bg-red-50 rounded px-2 py-1 cursor-pointer transition-all hover:shadow-md ${
+                    balanceFilter === 'negativos' ? 'ring-2 ring-red-400 shadow-md' : ''
+                  }`}
+                  onClick={() => setBalanceFilter('negativos')}
+                >
                   <div className="text-red-600 text-xs font-medium">Negativos</div>
                   <div className="text-red-700 text-xs sm:text-sm font-semibold">
                     -{negativos.length} {formatMoney(sumNegativos)}
                   </div>
                 </div>
-                <div className={`rounded px-2 py-1 ${balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                <div 
+                  className={`rounded px-2 py-1 cursor-pointer transition-all hover:shadow-md ${balance >= 0 ? 'bg-green-100' : 'bg-red-100'} ${
+                    balanceFilter === 'all' 
+                      ? balance >= 0
+                        ? 'ring-2 ring-green-400 shadow-md'
+                        : 'ring-2 ring-red-400 shadow-md'
+                      : ''
+                  }`}
+                  onClick={() => setBalanceFilter('all')}
+                >
                   <div className={`text-xs font-medium ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>Balance</div>
                   <div className={`text-xs sm:text-sm font-bold ${balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                     {balance >= 0 ? '+' : '-'}{formatMoney(Math.abs(balance))}

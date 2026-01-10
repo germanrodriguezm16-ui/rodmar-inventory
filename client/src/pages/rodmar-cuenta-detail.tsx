@@ -147,6 +147,7 @@ export default function RodMarCuentaDetail() {
 
   // Estado para búsqueda
   const [searchTerm, setSearchTerm] = useState("");
+  const [balanceFilter, setBalanceFilter] = useState<'all' | 'positivos' | 'negativos'>('all');
 
   // Estado para modal de detalles de transacciones
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
@@ -444,22 +445,6 @@ export default function RodMarCuentaDetail() {
       });
   }, [transaccionesReales, transaccionesTemporales, inversionesReales, cuentaNombre]);
 
-  // Resetear a página 1 cuando cambian los filtros
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filtros.fechaTipo, filtros.fechaEspecifica, filtros.fechaInicio, filtros.fechaFin]);
-
-  // Filtrar transacciones ocultas localmente (solo visual, no afecta BD)
-  const transaccionesFiltradas = useMemo(() => {
-    return todasTransacciones.filter(t => {
-      // Solo filtrar transacciones manuales (las temporales e inversiones se mantienen visibles)
-      if (t.tipo === "Manual" && typeof t.id === 'number') {
-        return !hiddenTransactions.has(t.id);
-      }
-      return true; // Mantener temporales e inversiones visibles
-    });
-  }, [todasTransacciones, hiddenTransactions]);
-
   // Obtener todos los identificadores posibles de la cuenta (para comparación flexible)
   const cuentaIdentificadores = useMemo(() => {
     const ids: string[] = [];
@@ -497,6 +482,56 @@ export default function RodMarCuentaDetail() {
     const idStr = id.toString().toLowerCase();
     return cuentaIdentificadores.some(cuentaId => cuentaId.toLowerCase() === idStr);
   };
+
+  // Resetear a página 1 cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filtros.fechaTipo, filtros.fechaEspecifica, filtros.fechaInicio, filtros.fechaFin]);
+
+  // Filtrar transacciones ocultas localmente (solo visual, no afecta BD)
+  const transaccionesFiltradas = useMemo(() => {
+    let filtered = todasTransacciones.filter(t => {
+      // Solo filtrar transacciones manuales (las temporales e inversiones se mantienen visibles)
+      if (t.tipo === "Manual" && typeof t.id === 'number') {
+        return !hiddenTransactions.has(t.id);
+      }
+      return true; // Mantener temporales e inversiones visibles
+    });
+
+    // Filtro de balance (positivos/negativos) - usando la misma lógica que calcularBalances
+    if (balanceFilter !== 'all') {
+      filtered = filtered.filter((transaccion: any) => {
+        // Lógica específica para inversiones
+        if (transaccion.esInversion) {
+          if (balanceFilter === 'positivos') {
+            return transaccion.esPositiva;
+          } else if (balanceFilter === 'negativos') {
+            return !transaccion.esPositiva;
+          }
+          return true;
+        }
+        
+        // Lógica específica para cuentas RodMar individuales
+        const esIngresoACuenta = transaccion.paraQuienTipo === 'rodmar' && 
+                                 coincideConCuenta(transaccion.paraQuienId);
+        const esEgresoDeEstaCuenta = transaccion.deQuienTipo === 'rodmar' && 
+                                     coincideConCuenta(transaccion.deQuienId);
+        
+        // Para transacciones temporales con origen en esta cuenta: siempre contar como negativo
+        if (transaccion.esTemporal && transaccion.deQuienTipo === 'rodmar' && coincideConCuenta(transaccion.deQuienId)) {
+          return balanceFilter === 'negativos';
+        } else if (esIngresoACuenta) {
+          return balanceFilter === 'positivos';
+        } else if (esEgresoDeEstaCuenta) {
+          return balanceFilter === 'negativos';
+        }
+        
+        return false; // Si no coincide con ninguno, excluir
+      });
+    }
+
+    return filtered;
+  }, [todasTransacciones, hiddenTransactions, balanceFilter, cuentaIdentificadores, coincideConCuenta]);
 
   // Calcular balances dinámicos
   const calcularBalances = () => {
@@ -623,15 +658,36 @@ export default function RodMarCuentaDetail() {
                 <p className="text-xs text-muted-foreground">Transacciones</p>
                 <p className="text-sm sm:text-lg font-bold text-blue-600">{transaccionesFiltradas.length}</p>
               </div>
-              <div className="p-2">
+              <div 
+                className={`p-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                  balanceFilter === 'positivos' ? 'ring-2 ring-green-400 shadow-md bg-green-50' : ''
+                }`}
+                onClick={() => setBalanceFilter('positivos')}
+              >
                 <p className="text-xs text-muted-foreground">Positivos</p>
                 <p className="text-sm sm:text-lg font-bold text-green-600">{formatCurrency(balances.positivos)}</p>
               </div>
-              <div className="p-2">
+              <div 
+                className={`p-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                  balanceFilter === 'negativos' ? 'ring-2 ring-red-400 shadow-md bg-red-50' : ''
+                }`}
+                onClick={() => setBalanceFilter('negativos')}
+              >
                 <p className="text-xs text-muted-foreground">Negativos</p>
                 <p className="text-sm sm:text-lg font-bold text-red-600">{formatCurrency(balances.negativos)}</p>
               </div>
-              <div className="p-2">
+              <div 
+                className={`p-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                  balanceFilter === 'all' 
+                    ? balances.balance > 0
+                      ? 'ring-2 ring-green-400 shadow-md bg-green-50'
+                      : balances.balance < 0
+                      ? 'ring-2 ring-red-400 shadow-md bg-red-50'
+                      : ''
+                    : ''
+                }`}
+                onClick={() => setBalanceFilter('all')}
+              >
                 <p className="text-xs text-muted-foreground">Balance</p>
                 <p className={`text-sm sm:text-lg font-bold ${
                   balances.balance > 0 ? 'text-green-600' : 

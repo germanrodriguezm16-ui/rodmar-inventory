@@ -69,6 +69,7 @@ export default function TerceroDetail() {
 
   // Estado para búsqueda
   const [searchTerm, setSearchTerm] = useState("");
+  const [balanceFilter, setBalanceFilter] = useState<'all' | 'positivos' | 'negativos'>('all');
 
   // Estado para modal de detalles de transacciones
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
@@ -240,14 +241,30 @@ export default function TerceroDetail() {
 
   // Filtrar transacciones ocultas localmente (solo visual, no afecta BD)
   const transaccionesFiltradas = useMemo(() => {
-    return todasTransacciones.filter(t => {
+    let filtered = todasTransacciones.filter(t => {
       // Solo filtrar transacciones manuales (las temporales se mantienen visibles)
       if (t.tipo === "Manual" && typeof t.id === 'number') {
         return !hiddenTransactions.has(t.id);
       }
       return true; // Mantener temporales visibles
     });
-  }, [todasTransacciones, hiddenTransactions]);
+
+    // Filtro de balance (positivos/negativos) - usando la misma lógica que calculateTerceroBalance
+    if (balanceFilter !== 'all') {
+      filtered = filtered.filter((transaccion: any) => {
+        if (balanceFilter === 'positivos') {
+          // Positivos: desde tercero (origen)
+          return transaccion.deQuienTipo === 'tercero' && transaccion.deQuienId === terceroId.toString();
+        } else if (balanceFilter === 'negativos') {
+          // Negativos: hacia tercero (destino)
+          return transaccion.paraQuienTipo === 'tercero' && transaccion.paraQuienId === terceroId.toString();
+        }
+        return true;
+      });
+    }
+
+    return filtered;
+  }, [todasTransacciones, hiddenTransactions, balanceFilter, terceroId]);
 
   // Calcular balances dinámicos usando función centralizada
   const balances = useMemo(() => {
@@ -346,15 +363,36 @@ export default function TerceroDetail() {
                 <p className="text-xs text-muted-foreground">Transacciones</p>
                 <p className="text-sm sm:text-lg font-bold text-blue-600">{transaccionesFiltradas.length}</p>
               </div>
-              <div className="p-2">
+              <div 
+                className={`p-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                  balanceFilter === 'positivos' ? 'ring-2 ring-green-400 shadow-md bg-green-50' : ''
+                }`}
+                onClick={() => setBalanceFilter('positivos')}
+              >
                 <p className="text-xs text-muted-foreground">Positivos</p>
                 <p className="text-sm sm:text-lg font-bold text-green-600">{formatCurrency(balances.positivos)}</p>
               </div>
-              <div className="p-2">
+              <div 
+                className={`p-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                  balanceFilter === 'negativos' ? 'ring-2 ring-red-400 shadow-md bg-red-50' : ''
+                }`}
+                onClick={() => setBalanceFilter('negativos')}
+              >
                 <p className="text-xs text-muted-foreground">Negativos</p>
                 <p className="text-sm sm:text-lg font-bold text-red-600">{formatCurrency(balances.negativos)}</p>
               </div>
-              <div className="p-2">
+              <div 
+                className={`p-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                  balanceFilter === 'all' 
+                    ? balances.balance > 0
+                      ? 'ring-2 ring-green-400 shadow-md bg-green-50'
+                      : balances.balance < 0
+                      ? 'ring-2 ring-red-400 shadow-md bg-red-50'
+                      : ''
+                    : ''
+                }`}
+                onClick={() => setBalanceFilter('all')}
+              >
                 <p className="text-xs text-muted-foreground">Balance</p>
                 <p className={`text-sm sm:text-lg font-bold ${
                   balances.balance > 0 ? 'text-green-600' : 
