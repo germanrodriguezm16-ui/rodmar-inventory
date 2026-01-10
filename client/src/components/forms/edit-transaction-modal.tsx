@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -234,113 +234,99 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
     return `${data.formaPago} de ${deQuienTipoCapitalizado} (${deQuienNombre}) a ${paraQuienTipoCapitalizado} (${paraQuienNombre})`;
   };
 
-  // Load transaction data when modal opens
-  useEffect(() => {
-    const loadTransactionData = async () => {
-      if (isOpen && currentTransaction) {
-        console.log("=== EditTransactionModal - Loading transaction data:", currentTransaction);
-        console.log("=== EditTransactionModal - Transaction valor type:", typeof currentTransaction.valor, "value:", currentTransaction.valor);
-        
-        // Procesar el valor correctamente - SOLUCIÓN SIMPLE
-        let valorStr = "";
-        if (currentTransaction.valor !== null && currentTransaction.valor !== undefined) {
-          console.log("=== EditTransactionModal - Raw currentTransaction.valor:", currentTransaction.valor, "type:", typeof currentTransaction.valor);
-          
-          // Convertir a número para eliminar decimales automáticamente
-          const numericValue = parseFloat(currentTransaction.valor.toString());
-          console.log("=== EditTransactionModal - NUEVO CÓDIGO CON PARSEFLOAT - Parsed numeric value:", numericValue);
-          
-          // Formatear con separadores de miles
-          if (numericValue && numericValue !== 0) {
-            valorStr = numericValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-          }
-          console.log("=== EditTransactionModal - Final formatted valor:", valorStr);
-        }
-        
-        // El voucher se carga automáticamente mediante useTransactionVoucher hook
-        const voucherValue = loadedVoucher || "";
-        
-        // Función helper para mapear IDs legacy de RodMar al ID numérico actual
-        const mapRodmarIdToNumeric = (tipo: string | null | undefined, id: string | number | null | undefined): string => {
-          if (!tipo || tipo !== 'rodmar' || !id) return id?.toString() || "";
-          
-          const idStr = id.toString();
-          
-          // Si ya es un número, verificar si existe en las cuentas
-          if (!isNaN(Number(idStr))) {
-            const cuenta = rodmarCuentas.find((c: any) => c.id?.toString() === idStr);
-            if (cuenta) return idStr;
-          }
-          
-          // Buscar por código, slug legacy, o nombre legacy
-          const cuenta = rodmarCuentas.find((c: any) => 
-            c.codigo === idStr || 
-            c.codigo?.toLowerCase() === idStr?.toLowerCase() ||
-            c.slugLegacy === idStr ||
-            c.cuenta?.toLowerCase().replace(/\s+/g, '-') === idStr?.toLowerCase() ||
-            c.id?.toString() === idStr
-          );
-          
-          // Retornar el ID numérico si se encuentra, o el original si no
-          return cuenta?.id?.toString() || idStr;
-        };
-        
-        const formData = {
-          deQuienTipo: currentTransaction.deQuienTipo || "",
-          deQuienId: mapRodmarIdToNumeric(currentTransaction.deQuienTipo, currentTransaction.deQuienId),
-          paraQuienTipo: currentTransaction.paraQuienTipo || "",
-          paraQuienId: mapRodmarIdToNumeric(currentTransaction.paraQuienTipo, currentTransaction.paraQuienId),
-          postobonCuenta: currentTransaction.postobonCuenta || "",
-          valor: valorStr,
-          fecha: convertToLocalDateString(currentTransaction.fecha),
-          formaPago: currentTransaction.formaPago || "",
-          voucher: voucherValue,
-          comentario: currentTransaction.comentario || "",
-        };
+  // Usar useRef para rastrear el último ID procesado y evitar bucles infinitos
+  const lastProcessedId = useRef<number | null>(null);
+  const lastProcessedData = useRef<string>("");
+  
+  // Usar una referencia estable del método reset para evitar incluirlo en dependencias
+  const formResetRef = useRef(form.reset);
+  formResetRef.current = form.reset;
 
-        console.log("=== EditTransactionModal - Form data to load:", formData);
-        console.log("=== EditTransactionModal - Formatted valor:", formData.valor);
-        
-        // AGGRESSIVE FORM UPDATE STRATEGY - Multiple approaches to ensure data loads
-        console.log("=== INITIATING AGGRESSIVE FORM UPDATE");
-        
-        // 1. Clear everything first
-        form.reset();
-        
-        // 2. Set data with multiple timing strategies
-        setTimeout(() => {
-          form.reset(formData);
-          console.log("=== First form.reset completed with data:", formData);
-        }, 10);
-        
-        setTimeout(() => {
-          // Force individual field updates as backup
-          Object.entries(formData).forEach(([key, value]) => {
-            form.setValue(key as any, value, { shouldValidate: false, shouldDirty: false });
-          });
-          console.log("=== Individual setValue calls completed");
-        }, 50);
-        
-        setTimeout(() => {
-          // Final verification and reset
-          form.reset(formData);
-          console.log("=== Final form.reset completed - Current form values:", form.getValues());
-        }, 100);
+  // Memoizar la función de mapeo de RodMar para evitar recrearla en cada render
+  const mapRodmarIdToNumeric = useMemo(() => {
+    return (tipo: string | null | undefined, id: string | number | null | undefined): string => {
+      if (!tipo || tipo !== 'rodmar' || !id) return id?.toString() || "";
+      
+      const idStr = id.toString();
+      
+      // Si ya es un número, verificar si existe en las cuentas
+      if (!isNaN(Number(idStr))) {
+        const cuenta = rodmarCuentas.find((c: any) => c.id?.toString() === idStr);
+        if (cuenta) return idStr;
       }
       
-      // Clear form when modal closes to prevent stale data
-      if (!isOpen) {
-        console.log("=== Modal closed, clearing form");
-        form.reset();
+      // Buscar por código, slug legacy, o nombre legacy
+      const cuenta = rodmarCuentas.find((c: any) => 
+        c.codigo === idStr || 
+        c.codigo?.toLowerCase() === idStr?.toLowerCase() ||
+        c.slugLegacy === idStr ||
+        c.cuenta?.toLowerCase().replace(/\s+/g, '-') === idStr?.toLowerCase() ||
+        c.id?.toString() === idStr
+      );
+      
+      // Retornar el ID numérico si se encuentra, o el original si no
+      return cuenta?.id?.toString() || idStr;
+    };
+  }, [rodmarCuentas]);
+
+  // Load transaction data when modal opens
+  useEffect(() => {
+    // Solo procesar si el modal está abierto y hay una transacción
+    if (!isOpen) {
+      // Limpiar formulario cuando el modal se cierra
+      if (lastProcessedId.current !== null) {
+        formResetRef.current();
+        lastProcessedId.current = null;
+        lastProcessedData.current = "";
       }
+      return;
+    }
+
+    if (!currentTransaction?.id) return;
+
+    // Verificar si ya procesamos esta transacción (evitar bucles)
+    const transactionId = currentTransaction.id;
+    const transactionKey = `${transactionId}-${currentTransaction.deQuienId}-${currentTransaction.paraQuienId}-${currentTransaction.valor}-${loadedVoucher}`;
+    
+    if (lastProcessedId.current === transactionId && lastProcessedData.current === transactionKey) {
+      return; // Ya procesamos esta transacción, no hacer nada
+    }
+
+    // Procesar el valor correctamente
+    let valorStr = "";
+    if (currentTransaction.valor !== null && currentTransaction.valor !== undefined) {
+      const numericValue = parseFloat(currentTransaction.valor.toString());
+      if (numericValue && numericValue !== 0) {
+        valorStr = numericValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      }
+    }
+    
+    // El voucher se carga automáticamente mediante useTransactionVoucher hook
+    const voucherValue = loadedVoucher || "";
+    
+    const formData = {
+      deQuienTipo: currentTransaction.deQuienTipo || "",
+      deQuienId: mapRodmarIdToNumeric(currentTransaction.deQuienTipo, currentTransaction.deQuienId),
+      paraQuienTipo: currentTransaction.paraQuienTipo || "",
+      paraQuienId: mapRodmarIdToNumeric(currentTransaction.paraQuienTipo, currentTransaction.paraQuienId),
+      postobonCuenta: currentTransaction.postobonCuenta || "",
+      valor: valorStr,
+      fecha: convertToLocalDateString(currentTransaction.fecha),
+      formaPago: currentTransaction.formaPago || "",
+      voucher: voucherValue,
+      comentario: currentTransaction.comentario || "",
     };
 
-    loadTransactionData();
-  }, [isOpen, currentTransaction?.id, currentTransaction?.valor, currentTransaction?.fecha, currentTransaction?.deQuienTipo, currentTransaction?.paraQuienTipo, currentTransaction?.deQuienId, currentTransaction?.paraQuienId, form, loadedVoucher, rodmarCuentas]);
+    // Actualizar formulario con los datos de la transacción (sin disparar validación)
+    formResetRef.current(formData, { keepDefaultValues: false });
+    
+    // Marcar como procesado ANTES de que termine el efecto para evitar bucles
+    lastProcessedId.current = transactionId;
+    lastProcessedData.current = transactionKey;
+  }, [isOpen, currentTransaction?.id, currentTransaction?.valor, currentTransaction?.fecha, currentTransaction?.deQuienTipo, currentTransaction?.paraQuienTipo, currentTransaction?.deQuienId, currentTransaction?.paraQuienId, loadedVoucher, mapRodmarIdToNumeric]);
 
   const updateTransactionMutation = useMutation({
     mutationFn: async (data: EditTransactionFormData) => {
-      console.log("=== Updating transaction:", currentTransaction?.id, "with data:", data);
       
       // Generar concepto automático con el formato específico
       const concepto = generateConcepto(data);
@@ -352,8 +338,6 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         valor: getNumericValue(data.valor), // Convertir valor formateado a número
       };
       
-      console.log("=== Making PATCH request to:", `/api/transacciones/${currentTransaction?.id}`);
-      console.log("=== Request body:", JSON.stringify(dataWithConcepto, null, 2));
       
       const { getAuthToken } = await import('@/hooks/useAuth');
       const token = getAuthToken();
@@ -371,9 +355,6 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         credentials: "include",
       });
 
-      console.log("=== Response status:", response.status);
-      console.log("=== Response ok:", response.ok);
-
       if (!response.ok) {
         const errorText = await response.text();
         console.error("=== Response error text:", errorText);
@@ -381,11 +362,9 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       }
 
       const result = await response.json();
-      console.log("=== Response result:", result);
       return result;
     },
     onSuccess: (updatedTransaction) => {
-      console.log("=== Transaction updated successfully:", updatedTransaction);
       
       toast({
         title: "Transacción actualizada",
@@ -394,7 +373,6 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       });
       
       // INVALIDACIÓN SELECTIVA - Solo entidades afectadas por la transacción editada
-      console.log("=== INVALIDACIÓN SELECTIVA POST-EDICIÓN ===");
       
       // Siempre invalidar transacciones
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
@@ -750,7 +728,6 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         }
       }
       
-      console.log("=== Cache invalidation completed - closing modal");
       
       // Cerrar modal - React Query actualizará automáticamente los datos visibles
       onClose();
@@ -767,8 +744,6 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
   });
 
   const onSubmit = (data: EditTransactionFormData) => {
-    console.log("=== EditTransactionModal - Form submitted with data:", data);
-    console.log("=== EditTransactionModal - Converting valor:", data.valor, "to numeric:", getNumericValue(data.valor));
     
     if (!currentTransaction?.id) {
       console.error("=== EditTransactionModal - No transaction ID available");

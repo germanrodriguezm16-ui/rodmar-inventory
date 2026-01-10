@@ -1043,10 +1043,30 @@ export class DatabaseStorage implements IStorage {
         let conceptoActualizado = t.concepto;
         
         // Determinar el socio principal según el nuevo sistema
-        if (t.paraQuienTipo && t.paraQuienId && ['mina', 'comprador', 'volquetero'].includes(t.paraQuienTipo)) {
-          socioNombre = this.getSocioNombreFromMap(t.paraQuienTipo, parseInt(t.paraQuienId), minasMap, compradoresMap, volqueterosMap);
-        } else if (t.deQuienTipo && t.deQuienId && ['mina', 'comprador', 'volquetero'].includes(t.deQuienTipo)) {
-          socioNombre = this.getSocioNombreFromMap(t.deQuienTipo, parseInt(t.deQuienId), minasMap, compradoresMap, volqueterosMap);
+        if (t.paraQuienTipo && t.paraQuienId) {
+          if (['mina', 'comprador', 'volquetero'].includes(t.paraQuienTipo)) {
+            socioNombre = this.getSocioNombreFromMap(t.paraQuienTipo, parseInt(t.paraQuienId), minasMap, compradoresMap, volqueterosMap);
+          } else if (t.paraQuienTipo === 'rodmar') {
+            socioNombre = this.getRodmarNombreFromMap(t.paraQuienId, rodmarCuentasMap);
+          } else if (t.paraQuienTipo === 'lcdm') {
+            socioNombre = 'La Casa del Motero';
+          } else if (t.paraQuienTipo === 'postobon') {
+            socioNombre = 'Postobón';
+          } else if (t.paraQuienTipo === 'banco') {
+            socioNombre = 'Banco';
+          }
+        } else if (t.deQuienTipo && t.deQuienId) {
+          if (['mina', 'comprador', 'volquetero'].includes(t.deQuienTipo)) {
+            socioNombre = this.getSocioNombreFromMap(t.deQuienTipo, parseInt(t.deQuienId), minasMap, compradoresMap, volqueterosMap);
+          } else if (t.deQuienTipo === 'rodmar') {
+            socioNombre = this.getRodmarNombreFromMap(t.deQuienId, rodmarCuentasMap);
+          } else if (t.deQuienTipo === 'lcdm') {
+            socioNombre = 'La Casa del Motero';
+          } else if (t.deQuienTipo === 'postobon') {
+            socioNombre = 'Postobón';
+          } else if (t.deQuienTipo === 'banco') {
+            socioNombre = 'Banco';
+          }
         }
 
         // Actualizar concepto dinámicamente con nombres actuales (usando Maps)
@@ -1217,16 +1237,48 @@ export class DatabaseStorage implements IStorage {
       allVolqueteros.forEach(v => volqueterosMap.set(v.id, v.nombre));
       allTerceros.forEach(t => tercerosMap.set(t.id, t.nombre));
       
-      // Mapear cuentas RodMar por ID, código y slug legacy
+      // Mapear cuentas RodMar por ID, código y slug legacy (exhaustivo)
       allRodmarCuentas.forEach(c => {
-        rodmarCuentasMap.set(c.id.toString(), c.nombre);
-        rodmarCuentasMap.set(c.codigo.toLowerCase(), c.nombre);
-        rodmarCuentasMap.set(c.codigo.toUpperCase(), c.nombre);
-        const slugLegacy = c.codigo.toLowerCase().replace(/_/g, '-');
+        const idStr = c.id.toString();
+        const codigoLower = c.codigo.toLowerCase();
+        const codigoUpper = c.codigo.toUpperCase();
+        const codigoOriginal = c.codigo;
+        
+        // 1. Mapear por ID numérico
+        rodmarCuentasMap.set(idStr, c.nombre);
+        
+        // 2. Mapear por código en diferentes variaciones
+        rodmarCuentasMap.set(codigoLower, c.nombre);
+        rodmarCuentasMap.set(codigoUpper, c.nombre);
+        rodmarCuentasMap.set(codigoOriginal, c.nombre);
+        
+        // 3. Mapear por slug legacy (guiones bajos → guiones)
+        const slugLegacy = codigoLower.replace(/_/g, '-');
         rodmarCuentasMap.set(slugLegacy, c.nombre);
         
-        // Mapear nombres antiguos conocidos al nombre actual
-        const codigoLower = c.codigo.toLowerCase();
+        // 4. Mapear slug legacy con mayúsculas
+        const slugLegacyUpper = codigoUpper.replace(/_/g, '-');
+        rodmarCuentasMap.set(slugLegacyUpper, c.nombre);
+        
+        // 5. Mapear slug legacy original
+        const slugLegacyOriginal = codigoOriginal.replace(/_/g, '-');
+        rodmarCuentasMap.set(slugLegacyOriginal, c.nombre);
+        
+        // 6. Mapear variación inversa (guiones → guiones bajos)
+        const conGuionesBajos = codigoLower.replace(/-/g, '_');
+        rodmarCuentasMap.set(conGuionesBajos, c.nombre);
+        
+        // 7. Mapear con espacios en lugar de guiones/guiones bajos
+        const conEspacios = codigoLower.replace(/[_-]/g, ' ');
+        rodmarCuentasMap.set(conEspacios, c.nombre);
+        
+        // 8. Mapear con espacios y capitalización
+        const conEspaciosCapitalizado = conEspacios.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        rodmarCuentasMap.set(conEspaciosCapitalizado, c.nombre);
+        
+        // 9. Mapear nombres antiguos conocidos al nombre actual (legacy compatibility)
         if (codigoLower === 'bemovil' || codigoLower === 'corresponsal' || codigoLower === 'efectivo' || 
             codigoLower === 'cuentas_german' || codigoLower === 'cuentas_jhon' || codigoLower === 'otros') {
           rodmarCuentasMap.set('Bemovil', c.nombre);
@@ -1237,8 +1289,10 @@ export class DatabaseStorage implements IStorage {
           rodmarCuentasMap.set('efectivo', c.nombre);
           rodmarCuentasMap.set('Cuentas German', c.nombre);
           rodmarCuentasMap.set('cuentas german', c.nombre);
+          rodmarCuentasMap.set('cuentas-german', c.nombre);
           rodmarCuentasMap.set('Cuentas Jhon', c.nombre);
           rodmarCuentasMap.set('cuentas jhon', c.nombre);
+          rodmarCuentasMap.set('cuentas-jhon', c.nombre);
           rodmarCuentasMap.set('Otros', c.nombre);
           rodmarCuentasMap.set('otros', c.nombre);
         }
@@ -1255,10 +1309,30 @@ export class DatabaseStorage implements IStorage {
         let conceptoActualizado = t.concepto;
         
         // Determinar el socio principal según el nuevo sistema
-        if (t.paraQuienTipo && t.paraQuienId && ['mina', 'comprador', 'volquetero'].includes(t.paraQuienTipo)) {
-          socioNombre = this.getSocioNombreFromMap(t.paraQuienTipo, parseInt(t.paraQuienId), minasMap, compradoresMap, volqueterosMap);
-        } else if (t.deQuienTipo && t.deQuienId && ['mina', 'comprador', 'volquetero'].includes(t.deQuienTipo)) {
-          socioNombre = this.getSocioNombreFromMap(t.deQuienTipo, parseInt(t.deQuienId), minasMap, compradoresMap, volqueterosMap);
+        if (t.paraQuienTipo && t.paraQuienId) {
+          if (['mina', 'comprador', 'volquetero'].includes(t.paraQuienTipo)) {
+            socioNombre = this.getSocioNombreFromMap(t.paraQuienTipo, parseInt(t.paraQuienId), minasMap, compradoresMap, volqueterosMap);
+          } else if (t.paraQuienTipo === 'rodmar') {
+            socioNombre = this.getRodmarNombreFromMap(t.paraQuienId, rodmarCuentasMap);
+          } else if (t.paraQuienTipo === 'lcdm') {
+            socioNombre = 'La Casa del Motero';
+          } else if (t.paraQuienTipo === 'postobon') {
+            socioNombre = 'Postobón';
+          } else if (t.paraQuienTipo === 'banco') {
+            socioNombre = 'Banco';
+          }
+        } else if (t.deQuienTipo && t.deQuienId) {
+          if (['mina', 'comprador', 'volquetero'].includes(t.deQuienTipo)) {
+            socioNombre = this.getSocioNombreFromMap(t.deQuienTipo, parseInt(t.deQuienId), minasMap, compradoresMap, volqueterosMap);
+          } else if (t.deQuienTipo === 'rodmar') {
+            socioNombre = this.getRodmarNombreFromMap(t.deQuienId, rodmarCuentasMap);
+          } else if (t.deQuienTipo === 'lcdm') {
+            socioNombre = 'La Casa del Motero';
+          } else if (t.deQuienTipo === 'postobon') {
+            socioNombre = 'Postobón';
+          } else if (t.deQuienTipo === 'banco') {
+            socioNombre = 'Banco';
+          }
         }
 
         // Actualizar concepto dinámicamente con nombres actuales
@@ -1533,16 +1607,48 @@ export class DatabaseStorage implements IStorage {
       allVolqueteros.forEach(v => volqueterosMap.set(v.id, v.nombre));
       allTerceros.forEach(t => tercerosMap.set(t.id, t.nombre));
       
-      // Mapear cuentas RodMar por ID, código y slug legacy
+      // Mapear cuentas RodMar por ID, código y slug legacy (exhaustivo)
       allRodmarCuentas.forEach(c => {
-        rodmarCuentasMap.set(c.id.toString(), c.nombre);
-        rodmarCuentasMap.set(c.codigo.toLowerCase(), c.nombre);
-        rodmarCuentasMap.set(c.codigo.toUpperCase(), c.nombre);
-        const slugLegacy = c.codigo.toLowerCase().replace(/_/g, '-');
+        const idStr = c.id.toString();
+        const codigoLower = c.codigo.toLowerCase();
+        const codigoUpper = c.codigo.toUpperCase();
+        const codigoOriginal = c.codigo;
+        
+        // 1. Mapear por ID numérico
+        rodmarCuentasMap.set(idStr, c.nombre);
+        
+        // 2. Mapear por código en diferentes variaciones
+        rodmarCuentasMap.set(codigoLower, c.nombre);
+        rodmarCuentasMap.set(codigoUpper, c.nombre);
+        rodmarCuentasMap.set(codigoOriginal, c.nombre);
+        
+        // 3. Mapear por slug legacy (guiones bajos → guiones)
+        const slugLegacy = codigoLower.replace(/_/g, '-');
         rodmarCuentasMap.set(slugLegacy, c.nombre);
         
-        // Mapear nombres antiguos conocidos al nombre actual
-        const codigoLower = c.codigo.toLowerCase();
+        // 4. Mapear slug legacy con mayúsculas
+        const slugLegacyUpper = codigoUpper.replace(/_/g, '-');
+        rodmarCuentasMap.set(slugLegacyUpper, c.nombre);
+        
+        // 5. Mapear slug legacy original
+        const slugLegacyOriginal = codigoOriginal.replace(/_/g, '-');
+        rodmarCuentasMap.set(slugLegacyOriginal, c.nombre);
+        
+        // 6. Mapear variación inversa (guiones → guiones bajos)
+        const conGuionesBajos = codigoLower.replace(/-/g, '_');
+        rodmarCuentasMap.set(conGuionesBajos, c.nombre);
+        
+        // 7. Mapear con espacios en lugar de guiones/guiones bajos
+        const conEspacios = codigoLower.replace(/[_-]/g, ' ');
+        rodmarCuentasMap.set(conEspacios, c.nombre);
+        
+        // 8. Mapear con espacios y capitalización
+        const conEspaciosCapitalizado = conEspacios.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        rodmarCuentasMap.set(conEspaciosCapitalizado, c.nombre);
+        
+        // 9. Mapear nombres antiguos conocidos al nombre actual (legacy compatibility)
         if (codigoLower === 'bemovil' || codigoLower === 'corresponsal' || codigoLower === 'efectivo' || 
             codigoLower === 'cuentas_german' || codigoLower === 'cuentas_jhon' || codigoLower === 'otros') {
           rodmarCuentasMap.set('Bemovil', c.nombre);
@@ -1553,8 +1659,10 @@ export class DatabaseStorage implements IStorage {
           rodmarCuentasMap.set('efectivo', c.nombre);
           rodmarCuentasMap.set('Cuentas German', c.nombre);
           rodmarCuentasMap.set('cuentas german', c.nombre);
+          rodmarCuentasMap.set('cuentas-german', c.nombre);
           rodmarCuentasMap.set('Cuentas Jhon', c.nombre);
           rodmarCuentasMap.set('cuentas jhon', c.nombre);
+          rodmarCuentasMap.set('cuentas-jhon', c.nombre);
           rodmarCuentasMap.set('Otros', c.nombre);
           rodmarCuentasMap.set('otros', c.nombre);
         }
@@ -1565,10 +1673,30 @@ export class DatabaseStorage implements IStorage {
         let socioNombre = 'Desconocido';
         
         // Determinar el socio principal (destino en solicitudes)
-        if (t.paraQuienTipo && t.paraQuienId && ['mina', 'comprador', 'volquetero'].includes(t.paraQuienTipo)) {
-          socioNombre = this.getSocioNombreFromMap(t.paraQuienTipo, parseInt(t.paraQuienId), minasMap, compradoresMap, volqueterosMap);
-        } else if (t.deQuienTipo && t.deQuienId && ['mina', 'comprador', 'volquetero'].includes(t.deQuienTipo)) {
-          socioNombre = this.getSocioNombreFromMap(t.deQuienTipo, parseInt(t.deQuienId), minasMap, compradoresMap, volqueterosMap);
+        if (t.paraQuienTipo && t.paraQuienId) {
+          if (['mina', 'comprador', 'volquetero'].includes(t.paraQuienTipo)) {
+            socioNombre = this.getSocioNombreFromMap(t.paraQuienTipo, parseInt(t.paraQuienId), minasMap, compradoresMap, volqueterosMap);
+          } else if (t.paraQuienTipo === 'rodmar') {
+            socioNombre = this.getRodmarNombreFromMap(t.paraQuienId, rodmarCuentasMap);
+          } else if (t.paraQuienTipo === 'lcdm') {
+            socioNombre = 'La Casa del Motero';
+          } else if (t.paraQuienTipo === 'postobon') {
+            socioNombre = 'Postobón';
+          } else if (t.paraQuienTipo === 'banco') {
+            socioNombre = 'Banco';
+          }
+        } else if (t.deQuienTipo && t.deQuienId) {
+          if (['mina', 'comprador', 'volquetero'].includes(t.deQuienTipo)) {
+            socioNombre = this.getSocioNombreFromMap(t.deQuienTipo, parseInt(t.deQuienId), minasMap, compradoresMap, volqueterosMap);
+          } else if (t.deQuienTipo === 'rodmar') {
+            socioNombre = this.getRodmarNombreFromMap(t.deQuienId, rodmarCuentasMap);
+          } else if (t.deQuienTipo === 'lcdm') {
+            socioNombre = 'La Casa del Motero';
+          } else if (t.deQuienTipo === 'postobon') {
+            socioNombre = 'Postobón';
+          } else if (t.deQuienTipo === 'banco') {
+            socioNombre = 'Banco';
+          }
         }
 
         // Actualizar concepto dinámicamente con nombres actuales
@@ -2264,16 +2392,48 @@ export class DatabaseStorage implements IStorage {
       allVolqueteros.forEach(v => volqueterosMap.set(v.id, v.nombre));
       allTerceros.forEach(t => tercerosMap.set(t.id, t.nombre));
       
-      // Mapear cuentas RodMar por ID, código y slug legacy
+      // Mapear cuentas RodMar por ID, código y slug legacy (exhaustivo)
       allRodmarCuentas.forEach(c => {
-        rodmarCuentasMap.set(c.id.toString(), c.nombre);
-        rodmarCuentasMap.set(c.codigo.toLowerCase(), c.nombre);
-        rodmarCuentasMap.set(c.codigo.toUpperCase(), c.nombre);
-        const slugLegacy = c.codigo.toLowerCase().replace(/_/g, '-');
+        const idStr = c.id.toString();
+        const codigoLower = c.codigo.toLowerCase();
+        const codigoUpper = c.codigo.toUpperCase();
+        const codigoOriginal = c.codigo;
+        
+        // 1. Mapear por ID numérico
+        rodmarCuentasMap.set(idStr, c.nombre);
+        
+        // 2. Mapear por código en diferentes variaciones
+        rodmarCuentasMap.set(codigoLower, c.nombre);
+        rodmarCuentasMap.set(codigoUpper, c.nombre);
+        rodmarCuentasMap.set(codigoOriginal, c.nombre);
+        
+        // 3. Mapear por slug legacy (guiones bajos → guiones)
+        const slugLegacy = codigoLower.replace(/_/g, '-');
         rodmarCuentasMap.set(slugLegacy, c.nombre);
         
-        // Mapear nombres antiguos conocidos al nombre actual
-        const codigoLower = c.codigo.toLowerCase();
+        // 4. Mapear slug legacy con mayúsculas
+        const slugLegacyUpper = codigoUpper.replace(/_/g, '-');
+        rodmarCuentasMap.set(slugLegacyUpper, c.nombre);
+        
+        // 5. Mapear slug legacy original
+        const slugLegacyOriginal = codigoOriginal.replace(/_/g, '-');
+        rodmarCuentasMap.set(slugLegacyOriginal, c.nombre);
+        
+        // 6. Mapear variación inversa (guiones → guiones bajos)
+        const conGuionesBajos = codigoLower.replace(/-/g, '_');
+        rodmarCuentasMap.set(conGuionesBajos, c.nombre);
+        
+        // 7. Mapear con espacios en lugar de guiones/guiones bajos
+        const conEspacios = codigoLower.replace(/[_-]/g, ' ');
+        rodmarCuentasMap.set(conEspacios, c.nombre);
+        
+        // 8. Mapear con espacios y capitalización
+        const conEspaciosCapitalizado = conEspacios.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        rodmarCuentasMap.set(conEspaciosCapitalizado, c.nombre);
+        
+        // 9. Mapear nombres antiguos conocidos al nombre actual (legacy compatibility)
         if (codigoLower === 'bemovil' || codigoLower === 'corresponsal' || codigoLower === 'efectivo' || 
             codigoLower === 'cuentas_german' || codigoLower === 'cuentas_jhon' || codigoLower === 'otros') {
           rodmarCuentasMap.set('Bemovil', c.nombre);
@@ -2284,15 +2444,28 @@ export class DatabaseStorage implements IStorage {
           rodmarCuentasMap.set('efectivo', c.nombre);
           rodmarCuentasMap.set('Cuentas German', c.nombre);
           rodmarCuentasMap.set('cuentas german', c.nombre);
+          rodmarCuentasMap.set('cuentas-german', c.nombre);
           rodmarCuentasMap.set('Cuentas Jhon', c.nombre);
           rodmarCuentasMap.set('cuentas jhon', c.nombre);
+          rodmarCuentasMap.set('cuentas-jhon', c.nombre);
           rodmarCuentasMap.set('Otros', c.nombre);
           rodmarCuentasMap.set('otros', c.nombre);
         }
       });
 
       // Obtener el nombre del socio una vez (usando Map)
-      const socioNombre = this.getSocioNombreFromMap(tipoSocio, socioId, minasMap, compradoresMap, volqueterosMap);
+      let socioNombre: string;
+      if (tipoSocio === 'rodmar') {
+        socioNombre = this.getRodmarNombreFromMap(socioId, rodmarCuentasMap);
+      } else if (tipoSocio === 'lcdm') {
+        socioNombre = 'La Casa del Motero';
+      } else if (tipoSocio === 'postobon') {
+        socioNombre = 'Postobón';
+      } else if (tipoSocio === 'banco') {
+        socioNombre = 'Banco';
+      } else {
+        socioNombre = this.getSocioNombreFromMap(tipoSocio, socioId, minasMap, compradoresMap, volqueterosMap);
+      }
       
       // Aplicar actualización de conceptos y nombres de socios a cada transacción (usando Maps)
       const updatedResults = uniqueResults.map((t) => {
@@ -2355,6 +2528,98 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       return `${tipoSocio} ${socioId}`;
     }
+  }
+
+  // Función helper para obtener nombre de cuenta RodMar desde el map
+  // Usa la misma lógica exhaustiva que updateConceptoWithCurrentNamesSync
+  private getRodmarNombreFromMap(
+    rodmarId: string | number | null | undefined,
+    rodmarCuentasMap: Map<string, string>
+  ): string {
+    if (!rodmarId) return 'Desconocido';
+    
+    const idStr = rodmarId.toString();
+    const cuentaId = idStr.toLowerCase();
+    
+    // Debug: Log solo si está activado
+    const DEBUG_RODMAR = process.env.DEBUG_RODMAR === 'true';
+    
+    // 1. Buscar por ID numérico exacto (original string)
+    const nombrePorId = rodmarCuentasMap.get(idStr);
+    if (nombrePorId) {
+      if (DEBUG_RODMAR) console.log(`[getRodmarNombreFromMap] ✓ Encontrado por ID exacto: "${idStr}" → "${nombrePorId}"`);
+      return nombrePorId;
+    }
+    
+    // 2. Buscar por código en minúsculas
+    const nombrePorCodigoLower = rodmarCuentasMap.get(cuentaId);
+    if (nombrePorCodigoLower) {
+      if (DEBUG_RODMAR) console.log(`[getRodmarNombreFromMap] ✓ Encontrado por lowercase: "${cuentaId}" → "${nombrePorCodigoLower}"`);
+      return nombrePorCodigoLower;
+    }
+    
+    // 3. Buscar por código en mayúsculas
+    const nombrePorCodigoUpper = rodmarCuentasMap.get(idStr.toUpperCase());
+    if (nombrePorCodigoUpper) {
+      if (DEBUG_RODMAR) console.log(`[getRodmarNombreFromMap] ✓ Encontrado por uppercase: "${idStr.toUpperCase()}" → "${nombrePorCodigoUpper}"`);
+      return nombrePorCodigoUpper;
+    }
+    
+    // 4. Buscar con transformación guiones bajos → guiones (slug legacy)
+    const conGuiones = cuentaId.replace(/_/g, '-');
+    if (conGuiones !== cuentaId) {
+      const nombrePorGuiones = rodmarCuentasMap.get(conGuiones);
+      if (nombrePorGuiones) {
+        if (DEBUG_RODMAR) console.log(`[getRodmarNombreFromMap] ✓ Encontrado por guiones (slug): "${conGuiones}" → "${nombrePorGuiones}"`);
+        return nombrePorGuiones;
+      }
+    }
+    
+    // 5. Buscar con transformación guiones → guiones bajos
+    const conGuionesBajos = cuentaId.replace(/-/g, '_');
+    if (conGuionesBajos !== cuentaId) {
+      const nombrePorGuionesBajos = rodmarCuentasMap.get(conGuionesBajos);
+      if (nombrePorGuionesBajos) {
+        if (DEBUG_RODMAR) console.log(`[getRodmarNombreFromMap] ✓ Encontrado por guiones bajos: "${conGuionesBajos}" → "${nombrePorGuionesBajos}"`);
+        return nombrePorGuionesBajos;
+      }
+    }
+    
+    // 6. Buscar con transformaciones en el ID original (sin lowercase)
+    const conGuionesOriginal = idStr.replace(/_/g, '-');
+    if (conGuionesOriginal !== idStr) {
+      const nombrePorGuionesOriginal = rodmarCuentasMap.get(conGuionesOriginal);
+      if (nombrePorGuionesOriginal) {
+        if (DEBUG_RODMAR) console.log(`[getRodmarNombreFromMap] ✓ Encontrado por guiones original: "${conGuionesOriginal}" → "${nombrePorGuionesOriginal}"`);
+        return nombrePorGuionesOriginal;
+      }
+    }
+    
+    const conGuionesBajosOriginal = idStr.replace(/-/g, '_');
+    if (conGuionesBajosOriginal !== idStr) {
+      const nombrePorGuionesBajosOriginal = rodmarCuentasMap.get(conGuionesBajosOriginal);
+      if (nombrePorGuionesBajosOriginal) {
+        if (DEBUG_RODMAR) console.log(`[getRodmarNombreFromMap] ✓ Encontrado por guiones bajos original: "${conGuionesBajosOriginal}" → "${nombrePorGuionesBajosOriginal}"`);
+        return nombrePorGuionesBajosOriginal;
+      }
+    }
+    
+    // 7. Buscar variaciones con espacios
+    const sinEspacios = cuentaId.replace(/\s+/g, '-');
+    if (sinEspacios !== cuentaId) {
+      const nombrePorSinEspacios = rodmarCuentasMap.get(sinEspacios);
+      if (nombrePorSinEspacios) {
+        if (DEBUG_RODMAR) console.log(`[getRodmarNombreFromMap] ✓ Encontrado sin espacios: "${sinEspacios}" → "${nombrePorSinEspacios}"`);
+        return nombrePorSinEspacios;
+      }
+    }
+    
+    // 8. Si no se encuentra, solo log si DEBUG está activado
+    if (DEBUG_RODMAR) {
+      console.warn(`[getRodmarNombreFromMap] ✗ NO ENCONTRADO: idStr="${idStr}", cuentaId="${cuentaId}"`);
+      console.warn(`[getRodmarNombreFromMap] Map tiene ${rodmarCuentasMap.size} entradas. Keys:`, Array.from(rodmarCuentasMap.keys()));
+    }
+    return 'Desconocido';
   }
 
   // Función para actualizar conceptos con nombres actuales (versión async - mantiene compatibilidad)
