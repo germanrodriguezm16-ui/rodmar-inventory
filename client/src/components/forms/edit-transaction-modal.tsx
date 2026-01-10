@@ -260,11 +260,36 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         // El voucher se carga automáticamente mediante useTransactionVoucher hook
         const voucherValue = loadedVoucher || "";
         
+        // Función helper para mapear IDs legacy de RodMar al ID numérico actual
+        const mapRodmarIdToNumeric = (tipo: string | null | undefined, id: string | number | null | undefined): string => {
+          if (!tipo || tipo !== 'rodmar' || !id) return id?.toString() || "";
+          
+          const idStr = id.toString();
+          
+          // Si ya es un número, verificar si existe en las cuentas
+          if (!isNaN(Number(idStr))) {
+            const cuenta = rodmarCuentas.find((c: any) => c.id?.toString() === idStr);
+            if (cuenta) return idStr;
+          }
+          
+          // Buscar por código, slug legacy, o nombre legacy
+          const cuenta = rodmarCuentas.find((c: any) => 
+            c.codigo === idStr || 
+            c.codigo?.toLowerCase() === idStr?.toLowerCase() ||
+            c.slugLegacy === idStr ||
+            c.cuenta?.toLowerCase().replace(/\s+/g, '-') === idStr?.toLowerCase() ||
+            c.id?.toString() === idStr
+          );
+          
+          // Retornar el ID numérico si se encuentra, o el original si no
+          return cuenta?.id?.toString() || idStr;
+        };
+        
         const formData = {
           deQuienTipo: currentTransaction.deQuienTipo || "",
-          deQuienId: currentTransaction.deQuienId || "",
+          deQuienId: mapRodmarIdToNumeric(currentTransaction.deQuienTipo, currentTransaction.deQuienId),
           paraQuienTipo: currentTransaction.paraQuienTipo || "",
-          paraQuienId: currentTransaction.paraQuienId || "",
+          paraQuienId: mapRodmarIdToNumeric(currentTransaction.paraQuienTipo, currentTransaction.paraQuienId),
           postobonCuenta: currentTransaction.postobonCuenta || "",
           valor: valorStr,
           fecha: convertToLocalDateString(currentTransaction.fecha),
@@ -311,7 +336,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
     };
 
     loadTransactionData();
-  }, [isOpen, currentTransaction?.id, currentTransaction?.valor, currentTransaction?.fecha, currentTransaction?.deQuienTipo, currentTransaction?.paraQuienTipo, form, loadedVoucher]);
+  }, [isOpen, currentTransaction?.id, currentTransaction?.valor, currentTransaction?.fecha, currentTransaction?.deQuienTipo, currentTransaction?.paraQuienTipo, currentTransaction?.deQuienId, currentTransaction?.paraQuienId, form, loadedVoucher, rodmarCuentas]);
 
   const updateTransactionMutation = useMutation({
     mutationFn: async (data: EditTransactionFormData) => {
@@ -396,19 +421,30 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
         affectedEntityTypes.add('postobon');
       }
       
-      // Detectar si involucra cuentas RodMar (Bemovil, Corresponsal, Efectivo, etc.)
-      const rodmarAccountIds = ['bemovil', 'corresponsal', 'efectivo', 'cuentas-german', 'cuentas-jhon', 'otros'];
+      // Función helper para verificar si un ID pertenece a alguna cuenta RodMar (usando cuentas dinámicas)
+      const isRodmarAccount = (id: string | null | undefined): boolean => {
+        if (!id) return false;
+        return rodmarCuentas.some((cuenta: any) => 
+          cuenta.id?.toString() === id || 
+          cuenta.codigo === id || 
+          cuenta.codigo?.toLowerCase() === id?.toLowerCase() ||
+          cuenta.slugLegacy === id ||
+          cuenta.cuenta?.toLowerCase().replace(/\s+/g, '-') === id?.toLowerCase()
+        );
+      };
+      
+      // Detectar si involucra cuentas RodMar (usando cuentas dinámicas de la API)
       const hasRodmarAccount = 
-        (originalTransaction?.deQuienTipo === 'rodmar' && rodmarAccountIds.includes(originalTransaction?.deQuienId || '')) ||
-        (originalTransaction?.paraQuienTipo === 'rodmar' && rodmarAccountIds.includes(originalTransaction?.paraQuienId || '')) ||
-        (updatedTransaction.deQuienTipo === 'rodmar' && rodmarAccountIds.includes(updatedTransaction.deQuienId || '')) ||
-        (updatedTransaction.paraQuienTipo === 'rodmar' && rodmarAccountIds.includes(updatedTransaction.paraQuienId || ''));
+        (originalTransaction?.deQuienTipo === 'rodmar' && isRodmarAccount(originalTransaction?.deQuienId)) ||
+        (originalTransaction?.paraQuienTipo === 'rodmar' && isRodmarAccount(originalTransaction?.paraQuienId)) ||
+        (updatedTransaction.deQuienTipo === 'rodmar' && isRodmarAccount(updatedTransaction.deQuienId)) ||
+        (updatedTransaction.paraQuienTipo === 'rodmar' && isRodmarAccount(updatedTransaction.paraQuienId));
       
       // Detectar si cambió de una cuenta RodMar a otra o se le quitó a una cuenta RodMar (para actualizar ambas)
-      const originalDeQuienRodmar = originalTransaction?.deQuienTipo === 'rodmar' && rodmarAccountIds.includes(originalTransaction?.deQuienId || '');
-      const originalParaQuienRodmar = originalTransaction?.paraQuienTipo === 'rodmar' && rodmarAccountIds.includes(originalTransaction?.paraQuienId || '');
-      const updatedDeQuienRodmar = updatedTransaction.deQuienTipo === 'rodmar' && rodmarAccountIds.includes(updatedTransaction.deQuienId || '');
-      const updatedParaQuienRodmar = updatedTransaction.paraQuienTipo === 'rodmar' && rodmarAccountIds.includes(updatedTransaction.paraQuienId || '');
+      const originalDeQuienRodmar = originalTransaction?.deQuienTipo === 'rodmar' && isRodmarAccount(originalTransaction?.deQuienId);
+      const originalParaQuienRodmar = originalTransaction?.paraQuienTipo === 'rodmar' && isRodmarAccount(originalTransaction?.paraQuienId);
+      const updatedDeQuienRodmar = updatedTransaction.deQuienTipo === 'rodmar' && isRodmarAccount(updatedTransaction.deQuienId);
+      const updatedParaQuienRodmar = updatedTransaction.paraQuienTipo === 'rodmar' && isRodmarAccount(updatedTransaction.paraQuienId);
       
       // Detectar si se le quitó la transacción a una cuenta RodMar (origen o destino)
       const removedFromRodmarAccount = (originalDeQuienRodmar && !updatedDeQuienRodmar) || 
@@ -990,7 +1026,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {getEntityOptions(watchedDeQuienTipo).map((option) => (
+                        {getEntityOptions(watchedParaQuienTipo).map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
