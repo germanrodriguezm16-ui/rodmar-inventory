@@ -524,6 +524,31 @@ export default function Finanzas({ onOpenTransaction, hideBottomNav = false }: F
     console.log('📅 PRIMERA TRANSACCIÓN - Tipo fecha:', typeof transactions[0].fecha);
   }
 
+  // Limpiar valores cuando cambia el tipo de filtro
+  useEffect(() => {
+    if (valorFilterType === "todos") {
+      setValorFilterValue("");
+      setValorFilterValueEnd("");
+    } else if (valorFilterType !== "entre") {
+      // Si cambia de "entre" a otro tipo, limpiar el valor final
+      setValorFilterValueEnd("");
+    }
+  }, [valorFilterType]);
+
+  useEffect(() => {
+    if (fechaFilterType === "todos") {
+      setFechaFilterValue("");
+      setFechaFilterValueEnd("");
+    } else if (fechaFilterType !== "entre" && fechaFilterType !== "exactamente" && fechaFilterType !== "despues-de" && fechaFilterType !== "antes-de") {
+      // Si es un filtro predefinido (hoy, ayer, etc.), limpiar valores de fecha
+      setFechaFilterValue("");
+      setFechaFilterValueEnd("");
+    } else if (fechaFilterType !== "entre") {
+      // Si cambia de "entre" a otro tipo, limpiar el valor final
+      setFechaFilterValueEnd("");
+    }
+  }, [fechaFilterType]);
+
   // Resetear a página 1 cuando cambian los filtros
   useEffect(() => {
     setCurrentPage(1);
@@ -896,9 +921,9 @@ export default function Finanzas({ onOpenTransaction, hideBottomNav = false }: F
         {/* Tab: Transacciones */}
         <TabsContent value="transacciones" className="mt-0">
           {/* Filters */}
-      <div className="px-4 py-3 bg-card border-b border-border">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-medium text-foreground">Filtros</h2>
+      <div className="px-3 py-2 sm:px-4 sm:py-3 bg-card border-b border-border">
+        <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+          <h2 className="text-xs sm:text-sm font-medium text-foreground">Filtros</h2>
           <Button variant="ghost" size="sm" onClick={() => {
             setSearchTerm("");
             setValorFilterType("todos");
@@ -909,169 +934,218 @@ export default function Finanzas({ onOpenTransaction, hideBottomNav = false }: F
             setFechaFilterType("todos");
             setFechaFilterValue("");
             setFechaFilterValueEnd("");
-          }}>
+          }} className="h-7 px-2 text-xs">
             Limpiar
           </Button>
         </div>
 
-        <div className="space-y-2">
-          {/* Primera fila: Filtros principales - Responsive */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {/* Filtro de valor */}
-            <div>
-              <label className="text-xs text-gray-600 mb-1 block">Filtrar por Valor</label>
-              <div className="flex gap-1 flex-wrap">
-                <Select value={valorFilterType} onValueChange={setValorFilterType}>
-                  <SelectTrigger className="h-8 text-xs min-w-[100px] flex-shrink-0">
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="exactamente">Exacto</SelectItem>
-                    <SelectItem value="mayor">Mayor</SelectItem>
-                    <SelectItem value="menor">Menor</SelectItem>
-                    <SelectItem value="entre">Entre</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Input
-                  type="text"
-                  placeholder="Valor"
-                  className="h-8 text-xs flex-1 min-w-[80px]"
-                  value={valorFilterValue ? formatCurrency(parseFloat(valorFilterValue)) : ''}
-                  onChange={(e) => setValorFilterValue(parseFormattedValue(e.target.value))}
-                  disabled={!valorFilterType || valorFilterType === "todos"}
-                />
-
-                {valorFilterType === "entre" && (
-                  <Input
-                    type="text"
-                    placeholder="Final"
-                    className="h-8 text-xs flex-1 min-w-[80px]"
-                    value={valorFilterValueEnd ? formatCurrency(parseFloat(valorFilterValueEnd)) : ''}
-                    onChange={(e) => setValorFilterValueEnd(parseFormattedValue(e.target.value))}
-                  />
-                )}
-              </div>
+        <div className="space-y-1.5 sm:space-y-2">
+          {/* Primera fila: Selects compactos siempre visibles - Sin labels en móvil */}
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+            {/* Filtro de valor - Select */}
+            <div className="flex flex-col">
+              <label className="text-[10px] text-gray-600 mb-0.5 hidden sm:block">Valor</label>
+              <Select value={valorFilterType} onValueChange={setValorFilterType}>
+                <SelectTrigger className="h-7 sm:h-8 text-xs px-2">
+                  <SelectValue placeholder="Valor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="igual-a">Igual a</SelectItem>
+                  <SelectItem value="mayor-que">Mayor que</SelectItem>
+                  <SelectItem value="menor-que">Menor que</SelectItem>
+                  <SelectItem value="entre">Entre</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Búsqueda */}
-            <div>
-              <label className="text-xs text-gray-600 mb-1 block">Búsqueda Global</label>
+            {/* Filtro de fecha - Select */}
+            <div className="flex flex-col">
+              <label className="text-[10px] text-gray-600 mb-0.5 hidden sm:block">Fecha</label>
+              <Select value={fechaFilterType} onValueChange={setFechaFilterType}>
+                <SelectTrigger className="h-7 sm:h-8 text-xs px-2">
+                  <SelectValue placeholder="Fecha" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas</SelectItem>
+                  <SelectItem value="exactamente">Exactamente</SelectItem>
+                  <SelectItem value="entre">Entre</SelectItem>
+                  <SelectItem value="despues-de">Después de</SelectItem>
+                  <SelectItem value="antes-de">Antes de</SelectItem>
+                  <SelectItem value="hoy">Hoy</SelectItem>
+                  <SelectItem value="ayer">Ayer</SelectItem>
+                  <SelectItem value="esta-semana">Esta semana</SelectItem>
+                  <SelectItem value="semana-pasada">Semana pasada</SelectItem>
+                  <SelectItem value="este-mes">Este mes</SelectItem>
+                  <SelectItem value="mes-pasado">Mes pasado</SelectItem>
+                  <SelectItem value="este-año">Este año</SelectItem>
+                  <SelectItem value="año-pasado">Año pasado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Búsqueda Global */}
+            <div className="flex flex-col">
+              <label className="text-[10px] text-gray-600 mb-0.5 hidden sm:block">Búsqueda</label>
               <Input
-                placeholder="Nombre, concepto, voucher..."
-                className="h-8 text-xs"
+                placeholder="Buscar..."
+                className="h-7 sm:h-8 text-xs px-2"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Segunda fila: Filtro de fecha y botones de ordenamiento - Responsive */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
-            {/* Filtro de fecha */}
-            <div className="flex-1 min-w-0">
-              <label className="text-xs text-gray-600 mb-1 block">Filtrar por Fecha</label>
-              <div className="flex gap-1 flex-wrap">
-                <Select value={fechaFilterType} onValueChange={setFechaFilterType}>
-                  <SelectTrigger className="h-8 text-xs min-w-[120px] flex-shrink-0">
-                    <SelectValue placeholder="Período" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todas</SelectItem>
-                    <SelectItem value="exactamente">Exactamente</SelectItem>
-                    <SelectItem value="entre">Entre</SelectItem>
-                    <SelectItem value="despues-de">Después de</SelectItem>
-                    <SelectItem value="antes-de">Antes de</SelectItem>
-                    <SelectItem value="hoy">Hoy</SelectItem>
-                    <SelectItem value="ayer">Ayer</SelectItem>
-                    <SelectItem value="esta-semana">Esta semana</SelectItem>
-                    <SelectItem value="semana-pasada">Semana pasada</SelectItem>
-                    <SelectItem value="este-mes">Este mes</SelectItem>
-                    <SelectItem value="mes-pasado">Mes pasado</SelectItem>
-                    <SelectItem value="este-año">Este año</SelectItem>
-                    <SelectItem value="año-pasado">Año pasado</SelectItem>
-                  </SelectContent>
-                </Select>
+          {/* Segunda fila: Inputs condicionales SOLO cuando requieren valores adicionales */}
+          {((valorFilterType !== "todos" && (valorFilterType === "igual-a" || valorFilterType === "mayor-que" || valorFilterType === "menor-que" || valorFilterType === "entre")) ||
+            (fechaFilterType !== "todos" && (fechaFilterType === "exactamente" || fechaFilterType === "entre" || fechaFilterType === "despues-de" || fechaFilterType === "antes-de"))) && (
+            <div className="space-y-1.5 sm:space-y-2">
+              {/* Inputs para filtro de valor - Solo si requiere input */}
+              {valorFilterType !== "todos" && (valorFilterType === "igual-a" || valorFilterType === "mayor-que" || valorFilterType === "menor-que" || valorFilterType === "entre") && (
+                <div>
+                  {valorFilterType === "entre" ? (
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                      <div className="flex flex-col">
+                        <label className="text-[10px] text-gray-600 mb-0.5 hidden sm:block">Valor inicial</label>
+                        <Input
+                          type="text"
+                          placeholder="Valor inicial"
+                          className="h-7 sm:h-8 text-xs px-2"
+                          value={valorFilterValue ? (() => {
+                            const numVal = parseFloat(valorFilterValue);
+                            return isNaN(numVal) ? valorFilterValue : formatCurrency(numVal);
+                          })() : ''}
+                          onChange={(e) => {
+                            const rawValue = parseFormattedValue(e.target.value);
+                            setValorFilterValue(rawValue);
+                          }}
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-[10px] text-gray-600 mb-0.5 hidden sm:block">Valor final</label>
+                        <Input
+                          type="text"
+                          placeholder="Valor final"
+                          className="h-7 sm:h-8 text-xs px-2"
+                          value={valorFilterValueEnd ? (() => {
+                            const numVal = parseFloat(valorFilterValueEnd);
+                            return isNaN(numVal) ? valorFilterValueEnd : formatCurrency(numVal);
+                          })() : ''}
+                          onChange={(e) => {
+                            const rawValue = parseFormattedValue(e.target.value);
+                            setValorFilterValueEnd(rawValue);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col">
+                      <label className="text-[10px] text-gray-600 mb-0.5 hidden sm:block">Valor</label>
+                      <Input
+                        type="text"
+                        placeholder="Ingrese valor"
+                        className="h-7 sm:h-8 text-xs px-2"
+                        value={valorFilterValue ? (() => {
+                          const numVal = parseFloat(valorFilterValue);
+                          return isNaN(numVal) ? valorFilterValue : formatCurrency(numVal);
+                        })() : ''}
+                        onChange={(e) => {
+                          const rawValue = parseFormattedValue(e.target.value);
+                          setValorFilterValue(rawValue);
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
-                {(fechaFilterType === "exactamente" || fechaFilterType === "despues-de" || fechaFilterType === "antes-de") && (
-                  <Input
-                    type="date"
-                    className="h-8 text-xs flex-1 min-w-[120px]"
-                    value={fechaFilterValue}
-                    onChange={(e) => setFechaFilterValue(e.target.value)}
-                  />
-                )}
-
-                {fechaFilterType === "entre" && (
-                  <>
-                    <Input
-                      type="date"
-                      placeholder="Desde"
-                      className="h-8 text-xs flex-1 min-w-[120px]"
-                      value={fechaFilterValue}
-                      onChange={(e) => setFechaFilterValue(e.target.value)}
-                    />
-                    <Input
-                      type="date"
-                      placeholder="Hasta"
-                      className="h-8 text-xs flex-1 min-w-[120px]"
-                      value={fechaFilterValueEnd}
-                      onChange={(e) => setFechaFilterValueEnd(e.target.value)}
-                    />
-                  </>
-                )}
-              </div>
+              {/* Inputs para filtro de fecha - Solo si requiere fecha específica */}
+              {fechaFilterType !== "todos" && (fechaFilterType === "exactamente" || fechaFilterType === "entre" || fechaFilterType === "despues-de" || fechaFilterType === "antes-de") && (
+                <div>
+                  {fechaFilterType === "entre" ? (
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                      <div className="flex flex-col">
+                        <label className="text-[10px] text-gray-600 mb-0.5 hidden sm:block">Fecha inicial</label>
+                        <Input
+                          type="date"
+                          className="h-7 sm:h-8 text-xs px-2"
+                          value={fechaFilterValue}
+                          onChange={(e) => setFechaFilterValue(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-[10px] text-gray-600 mb-0.5 hidden sm:block">Fecha final</label>
+                        <Input
+                          type="date"
+                          className="h-7 sm:h-8 text-xs px-2"
+                          value={fechaFilterValueEnd}
+                          onChange={(e) => setFechaFilterValueEnd(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col">
+                      <label className="text-[10px] text-gray-600 mb-0.5 hidden sm:block">Fecha</label>
+                      <Input
+                        type="date"
+                        className="h-7 sm:h-8 text-xs px-2"
+                        value={fechaFilterValue}
+                        onChange={(e) => setFechaFilterValue(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+          )}
 
-            {/* Botones de ordenamiento compactos - Apilados en móviles */}
-            <div className="flex items-center space-x-1 flex-shrink-0">
-              <span className="text-xs text-gray-600 hidden sm:inline">Orden:</span>
-              
-              {/* Botón ordenamiento por fecha */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleSortFecha}
-                className={`h-8 px-2 flex items-center space-x-1 ${
-                  sortByFecha !== "ninguno" 
-                    ? "bg-blue-100 hover:bg-blue-200 text-blue-700" 
-                    : "text-gray-500"
-                }`}
-                title={
-                  sortByFecha === "ninguno" ? "Sin orden por fecha" :
-                  sortByFecha === "asc" ? "Más antiguo primero" : 
-                  "Más reciente primero"
-                }
-              >
-                <CalendarDays className="w-3 h-3" />
-                {sortByFecha === "ninguno" && <span className="text-xs">-</span>}
-                {sortByFecha === "asc" && <ArrowUp className="w-3 h-3" />}
-                {sortByFecha === "desc" && <ArrowDown className="w-3 h-3" />}
-              </Button>
+          {/* Tercera fila: Botones de ordenamiento compactos */}
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2 pt-1">
+            <span className="text-[10px] sm:text-xs text-gray-600 hidden sm:inline">Orden:</span>
+            
+            {/* Botón ordenamiento por fecha */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleSortFecha}
+              className={`h-7 sm:h-8 px-1.5 sm:px-2 flex items-center space-x-0.5 sm:space-x-1 ${
+                sortByFecha !== "ninguno" 
+                  ? "bg-blue-100 hover:bg-blue-200 text-blue-700" 
+                  : "text-gray-500"
+              }`}
+              title={
+                sortByFecha === "ninguno" ? "Sin orden por fecha" :
+                sortByFecha === "asc" ? "Más antiguo primero" : 
+                "Más reciente primero"
+              }
+            >
+              <CalendarDays className="w-3 h-3" />
+              {sortByFecha === "ninguno" && <span className="text-[10px]">-</span>}
+              {sortByFecha === "asc" && <ArrowUp className="w-3 h-3" />}
+              {sortByFecha === "desc" && <ArrowDown className="w-3 h-3" />}
+            </Button>
 
-              {/* Botón ordenamiento por valor */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleSortValor}
-                className={`h-8 px-2 flex items-center space-x-1 ${
-                  sortByValor !== "ninguno" 
-                    ? "bg-green-100 hover:bg-green-200 text-green-700" 
-                    : "text-gray-500"
-                }`}
-                title={
-                  sortByValor === "ninguno" ? "Sin orden por valor" :
-                  sortByValor === "asc" ? "Menor a mayor" : 
-                  "Mayor a menor"
-                }
-              >
-                <DollarSign className="w-3 h-3" />
-                {sortByValor === "ninguno" && <span className="text-xs">-</span>}
-                {sortByValor === "asc" && <ArrowUp className="w-3 h-3" />}
-                {sortByValor === "desc" && <ArrowDown className="w-3 h-3" />}
-              </Button>
-            </div>
+            {/* Botón ordenamiento por valor */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleSortValor}
+              className={`h-7 sm:h-8 px-1.5 sm:px-2 flex items-center space-x-0.5 sm:space-x-1 ${
+                sortByValor !== "ninguno" 
+                  ? "bg-green-100 hover:bg-green-200 text-green-700" 
+                  : "text-gray-500"
+              }`}
+              title={
+                sortByValor === "ninguno" ? "Sin orden por valor" :
+                sortByValor === "asc" ? "Menor a mayor" : 
+                "Mayor a menor"
+              }
+            >
+              <DollarSign className="w-3 h-3" />
+              {sortByValor === "ninguno" && <span className="text-[10px]">-</span>}
+              {sortByValor === "asc" && <ArrowUp className="w-3 h-3" />}
+              {sortByValor === "desc" && <ArrowDown className="w-3 h-3" />}
+            </Button>
           </div>
 
         </div>
