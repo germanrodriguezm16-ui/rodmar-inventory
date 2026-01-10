@@ -1,5 +1,39 @@
 # Changelog - RodMar Inventory v2.1.0
 
+## 📅 Cambios Más Recientes (Enero 2025)
+
+### 🏦 v2.1.3 - Implementación de Pestaña Banco y Optimización de Filtros (Enero 2025)
+
+#### 🎯 Objetivo
+Implementar una pestaña dedicada "Banco" en el módulo RodMar y optimizar el encabezado de filtros en el módulo Finanzas para una mejor experiencia en móviles.
+
+#### ✨ Cambios Implementados
+
+**1. Pestaña Banco en Módulo RodMar**
+- ✅ Componente `BancoTransactionsTab` completo con todas las funcionalidades
+- ✅ Endpoint optimizado `/api/transacciones/banco` con paginación del servidor
+- ✅ Permiso `module.RODMAR.Banco.view` configurado
+- ✅ Integración completa en módulo rodmar con navegación por URL
+
+**2. Optimización de Encabezado de Filtros (Finanzas)**
+- ✅ Encabezado inicial compacto en móvil (40% menos espacio vertical)
+- ✅ Labels ocultos en móvil, visibles solo en desktop
+- ✅ Segunda fila condicional que aparece solo cuando se requieren inputs adicionales
+- ✅ Corrección de filtro de valor (valores del Select coinciden con switch)
+- ✅ Layout responsive mejorado para móviles
+
+#### 📝 Archivos Modificados
+- `client/src/components/modules/rodmar.tsx`: Componente BancoTransactionsTab
+- `client/src/pages/finanzas.tsx`: Optimización de encabezado de filtros
+- `server/routes.ts`: Endpoint `/api/transacciones/banco`
+- `server/db-storage.ts`: Método `getTransaccionesForBanco`
+- `server/add-missing-permissions.ts`: Permiso Banco
+
+#### 📚 Documentación Completa
+Ver `CAMBIOS_RECIENTES_MODULO_FINANZAS_BANCO.md` para detalles completos de ambos cambios.
+
+---
+
 ## 📅 Cambios Recientes (Diciembre 2025 - Enero 2025)
 
 ### 🔄 v2.0.1 - Migración Automática de Volqueteros y Transacciones (Diciembre 2025)
