@@ -2,7 +2,7 @@
  * Utilidades para determinar módulos disponibles según permisos
  */
 
-export type Module = "principal" | "minas" | "compradores" | "volqueteros" | "transacciones" | "rodmar";
+export type Module = "principal" | "minas" | "compradores" | "volqueteros" | "finanzas" | "rodmar";
 
 /**
  * Mapeo de módulos a sus permisos requeridos
@@ -12,7 +12,7 @@ export const modulePermissions: Record<Module, string> = {
   minas: "module.MINAS.view",
   compradores: "module.COMPRADORES.view",
   volqueteros: "module.VOLQUETEROS.view",
-  transacciones: "module.TRANSACCIONES.view",
+  finanzas: "module.TRANSACCIONES.view",
   rodmar: "module.RODMAR.view",
 };
 
@@ -25,7 +25,7 @@ export const modulePriority: Module[] = [
   "minas",
   "compradores",
   "volqueteros",
-  "transacciones",
+  "finanzas",
   "rodmar",
 ];
 
@@ -58,6 +58,9 @@ export function hasModulePermission(userPermissions: string[], module: Module): 
   const requiredPermission = modulePermissions[module];
   return userPermissions.includes(requiredPermission);
 }
+
+
+
 
 
 

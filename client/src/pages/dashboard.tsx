@@ -10,7 +10,7 @@ import { debugLogger } from "@/hooks/useDebugLogger";
 const Minas = lazy(() => import("@/pages/minas"));
 const Compradores = lazy(() => import("@/pages/compradores"));
 const Volqueteros = lazy(() => import("@/pages/volqueteros"));
-const Transacciones = lazy(() => import("@/pages/transacciones"));
+const Finanzas = lazy(() => import("@/pages/finanzas"));
 const RodMar = lazy(() => import("@/components/modules/rodmar"));
 import RegisterCargueModal from "@/components/forms/register-cargue-modal";
 import RegisterDescargueModal from "@/components/forms/register-descargue-modal";
@@ -28,7 +28,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { getAuthToken } from "@/hooks/useAuth";
 import { hasModulePermission, getFirstAvailableModule } from "@/lib/module-utils";
 
-type Module = "principal" | "minas" | "compradores" | "volqueteros" | "transacciones" | "rodmar";
+type Module = "principal" | "minas" | "compradores" | "volqueteros" | "finanzas" | "rodmar";
 
 interface DashboardProps {
   initialModule?: Module;
@@ -97,7 +97,7 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
         minas: "/minas",
         compradores: "/compradores",
         volqueteros: "/volqueteros",
-        transacciones: "/transacciones",
+        finanzas: "/finanzas",
         rodmar: "/rodmar",
       };
 
@@ -329,9 +329,9 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     
     // Manejar notificación de transacción completada
     if (isCompletedNotification && transactionId) {
-      // Cambiar al módulo de transacciones si no está ya ahí
-      if (activeModule !== 'transacciones') {
-        setActiveModule('transacciones');
+      // Cambiar al módulo de finanzas si no está ya ahí
+      if (activeModule !== 'finanzas') {
+        setActiveModule('finanzas');
       }
       
       // Buscar la transacción completada en todas las transacciones
@@ -368,9 +368,9 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     }
     
     if (pendingParam === 'true') {
-      // Cambiar al módulo de transacciones si no está ya ahí
-      if (activeModule !== 'transacciones') {
-        setActiveModule('transacciones');
+      // Cambiar al módulo de finanzas si no está ya ahí
+      if (activeModule !== 'finanzas') {
+        setActiveModule('finanzas');
       }
       
       // Invalidar y refetchear pendientes en background (no bloqueante) para mantener caché actualizado
@@ -476,9 +476,9 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     
     // Manejar notificación de transacción completada
     if (isCompletedNotification && transactionId) {
-      // Cambiar al módulo de transacciones si no está ya ahí
-      if (activeModule !== 'transacciones') {
-        setActiveModule('transacciones');
+      // Cambiar al módulo de finanzas si no está ya ahí
+      if (activeModule !== 'finanzas') {
+        setActiveModule('finanzas');
       }
       
       // Buscar la transacción completada en todas las transacciones
@@ -506,9 +506,9 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     }
     
     if (pendingParam) {
-      // Cambiar al módulo de transacciones si no está ya ahí
-      if (activeModule !== 'transacciones') {
-        setActiveModule('transacciones');
+      // Cambiar al módulo de finanzas si no está ya ahí
+      if (activeModule !== 'finanzas') {
+        setActiveModule('finanzas');
       }
       
       // Invalidar y refetchear pendientes en background (no bloqueante) para mantener caché actualizado
@@ -611,9 +611,9 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     const pendingParam = url.includes('pending=true') || isPendingNotification;
     
     if (pendingParam) {
-      // Cambiar al módulo de transacciones si no está ya ahí
-      if (activeModule !== 'transacciones') {
-        setActiveModule('transacciones');
+      // Cambiar al módulo de finanzas si no está ya ahí
+      if (activeModule !== 'finanzas') {
+        setActiveModule('finanzas');
       }
       
       // Invalidar y refetchear pendientes en background (no bloqueante) para mantener caché actualizado
@@ -697,9 +697,9 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
     
     // Manejar notificación de transacción completada
     if (isCompletedNotification && transactionId) {
-      // Cambiar al módulo de transacciones si no está ya ahí
-      if (activeModule !== 'transacciones') {
-        setActiveModule('transacciones');
+      // Cambiar al módulo de finanzas si no está ya ahí
+      if (activeModule !== 'finanzas') {
+        setActiveModule('finanzas');
       }
       
       // Buscar la transacción completada directamente en el servidor (ya optimizado)
@@ -853,10 +853,10 @@ export default function Dashboard({ initialModule = "principal" }: DashboardProp
             <Volqueteros />
           </Suspense>
         );
-      case "transacciones":
+      case "finanzas":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <Transacciones 
+            <Finanzas 
               onOpenTransaction={() => setShowTransactionModal(true)} 
               hideBottomNav={true}
             />

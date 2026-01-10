@@ -164,3 +164,6 @@ El map ahora incluye múltiples variaciones para cada cuenta:
 - Los logs de debugging en `getRodmarNombreFromMap` están desactivados por defecto. Para activarlos, agregar `DEBUG_RODMAR=true` en el archivo `.env` del servidor.
 - La función `mapRodmarIdToNumeric` en el frontend se ejecuta cada vez que se carga una transacción, pero está memoizada para evitar recreaciones innecesarias.
 - El mapeo de `rodmarCuentasMap` se crea una vez por llamada a la función que lo necesita, optimizando el rendimiento.
+
+
+

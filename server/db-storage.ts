@@ -5542,6 +5542,130 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  // Optimización: Obtener transacciones Banco con query SQL directa (sin cargar todas las transacciones)
+  async getTransaccionesForBanco(userId?: string, options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    fechaDesde?: string;
+    fechaHasta?: string;
+    includeHidden?: boolean;
+  }): Promise<{
+    data: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
+  }> {
+    return wrapDbOperation(async () => {
+      const startTime = Date.now();
+      const page = options?.page || 1;
+      const limit = options?.limit || 50;
+      const search = options?.search || '';
+      const fechaDesde = options?.fechaDesde || '';
+      const fechaHasta = options?.fechaHasta || '';
+      
+      // Construir condiciones WHERE para SQL
+      const conditions = [
+        or(
+          eq(transacciones.deQuienTipo, 'banco'),
+          eq(transacciones.paraQuienTipo, 'banco')
+        )
+      ];
+      
+      if (userId) {
+        conditions.push(eq(transacciones.userId, userId));
+      }
+      
+      if (fechaDesde) {
+        conditions.push(sql`${transacciones.fecha} >= ${fechaDesde}::date`);
+      }
+      
+      if (fechaHasta) {
+        conditions.push(sql`${transacciones.fecha} <= ${fechaHasta}::date`);
+      }
+      
+      // Query principal con paginación en SQL
+      const offset = (page - 1) * limit;
+      
+      // Query para obtener total de registros
+      const [totalResult] = await db
+        .select({ count: sql<number>`COUNT(*)::int` })
+        .from(transacciones)
+        .where(and(...conditions));
+      
+      const total = totalResult?.count || 0;
+      
+      // Query para obtener los datos paginados
+      let query = db
+        .select({
+          id: transacciones.id,
+          deQuienTipo: transacciones.deQuienTipo,
+          deQuienId: transacciones.deQuienId,
+          paraQuienTipo: transacciones.paraQuienTipo,
+          paraQuienId: transacciones.paraQuienId,
+          postobonCuenta: transacciones.postobonCuenta,
+          concepto: transacciones.concepto,
+          valor: transacciones.valor,
+          fecha: transacciones.fecha,
+          horaInterna: transacciones.horaInterna,
+          formaPago: transacciones.formaPago,
+          comentario: transacciones.comentario,
+          tipoTransaccion: transacciones.tipoTransaccion,
+          estado: transacciones.estado,
+          detalle_solicitud: transacciones.detalle_solicitud,
+          codigo_solicitud: transacciones.codigo_solicitud,
+          tiene_voucher: transacciones.tiene_voucher,
+          userId: transacciones.userId,
+        })
+        .from(transacciones)
+        .where(and(...conditions))
+        .orderBy(desc(transacciones.fecha), desc(transacciones.horaInterna))
+        .limit(limit)
+        .offset(offset);
+      
+      let data = await query;
+      
+      // Aplicar filtro de búsqueda en memoria (si es necesario)
+      // Nota: Idealmente esto también debería estar en SQL, pero por simplicidad lo hacemos aquí
+      if (search.trim()) {
+        const searchLower = search.toLowerCase();
+        data = data.filter((t: any) => {
+          const fechaString = String(t.fecha);
+          const fechaDirecta = t.fecha instanceof Date 
+            ? t.fecha.toISOString().split('T')[0]
+            : fechaString.includes('T') 
+                ? fechaString.split('T')[0] 
+                : fechaString;
+          
+          return (
+            t.concepto?.toLowerCase().includes(searchLower) ||
+            t.comentario?.toLowerCase().includes(searchLower) ||
+            t.valor?.toString().includes(searchLower) ||
+            fechaDirecta.includes(searchLower)
+          );
+        });
+      }
+      
+      const endTime = Date.now();
+      console.log(`⏱️  [PERF] ⚡ getTransaccionesForBanco: ${endTime - startTime}ms (${data.length} transacciones, página ${page})`);
+      
+      return {
+        data,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasMore: page < Math.ceil(total / limit),
+        },
+      };
+    });
+  }
+
   // Optimización: Obtener transacciones Postobon con query SQL directa (sin cargar todas las transacciones)
   async getTransaccionesForPostobon(userId?: string, options?: {
     page?: number;

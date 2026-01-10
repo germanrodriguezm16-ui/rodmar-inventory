@@ -1,4 +1,4 @@
-import { Home, Mountain, Building2, Truck, ArrowUpDown, User } from "lucide-react";
+import { Home, Mountain, Building2, Truck, DollarSign, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGlobalNavigation } from "@/hooks/use-global-navigation";
 import { useNavigationVisibility } from "@/hooks/use-navigation-visibility";
@@ -6,7 +6,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 
 interface BottomNavigationProps {
   activeModule?: string;
-  onModuleChange?: (module: "principal" | "minas" | "compradores" | "volqueteros" | "transacciones" | "rodmar") => void;
+  onModuleChange?: (module: "principal" | "minas" | "compradores" | "volqueteros" | "finanzas" | "rodmar") => void;
 }
 
 export default function BottomNavigation({ activeModule, onModuleChange }: BottomNavigationProps) {
@@ -28,7 +28,7 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
     minas: "module.MINAS.view",
     compradores: "module.COMPRADORES.view",
     volqueteros: "module.VOLQUETEROS.view",
-    transacciones: "module.TRANSACCIONES.view",
+    finanzas: "module.TRANSACCIONES.view",
     rodmar: "module.RODMAR.view",
   };
   
@@ -37,7 +37,7 @@ export default function BottomNavigation({ activeModule, onModuleChange }: Botto
     { id: "minas", icon: Mountain, label: "Minas" },
     { id: "compradores", icon: Building2, label: "Compradores" },
     { id: "volqueteros", icon: Truck, label: "Volqueteros" },
-    { id: "transacciones", icon: ArrowUpDown, label: "Transacc" },
+    { id: "finanzas", icon: DollarSign, label: "Finanzas" },
     { id: "rodmar", icon: User, label: "RodMar" },
   ];
   

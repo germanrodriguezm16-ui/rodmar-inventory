@@ -105,23 +105,17 @@ export default function RodMar() {
     if (tabParam === 'cuentas' && has("module.RODMAR.accounts.view")) {
       return 'cuentas';
     }
-    if (tabParam === 'balances' && has("module.RODMAR.balances.view")) {
-      return 'balances';
-    }
-    if (tabParam === 'financiero' && has("module.RODMAR.balances.view")) {
-      return 'financiero';
-    }
-    if (tabParam === 'ganancias' && has("module.RODMAR.balances.view")) {
-      return 'ganancias';
-    }
     if (tabParam === 'lcdm' && has("module.RODMAR.LCDM.view")) {
       return 'lcdm';
+    }
+    if (tabParam === 'banco' && has("module.RODMAR.Banco.view")) {
+      return 'banco';
     }
     if (tabParam === 'postobon' && has("module.RODMAR.Postobon.view")) {
       return 'postobon';
     }
     // Default: cuentas si tiene permisos, sino el primero disponible
-    return has("module.RODMAR.accounts.view") ? 'cuentas' : 'balances';
+    return has("module.RODMAR.accounts.view") ? 'cuentas' : (has("module.RODMAR.tab.TERCEROS.view") ? 'terceros' : (has("module.RODMAR.LCDM.view") ? 'lcdm' : (has("module.RODMAR.Banco.view") ? 'banco' : 'postobon')));
   };
 
   const [activeTab, setActiveTab] = useState<string>(getInitialTab());
@@ -224,6 +218,53 @@ export default function RodMar() {
     enabled: has("module.RODMAR.LCDM.view"), // Solo cargar si tiene permiso
   });
   const lcdmTransactions = lcdmTransactionsData || [];
+
+  // Obtener transacciones específicas de Banco
+  const { data: bancoTransactionsData } = useQuery({
+    queryKey: ["/api/transacciones/banco?includeHidden=true"],
+    queryFn: async ({ queryKey }) => {
+      const url = queryKey[0] as string;
+      const fullUrl = apiUrl(url);
+      
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      };
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        console.warn('[Banco] ⚠️ No token available!');
+        removeAuthToken();
+        throw new Error('No autenticado');
+      }
+      
+      const response = await fetch(fullUrl, {
+        credentials: "include",
+        headers,
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          removeAuthToken();
+          throw new Error('No autenticado');
+        }
+        throw new Error(`Error: ${response.status}`);
+      }
+      
+      const data = await parseJsonWithDateInterception(response);
+      // El backend devuelve { data: [...], pagination: {...} } o directamente un array si includeHidden=true
+      return Array.isArray(data) ? data : (data.data || []);
+    },
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    enabled: has("module.RODMAR.Banco.view"), // Solo cargar si tiene permiso
+  });
+
+  const bancoTransactions = bancoTransactionsData || [];
 
   // Obtener transacciones específicas de Postobón
   const { data: postobonTransactionsData } = useQuery({
@@ -487,11 +528,9 @@ export default function RodMar() {
                 const visibleTabs = [
                   has("module.RODMAR.accounts.view"), // cuentas
                   has("module.RODMAR.tab.TERCEROS.view"), // terceros
-                  has("module.RODMAR.balances.view"),
-                  has("module.RODMAR.balances.view"), // financiero usa balances
                   has("module.RODMAR.LCDM.view"),
+                  has("module.RODMAR.Banco.view"),
                   has("module.RODMAR.Postobon.view"),
-                  has("module.RODMAR.balances.view"), // ganancias usa balances
                 ].filter(Boolean).length;
                 return visibleTabs === 1 ? "grid-cols-1" :
                        visibleTabs === 2 ? "grid-cols-2" :
@@ -510,22 +549,14 @@ export default function RodMar() {
                   </TabsTrigger>
                 </>
               )}
-              {has("module.RODMAR.balances.view") && (
-                <>
-                  <TabsTrigger value="balances" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
-                    Balances
-                  </TabsTrigger>
-                  <TabsTrigger value="financiero" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
-                    Estado
-                  </TabsTrigger>
-                  <TabsTrigger value="ganancias" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
-                    Ganancias
-                  </TabsTrigger>
-                </>
-              )}
               {has("module.RODMAR.LCDM.view") && (
                 <TabsTrigger value="lcdm" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
                   LCDM
+                </TabsTrigger>
+              )}
+              {has("module.RODMAR.Banco.view") && (
+                <TabsTrigger value="banco" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
+                  Banco
                 </TabsTrigger>
               )}
               {has("module.RODMAR.Postobon.view") && (
@@ -707,215 +738,6 @@ export default function RodMar() {
               </div>
             </TabsContent>
 
-            {/* Tab: Balances */}
-            <TabsContent value="balances" className="mt-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Calculator className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-lg font-semibold text-foreground">Balances Consolidados</h3>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Balance de Minas */}
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium text-green-800 dark:text-green-200 flex items-center gap-2">
-                          <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-                          Minas
-                        </h4>
-                        <Badge variant="outline" className="text-xs text-green-700">
-                          {balanceMinas.balance >= 0 ? 'Positivo' : 'Negativo'}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div className="text-center">
-                          <p className="text-green-600 font-medium">+${balanceMinas.positivos.toLocaleString()}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-red-600 font-medium">-${balanceMinas.negativos.toLocaleString()}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className={`font-bold ${
-                            balanceMinas.balance > 0 ? 'text-green-600' : 
-                            balanceMinas.balance < 0 ? 'text-red-600' : 'text-gray-600'
-                          }`}>
-                            ${balanceMinas.balance.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Balance de Compradores */}
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2">
-                          <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                          Compradores
-                        </h4>
-                        <Badge variant="outline" className="text-xs text-blue-700">
-                          {balanceCompradores.balance >= 0 ? 'Positivo' : 'Negativo'}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div className="text-center">
-                          <p className="text-green-600 font-medium">+${balanceCompradores.positivos.toLocaleString()}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-red-600 font-medium">-${balanceCompradores.negativos.toLocaleString()}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className={`font-bold ${
-                            balanceCompradores.balance > 0 ? 'text-green-600' : 
-                            balanceCompradores.balance < 0 ? 'text-red-600' : 'text-gray-600'
-                          }`}>
-                            ${balanceCompradores.balance.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Balance de Volqueteros */}
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
-                          <div className="w-3 h-3 bg-yellow-600 rounded-full"></div>
-                          Volqueteros
-                        </h4>
-                        <Badge variant="outline" className="text-xs text-yellow-700">
-                          {balanceVolqueteros.balance >= 0 ? 'Positivo' : 'Negativo'}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div className="text-center">
-                          <p className="text-green-600 font-medium">+${balanceVolqueteros.positivos.toLocaleString()}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-red-600 font-medium">-${balanceVolqueteros.negativos.toLocaleString()}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className={`font-bold ${
-                            balanceVolqueteros.balance > 0 ? 'text-green-600' : 
-                            balanceVolqueteros.balance < 0 ? 'text-red-600' : 'text-gray-600'
-                          }`}>
-                            ${balanceVolqueteros.balance.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* Tab: Mi Estado Financiero */}
-            <TabsContent value="financiero" className="mt-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <BarChart3 className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-lg font-semibold text-foreground">Estado Financiero General</h3>
-                </div>
-                
-                {/* Balance Consolidado */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Calculator className="w-4 h-4 text-blue-600" />
-                      Balance Financiero Consolidado
-                      <Badge variant="secondary" className="text-xs">
-                        General
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                      <div className="bg-green-50 p-2 rounded text-center">
-                        <p className="text-xs text-green-700">Cuentas RodMar</p>
-                        <p className="text-sm font-bold text-green-700">
-                          {formatCurrency(cuentasRodMar.reduce((total: number, cuenta: any) => total + cuenta.balance, 0))}
-                        </p>
-                      </div>
-                      <div className="bg-blue-50 p-2 rounded text-center">
-                        <p className="text-xs text-blue-700">Socios</p>
-                        <p className="text-sm font-bold text-blue-700">
-                          {formatCurrency(balanceMinas.balance + balanceCompradores.balance + balanceVolqueteros.balance)}
-                        </p>
-                      </div>
-                      <div className="bg-purple-50 p-2 rounded text-center">
-                        <p className="text-xs text-purple-700">Balance Total</p>
-                        <p className="text-sm font-bold text-purple-700">
-                          {formatCurrency(cuentasRodMar.reduce((total: number, cuenta: any) => total + cuenta.balance, 0) + balanceMinas.balance + balanceCompradores.balance + balanceVolqueteros.balance)}
-                        </p>
-                      </div>
-                      <div className="bg-gray-50 p-2 rounded text-center">
-                        <p className="text-xs text-gray-700">Cuentas</p>
-                        <p className="text-sm font-bold text-gray-700">
-                          {cuentasRodMar.length} activas
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Métricas Financieras */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-green-600" />
-                      Resumen de Operaciones
-                      <Badge variant="outline" className="text-xs">
-                        Totales
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      <div className="bg-green-50 p-2 rounded text-center">
-                        <p className="text-xs text-green-700">Ventas</p>
-                        <p className="text-sm font-bold text-green-700">
-                          ${parseFloat(financialSummary?.totalVentas || '0').toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="bg-red-50 p-2 rounded text-center">
-                        <p className="text-xs text-red-700">Compras</p>
-                        <p className="text-sm font-bold text-red-700">
-                          ${parseFloat(financialSummary?.totalCompras || '0').toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="bg-yellow-50 p-2 rounded text-center">
-                        <p className="text-xs text-yellow-700">Fletes</p>
-                        <p className="text-sm font-bold text-yellow-700">
-                          ${parseFloat(financialSummary?.totalFletes || '0').toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="bg-blue-50 p-2 rounded text-center">
-                        <p className="text-xs text-blue-700">Ganancia</p>
-                        <p className="text-sm font-bold text-blue-700">
-                          ${parseFloat(financialSummary?.gananciaNeta || '0').toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Gráfico de Barras */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Análisis Visual</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64">
-                      <Bar data={chartData} options={chartOptions} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
             {/* Tab: LCDM */}
             <TabsContent value="lcdm" className="mt-6">
               <div className="space-y-4">
@@ -943,6 +765,21 @@ export default function RodMar() {
                 </Tabs>
               </div>
             </TabsContent>
+
+            {/* Tab: Banco */}
+            {has("module.RODMAR.Banco.view") && (
+              <TabsContent value="banco" className="mt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Banknote className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-foreground">Banco</h3>
+                  </div>
+
+                  {/* Transacciones Banco (sin subpestañas) */}
+                  <BancoTransactionsTab transactions={bancoTransactions || []} />
+                </div>
+              </TabsContent>
+            )}
 
             {/* Tab: Postobón */}
             <TabsContent value="postobon" className="mt-6">
@@ -1001,88 +838,6 @@ export default function RodMar() {
                     <PostobonBalanceTab transactions={postobonTransactions || []} />
                   </TabsContent>
                 </Tabs>
-              </div>
-            </TabsContent>
-
-            {/* Tab: Ganancias */}
-            <TabsContent value="ganancias" className="mt-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-lg font-semibold text-foreground">Análisis de Ganancias</h3>
-                </div>
-
-                {/* Resumen de Ganancias */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Resumen de Ganancias Netas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                      <div className="bg-green-50 p-2 rounded text-center">
-                        <p className="text-xs text-green-700">Ventas</p>
-                        <p className="text-sm font-bold text-green-700">
-                          ${parseFloat(financialSummary?.totalVentas || '0').toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="bg-red-50 p-2 rounded text-center">
-                        <p className="text-xs text-red-700">Gastos</p>
-                        <p className="text-sm font-bold text-red-700">
-                          ${(parseFloat(financialSummary?.totalCompras || '0') + parseFloat(financialSummary?.totalFletes || '0')).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="bg-blue-50 p-2 rounded text-center">
-                        <p className="text-xs text-blue-700">Ganancia</p>
-                        <p className="text-sm font-bold text-blue-700">
-                          ${parseFloat(financialSummary?.gananciaNeta || '0').toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="bg-yellow-50 p-2 rounded text-center">
-                        <p className="text-xs text-yellow-700">Margen</p>
-                        <p className="text-sm font-bold text-yellow-700">
-                          {financialSummary?.totalVentas ? 
-                            ((parseFloat(financialSummary.gananciaNeta || '0') / parseFloat(financialSummary.totalVentas)) * 100).toFixed(1) 
-                            : '0.0'}%
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Desglose de Componentes */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Desglose de Componentes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center py-1 px-2 bg-green-50 rounded">
-                        <span className="text-sm text-green-700">Total Ventas</span>
-                        <span className="text-sm font-bold text-green-700">
-                          ${parseFloat(financialSummary?.totalVentas || '0').toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center py-1 px-2 bg-red-50 rounded">
-                        <span className="text-sm text-red-700">Total Compras</span>
-                        <span className="text-sm font-bold text-red-700">
-                          -${parseFloat(financialSummary?.totalCompras || '0').toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center py-1 px-2 bg-yellow-50 rounded">
-                        <span className="text-sm text-yellow-700">Total Fletes</span>
-                        <span className="text-sm font-bold text-yellow-700">
-                          -${parseFloat(financialSummary?.totalFletes || '0').toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center py-1 px-2 bg-blue-50 rounded border-2 border-blue-200">
-                        <span className="text-sm text-blue-700 font-medium">Ganancia Neta</span>
-                        <span className="text-sm font-bold text-blue-700">
-                          ${parseFloat(financialSummary?.gananciaNeta || '0').toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             </TabsContent>
           </Tabs>
@@ -2788,6 +2543,731 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
       />
 
       {/* Modal de transacción temporal - Como en minas */}
+      <NewTransactionModal
+        open={showTemporalTransaction}
+        onClose={() => setShowTemporalTransaction(false)}
+        onTemporalSubmit={handleTemporalSubmit}
+        isTemporalMode={true}
+      />
+
+      {/* Modales de acciones */}
+      <EditTransactionModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedTransaction(null);
+        }}
+        transaction={selectedTransaction}
+      />
+
+      <DeleteTransactionModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedTransaction(null);
+        }}
+        transaction={selectedTransaction}
+      />
+
+      <TransactionDetailModal
+        open={showDetailModal}
+        onOpenChange={setShowDetailModal}
+        transaction={selectedTransaction}
+      />
+    </div>
+  );
+}
+
+// Componente para mostrar transacciones de Banco
+function BancoTransactionsTab({ transactions }: { transactions: any[] }) {
+  // Estados para filtros y ordenamiento idénticos a LCDM
+  const [searchTerm, setSearchTerm] = useState("");
+  const [fechaFilterType, setFechaFilterType] = useState<DateFilterType>("todos");
+  const [fechaFilterValue, setFechaFilterValue] = useState("");
+  const [fechaFilterValueEnd, setFechaFilterValueEnd] = useState("");
+  const [sortByFecha, setSortByFecha] = useState<"asc" | "desc" | "ninguno">("desc");
+  const [sortByValor, setSortByValor] = useState<"asc" | "desc" | "ninguno">("ninguno");
+  
+  // Paginación con memoria en localStorage
+  const { currentPage, setCurrentPage, pageSize, setPageSize, getLimitForServer } = usePagination({
+    storageKey: "banco-transactions-pageSize",
+    defaultPageSize: 50,
+  });
+  
+  // Estado para modal de imagen
+  const [showImageModal, setShowImageModal] = useState(false);
+  
+  // Estados para transacciones temporales - Como en LCDM
+  const [transaccionesTemporales, setTransaccionesTemporales] = useState<any[]>([]);
+  const [showTemporalTransaction, setShowTemporalTransaction] = useState(false);
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Hook para manejar transacciones ocultas de forma local y temporal
+  const {
+    hideTransaction: hideTransactionLocal,
+    showAllHidden: showAllHiddenLocal,
+    getHiddenCount: getHiddenTransactionsCount,
+    filterVisible: filterVisibleTransactions,
+  } = useHiddenTransactions('banco');
+
+  // Estados para modales de acciones
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+
+  // Usar función centralizada directamente (ya devuelve strings YYYY-MM-DD)
+  const dateRange = useMemo(() => {
+    return getDateRangeFromFilter(fechaFilterType, fechaFilterValue, fechaFilterValueEnd);
+  }, [fechaFilterType, fechaFilterValue, fechaFilterValueEnd]);
+
+  // Obtener transacciones de Banco con paginación del servidor (sin filtros)
+  const { 
+    data: transactionsData,
+    isLoading: isLoadingTransactions
+  } = useQuery<{
+    data: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
+    hiddenCount?: number;
+  }>({
+    queryKey: [
+      "/api/transacciones/banco", 
+      currentPage, 
+      pageSize
+    ],
+    queryFn: async () => {
+      // Solo enviar paginación al servidor (sin filtros)
+      const limit = getLimitForServer();
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: limit.toString(),
+      });
+      
+      const url = apiUrl(`/api/transacciones/banco?${params.toString()}`);
+      console.log('[Banco] Fetching transactions from:', url);
+      
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(url, {
+        credentials: "include",
+        headers,
+      });
+      console.log('[Banco] Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        console.error('[Banco] Error response:', errorText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('[Banco] Transactions received:', data?.data?.length || 0);
+      return data;
+    },
+    staleTime: 300000, // 5 minutos - cache persistente (WebSockets actualiza en tiempo real)
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const allBancoTransactions = transactionsData?.data || [];
+  const pagination = transactionsData?.pagination;
+  const hiddenBancoCount = getHiddenTransactionsCount();
+
+  // Filtrado client-side sobre la página activa
+  const bancoTransactions = useMemo(() => {
+    let filtered = [...allBancoTransactions];
+
+    // Filtro de búsqueda (texto) - buscar en concepto, comentario y monto (valor)
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      const searchNumeric = searchTerm.replace(/[^\d]/g, ''); // Solo números para búsqueda en valor
+      filtered = filtered.filter(t => {
+        const concepto = (t.concepto || '').toLowerCase();
+        const comentario = (t.comentario || '').toLowerCase();
+        const valor = String(t.valor || '').replace(/[^\d]/g, ''); // Solo números del valor
+        const deQuien = (t.deQuien || '').toLowerCase();
+        const paraQuien = (t.paraQuien || '').toLowerCase();
+        return concepto.includes(searchLower) || 
+               comentario.includes(searchLower) ||
+               (searchNumeric && valor.includes(searchNumeric)) ||
+               deQuien.includes(searchLower) ||
+               paraQuien.includes(searchLower);
+      });
+    }
+
+    // Filtro de fecha usando función centralizada
+    if (dateRange) {
+      filtered = filterTransactionsByDateRange(filtered, dateRange);
+    }
+
+    // Ordenamiento
+    if (sortByFecha !== "ninguno") {
+      filtered.sort((a, b) => {
+        const fechaA = new Date(a.fecha).getTime();
+        const fechaB = new Date(b.fecha).getTime();
+        return sortByFecha === "asc" ? fechaA - fechaB : fechaB - fechaA;
+      });
+    }
+
+    if (sortByValor !== "ninguno") {
+      filtered.sort((a, b) => {
+        const valorA = Math.abs(a.valor || 0);
+        const valorB = Math.abs(b.valor || 0);
+        return sortByValor === "asc" ? valorA - valorB : valorB - valorA;
+      });
+    }
+
+    return filtered;
+  }, [allBancoTransactions, searchTerm, dateRange, sortByFecha, sortByValor]);
+
+  // Prefetching automático en segundo plano (solo si no está en modo "todo")
+  useEffect(() => {
+    if (pagination && currentPage === 1 && pagination.totalPages > 1 && pageSize !== "todo") {
+      const prefetchPages = Math.min(pagination.totalPages, 10);
+      setTimeout(() => {
+        for (let page = 2; page <= prefetchPages; page++) {
+          const limit = getLimitForServer();
+          const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString(),
+          });
+          
+          queryClient.prefetchQuery({
+            queryKey: [
+              "/api/transacciones/banco", 
+              page, 
+              typeof pageSize === "number" ? pageSize : 999999
+            ],
+            queryFn: async () => {
+              const { getAuthToken } = await import('@/hooks/useAuth');
+              const token = getAuthToken();
+              const headers: Record<string, string> = {};
+              if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+              }
+              const response = await fetch(apiUrl(`/api/transacciones/banco?${params.toString()}`), {
+                credentials: "include",
+                headers,
+              });
+              if (!response.ok) throw new Error('Error al obtener transacciones');
+              return response.json();
+            },
+            staleTime: 300000,
+          });
+        }
+      }, 100);
+    }
+  }, [pagination, currentPage, pageSize, queryClient, getLimitForServer]);
+
+  // Función para manejar transacciones temporales - Como en LCDM
+  const handleTemporalSubmit = (formData: any) => {
+    const nuevaTransacionTemporal = {
+      id: `temporal-${Date.now()}`,
+      fecha: formData.fecha,
+      concepto: formData.concepto || "Transacción temporal",
+      valor: formData.valor,
+      deQuienTipo: formData.deQuienTipo,
+      deQuienId: formData.deQuienId,
+      paraQuienTipo: formData.paraQuienTipo,
+      paraQuienId: formData.paraQuienId,
+      comentario: formData.comentario || "",
+      tipo: "Temporal",
+      voucher: formData.voucher || "",
+      formaPago: formData.formaPago || "",
+      createdAt: new Date().toISOString(),
+      horaInterna: new Date().toISOString(),
+      tipoSocio: "banco" as const,
+      socioId: "banco"
+    };
+
+    // Agregar a la lista de transacciones temporales
+    setTransaccionesTemporales(prev => [...prev, nuevaTransacionTemporal]);
+    
+    // Cerrar modal
+    setShowTemporalTransaction(false);
+    
+    // Mostrar notificación
+    toast({
+      title: "Transacción temporal creada",
+      description: "La transacción temporal se ha agregado correctamente. Se eliminará al salir de la vista.",
+      variant: "default"
+    });
+  };
+
+  // Función para eliminar transacción temporal
+  const handleDeleteTemporalTransaction = (temporalId: string) => {
+    setTransaccionesTemporales(prev => prev.filter(t => t.id !== temporalId));
+    toast({
+      title: "Transacción temporal eliminada",
+      description: "La transacción temporal se ha eliminado correctamente.",
+    });
+  };
+
+  // Función para ocultar transacciones localmente (sin llamar a la API)
+  const handleHideTransaction = (transactionId: number) => {
+    hideTransactionLocal(transactionId);
+    toast({
+      title: "Transacción ocultada",
+      description: "La transacción se ha ocultado correctamente"
+    });
+  };
+
+  // Función para mostrar todas las transacciones ocultas localmente
+  const handleShowAllHidden = () => {
+    showAllHiddenLocal();
+    toast({
+      description: "Todas las transacciones ocultas ahora son visibles",
+      duration: 2000,
+    });
+  };
+
+
+  // Resetear a página 1 cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, fechaFilterType, fechaFilterValue, fechaFilterValueEnd]);
+
+  // Combinar transacciones normales con temporales y filtrar las ocultas localmente
+  const todasLasTransacciones = useMemo(() => {
+    return [...bancoTransactions, ...transaccionesTemporales];
+  }, [bancoTransactions, transaccionesTemporales]);
+
+  // Filtrar transacciones ocultas localmente
+  const transaccionesFiltradas = useMemo(() => {
+    return filterVisibleTransactions(todasLasTransacciones);
+  }, [todasLasTransacciones, filterVisibleTransactions]);
+
+  return (
+    <div className="space-y-3">
+      {/* Encabezado compacto de transacciones optimizado para móviles - Estilo idéntico a LCDM */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <CardContent className="p-2 sm:p-4">
+          <div className="flex flex-col gap-2">
+            {/* Primera línea: Título */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="p-1 sm:p-2 bg-blue-100 rounded-lg">
+                  <Banknote className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-blue-900">Transacciones Banco</h3>
+                  <p className="text-xs sm:text-sm text-blue-600 hidden sm:block">Historial financiero bancario</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-1">
+                {/* Botón de descarga de imagen */}
+              <Button
+                onClick={() => setShowImageModal(true)}
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
+                title={`Descargar imagen (máx. 100 de ${transaccionesFiltradas.length} transacciones)`}
+              >
+                <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Imagen</span>
+                <span className="sm:hidden">IMG</span>
+              </Button>
+
+                {/* Botón de transacción temporal - Como en LCDM */}
+                <Button
+                  onClick={() => setShowTemporalTransaction(true)}
+                  size="sm"
+                  variant="outline"
+                  className="bg-orange-50 hover:bg-orange-100 border-orange-600 text-orange-600 h-8 px-3 text-xs flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span>TEMP</span>
+                </Button>
+              </div>
+            </div>
+            
+            {/* Segunda línea: Contador de registros */}
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="text-blue-700 font-medium text-xs sm:text-sm">{transaccionesFiltradas.length} registros</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Controles de filtros optimizados para móviles - Idéntico a LCDM */}
+      <Card>
+        <CardContent className="p-2">
+          <div className="space-y-2">
+            {/* Fila única compacta: Búsqueda, filtro de fecha y botones */}
+            <div className="flex gap-1 items-center">
+              {/* Búsqueda compacta */}
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3" />
+                <Input
+                  placeholder="Buscar..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-7 h-8 text-xs pr-2"
+                />
+              </div>
+              
+              {/* Filtro de fecha compacto */}
+              <div className="w-24 sm:w-32">
+                <Select value={fechaFilterType} onValueChange={(value: DateFilterType) => setFechaFilterType(value)}>
+                  <SelectTrigger className="h-8 text-xs px-2">
+                    <SelectValue placeholder="Fecha" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="exactamente">Exactamente</SelectItem>
+                    <SelectItem value="entre">Entre</SelectItem>
+                    <SelectItem value="despues-de">Después de</SelectItem>
+                    <SelectItem value="antes-de">Antes de</SelectItem>
+                    <SelectItem value="hoy">Hoy</SelectItem>
+                    <SelectItem value="ayer">Ayer</SelectItem>
+                    <SelectItem value="esta-semana">Esta semana</SelectItem>
+                    <SelectItem value="semana-pasada">Semana pasada</SelectItem>
+                    <SelectItem value="este-mes">Este mes</SelectItem>
+                    <SelectItem value="mes-pasado">Mes pasado</SelectItem>
+                    <SelectItem value="este-año">Este año</SelectItem>
+                    <SelectItem value="año-pasado">Año pasado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Botones de ordenamiento ultra-compactos */}
+              <div className="flex gap-0.5">
+                <Button
+                  variant={sortByFecha !== "ninguno" ? "default" : "outline"}
+                  size="sm"
+                  className={`h-8 w-7 p-0 relative ${sortByFecha === "desc" ? 'bg-blue-600 hover:bg-blue-700' : sortByFecha === "asc" ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
+                  title={`Fecha: ${sortByFecha === "desc" ? "Reciente" : sortByFecha === "asc" ? "Antiguo" : "Normal"}`}
+                  onClick={() => {
+                    setSortByValor("ninguno");
+                    setSortByFecha(
+                      sortByFecha === "ninguno" ? "desc" : 
+                      sortByFecha === "desc" ? "asc" : "ninguno"
+                    );
+                  }}
+                >
+                  <CalendarDays className="w-3 h-3" />
+                  {sortByFecha === "asc" && <ArrowUp className="w-1.5 h-1.5 absolute -bottom-0.5 -right-0.5" />}
+                  {sortByFecha === "desc" && <ArrowDown className="w-1.5 h-1.5 absolute -bottom-0.5 -right-0.5" />}
+                </Button>
+
+                <Button
+                  variant={sortByValor !== "ninguno" ? "default" : "outline"}
+                  size="sm"
+                  className={`h-8 w-7 p-0 relative ${sortByValor === "desc" ? 'bg-green-600 hover:bg-green-700' : sortByValor === "asc" ? 'bg-green-500 hover:bg-green-600' : ''}`}
+                  title={`Valor: ${sortByValor === "desc" ? "Mayor" : sortByValor === "asc" ? "Menor" : "Normal"}`}
+                  onClick={() => {
+                    setSortByFecha("ninguno");
+                    setSortByValor(
+                      sortByValor === "ninguno" ? "desc" : 
+                      sortByValor === "desc" ? "asc" : "ninguno"
+                    );
+                  }}
+                >
+                  <DollarSign className="w-3 h-3" />
+                  {sortByValor === "asc" && <ArrowUp className="w-1.5 h-1.5 absolute -bottom-0.5 -right-0.5" />}
+                  {sortByValor === "desc" && <ArrowDown className="w-1.5 h-1.5 absolute -bottom-0.5 -right-0.5" />}
+                </Button>
+
+                {/* Botón mostrar ocultas - Banco */}
+                {hiddenBancoCount > 0 ? (
+                  <Button
+                    onClick={handleShowAllHidden}
+                    size="sm"
+                    className="h-8 px-2 bg-blue-600 hover:bg-blue-700 text-xs"
+                    title={`Mostrar ${hiddenBancoCount} transacciones ocultas`}
+                  >
+                    <Eye className="w-3 h-3 mr-1" />
+                    {hiddenBancoCount}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Segunda fila solo cuando se necesiten inputs de fecha */}
+            {(fechaFilterType === "exactamente" || fechaFilterType === "entre" || fechaFilterType === "despues-de" || fechaFilterType === "antes-de") && (
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={fechaFilterValue}
+                  onChange={(e) => setFechaFilterValue(e.target.value)}
+                  className="flex-1 h-8 text-xs"
+                />
+                {fechaFilterType === "entre" && (
+                  <Input
+                    type="date"
+                    value={fechaFilterValueEnd}
+                    onChange={(e) => setFechaFilterValueEnd(e.target.value)}
+                    className="flex-1 h-8 text-xs"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Balance dinámico basado en transacciones filtradas - considerar origen Banco como positivo */}
+      {(() => {
+        const positivos = transaccionesFiltradas.filter(t => t.deQuienTipo === 'banco');
+        const negativos = transaccionesFiltradas.filter(t => t.paraQuienTipo === 'banco');
+
+        const sumPositivos = positivos.reduce((sum, t) => sum + parseFloat(t.valor || "0"), 0);
+        const sumNegativos = negativos.reduce((sum, t) => sum + parseFloat(t.valor || "0"), 0);
+        const balance = sumPositivos - sumNegativos;
+
+        const formatMoney = (value: number) => {
+          return new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: 'COP',
+            minimumFractionDigits: 0,
+          }).format(Math.abs(value)).replace('COP', '$');
+        };
+
+        return (
+          <Card className="border-gray-200 bg-gray-50">
+            <CardContent className="p-1.5 sm:p-2">
+              <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center">
+                <div className="bg-green-50 rounded px-2 py-1">
+                  <div className="text-green-600 text-xs font-medium">Positivos</div>
+                  <div className="text-green-700 text-xs sm:text-sm font-semibold">
+                    +{positivos.length} {formatMoney(sumPositivos)}
+                  </div>
+                </div>
+                <div className="bg-red-50 rounded px-2 py-1">
+                  <div className="text-red-600 text-xs font-medium">Negativos</div>
+                  <div className="text-red-700 text-xs sm:text-sm font-semibold">
+                    -{negativos.length} {formatMoney(sumNegativos)}
+                  </div>
+                </div>
+                <div className={`rounded px-2 py-1 ${balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <div className={`text-xs font-medium ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>Balance</div>
+                  <div className={`text-xs sm:text-sm font-bold ${balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                    {balance >= 0 ? '+' : '-'}{formatMoney(Math.abs(balance))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Lista de transacciones con tarjetas - Estilo idéntico a LCDM */}
+      {transaccionesFiltradas.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            <Banknote className="mx-auto h-12 w-12 mb-2" />
+            <p>No hay transacciones con Banco</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {transaccionesFiltradas.map((transaccion) => (
+            <Card 
+              key={transaccion.id} 
+              className="border border-gray-200 transition-colors cursor-pointer hover:bg-gray-50"
+              onClick={() => {
+                if (transaccion.tipo !== "Temporal") {
+                  setSelectedTransaction(transaccion);
+                  setShowDetailModal(true);
+                }
+              }}
+            >
+              <CardContent className="p-2 sm:p-3">
+                <div className="flex items-center justify-between gap-2">
+                  {/* Lado izquierdo: Fecha y concepto */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                      <span className="text-xs font-medium text-gray-600">
+                        {(() => {
+                          const dateStr = transaccion.fecha.toString().split('T')[0];
+                          const [year, month, day] = dateStr.split('-');
+                          const shortYear = year.slice(-2);
+                          const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+                          const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+                          const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                          const dayName = dayNames[date.getDay()];
+                          const monthName = monthNames[parseInt(month) - 1];
+                          return `${dayName}. ${day}/${month}/${shortYear}`;
+                        })()}
+                      </span>
+                      {transaccion.tipo === "Temporal" ? (
+                        <Badge variant="outline" className="text-xs px-1 py-0 h-4 text-orange-600 border-orange-600">T</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs px-1 py-0 h-4">M</Badge>
+                      )}
+                      <Badge variant="outline" className="text-xs px-1 py-0 h-4">
+                        {transaccion.deQuienTipo === 'banco' ? 'B→R' : 'R→B'}
+                      </Badge>
+                    </div>
+                    <div className="text-xs sm:text-sm text-gray-900 truncate pr-1">
+                      {transaccion.concepto && transaccion.concepto.includes('data:image') ? 
+                        '[Imagen]' : 
+                        transaccion.tipo === "Temporal" ? 
+                          `${transaccion.concepto} (Temporal)` :
+                          transaccion.concepto
+                      }
+                    </div>
+                    {/* Comentario compacto si existe */}
+                    {transaccion.comentario && transaccion.comentario.trim() && (
+                      <div className="text-xs text-gray-500 mt-0.5 leading-tight">
+                        {transaccion.comentario.length > 50 ? 
+                          `${transaccion.comentario.substring(0, 50)}...` : 
+                          transaccion.comentario
+                        }
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Lado derecho: Valor y botones de acción */}
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className={`font-medium text-xs sm:text-sm text-right min-w-0 ${
+                      transaccion.paraQuienTipo === 'banco' ? 'text-red-600' : 'text-green-600'
+                    }`}>
+                      {(() => {
+                        const valor = parseFloat(transaccion.valor || '0');
+                        const valorText = transaccion.paraQuienTipo === 'banco' ? 
+                          `-$ ${valor.toLocaleString()}` : 
+                          `+$ ${valor.toLocaleString()}`;
+                        return highlightValue(valorText, searchTerm);
+                      })()}
+                    </span>
+
+                    {/* Botones de acción para transacciones manuales */}
+                    {transaccion.tipo !== "Temporal" && typeof transaccion.id === 'number' ? (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-blue-100 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTransaction(transaccion);
+                            setShowEditModal(true);
+                          }}
+                          title="Editar transacción"
+                        >
+                          <Edit className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-red-100 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTransaction(transaccion);
+                            setShowDeleteModal(true);
+                          }}
+                          title="Eliminar transacción"
+                        >
+                          <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-red-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-gray-100 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (typeof transaccion.id === 'number') {
+                              handleHideTransaction(transaccion.id);
+                            }
+                          }}
+                          title="Ocultar transacción"
+                        >
+                          <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-500" />
+                        </Button>
+                      </div>
+                    ) : transaccion.tipo === "Temporal" ? (
+                      <div className="flex items-center gap-1">
+                        <Badge 
+                          variant="outline" 
+                          className="bg-orange-50 border-orange-200 text-orange-700 text-xs px-1 py-0 h-4"
+                        >
+                          T
+                        </Badge>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTemporalTransaction(transaccion.id);
+                          }}
+                          className="w-4 h-4 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center transition-colors"
+                          title="Eliminar transacción temporal"
+                        >
+                          <X className="w-2.5 h-2.5 text-red-600" />
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Controles de paginación - Mostrar siempre, incluso con filtros */}
+      {pagination && (
+        <div className="py-4">
+          <PaginationControls
+            page={currentPage}
+            limit={pageSize}
+            total={transaccionesFiltradas.length} // Mostrar total de transacciones filtradas en la página actual
+            totalPages={pagination.totalPages}
+            hasMore={pagination.hasMore}
+            onPageChange={(newPage) => {
+              setCurrentPage(newPage);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onLimitChange={(newLimit) => {
+              setPageSize(newLimit);
+            }}
+            limitOptions={[10, 20, 50, 100, 200, 500, 1000]}
+          />
+        </div>
+      )}
+
+      {/* Modal de descarga de imagen específico para RodMar */}
+      <RodmarTransaccionesImageModal
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        transactions={transaccionesFiltradas}
+        title="Transacciones Banco"
+        subtitle={(() => {
+          if (fechaFilterType === 'todos') return 'Todas las transacciones';
+          if (fechaFilterType === 'hoy') return 'Transacciones de hoy';
+          if (fechaFilterType === 'ayer') return 'Transacciones de ayer';
+          if (fechaFilterType === 'esta-semana') return 'Transacciones de esta semana';
+          if (fechaFilterType === 'semana-pasada') return 'Transacciones de la semana pasada';
+          if (fechaFilterType === 'este-mes') return 'Transacciones de este mes';
+          if (fechaFilterType === 'mes-pasado') return 'Transacciones del mes pasado';
+          if (fechaFilterType === 'este-año') return 'Transacciones de este año';
+          if (fechaFilterType === 'año-pasado') return 'Transacciones del año pasado';
+          if (fechaFilterType === 'exactamente' && fechaFilterValue) return `Transacciones del ${fechaFilterValue}`;
+          if (fechaFilterType === 'entre' && fechaFilterValue && fechaFilterValueEnd) return `Transacciones entre ${fechaFilterValue} y ${fechaFilterValueEnd}`;
+          if (fechaFilterType === 'despues-de' && fechaFilterValue) return `Transacciones después del ${fechaFilterValue}`;
+          if (fechaFilterType === 'antes-de' && fechaFilterValue) return `Transacciones antes del ${fechaFilterValue}`;
+          return 'Transacciones filtradas';
+        })()}
+        accountType="banco"
+      />
+
+      {/* Modal de transacción temporal - Como en LCDM */}
       <NewTransactionModal
         open={showTemporalTransaction}
         onClose={() => setShowTemporalTransaction(false)}

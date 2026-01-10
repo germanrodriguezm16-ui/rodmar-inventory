@@ -64,8 +64,11 @@ function Router() {
       <Route path="/principal">
         <Dashboard initialModule="principal" />
       </Route>
+      <Route path="/finanzas">
+        <Dashboard initialModule="finanzas" />
+      </Route>
       <Route path="/transacciones">
-        <Dashboard initialModule="transacciones" />
+        <Dashboard initialModule="finanzas" />
       </Route>
       <Route path="/minas">
         <Dashboard initialModule="minas" />

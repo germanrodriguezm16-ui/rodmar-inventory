@@ -3635,6 +3635,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint paginado para transacciones de Banco (DEBE IR ANTES de /api/transacciones/:id)
+  app.get("/api/transacciones/banco", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user?.id || "main_user";
+      
+      // Si el usuario tiene permisos de transacciones, puede ver TODAS las transacciones
+      // (sin filtrar por userId) para mantener coherencia en tiempo real
+      const userPermissions = await getUserPermissions(userId);
+      const hasTransactionPermissions = 
+        userPermissions.includes("action.TRANSACCIONES.create") ||
+        userPermissions.includes("action.TRANSACCIONES.completePending") ||
+        userPermissions.includes("action.TRANSACCIONES.edit") ||
+        userPermissions.includes("action.TRANSACCIONES.delete");
+      
+      // Si tiene permisos de transacciones, no filtrar por userId (ver todas)
+      const effectiveUserId = hasTransactionPermissions ? undefined : userId;
+      
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const search = req.query.search as string || '';
+      const fechaDesde = req.query.fechaDesde as string || '';
+      const fechaHasta = req.query.fechaHasta as string || '';
+      const includeHidden = req.query.includeHidden === 'true';
+      
+      // OPTIMIZACIÓN: Usar método optimizado con queries SQL directas
+      if (includeHidden) {
+        // Para includeHidden, usar método antiguo por compatibilidad
+        const allTransaccionesIncludingHidden = await storage.getTransaccionesIncludingHidden(effectiveUserId);
+        const bancoTransactions = allTransaccionesIncludingHidden.filter((t: any) => 
+          t.deQuienTipo === 'banco' || t.paraQuienTipo === 'banco'
+        );
+        return res.json(bancoTransactions);
+      }
+      
+      // Usar método optimizado con queries SQL
+      const result = await storage.getTransaccionesForBanco(effectiveUserId, {
+        page,
+        limit,
+        search,
+        fechaDesde,
+        fechaHasta,
+        includeHidden: false,
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error("[Banco] Error fetching Banco transactions:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error("[Banco] Error details:", errorMessage);
+      console.error("[Banco] Error stack:", errorStack);
+      
+      // Si es un error de validación, devolver 400, sino 500
+      const statusCode = errorMessage.includes('validation') || errorMessage.includes('invalid') ? 400 : 500;
+      res.status(statusCode).json({ 
+        error: "Error al obtener transacciones de Banco",
+        details: errorMessage 
+      });
+    }
+  });
+
   // Endpoint paginado para transacciones de Postobón (DEBE IR ANTES de /api/transacciones/:id)
   app.get("/api/transacciones/postobon", requireAuth, async (req, res) => {
     try {

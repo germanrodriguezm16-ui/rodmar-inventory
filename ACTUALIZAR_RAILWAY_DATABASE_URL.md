@@ -75,3 +75,9 @@ Tu aplicación ahora está usando Railway PostgreSQL en lugar de Supabase.
 
 
 
+
+
+
+
+
+
