@@ -2,6 +2,27 @@
 
 ## 📅 Cambios Más Recientes (Enero 2025)
 
+### 🧾 v2.1.7 - Mejora: Imagen descargable de viajes (Compradores) sin fletes cuando no aplica + totales (Enero 2026)
+
+#### 🎯 Objetivo
+Mejorar la imagen PNG exportable en **Compradores → Viajes** para:
+- Ocultar información de fletes cuando el flete **no lo paga el comprador**.
+- Completar la fila TOTAL con valores faltantes y usar promedios donde corresponde.
+
+#### ✨ Cambios Implementados
+- ✅ Se ocultan completamente las columnas de flete (**FUT/OGF/T. FLETE**) si ningún viaje del set tiene `quienPagaFlete` = `"comprador"` / `"El comprador"`.
+- ✅ Si las columnas de flete están visibles, los viajes donde no paga el comprador muestran `"-"` en esas celdas.
+- ✅ Fila **TOTAL**:
+  - Agrega **PESO** (suma en viajes completados)
+  - Agrega **VUT** (promedio simple en viajes completados; `"-"` si no hay datos)
+  - Agrega **FUT** (promedio simple solo para viajes completados donde paga el comprador; `"-"` si no hay datos)
+  - Mantiene **OGF** (suma solo cuando paga el comprador), **T. VENTA**, **T. FLETE**, **A CONSIGNAR**
+
+#### 📝 Archivos Modificados
+- `client/src/components/modals/comprador-viajes-image-modal.tsx`
+
+---
+
 ### 🧹 v2.1.6 - Fix: no recrear permisos legacy de cuentas RodMar en deploy/restart (Enero 2026)
 
 #### 🎯 Objetivo
