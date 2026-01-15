@@ -55,7 +55,44 @@ export default function CompradorViajesImageModal({
   const viajesCompletados = viajes.filter(viaje => viaje.fechaDescargue && viaje.valorConsignar);
   const totalConsignar = viajesCompletados.reduce((sum, viaje) => sum + parseFloat(viaje.valorConsignar || "0"), 0);
   const totalVenta = viajesCompletados.reduce((sum, viaje) => sum + parseFloat(viaje.totalVenta || "0"), 0);
-  const totalFlete = viajesCompletados.reduce((sum, viaje) => sum + parseFloat(viaje.totalFlete || "0"), 0);
+  const esCompradorPagaFlete = (quienPagaFlete?: string | null) =>
+    quienPagaFlete === "comprador" || quienPagaFlete === "El comprador";
+  const hayFletesPagadosPorComprador = viajes.some((v) => esCompradorPagaFlete(v.quienPagaFlete));
+  const totalPeso = viajesCompletados.reduce((sum, viaje) => sum + parseFloat(viaje.peso || "0"), 0);
+  const sumVut = viajesCompletados.reduce((sum, viaje) => {
+    const vut = parseFloat(viaje.vut || "");
+    if (Number.isNaN(vut)) return sum;
+    return sum + vut;
+  }, 0);
+  const countVut = viajesCompletados.reduce((count, viaje) => {
+    const vut = parseFloat(viaje.vut || "");
+    if (Number.isNaN(vut)) return count;
+    return count + 1;
+  }, 0);
+  const avgVut = countVut > 0 ? (sumVut / countVut) : null;
+
+  const sumFut = viajesCompletados.reduce((sum, viaje) => {
+    if (!esCompradorPagaFlete(viaje.quienPagaFlete)) return sum;
+    const fut = parseFloat(viaje.fleteTon || "");
+    if (Number.isNaN(fut)) return sum;
+    return sum + fut;
+  }, 0);
+  const countFut = viajesCompletados.reduce((count, viaje) => {
+    if (!esCompradorPagaFlete(viaje.quienPagaFlete)) return count;
+    const fut = parseFloat(viaje.fleteTon || "");
+    if (Number.isNaN(fut)) return count;
+    return count + 1;
+  }, 0);
+  const avgFut = countFut > 0 ? (sumFut / countFut) : null;
+
+  const totalOgf = viajesCompletados.reduce((sum, viaje) => {
+    if (!esCompradorPagaFlete(viaje.quienPagaFlete)) return sum;
+    return sum + parseFloat(viaje.otrosGastosFlete || "0");
+  }, 0);
+  const totalFlete = viajesCompletados.reduce((sum, viaje) => {
+    if (!esCompradorPagaFlete(viaje.quienPagaFlete)) return sum;
+    return sum + parseFloat(viaje.totalFlete || "0");
+  }, 0);
   const filterLabel = getFilterLabel(filterType, filterValue, filterValueEnd);
 
   const handleDownload = async () => {
@@ -180,10 +217,16 @@ export default function CompradorViajesImageModal({
                   <th className="border border-gray-300 p-1 sm:p-2 text-left">PLACA</th>
                   <th className="border border-gray-300 p-1 sm:p-2 text-left">PESO</th>
                   <th className="border border-gray-300 p-1 sm:p-2 text-left">VUT</th>
-                  <th className="border border-gray-300 p-1 sm:p-2 text-left">FUT</th>
-                  <th className="border border-gray-300 p-1 sm:p-2 text-left">OGF</th>
+                  {hayFletesPagadosPorComprador && (
+                    <th className="border border-gray-300 p-1 sm:p-2 text-left">FUT</th>
+                  )}
+                  {hayFletesPagadosPorComprador && (
+                    <th className="border border-gray-300 p-1 sm:p-2 text-left">OGF</th>
+                  )}
                   <th className="border border-gray-300 p-1 sm:p-2 text-left">T. VENTA</th>
-                  <th className="border border-gray-300 p-1 sm:p-2 text-left">T. FLETE</th>
+                  {hayFletesPagadosPorComprador && (
+                    <th className="border border-gray-300 p-1 sm:p-2 text-left">T. FLETE</th>
+                  )}
                   <th className="border border-gray-300 p-1 sm:p-2 text-left">A CONSIGNAR</th>
                 </tr>
               </thead>
@@ -204,18 +247,24 @@ export default function CompradorViajesImageModal({
                     <td className="border border-gray-300 p-1 sm:p-2">
                       {viaje.vut ? formatCurrency(viaje.vut) : "-"}
                     </td>
-                    <td className="border border-gray-300 p-1 sm:p-2">
-                      {viaje.fleteTon ? formatCurrency(viaje.fleteTon) : "-"}
-                    </td>
-                    <td className="border border-gray-300 p-1 sm:p-2">
-                      {viaje.otrosGastosFlete ? formatCurrency(viaje.otrosGastosFlete) : "-"}
-                    </td>
+                    {hayFletesPagadosPorComprador && (
+                      <td className="border border-gray-300 p-1 sm:p-2">
+                        {esCompradorPagaFlete(viaje.quienPagaFlete) && viaje.fleteTon ? formatCurrency(viaje.fleteTon) : "-"}
+                      </td>
+                    )}
+                    {hayFletesPagadosPorComprador && (
+                      <td className="border border-gray-300 p-1 sm:p-2">
+                        {esCompradorPagaFlete(viaje.quienPagaFlete) && viaje.otrosGastosFlete ? formatCurrency(viaje.otrosGastosFlete) : "-"}
+                      </td>
+                    )}
                     <td className="border border-gray-300 p-1 sm:p-2">
                       {viaje.totalVenta ? formatCurrency(viaje.totalVenta) : "-"}
                     </td>
-                    <td className="border border-gray-300 p-1 sm:p-2">
-                      {viaje.totalFlete ? formatCurrency(viaje.totalFlete) : "-"}
-                    </td>
+                    {hayFletesPagadosPorComprador && (
+                      <td className="border border-gray-300 p-1 sm:p-2">
+                        {esCompradorPagaFlete(viaje.quienPagaFlete) && viaje.totalFlete ? formatCurrency(viaje.totalFlete) : "-"}
+                      </td>
+                    )}
                     <td className="border border-gray-300 p-1 sm:p-2 font-semibold text-green-600">
                       {viaje.valorConsignar ? formatCurrency(viaje.valorConsignar) : "-"}
                     </td>
@@ -225,9 +274,26 @@ export default function CompradorViajesImageModal({
               {/* Fila de totales */}
               <tfoot>
                 <tr className="bg-green-600 text-white font-bold">
-                  <td className="border border-gray-300 p-1 sm:p-2" colSpan={10}>TOTAL</td>
+                  <td
+                    className="border border-gray-300 p-1 sm:p-2"
+                    colSpan={6}
+                  >
+                    TOTAL
+                  </td>
+                  <td className="border border-gray-300 p-1 sm:p-2">
+                    {totalPeso.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="border border-gray-300 p-1 sm:p-2">{avgVut === null ? "-" : formatCurrency(avgVut)}</td>
+                  {hayFletesPagadosPorComprador && (
+                    <td className="border border-gray-300 p-1 sm:p-2">{avgFut === null ? "-" : formatCurrency(avgFut)}</td>
+                  )}
+                  {hayFletesPagadosPorComprador && (
+                    <td className="border border-gray-300 p-1 sm:p-2">{formatCurrency(totalOgf)}</td>
+                  )}
                   <td className="border border-gray-300 p-1 sm:p-2">{formatCurrency(totalVenta)}</td>
-                  <td className="border border-gray-300 p-1 sm:p-2">{formatCurrency(totalFlete)}</td>
+                  {hayFletesPagadosPorComprador && (
+                    <td className="border border-gray-300 p-1 sm:p-2">{formatCurrency(totalFlete)}</td>
+                  )}
                   <td className="border border-gray-300 p-1 sm:p-2">{formatCurrency(totalConsignar)}</td>
                 </tr>
               </tfoot>
