@@ -1,6 +1,7 @@
 import { db } from './db';
-import { permissions, rolePermissions, roles } from '../shared/schema';
+import { permissions, rolePermissions, roles, rodmarCuentas } from '../shared/schema';
 import { eq, and } from 'drizzle-orm';
+import { assignPermissionToAdminRole, createRodMarAccountPermission } from './rodmar-account-permissions';
 
 /**
  * Script para agregar los permisos faltantes de pestañas de Viajes
@@ -32,13 +33,6 @@ async function addMissingPermissions() {
       { key: 'module.RODMAR.LCDM.view', descripcion: 'Ver sección LCDM en RodMar', categoria: 'tab' },
       { key: 'module.RODMAR.Banco.view', descripcion: 'Ver sección Banco en RodMar', categoria: 'tab' },
       { key: 'module.RODMAR.Postobon.view', descripcion: 'Ver sección Postobón en RodMar', categoria: 'tab' },
-      // Permisos por cuenta RodMar individual
-      { key: 'module.RODMAR.account.Bemovil.view', descripcion: 'Ver cuenta RodMar: Bemovil', categoria: 'account' },
-      { key: 'module.RODMAR.account.Corresponsal.view', descripcion: 'Ver cuenta RodMar: Corresponsal', categoria: 'account' },
-      { key: 'module.RODMAR.account.Efectivo.view', descripcion: 'Ver cuenta RodMar: Efectivo', categoria: 'account' },
-      { key: 'module.RODMAR.account.Cuentas German.view', descripcion: 'Ver cuenta RodMar: Cuentas German', categoria: 'account' },
-      { key: 'module.RODMAR.account.Cuentas Jhon.view', descripcion: 'Ver cuenta RodMar: Cuentas Jhon', categoria: 'account' },
-      { key: 'module.RODMAR.account.Otros.view', descripcion: 'Ver cuenta RodMar: Otros', categoria: 'account' },
     ];
 
     // Obtener todos los permisos del sistema para verificar si faltan asignaciones
@@ -178,6 +172,26 @@ async function addMissingPermissions() {
       } else {
         console.log(`✅ Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
       }
+    }
+
+    // RodMar: permisos por cuenta deben ser DINÁMICOS (por código), no hardcodeados.
+    // Esto evita que se "recreen" permisos legacy obsoletos al hacer deploy/restart.
+    try {
+      const cuentas = await db.select().from(rodmarCuentas);
+      if (cuentas.length > 0) {
+        console.log(`🔐 Verificando permisos dinámicos de RodMar para ${cuentas.length} cuentas...`);
+      }
+
+      for (const cuenta of cuentas) {
+        // Crear (o reutilizar) permiso por código
+        const permissionId = await createRodMarAccountPermission(cuenta.codigo, cuenta.nombre);
+        if (!permissionId) continue;
+
+        // Asegurar que ADMIN lo tenga asignado (conveniencia)
+        await assignPermissionToAdminRole(`module.RODMAR.account.${cuenta.codigo}.view`);
+      }
+    } catch (error: any) {
+      console.warn('⚠️  No se pudo verificar/crear permisos dinámicos de RodMar (se omite):', error?.message || error);
     }
 
     console.log('=== PERMISOS FALTANTES AGREGADOS EXITOSAMENTE ===');
