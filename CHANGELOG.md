@@ -2,6 +2,21 @@
 
 ## 📅 Cambios Más Recientes (Enero 2025)
 
+### ✅ v2.1.4 - Fix: Modal "Completar Transacción" usa cuentas RodMar dinámicas (Enero 2026)
+
+#### 🎯 Objetivo
+Evitar que el modal muestre cuentas RodMar hardcodeadas/obsoletas, cargando las cuentas reales desde la base de datos.
+
+#### ✨ Cambios Implementados
+- ✅ Eliminadas las opciones hardcodeadas de RodMar en el modal
+- ✅ El selector de "Cuenta RodMar" ahora carga dinámicamente desde `/api/rodmar-cuentas`
+- ✅ Se usa `codigo` como `value` persistente para guardar correctamente `deQuienId/paraQuienId`
+
+#### 📝 Archivos Modificados
+- `client/src/components/modals/complete-transaction-modal.tsx`
+
+---
+
 ### 🏦 v2.1.3 - Implementación de Pestaña Banco y Optimización de Filtros (Enero 2025)
 
 #### 🎯 Objetivo
