@@ -2,6 +2,25 @@
 
 ## 📅 Cambios Más Recientes (Enero 2025)
 
+### 🔐 v2.1.5 - Fix: Permisos por cuenta RodMar respetados por rol (Enero 2026)
+
+#### 🎯 Objetivo
+Asegurar que `module.RODMAR.accounts.view` solo habilite la pestaña “Cuentas”, y que el acceso real a cuentas dependa únicamente de permisos específicos `module.RODMAR.account.{CODIGO}.view`.
+
+#### ✨ Cambios Implementados
+- ✅ Se eliminó el “fallback” que otorgaba acceso a todas las cuentas cuando el usuario tenía `module.RODMAR.accounts.view`
+- ✅ `GET /api/rodmar-accounts` ahora devuelve balances solo de cuentas permitidas por permisos específicos
+- ✅ `GET /api/transacciones/cuenta/:cuentaNombre` ahora exige permiso específico de cuenta
+- ✅ `GET /api/rodmar-cuentas` ahora devuelve solo cuentas permitidas (para UI)
+- ✅ Se agregó `GET /api/rodmar-cuentas/all` para administración (requiere `module.ADMIN.view`)
+- ✅ UI: el tab “Cuentas” puede quedar vacío con mensaje “No tienes cuentas asignadas”; acciones de crear/editar/eliminar quedan visibles solo para admin
+
+#### 📝 Archivos Modificados
+- `server/routes.ts`
+- `client/src/components/modules/rodmar.tsx`
+
+---
+
 ### ✅ v2.1.4 - Fix: Modal "Completar Transacción" usa cuentas RodMar dinámicas (Enero 2026)
 
 #### 🎯 Objetivo

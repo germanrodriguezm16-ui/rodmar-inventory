@@ -81,6 +81,7 @@ const formatCurrency = (value: string | number) => {
 export default function RodMar() {
   const [, setLocation] = useLocation();
   const { has } = usePermissions();
+  const isAdmin = has("module.ADMIN.view");
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
   const [selectedSubAccount, setSelectedSubAccount] = useState<string>("");
   const [showAddTerceroModal, setShowAddTerceroModal] = useState(false);
@@ -574,7 +575,7 @@ export default function RodMar() {
                     <User className="w-5 h-5 text-blue-600" />
                     <h3 className="text-lg font-semibold text-foreground">Cuentas RodMar</h3>
                   </div>
-                  {has("module.RODMAR.accounts.view") && (
+                  {isAdmin && (
                     <Button 
                       onClick={() => setShowAddCuentaModal(true)} 
                       size="sm"
@@ -590,7 +591,7 @@ export default function RodMar() {
                   {cuentasRodMar.length === 0 ? (
                     <Card>
                       <CardContent className="p-6 text-center">
-                        <p className="text-muted-foreground">No hay cuentas registradas</p>
+                        <p className="text-muted-foreground">No tienes cuentas asignadas</p>
                       </CardContent>
                     </Card>
                   ) : (
@@ -624,29 +625,31 @@ export default function RodMar() {
                             </CardContent>
                           </Card>
                         </ContextMenuTrigger>
-                        <ContextMenuContent>
-                          <ContextMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCuenta(cuenta);
-                              setShowEditCuentaModal(true);
-                            }}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar nombre
-                          </ContextMenuItem>
-                          <ContextMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCuenta(cuenta);
-                              setShowDeleteCuentaModal(true);
-                            }}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
-                          </ContextMenuItem>
-                        </ContextMenuContent>
+                        {isAdmin && (
+                          <ContextMenuContent>
+                            <ContextMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCuenta(cuenta);
+                                setShowEditCuentaModal(true);
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar nombre
+                            </ContextMenuItem>
+                            <ContextMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCuenta(cuenta);
+                                setShowDeleteCuentaModal(true);
+                              }}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Eliminar
+                            </ContextMenuItem>
+                          </ContextMenuContent>
+                        )}
                       </ContextMenu>
                     ))
                   )}

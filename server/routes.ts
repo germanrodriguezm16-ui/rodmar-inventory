@@ -4571,13 +4571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return true;
           }
         }
-        
-        // CUARTO: Si tiene permiso general, permitir (para nuevas cuentas sin permiso específico aún)
-        const tienePermisoGeneral = userPermissions.includes('module.RODMAR.accounts.view');
-        if (tienePermisoGeneral) {
-          return true;
-        }
-        
+
         return false;
       };
 
@@ -4808,21 +4802,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // ========== ENDPOINTS CRUD PARA CUENTAS RODMAR ==========
+  // ========== ENDPOINTS PARA CUENTAS RODMAR ==========
 
-  // GET todas las cuentas RodMar (para administración)
+  // GET cuentas RodMar permitidas para el usuario (para UI)
+  // NOTA: module.RODMAR.accounts.view habilita la pestaña, pero NO da acceso a cuentas.
+  // El acceso real se controla por module.RODMAR.account.{CODIGO}.view (y compatibilidad legacy por nombre).
   app.get("/api/rodmar-cuentas", requireAuth, requirePermission("module.RODMAR.accounts.view"), async (req, res) => {
     try {
-      const todasLasCuentas = await db.select().from(rodmarCuentas).orderBy(rodmarCuentas.nombre);
-      res.json(todasLasCuentas);
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "No autenticado" });
+      }
+
+      const userPermissions = await getUserPermissions(req.user.id);
+
+      // Overrides del usuario para denegar cuentas específicas
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, req.user.id));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+
+      const todasLasCuentas = await db
+        .select()
+        .from(rodmarCuentas)
+        .orderBy(rodmarCuentas.nombre);
+
+      const cuentasPermitidas = todasLasCuentas.filter((cuenta) => {
+        const permisoPorCodigo = `module.RODMAR.account.${cuenta.codigo}.view`;
+
+        // deny explícito (override de usuario) siempre gana
+        if (deniedPermissions.has(permisoPorCodigo)) {
+          return false;
+        }
+
+        // permiso nuevo por código
+        if (userPermissions.includes(permisoPorCodigo)) {
+          return true;
+        }
+
+        // compatibilidad legacy por nombre
+        const permisoPorNombre = `module.RODMAR.account.${cuenta.nombre}.view`;
+        if (deniedPermissions.has(permisoPorNombre)) {
+          return false;
+        }
+        if (userPermissions.includes(permisoPorNombre)) {
+          return true;
+        }
+
+        // mapeo legacy nombre->codigo (fallback)
+        const codigoMapeado = nombreToCodigoMap[cuenta.nombre];
+        if (codigoMapeado && cuenta.codigo === codigoMapeado) {
+          const permisoMapeado = `module.RODMAR.account.${cuenta.nombre}.view`;
+          if (deniedPermissions.has(permisoMapeado)) {
+            return false;
+          }
+          if (userPermissions.includes(permisoMapeado)) {
+            return true;
+          }
+        }
+
+        return false;
+      });
+
+      res.json(cuentasPermitidas);
     } catch (error: any) {
       console.error("Error fetching RodMar cuentas:", error);
       res.status(500).json({ error: "Failed to fetch RodMar cuentas" });
     }
   });
 
+  // GET todas las cuentas RodMar (administración)
+  app.get("/api/rodmar-cuentas/all", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const todasLasCuentas = await db.select().from(rodmarCuentas).orderBy(rodmarCuentas.nombre);
+      res.json(todasLasCuentas);
+    } catch (error: any) {
+      console.error("Error fetching RodMar cuentas (admin):", error);
+      res.status(500).json({ error: "Failed to fetch RodMar cuentas" });
+    }
+  });
+
   // POST crear nueva cuenta RodMar
-  app.post("/api/rodmar-cuentas", requireAuth, requirePermission("module.RODMAR.accounts.view"), async (req, res) => {
+  app.post("/api/rodmar-cuentas", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
     try {
       console.log(`[RODMAR-CREATE] Request body:`, req.body);
       const userId = req.user!.id;
@@ -4878,7 +4946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PATCH actualizar nombre de cuenta RodMar (actualiza código y migra transacciones)
-  app.patch("/api/rodmar-cuentas/:id/nombre", requireAuth, requirePermission("module.RODMAR.accounts.view"), async (req, res) => {
+  app.patch("/api/rodmar-cuentas/:id/nombre", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
     try {
       const cuentaId = parseInt(req.params.id);
       if (isNaN(cuentaId)) {
@@ -5213,7 +5281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // DELETE eliminar cuenta RodMar (solo si no tiene transacciones)
-  app.delete("/api/rodmar-cuentas/:id", requireAuth, requirePermission("module.RODMAR.accounts.view"), async (req, res) => {
+  app.delete("/api/rodmar-cuentas/:id", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
     try {
       const cuentaId = parseInt(req.params.id);
       if (isNaN(cuentaId)) {
@@ -5327,26 +5395,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const todasLasCuentas = await db.select().from(rodmarCuentas);
 
       // Filtrar cuentas según permisos del usuario (usando código, no nombre)
-      // Si tiene el permiso general module.RODMAR.accounts.view, puede ver todas las cuentas
-      // Si tiene el permiso específico module.RODMAR.account.{CODIGO}.view, puede ver esa cuenta específica
-      const tienePermisoGeneral = userPermissions.includes('module.RODMAR.accounts.view');
-      
+      // module.RODMAR.accounts.view SOLO habilita la pestaña; el acceso real es por
+      // module.RODMAR.account.{CODIGO}.view (y compatibilidad legacy por nombre).
       const cuentasRodMar = todasLasCuentas.filter((cuenta) => {
         const permisoCuenta = `module.RODMAR.account.${cuenta.codigo}.view`;
-        
-        // Si tiene permiso general, permitir todas las cuentas (excepto si hay override deny)
-        if (tienePermisoGeneral) {
-          if (deniedPermissions.has(permisoCuenta)) {
-            if (process.env.DEBUG_RODMAR === 'true') {
-              console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): DENEGADA por override (a pesar de permiso general)`);
-            }
-            return false;
-          }
-          if (process.env.DEBUG_RODMAR === 'true') {
-            console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): PERMITIDA (permiso general)`);
-          }
-          return true;
-        }
         
         // Verificar si tiene un override "deny"
         if (deniedPermissions.has(permisoCuenta)) {
