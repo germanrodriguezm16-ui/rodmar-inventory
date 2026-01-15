@@ -5005,85 +5005,191 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // 3. Migrar permiso: crear nuevo permiso con el nuevo código
           const permisoAnteriorKey = `module.RODMAR.account.${codigoAnterior}.view`;
+          const permisoLegacyNombreAnteriorKey = `module.RODMAR.account.${nombreAnterior}.view`;
           const permisoNuevoKey = `module.RODMAR.account.${nuevoCodigo}.view`;
 
-          // Buscar el permiso antiguo
-          const [permisoAnterior] = await tx
-            .select()
+          // Asegurar que el permiso nuevo exista (o reutilizarlo si ya existe)
+          let nuevoPermisoId: number | null = null;
+          const [permisoNuevoExistente] = await tx
+            .select({ id: permissions.id })
             .from(permissions)
-            .where(eq(permissions.key, permisoAnteriorKey))
+            .where(eq(permissions.key, permisoNuevoKey))
             .limit(1);
 
-          if (permisoAnterior) {
-            // Crear nuevo permiso
+          if (permisoNuevoExistente) {
+            nuevoPermisoId = permisoNuevoExistente.id;
+            await tx
+              .update(permissions)
+              .set({ descripcion: `Ver cuenta RodMar: ${data.nombre}` })
+              .where(eq(permissions.id, nuevoPermisoId));
+          } else {
             const [nuevoPermiso] = await tx
               .insert(permissions)
               .values({
                 key: permisoNuevoKey,
                 descripcion: `Ver cuenta RodMar: ${data.nombre}`,
-                categoria: 'account',
+                categoria: "account",
               })
-              .returning();
+              .returning({ id: permissions.id });
+            nuevoPermisoId = nuevoPermiso?.id ?? null;
+          }
 
-            // Migrar asignaciones de roles: copiar del permiso antiguo al nuevo
-            const asignacionesAntiguas = await tx
-              .select()
+          if (!nuevoPermisoId) {
+            throw new Error("No se pudo crear/obtener el permiso nuevo para la cuenta RodMar");
+          }
+
+          // Migrar asignaciones (roles + overrides) desde un permiso viejo hacia el permiso nuevo y eliminar el viejo
+          const migratePermissionKey = async (oldKey: string) => {
+            if (!oldKey || oldKey === permisoNuevoKey) return;
+
+            const [oldPerm] = await tx
+              .select({ id: permissions.id, key: permissions.key })
+              .from(permissions)
+              .where(eq(permissions.key, oldKey))
+              .limit(1);
+
+            if (!oldPerm) return;
+
+            // Migrar asignaciones de roles
+            const asignacionesRoles = await tx
+              .select({
+                roleId: rolePermissions.roleId,
+              })
               .from(rolePermissions)
-              .where(eq(rolePermissions.permissionId, permisoAnterior.id));
+              .where(eq(rolePermissions.permissionId, oldPerm.id));
 
-            if (asignacionesAntiguas.length > 0) {
-              const nuevasAsignaciones = asignacionesAntiguas.map(a => ({
-                roleId: a.roleId,
-                permissionId: nuevoPermiso.id,
-              }));
-
-              // Insertar nuevas asignaciones (evitar duplicados con try-catch)
-              for (const asignacion of nuevasAsignaciones) {
-                try {
-                  await tx.insert(rolePermissions).values(asignacion);
-                } catch (error: any) {
-                  // Si ya existe (23505), ignorar
-                  if (error.code !== '23505') {
-                    throw error;
-                  }
-                }
+            for (const a of asignacionesRoles) {
+              try {
+                await tx.insert(rolePermissions).values({
+                  roleId: a.roleId,
+                  permissionId: nuevoPermisoId!,
+                });
+              } catch (error: any) {
+                if (error?.code !== "23505") throw error;
               }
             }
 
-            // Eliminar asignaciones del permiso antiguo
-            await tx
-              .delete(rolePermissions)
-              .where(eq(rolePermissions.permissionId, permisoAnterior.id));
+            // Migrar overrides por usuario (allow/deny) si existen
+            const overrides = await tx
+              .select({
+                userId: userPermissionsOverride.userId,
+                overrideType: userPermissionsOverride.overrideType,
+              })
+              .from(userPermissionsOverride)
+              .where(eq(userPermissionsOverride.permissionId, oldPerm.id));
 
-            // Eliminar el permiso antiguo
-            await tx
-              .delete(permissions)
-              .where(eq(permissions.id, permisoAnterior.id));
+            for (const o of overrides) {
+              try {
+                await tx.insert(userPermissionsOverride).values({
+                  userId: o.userId,
+                  permissionId: nuevoPermisoId!,
+                  overrideType: o.overrideType,
+                });
+              } catch (error: any) {
+                if (error?.code !== "23505") throw error;
+              }
+            }
 
-            debugLog(`✅ Permiso migrado y eliminado: ${permisoAnteriorKey} → ${permisoNuevoKey}`);
-          } else {
-            // Si no existe permiso antiguo, crear uno nuevo
-            await createRodMarAccountPermission(nuevoCodigo, data.nombre);
-            await assignPermissionToAdminRole(permisoNuevoKey);
-          }
+            // Limpiar relaciones y eliminar permiso viejo (para que no queden duplicados)
+            await tx.delete(rolePermissions).where(eq(rolePermissions.permissionId, oldPerm.id));
+            await tx.delete(userPermissionsOverride).where(eq(userPermissionsOverride.permissionId, oldPerm.id));
+            await tx.delete(permissions).where(eq(permissions.id, oldPerm.id));
+
+            debugLog(`✅ Permiso migrado y eliminado: ${oldPerm.key} → ${permisoNuevoKey}`);
+          };
+
+          // Migrar tanto el permiso por código anterior como cualquier permiso legacy por nombre anterior (si existía)
+          await migratePermissionKey(permisoAnteriorKey);
+          await migratePermissionKey(permisoLegacyNombreAnteriorKey);
         });
 
         debugLog(`✅ Cuenta migrada: ${codigoAnterior} → ${nuevoCodigo}`);
-      } else {
-        // Si el código no cambió, solo actualizar nombre y descripción del permiso
-        await db
-          .update(rodmarCuentas)
-          .set({
-            nombre: data.nombre,
-            updatedAt: new Date(),
-          })
-          .where(eq(rodmarCuentas.id, cuentaId));
 
+        // Asegurar que ADMIN tenga acceso a la cuenta (en caso de escenarios raros sin permiso previo)
+        // (fuera de la transacción: usa helpers que consultan db global)
+        await assignPermissionToAdminRole(`module.RODMAR.account.${nuevoCodigo}.view`);
+      } else {
+        // Si el código no cambió, actualizar nombre y descripción del permiso
+        // y absorber (migrar + eliminar) cualquier permiso legacy por NOMBRE anterior si existiera.
+        const nombreAnterior = cuentaActual.nombre;
         const permisoKey = `module.RODMAR.account.${codigoAnterior}.view`;
-        await db
-          .update(permissions)
-          .set({ descripcion: `Ver cuenta RodMar: ${data.nombre}` })
-          .where(eq(permissions.key, permisoKey));
+        const permisoLegacyNombreAnteriorKey = `module.RODMAR.account.${nombreAnterior}.view`;
+
+        await db.transaction(async (tx) => {
+          await tx
+            .update(rodmarCuentas)
+            .set({
+              nombre: data.nombre,
+              updatedAt: new Date(),
+            })
+            .where(eq(rodmarCuentas.id, cuentaId));
+
+          // Asegurar descripción actualizada en el permiso por código
+          await tx
+            .update(permissions)
+            .set({ descripcion: `Ver cuenta RodMar: ${data.nombre}` })
+            .where(eq(permissions.key, permisoKey));
+
+          // Buscar ID del permiso por código
+          const [permCodigo] = await tx
+            .select({ id: permissions.id })
+            .from(permissions)
+            .where(eq(permissions.key, permisoKey))
+            .limit(1);
+
+          if (permCodigo) {
+            // Si existe permiso legacy por nombre anterior, migrar asignaciones/overrides y eliminarlo
+            const [permLegacy] = await tx
+              .select({ id: permissions.id, key: permissions.key })
+              .from(permissions)
+              .where(eq(permissions.key, permisoLegacyNombreAnteriorKey))
+              .limit(1);
+
+            if (permLegacy && permLegacy.key !== permisoKey) {
+              const asignacionesRoles = await tx
+                .select({ roleId: rolePermissions.roleId })
+                .from(rolePermissions)
+                .where(eq(rolePermissions.permissionId, permLegacy.id));
+
+              for (const a of asignacionesRoles) {
+                try {
+                  await tx.insert(rolePermissions).values({
+                    roleId: a.roleId,
+                    permissionId: permCodigo.id,
+                  });
+                } catch (error: any) {
+                  if (error?.code !== "23505") throw error;
+                }
+              }
+
+              const overrides = await tx
+                .select({
+                  userId: userPermissionsOverride.userId,
+                  overrideType: userPermissionsOverride.overrideType,
+                })
+                .from(userPermissionsOverride)
+                .where(eq(userPermissionsOverride.permissionId, permLegacy.id));
+
+              for (const o of overrides) {
+                try {
+                  await tx.insert(userPermissionsOverride).values({
+                    userId: o.userId,
+                    permissionId: permCodigo.id,
+                    overrideType: o.overrideType,
+                  });
+                } catch (error: any) {
+                  if (error?.code !== "23505") throw error;
+                }
+              }
+
+              await tx.delete(rolePermissions).where(eq(rolePermissions.permissionId, permLegacy.id));
+              await tx.delete(userPermissionsOverride).where(eq(userPermissionsOverride.permissionId, permLegacy.id));
+              await tx.delete(permissions).where(eq(permissions.id, permLegacy.id));
+
+              debugLog(`✅ Permiso legacy por nombre absorbido y eliminado: ${permisoLegacyNombreAnteriorKey} → ${permisoKey}`);
+            }
+          }
+        });
       }
 
       // Obtener la cuenta actualizada
