@@ -2,6 +2,21 @@
 
 ## 📅 Cambios Más Recientes (Enero 2025)
 
+### 🧹 v2.1.6 - Fix: no recrear permisos legacy de cuentas RodMar en deploy/restart (Enero 2026)
+
+#### 🎯 Objetivo
+Evitar que al desplegar o reiniciar el servidor se vuelvan a crear permisos obsoletos por nombre (p.ej. `module.RODMAR.account.Bemovil.view`).
+
+#### ✨ Cambios Implementados
+- ✅ Se eliminaron permisos legacy hardcodeados de los scripts de inicialización/missing-permissions
+- ✅ Los permisos de cuentas RodMar ahora se aseguran dinámicamente leyendo `rodmarCuentas` y creando solo `module.RODMAR.account.{CODIGO}.view`
+
+#### 📝 Archivos Modificados
+- `server/add-missing-permissions.ts`
+- `server/init-db.ts`
+
+---
+
 ### 🔐 v2.1.5 - Fix: Permisos por cuenta RodMar respetados por rol (Enero 2026)
 
 #### 🎯 Objetivo
