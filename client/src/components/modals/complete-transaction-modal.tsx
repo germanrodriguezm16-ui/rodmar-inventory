@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { TransactionReceiptModal } from "@/components/modals/transaction-receipt-modal";
 import { getSocioNombre } from "@/lib/getSocioNombre";
-import type { Mina, Comprador, Volquetero, Tercero } from "@shared/schema";
+import type { Mina, Comprador, Volquetero, Tercero, RodmarCuenta } from "@shared/schema";
 
 const completeSchema = z.object({
   deQuienTipo: z.string().min(1, "Debe seleccionar el origen"),
@@ -33,16 +33,6 @@ interface CompleteTransactionModalProps {
   paraQuienTipo?: string;
   paraQuienId?: string;
 }
-
-// Opciones para RodMar
-const rodmarOptions = [
-  { value: "bemovil", label: "Bemovil" },
-  { value: "corresponsal", label: "Corresponsal" },
-  { value: "efectivo", label: "Efectivo" },
-  { value: "cuentas-german", label: "Cuentas German" },
-  { value: "cuentas-jhon", label: "Cuentas Jhon" },
-  { value: "otras", label: "Otras" },
-];
 
 // Función para obtener la fecha local colombiana en formato YYYY-MM-DD
 const getTodayLocalDate = () => {
@@ -92,6 +82,12 @@ export function CompleteTransactionModal({
     enabled: open,
   });
 
+  // Cuentas RodMar dinámicas (desde BD)
+  const { data: rodmarCuentas = [] } = useQuery<RodmarCuenta[]>({
+    queryKey: ["/api/rodmar-cuentas"],
+    enabled: open,
+  });
+
   const form = useForm<z.infer<typeof completeSchema>>({
     resolver: zodResolver(completeSchema),
     defaultValues: {
@@ -130,7 +126,8 @@ export function CompleteTransactionModal({
       case "tercero":
         return terceros.map(tercero => ({ value: tercero.id.toString(), label: tercero.nombre }));
       case "rodmar":
-        return rodmarOptions;
+        // Usar el código como ID persistente en transacciones
+        return rodmarCuentas.map((cuenta) => ({ value: cuenta.codigo, label: cuenta.nombre }));
       case "banco":
         return [{ value: "banco", label: "Banco" }];
       case "lcdm":
@@ -311,7 +308,7 @@ export function CompleteTransactionModal({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {rodmarOptions.map((option) => (
+                        {getEntityOptions("rodmar").map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
