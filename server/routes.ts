@@ -203,6 +203,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return { allowed: true, requiredPermission: key };
   };
 
+  const buildViewPermissionKey = (tipo: string, rawId: string | number) => {
+    const idNum = typeof rawId === "number" ? rawId : parseInt(rawId, 10);
+    if (Number.isNaN(idNum)) return null;
+    switch (tipo) {
+      case "mina":
+        return `module.MINAS.mina.${idNum}.view`;
+      case "comprador":
+        return `module.COMPRADORES.comprador.${idNum}.view`;
+      case "volquetero":
+        if (idNum >= 1000) return null;
+        return `module.VOLQUETEROS.volquetero.${idNum}.view`;
+      default:
+        return null;
+    }
+  };
+
+  const checkViewPermission = async (params: {
+    userPermissions: string[];
+    deniedPermissions: Set<string>;
+    permissionExistsCache: Map<string, boolean>;
+    tipo: string;
+    id: string | number;
+  }) => {
+    const { userPermissions, deniedPermissions, permissionExistsCache, tipo, id } = params;
+    const key = buildViewPermissionKey(tipo, id);
+    if (!key) {
+      return { allowed: true };
+    }
+
+    const exists = await permissionExists(key, permissionExistsCache);
+    if (!exists) {
+      return { allowed: true };
+    }
+
+    if (deniedPermissions.has(key)) {
+      return {
+        allowed: false,
+        status: 403,
+        message: "No tienes permiso para ver esta entidad",
+        requiredPermission: key,
+      };
+    }
+
+    if (!userPermissions.includes(key)) {
+      return {
+        allowed: false,
+        status: 403,
+        message: "No tienes permiso para ver esta entidad",
+        requiredPermission: key,
+      };
+    }
+
+    return { allowed: true, requiredPermission: key };
+  };
+
   const filterEntitiesByUsePermission = async <T>(params: {
     entities: T[];
     userPermissions: string[];
@@ -489,6 +544,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(minasPermitidas);
       }
 
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
       // Si el usuario tiene permisos de transacciones, devolver TODAS las minas
       // (sin filtrar por userId) para que pueda seleccionarlas en transacciones
       const hasTransactionPermissions = 
@@ -500,7 +569,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const minas = hasTransactionPermissions 
         ? await storage.getMinas() // Sin userId = todas las minas
         : await storage.getMinas(userId); // Con userId = solo las del usuario
-      res.json(minas);
+      const minasPermitidas = await filterEntitiesByUsePermission({
+        entities: minas,
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        getPermissionKey: (mina) => buildViewPermissionKey("mina", mina.id),
+      });
+      res.json(minasPermitidas);
     } catch (error: any) {
       console.error("Error fetching minas:", error.message);
       console.error("Error code:", error.code);
@@ -643,11 +719,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.get("/api/minas/:id", async (req, res) => {
+  app.get("/api/minas/:id", requireAuth, async (req, res) => {
     try {
       const minaId = parseInt(req.params.id);
       if (isNaN(minaId)) {
         return res.status(400).json({ error: "Invalid mina ID" });
+      }
+
+      const userId = req.user!.id;
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const viewCheck = await checkViewPermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: "mina",
+        id: minaId,
+      });
+      if (!viewCheck.allowed) {
+        return res.status(viewCheck.status || 403).json({
+          error: viewCheck.message || "No tienes permiso para ver esta mina",
+          requiredPermission: viewCheck.requiredPermission,
+        });
       }
       const mina = await storage.getMina(minaId);
       if (!mina) {
@@ -677,6 +783,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (permError) {
         console.warn("⚠️  No se pudo crear permiso use para mina:", permError);
+      }
+      try {
+        const viewKey = `module.MINAS.mina.${mina.id}.view`;
+        const permissionId = await ensurePermission({
+          key: viewKey,
+          descripcion: `Ver mina: ${mina.nombre}`,
+          categoria: "entity",
+        });
+        if (permissionId) {
+          await assignPermissionToAdminRole(viewKey);
+          await assignAllowOverride(permissionId, userId);
+        }
+      } catch (permError) {
+        console.warn("⚠️  No se pudo crear permiso view para mina:", permError);
       }
       res.json(mina);
     } catch (error: any) {
@@ -747,9 +867,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/minas/:id/viajes", async (req, res) => {
+  app.get("/api/minas/:id/viajes", requireAuth, async (req, res) => {
     try {
       const minaId = parseInt(req.params.id);
+      if (isNaN(minaId)) {
+        return res.status(400).json({ error: "Invalid mina ID" });
+      }
+
+      const userId = req.user!.id;
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const viewCheck = await checkViewPermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: "mina",
+        id: minaId,
+      });
+      if (!viewCheck.allowed) {
+        return res.status(viewCheck.status || 403).json({
+          error: viewCheck.message || "No tienes permiso para ver esta mina",
+          requiredPermission: viewCheck.requiredPermission,
+        });
+      }
       const includeHidden = req.query.includeHidden === 'true';
       const viajes = await storage.getViajesByMina(minaId);
       
@@ -764,9 +917,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/minas/:id/transacciones", async (req, res) => {
+  app.get("/api/minas/:id/transacciones", requireAuth, async (req, res) => {
     try {
       const minaId = parseInt(req.params.id);
+      if (isNaN(minaId)) {
+        return res.status(400).json({ error: "Invalid mina ID" });
+      }
+
+      const userId = req.user!.id;
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const viewCheck = await checkViewPermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: "mina",
+        id: minaId,
+      });
+      if (!viewCheck.allowed) {
+        return res.status(viewCheck.status || 403).json({
+          error: viewCheck.message || "No tienes permiso para ver esta mina",
+          requiredPermission: viewCheck.requiredPermission,
+        });
+      }
       const transacciones = await storage.getTransaccionesBySocio(
         "mina",
         minaId,
@@ -825,6 +1011,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (deleteResult) {
           try {
             await deletePermissionByKey(`action.TRANSACCIONES.mina.${minaId}.use`);
+            await deletePermissionByKey(`module.MINAS.mina.${minaId}.view`);
           } catch (permError) {
             console.warn("⚠️  No se pudo eliminar permiso use de mina:", permError);
           }
@@ -872,6 +1059,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           categoria: "action",
         });
         await updatePermissionDescription(useKey, `Usar mina: ${data.nombre}`);
+        const viewKey = `module.MINAS.mina.${minaId}.view`;
+        await ensurePermission({
+          key: viewKey,
+          descripcion: `Ver mina: ${data.nombre}`,
+          categoria: "entity",
+        });
+        await updatePermissionDescription(viewKey, `Ver mina: ${data.nombre}`);
       } catch (permError) {
         console.warn("⚠️  No se pudo actualizar permiso use de mina:", permError);
       }
@@ -925,6 +1119,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.json(compradoresPermitidos);
         }
 
+        const userOverrides = await db
+          .select({
+            permissionKey: permissions.key,
+            overrideType: userPermissionsOverride.overrideType,
+          })
+          .from(userPermissionsOverride)
+          .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+          .where(eq(userPermissionsOverride.userId, userId));
+
+        const deniedPermissions = new Set(
+          userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+        );
+        const permissionExistsCache = new Map<string, boolean>();
+
         // Si el usuario tiene permisos de transacciones, devolver TODOS los compradores
         // (sin filtrar por userId) para que pueda seleccionarlos en transacciones
         const hasTransactionPermissions = 
@@ -936,7 +1144,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const compradores = hasTransactionPermissions 
           ? await storage.getCompradores() // Sin userId = todos los compradores
           : await storage.getCompradores(userId); // Con userId = solo los del usuario
-        res.json(compradores);
+        const compradoresPermitidos = await filterEntitiesByUsePermission({
+          entities: compradores,
+          userPermissions,
+          deniedPermissions,
+          permissionExistsCache,
+          getPermissionKey: (comprador) => buildViewPermissionKey("comprador", comprador.id),
+        });
+        res.json(compradoresPermitidos);
       } catch (error: any) {
         console.error("Error fetching compradores:", error.message);
         if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || 
@@ -953,11 +1168,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.get("/api/compradores/:id", async (req, res) => {
+  app.get("/api/compradores/:id", requireAuth, async (req, res) => {
     try {
       const compradorId = parseInt(req.params.id);
       if (isNaN(compradorId)) {
         return res.status(400).json({ error: "Invalid comprador ID" });
+      }
+
+      const userId = req.user!.id;
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const viewCheck = await checkViewPermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: "comprador",
+        id: compradorId,
+      });
+      if (!viewCheck.allowed) {
+        return res.status(viewCheck.status || 403).json({
+          error: viewCheck.message || "No tienes permiso para ver este comprador",
+          requiredPermission: viewCheck.requiredPermission,
+        });
       }
 
       const comprador = await storage.getComprador(compradorId);
@@ -991,6 +1236,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (permError) {
         console.warn("⚠️  No se pudo crear permiso use para comprador:", permError);
       }
+      try {
+        const viewKey = `module.COMPRADORES.comprador.${comprador.id}.view`;
+        const permissionId = await ensurePermission({
+          key: viewKey,
+          descripcion: `Ver comprador: ${comprador.nombre}`,
+          categoria: "entity",
+        });
+        if (permissionId) {
+          await assignPermissionToAdminRole(viewKey);
+          await assignAllowOverride(permissionId, userId);
+        }
+      } catch (permError) {
+        console.warn("⚠️  No se pudo crear permiso view para comprador:", permError);
+      }
       res.json(comprador);
     } catch (error: any) {
       console.error("Error creating comprador:", error.message);
@@ -1011,9 +1270,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/compradores/:id/viajes", async (req, res) => {
+  app.get("/api/compradores/:id/viajes", requireAuth, async (req, res) => {
     try {
       const compradorId = parseInt(req.params.id);
+      if (isNaN(compradorId)) {
+        return res.status(400).json({ error: "Invalid comprador ID" });
+      }
+
+      const userId = req.user!.id;
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const viewCheck = await checkViewPermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: "comprador",
+        id: compradorId,
+      });
+      if (!viewCheck.allowed) {
+        return res.status(viewCheck.status || 403).json({
+          error: viewCheck.message || "No tienes permiso para ver este comprador",
+          requiredPermission: viewCheck.requiredPermission,
+        });
+      }
+
       const viajes = await storage.getViajesByComprador(compradorId);
       res.json(viajes);
     } catch (error) {
@@ -1022,11 +1315,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get viajes by comprador (alternative route)
-  app.get("/api/viajes/comprador/:compradorId", async (req, res) => {
+  app.get("/api/viajes/comprador/:compradorId", requireAuth, async (req, res) => {
     try {
       const compradorId = parseInt(req.params.compradorId);
       if (isNaN(compradorId)) {
         return res.status(400).json({ error: "Invalid comprador ID" });
+      }
+
+      const userId = req.user!.id;
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const viewCheck = await checkViewPermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: "comprador",
+        id: compradorId,
+      });
+      if (!viewCheck.allowed) {
+        return res.status(viewCheck.status || 403).json({
+          error: viewCheck.message || "No tienes permiso para ver este comprador",
+          requiredPermission: viewCheck.requiredPermission,
+        });
       }
 
       const includeHidden = req.query.includeHidden === 'true';
@@ -1061,9 +1384,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/compradores/:id/transacciones", async (req, res) => {
+  app.get("/api/compradores/:id/transacciones", requireAuth, async (req, res) => {
     try {
       const compradorId = parseInt(req.params.id);
+      if (isNaN(compradorId)) {
+        return res.status(400).json({ error: "Invalid comprador ID" });
+      }
+
+      const userId = req.user!.id;
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const viewCheck = await checkViewPermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: "comprador",
+        id: compradorId,
+      });
+      if (!viewCheck.allowed) {
+        return res.status(viewCheck.status || 403).json({
+          error: viewCheck.message || "No tienes permiso para ver este comprador",
+          requiredPermission: viewCheck.requiredPermission,
+        });
+      }
       const transacciones = await storage.getTransaccionesBySocio(
         "comprador",
         compradorId,
@@ -1496,6 +1852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.deleteComprador(compradorId);
         try {
           await deletePermissionByKey(`action.TRANSACCIONES.comprador.${compradorId}.use`);
+          await deletePermissionByKey(`module.COMPRADORES.comprador.${compradorId}.view`);
         } catch (permError) {
           console.warn("⚠️  No se pudo eliminar permiso use de comprador:", permError);
         }
@@ -1539,6 +1896,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             categoria: "action",
           });
           await updatePermissionDescription(useKey, `Usar comprador: ${data.nombre}`);
+          const viewKey = `module.COMPRADORES.comprador.${compradorId}.view`;
+          await ensurePermission({
+            key: viewKey,
+            descripcion: `Ver comprador: ${data.nombre}`,
+            categoria: "entity",
+          });
+          await updatePermissionDescription(viewKey, `Ver comprador: ${data.nombre}`);
         } catch (permError) {
           console.warn("⚠️  No se pudo actualizar permiso use de comprador:", permError);
         }
@@ -1591,6 +1955,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           return res.json(volqueterosPermitidos);
         }
+
+        const userOverrides = await db
+          .select({
+            permissionKey: permissions.key,
+            overrideType: userPermissionsOverride.overrideType,
+          })
+          .from(userPermissionsOverride)
+          .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+          .where(eq(userPermissionsOverride.userId, userId));
+
+        const deniedPermissions = new Set(
+          userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+        );
+        const permissionExistsCache = new Map<string, boolean>();
         
         // Si el usuario tiene permisos de transacciones, obtener TODOS los viajes
         // (sin filtrar por userId) para que pueda ver todos los volqueteros en transacciones
@@ -1747,7 +2125,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .map((v) => `${v.nombre} (ID: ${v.id})`),
         );
 
-        res.json(volqueterosConPlacas);
+        const volqueterosPermitidos: typeof volqueterosConPlacas = [];
+        for (const volquetero of volqueterosConPlacas) {
+          if (!volquetero.isRealId) {
+            volqueterosPermitidos.push(volquetero);
+            continue;
+          }
+
+          const key = buildViewPermissionKey("volquetero", volquetero.id);
+          if (!key) {
+            volqueterosPermitidos.push(volquetero);
+            continue;
+          }
+
+          const exists = await permissionExists(key, permissionExistsCache);
+          if (!exists) {
+            volqueterosPermitidos.push(volquetero);
+            continue;
+          }
+
+          if (deniedPermissions.has(key)) {
+            continue;
+          }
+
+          if (userPermissions.includes(key)) {
+            volqueterosPermitidos.push(volquetero);
+          }
+        }
+
+        res.json(volqueterosPermitidos);
       } catch (error: any) {
         console.error("Error fetching volqueteros:", error.message);
         if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || 
@@ -1786,6 +2192,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (permError) {
         console.warn("⚠️  No se pudo crear permiso use para volquetero:", permError);
       }
+      try {
+        const viewKey = `module.VOLQUETEROS.volquetero.${volquetero.id}.view`;
+        const permissionId = await ensurePermission({
+          key: viewKey,
+          descripcion: `Ver volquetero: ${volquetero.nombre}`,
+          categoria: "entity",
+        });
+        if (permissionId) {
+          await assignPermissionToAdminRole(viewKey);
+          await assignAllowOverride(permissionId, userId);
+        }
+      } catch (permError) {
+        console.warn("⚠️  No se pudo crear permiso view para volquetero:", permError);
+      }
       res.json(volquetero);
     } catch (error: any) {
       console.error("Error creating volquetero:", error.message);
@@ -1806,10 +2226,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/volqueteros/:id/transacciones", async (req, res) => {
+  app.get("/api/volqueteros/:id/transacciones", requireAuth, async (req, res) => {
     try {
       const userId = req.user?.id || "main_user";
       const volqueteroId = parseInt(req.params.id);
+      if (isNaN(volqueteroId)) {
+        return res.status(400).json({ error: "ID de volquetero inválido" });
+      }
+
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const viewCheck = await checkViewPermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: "volquetero",
+        id: volqueteroId,
+      });
+      if (!viewCheck.allowed) {
+        return res.status(viewCheck.status || 403).json({
+          error: viewCheck.message || "No tienes permiso para ver este volquetero",
+          requiredPermission: viewCheck.requiredPermission,
+        });
+      }
       // Usar getTransaccionesForModule con módulo 'volquetero' para filtrado correcto
       const transacciones = await storage.getTransaccionesForModule(
         "volquetero",
@@ -1837,10 +2289,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(volqueteroId)) {
         return res.status(400).json({ error: "ID de volquetero inválido" });
       }
+
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const viewCheck = await checkViewPermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: "volquetero",
+        id: volqueteroId,
+      });
+      if (!viewCheck.allowed) {
+        return res.status(viewCheck.status || 403).json({
+          error: viewCheck.message || "No tienes permiso para ver este volquetero",
+          requiredPermission: viewCheck.requiredPermission,
+        });
+      }
       
       // Si el usuario tiene permisos de transacciones, obtener TODOS los viajes
       // (sin filtrar por userId) para que pueda ver todos los viajes del volquetero
-      const userPermissions = await getUserPermissions(userId);
       const hasTransactionPermissions = 
         userPermissions.includes("action.TRANSACCIONES.create") ||
         userPermissions.includes("action.TRANSACCIONES.completePending") ||
@@ -2072,6 +2552,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             categoria: "action",
           });
           await updatePermissionDescription(useKey, `Usar volquetero: ${data.nombre}`);
+          const viewKey = `module.VOLQUETEROS.volquetero.${volqueteroId}.view`;
+          await ensurePermission({
+            key: viewKey,
+            descripcion: `Ver volquetero: ${data.nombre}`,
+            categoria: "entity",
+          });
+          await updatePermissionDescription(viewKey, `Ver volquetero: ${data.nombre}`);
         } catch (permError) {
           console.warn("⚠️  No se pudo actualizar permiso use de volquetero:", permError);
         }
@@ -2125,6 +2612,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             categoria: "action",
           });
           await updatePermissionDescription(useKey, `Usar mina: ${nombre.trim()}`);
+        const viewKey = `module.MINAS.mina.${minaId}.view`;
+        await ensurePermission({
+          key: viewKey,
+          descripcion: `Ver mina: ${nombre.trim()}`,
+          categoria: "entity",
+        });
+        await updatePermissionDescription(viewKey, `Ver mina: ${nombre.trim()}`);
         } catch (permError) {
           console.warn("⚠️  No se pudo actualizar permiso use de mina:", permError);
         }
@@ -2173,6 +2667,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             categoria: "action",
           });
           await updatePermissionDescription(useKey, `Usar comprador: ${nombre.trim()}`);
+          const viewKey = `module.COMPRADORES.comprador.${compradorId}.view`;
+          await ensurePermission({
+            key: viewKey,
+            descripcion: `Ver comprador: ${nombre.trim()}`,
+            categoria: "entity",
+          });
+          await updatePermissionDescription(viewKey, `Ver comprador: ${nombre.trim()}`);
         } catch (permError) {
           console.warn("⚠️  No se pudo actualizar permiso use de comprador:", permError);
         }
@@ -2240,6 +2741,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             categoria: "action",
           });
           await updatePermissionDescription(useKey, `Usar volquetero: ${nombre.trim()}`);
+          const viewKey = `module.VOLQUETEROS.volquetero.${volqueteroId}.view`;
+          await ensurePermission({
+            key: viewKey,
+            descripcion: `Ver volquetero: ${nombre.trim()}`,
+            categoria: "entity",
+          });
+          await updatePermissionDescription(viewKey, `Ver volquetero: ${nombre.trim()}`);
         } catch (permError) {
           console.warn("⚠️  No se pudo actualizar permiso use de volquetero:", permError);
         }

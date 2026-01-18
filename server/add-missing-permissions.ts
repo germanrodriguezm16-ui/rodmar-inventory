@@ -72,6 +72,20 @@ async function addMissingPermissions() {
       }
     };
 
+    const assignAllowOverride = async (permissionId: number, userId: string) => {
+      try {
+        await db.insert(userPermissionsOverride).values({
+          userId,
+          permissionId,
+          overrideType: "allow",
+        });
+      } catch (error: any) {
+        if (error.code !== '23505') {
+          throw error;
+        }
+      }
+    };
+
     // Permisos a agregar/verificar
     const missingPermissions = [
       { key: 'module.PRINCIPAL.view', descripcion: 'Ver módulo Principal (Viajes)', categoria: 'module' },
@@ -310,6 +324,17 @@ async function addMissingPermissions() {
         );
         await assignPermissionToAdminRole(useKey);
         await assignPermissionToRoles(usePermissionId);
+
+        const viewKey = `module.MINAS.mina.${mina.id}.view`;
+        const viewPermissionId = await ensurePermission(
+          viewKey,
+          `Ver mina: ${mina.nombre}`,
+          'entity',
+        );
+        await assignPermissionToAdminRole(viewKey);
+        if (mina.userId) {
+          await assignAllowOverride(viewPermissionId, mina.userId);
+        }
       }
     } catch (error: any) {
       console.warn('⚠️  No se pudo verificar/crear permisos USE de Minas (se omite):', error?.message || error);
@@ -331,6 +356,17 @@ async function addMissingPermissions() {
         );
         await assignPermissionToAdminRole(useKey);
         await assignPermissionToRoles(usePermissionId);
+
+        const viewKey = `module.COMPRADORES.comprador.${comprador.id}.view`;
+        const viewPermissionId = await ensurePermission(
+          viewKey,
+          `Ver comprador: ${comprador.nombre}`,
+          'entity',
+        );
+        await assignPermissionToAdminRole(viewKey);
+        if (comprador.userId) {
+          await assignAllowOverride(viewPermissionId, comprador.userId);
+        }
       }
     } catch (error: any) {
       console.warn('⚠️  No se pudo verificar/crear permisos USE de Compradores (se omite):', error?.message || error);
@@ -352,6 +388,17 @@ async function addMissingPermissions() {
         );
         await assignPermissionToAdminRole(useKey);
         await assignPermissionToRoles(usePermissionId);
+
+        const viewKey = `module.VOLQUETEROS.volquetero.${volquetero.id}.view`;
+        const viewPermissionId = await ensurePermission(
+          viewKey,
+          `Ver volquetero: ${volquetero.nombre}`,
+          'entity',
+        );
+        await assignPermissionToAdminRole(viewKey);
+        if (volquetero.userId) {
+          await assignAllowOverride(viewPermissionId, volquetero.userId);
+        }
       }
     } catch (error: any) {
       console.warn('⚠️  No se pudo verificar/crear permisos USE de Volqueteros (se omite):', error?.message || error);

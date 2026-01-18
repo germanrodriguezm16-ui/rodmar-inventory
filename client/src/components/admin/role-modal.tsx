@@ -48,7 +48,7 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
   const [descripcion, setDescripcion] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -81,7 +81,7 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
       setSelectedPermissions(new Set());
     }
     setSearchTerm("");
-    setCategoryFilter("all");
+    setGroupFilter("all");
   }, [role, open]);
 
   const createMutation = useMutation({
@@ -202,42 +202,78 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
   };
 
   const allPermissions = permissionsData?.all || [];
-  const categories = Array.from(new Set(allPermissions.map((p) => p.categoria).filter(Boolean)));
-
-  const categoryLabels: Record<string, string> = {
-    module: "Módulo",
-    tab: "Pestaña",
-    action: "Acción",
-    account: "Cuentas RodMar",
-    tercero: "Terceros",
+  const groupLabels: Record<string, string> = {
+    ui: "Acceso UI",
+    visibility: "Visibilidad",
+    ops: "Operación",
     other: "Otros",
   };
+
+  const getPermissionGroup = (perm: Permission) => {
+    const key = perm.key;
+
+    if (key.startsWith("module.")) {
+      if (key.includes(".tab.")) {
+        return { group: "ui", subgroup: "Pestañas" };
+      }
+      if (
+        key.startsWith("module.MINAS.mina.") ||
+        key.startsWith("module.COMPRADORES.comprador.") ||
+        key.startsWith("module.VOLQUETEROS.volquetero.") ||
+        key.startsWith("module.RODMAR.tercero.") ||
+        key.startsWith("module.RODMAR.account.")
+      ) {
+        if (key.startsWith("module.MINAS.mina.")) return { group: "visibility", subgroup: "Minas" };
+        if (key.startsWith("module.COMPRADORES.comprador.")) return { group: "visibility", subgroup: "Compradores" };
+        if (key.startsWith("module.VOLQUETEROS.volquetero.")) return { group: "visibility", subgroup: "Volqueteros" };
+        if (key.startsWith("module.RODMAR.tercero.")) return { group: "visibility", subgroup: "Terceros" };
+        if (key.startsWith("module.RODMAR.account.")) return { group: "visibility", subgroup: "Cuentas RodMar" };
+      }
+      return { group: "ui", subgroup: "Módulos" };
+    }
+
+    if (key.startsWith("action.")) {
+      if (key.includes(".use")) {
+        return { group: "ops", subgroup: "Usar por entidad" };
+      }
+      return { group: "ops", subgroup: "Acciones" };
+    }
+
+    return { group: "other", subgroup: "Otros" };
+  };
+
+  const groupOptions = Array.from(
+    new Set(allPermissions.map((perm) => getPermissionGroup(perm).group)),
+  );
 
   const filteredPermissions = allPermissions.filter((perm) => {
     const matchesSearch =
       perm.key.toLowerCase().includes(searchTerm.toLowerCase()) ||
       perm.descripcion.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || perm.categoria === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesGroup = groupFilter === "all" || getPermissionGroup(perm).group === groupFilter;
+    return matchesSearch && matchesGroup;
   });
 
   const groupedPermissions = filteredPermissions.reduce((acc, perm) => {
-    const categoria = perm.categoria || "other";
-    if (!acc[categoria]) {
-      acc[categoria] = [];
+    const { group, subgroup } = getPermissionGroup(perm);
+    if (!acc[group]) {
+      acc[group] = {};
     }
-    acc[categoria].push(perm);
+    if (!acc[group][subgroup]) {
+      acc[group][subgroup] = [];
+    }
+    acc[group][subgroup].push(perm);
     return acc;
-  }, {} as Record<string, Permission[]>);
+  }, {} as Record<string, Record<string, Permission[]>>);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] w-[calc(100vw-1rem)] sm:w-full mx-2 sm:mx-auto my-2 sm:my-auto p-4 sm:p-6">
+      <DialogContent className="max-w-5xl w-[calc(100vw-1rem)] sm:w-full mx-2 sm:mx-auto my-2 sm:my-auto p-4 sm:p-6 max-h-[95vh] overflow-hidden overflow-x-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{role ? "Editar Rol" : "Crear Nuevo Rol"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4 min-h-0 flex-1">
           <div className="space-y-2">
             <Label htmlFor="nombre">Nombre del Rol *</Label>
             <Input
@@ -259,38 +295,10 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 flex-1 min-h-0">
             <Label>Permisos ({selectedPermissions.size} seleccionados)</Label>
-            
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant={categoryFilter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCategoryFilter("all")}
-              >
-                Todos
-              </Button>
-              <Button
-                type="button"
-                variant={categoryFilter === "tercero" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCategoryFilter("tercero")}
-              >
-                Terceros
-              </Button>
-              <Button
-                type="button"
-                variant={categoryFilter === "account" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCategoryFilter("account")}
-              >
-                Cuentas RodMar
-              </Button>
-            </div>
-
-            <div className="flex gap-2 mb-2">
-              <div className="relative flex-1">
+            <div className="flex flex-col sm:flex-row gap-2 mb-2">
+              <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar permisos..."
@@ -299,50 +307,59 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
                   className="pl-8"
                 />
               </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
+              <Select value={groupFilter} onValueChange={setGroupFilter}>
+                <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="Categoría" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las categorías</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {categoryLabels[cat] || cat}
+                  <SelectItem value="all">Todas</SelectItem>
+                  {groupOptions.map((group) => (
+                    <SelectItem key={group} value={group}>
+                      {groupLabels[group] || group}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <ScrollArea className="h-[400px] border rounded-md p-4">
-              <div className="space-y-4">
-                {Object.entries(groupedPermissions).map(([categoria, perms]) => (
-                  <div key={categoria}>
-                    <h4 className="font-semibold mb-2 text-sm uppercase text-muted-foreground">
-                      {categoryLabels[categoria] || categoria}
-                    </h4>
-                    <div className="space-y-2">
-                      {perms.map((perm) => (
-                        <div key={perm.id} className="flex items-start space-x-2">
-                          <Checkbox
-                            id={`perm-${perm.id}`}
-                            checked={selectedPermissions.has(perm.id)}
-                            onCheckedChange={() => handleTogglePermission(perm.id)}
-                          />
-                          <label
-                            htmlFor={`perm-${perm.id}`}
-                            className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                          >
-                            <div className="font-medium">{perm.key}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {perm.descripcion}
-                            </div>
-                          </label>
+            <ScrollArea className="flex-1 min-h-0 border rounded-md p-4">
+              <div className="space-y-5">
+                {["ui", "visibility", "ops", "other"]
+                  .filter((group) => groupedPermissions[group])
+                  .map((group) => (
+                    <div key={group} className="space-y-3">
+                      <h4 className="font-semibold text-sm uppercase text-muted-foreground">
+                        {groupLabels[group] || group}
+                      </h4>
+                      {Object.entries(groupedPermissions[group]).map(([subgroup, perms]) => (
+                        <div key={subgroup} className="space-y-2">
+                          <div className="text-xs font-semibold text-muted-foreground">
+                            {subgroup}
+                          </div>
+                          <div className="space-y-2">
+                            {perms.map((perm) => (
+                              <div key={perm.id} className="flex items-start gap-2 min-w-0">
+                                <Checkbox
+                                  id={`perm-${perm.id}`}
+                                  checked={selectedPermissions.has(perm.id)}
+                                  onCheckedChange={() => handleTogglePermission(perm.id)}
+                                />
+                                <label
+                                  htmlFor={`perm-${perm.id}`}
+                                  className="text-sm leading-tight peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1 min-w-0"
+                                >
+                                  <div className="font-medium break-words">{perm.descripcion}</div>
+                                  <div className="text-xs text-muted-foreground break-all">
+                                    {perm.key}
+                                  </div>
+                                </label>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </ScrollArea>
           </div>

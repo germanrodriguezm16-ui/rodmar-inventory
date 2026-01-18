@@ -118,6 +118,31 @@ export default function RolesTab() {
     return `${preview.join(", ")}${remaining > 0 ? ` y ${remaining} más` : ""}`;
   };
 
+  const getPermissionGroup = (permissionKey: string) => {
+    if (permissionKey.startsWith("module.")) {
+      if (permissionKey.includes(".tab.")) return "ui";
+      if (
+        permissionKey.startsWith("module.MINAS.mina.") ||
+        permissionKey.startsWith("module.COMPRADORES.comprador.") ||
+        permissionKey.startsWith("module.VOLQUETEROS.volquetero.") ||
+        permissionKey.startsWith("module.RODMAR.tercero.") ||
+        permissionKey.startsWith("module.RODMAR.account.")
+      ) {
+        return "visibility";
+      }
+      return "ui";
+    }
+    if (permissionKey.startsWith("action.")) return "ops";
+    return "other";
+  };
+
+  const groupLabels: Record<string, string> = {
+    ui: "Acceso UI",
+    visibility: "Visibilidad",
+    ops: "Operación",
+    other: "Otros",
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -148,26 +173,27 @@ export default function RolesTab() {
                       {role.permissions.length} permiso{role.permissions.length !== 1 ? "s" : ""}
                     </p>
                     {(() => {
-                      const tercerosPerms = role.permissions.filter((perm) =>
-                        perm.permissionKey.startsWith("module.RODMAR.tercero."),
+                      const grouped = role.permissions.reduce<Record<string, Role["permissions"]>>(
+                        (acc, perm) => {
+                          const group = getPermissionGroup(perm.permissionKey);
+                          if (!acc[group]) acc[group] = [];
+                          acc[group].push(perm);
+                          return acc;
+                        },
+                        {},
                       );
-                      const cuentasPerms = role.permissions.filter((perm) =>
-                        perm.permissionKey.startsWith("module.RODMAR.account."),
+                      const orderedGroups = ["ui", "visibility", "ops", "other"].filter(
+                        (group) => grouped[group]?.length,
                       );
+
                       return (
                         <>
-                          {tercerosPerms.length > 0 && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Terceros asignados: {tercerosPerms.length}
-                              {getPreviewText(tercerosPerms) ? ` — ${getPreviewText(tercerosPerms)}` : ""}
+                          {orderedGroups.map((group) => (
+                            <p key={group} className="text-xs text-muted-foreground mt-1">
+                              {groupLabels[group]}: {grouped[group].length}
+                              {getPreviewText(grouped[group]) ? ` — ${getPreviewText(grouped[group])}` : ""}
                             </p>
-                          )}
-                          {cuentasPerms.length > 0 && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Cuentas RodMar: {cuentasPerms.length}
-                              {getPreviewText(cuentasPerms) ? ` — ${getPreviewText(cuentasPerms)}` : ""}
-                            </p>
-                          )}
+                          ))}
                         </>
                       );
                     })()}
