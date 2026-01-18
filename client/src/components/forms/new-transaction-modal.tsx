@@ -784,45 +784,48 @@ function NewTransactionModal({
               />
             )}
 
-            {/* Valor */}
-            <FormField
-              control={form.control}
-              name="valor"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="text" 
-                      inputMode="numeric"
-                      placeholder="0" 
-                      value={formatNumber(field.value)}
-                      onChange={(e) => {
-                        const formattedValue = formatNumber(e.target.value);
-                        const numericValue = getNumericValue(formattedValue);
-                        field.onChange(numericValue);
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-2">
+              {/* Valor */}
+              <FormField
+                control={form.control}
+                name="valor"
+                render={({ field }) => (
+                  <FormItem className="min-w-0">
+                    <FormLabel>Valor</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="text" 
+                        inputMode="numeric"
+                        placeholder="0" 
+                        value={formatNumber(field.value)}
+                        onChange={(e) => {
+                          const formattedValue = formatNumber(e.target.value);
+                          const numericValue = getNumericValue(formattedValue);
+                          field.onChange(numericValue);
+                        }}
+                        className="w-full"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Fecha */}
-            <FormField
-              control={form.control}
-              name="fecha"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fecha</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {/* Fecha */}
+              <FormField
+                control={form.control}
+                name="fecha"
+                render={({ field }) => (
+                  <FormItem className="min-w-0">
+                    <FormLabel>Fecha</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} className="w-full" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Forma de Pago - Opcional para solicitudes */}
             <FormField
