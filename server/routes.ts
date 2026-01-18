@@ -62,6 +62,249 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
+  const resolveRodmarCuentaCodigo = async (rawId: string): Promise<string | null> => {
+    const input = rawId?.trim();
+    if (!input) return null;
+
+    const numericId = parseInt(input, 10);
+    if (!isNaN(numericId)) {
+      const [cuenta] = await db
+        .select({ codigo: rodmarCuentas.codigo })
+        .from(rodmarCuentas)
+        .where(eq(rodmarCuentas.id, numericId))
+        .limit(1);
+      if (cuenta?.codigo) return cuenta.codigo;
+    }
+
+    const inputUpper = input.toUpperCase();
+    const [cuentaByCodigo] = await db
+      .select({ codigo: rodmarCuentas.codigo, nombre: rodmarCuentas.nombre })
+      .from(rodmarCuentas)
+      .where(eq(rodmarCuentas.codigo, inputUpper))
+      .limit(1);
+    if (cuentaByCodigo?.codigo) return cuentaByCodigo.codigo;
+
+    const cuentas = await db
+      .select({ codigo: rodmarCuentas.codigo, nombre: rodmarCuentas.nombre })
+      .from(rodmarCuentas);
+    const inputLower = input.toLowerCase();
+    const slugify = (value: string) => value.toLowerCase().replace(/\s+/g, "-");
+    const match = cuentas.find((cuenta) => {
+      if (!cuenta) return false;
+      if (cuenta.codigo?.toLowerCase() === inputLower) return true;
+      if (cuenta.codigo?.toLowerCase().replace(/_/g, "-") === inputLower) return true;
+      if (cuenta.nombre?.toLowerCase() === inputLower) return true;
+      if (cuenta.nombre && slugify(cuenta.nombre) === inputLower) return true;
+      return false;
+    });
+
+    return match?.codigo || null;
+  };
+
+  const resolveVolqueteroId = async (rawId: string): Promise<number | null> => {
+    const input = rawId?.trim();
+    if (!input) return null;
+
+    const numericId = parseInt(input, 10);
+    if (!isNaN(numericId)) {
+      return numericId;
+    }
+
+    const volqueteros = await storage.getVolqueteros();
+    const match = volqueteros.find(
+      (v) => v.nombre?.toLowerCase() === input.toLowerCase(),
+    );
+    return match?.id ?? null;
+  };
+
+  const buildUsePermissionKey = async (tipo: string, rawId: string) => {
+    switch (tipo) {
+      case "mina":
+      case "comprador":
+      case "tercero": {
+        const idNum = parseInt(rawId, 10);
+        if (isNaN(idNum)) {
+          return { error: `ID inválido para ${tipo}` } as const;
+        }
+        return { key: `action.TRANSACCIONES.${tipo}.${idNum}.use` } as const;
+      }
+      case "volquetero": {
+        const idNum = await resolveVolqueteroId(rawId);
+        if (!idNum) {
+          return { error: "Volquetero no encontrado" } as const;
+        }
+        return { key: `action.TRANSACCIONES.volquetero.${idNum}.use` } as const;
+      }
+      case "rodmar": {
+        const codigo = await resolveRodmarCuentaCodigo(rawId);
+        if (!codigo) {
+          return { error: "Cuenta RodMar no encontrada" } as const;
+        }
+        return { key: `action.TRANSACCIONES.rodmar.account.${codigo}.use` } as const;
+      }
+      default:
+        return { key: null } as const;
+    }
+  };
+
+  const permissionExists = async (key: string, cache: Map<string, boolean>) => {
+    if (cache.has(key)) return cache.get(key) as boolean;
+    const exists = await db
+      .select({ id: permissions.id })
+      .from(permissions)
+      .where(eq(permissions.key, key))
+      .limit(1);
+    const value = exists.length > 0;
+    cache.set(key, value);
+    return value;
+  };
+
+  const checkUsePermission = async (params: {
+    userPermissions: string[];
+    deniedPermissions: Set<string>;
+    permissionExistsCache: Map<string, boolean>;
+    tipo: string;
+    id: string;
+  }) => {
+    const { userPermissions, deniedPermissions, permissionExistsCache, tipo, id } = params;
+    const { key, error } = await buildUsePermissionKey(tipo, id);
+
+    if (error) {
+      return { allowed: false, status: 400, message: error };
+    }
+
+    if (!key) {
+      return { allowed: true };
+    }
+
+    const exists = await permissionExists(key, permissionExistsCache);
+    if (!exists) {
+      return { allowed: true };
+    }
+
+    if (deniedPermissions.has(key)) {
+      return {
+        allowed: false,
+        status: 403,
+        message: "No tienes permiso para usar esta entidad en transacciones",
+        requiredPermission: key,
+      };
+    }
+
+    if (!userPermissions.includes(key)) {
+      return {
+        allowed: false,
+        status: 403,
+        message: "No tienes permiso para usar esta entidad en transacciones",
+        requiredPermission: key,
+      };
+    }
+
+    return { allowed: true, requiredPermission: key };
+  };
+
+  const filterEntitiesByUsePermission = async <T>(params: {
+    entities: T[];
+    userPermissions: string[];
+    deniedPermissions: Set<string>;
+    permissionExistsCache: Map<string, boolean>;
+    getPermissionKey: (entity: T) => string | null;
+  }): Promise<T[]> => {
+    const { entities, userPermissions, deniedPermissions, permissionExistsCache, getPermissionKey } = params;
+    const results: T[] = [];
+
+    for (const entity of entities) {
+      const key = getPermissionKey(entity);
+      if (!key) {
+        results.push(entity);
+        continue;
+      }
+
+      const exists = await permissionExists(key, permissionExistsCache);
+      if (!exists) {
+        results.push(entity);
+        continue;
+      }
+
+      if (deniedPermissions.has(key)) {
+        continue;
+      }
+
+      if (userPermissions.includes(key)) {
+        results.push(entity);
+      }
+    }
+
+    return results;
+  };
+
+  const ensurePermission = async (params: {
+    key: string;
+    descripcion: string;
+    categoria: string;
+  }): Promise<number | null> => {
+    const { key, descripcion, categoria } = params;
+    const existing = await db
+      .select({ id: permissions.id })
+      .from(permissions)
+      .where(eq(permissions.key, key))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return existing[0].id;
+    }
+
+    try {
+      const [created] = await db
+        .insert(permissions)
+        .values({ key, descripcion, categoria })
+        .returning();
+      return created.id;
+    } catch (error: any) {
+      if (error?.code === "23505") {
+        const fallback = await db
+          .select({ id: permissions.id })
+          .from(permissions)
+          .where(eq(permissions.key, key))
+          .limit(1);
+        return fallback[0]?.id ?? null;
+      }
+      throw error;
+    }
+  };
+
+  const updatePermissionDescription = async (key: string, descripcion: string) => {
+    await db.update(permissions).set({ descripcion }).where(eq(permissions.key, key));
+  };
+
+  const assignAllowOverride = async (permissionId: number, userId: string) => {
+    try {
+      await db.insert(userPermissionsOverride).values({
+        userId,
+        permissionId,
+        overrideType: "allow",
+      });
+    } catch (error: any) {
+      if (error?.code !== "23505") {
+        throw error;
+      }
+    }
+  };
+
+  const deletePermissionByKey = async (key: string) => {
+    const [permiso] = await db
+      .select({ id: permissions.id })
+      .from(permissions)
+      .where(eq(permissions.key, key))
+      .limit(1);
+
+    if (!permiso) return;
+
+    await db.delete(rolePermissions).where(eq(rolePermissions.permissionId, permiso.id));
+    await db.delete(userPermissionsOverride).where(eq(userPermissionsOverride.permissionId, permiso.id));
+    await db.delete(permissions).where(eq(permissions.id, permiso.id));
+  };
+
   // ============================================
   // AUTH ENDPOINTS - Autenticación con celular y contraseña
   // ============================================
@@ -216,10 +459,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/minas", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
-      
+      const userPermissions = await getUserPermissions(userId);
+      const isUseMode = req.query.mode === "use";
+
+      if (isUseMode) {
+        const userOverrides = await db
+          .select({
+            permissionKey: permissions.key,
+            overrideType: userPermissionsOverride.overrideType,
+          })
+          .from(userPermissionsOverride)
+          .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+          .where(eq(userPermissionsOverride.userId, userId));
+
+        const deniedPermissions = new Set(
+          userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+        );
+        const permissionExistsCache = new Map<string, boolean>();
+
+        const allMinas = await storage.getMinas();
+        const minasPermitidas = await filterEntitiesByUsePermission({
+          entities: allMinas,
+          userPermissions,
+          deniedPermissions,
+          permissionExistsCache,
+          getPermissionKey: (mina) => `action.TRANSACCIONES.mina.${mina.id}.use`,
+        });
+
+        return res.json(minasPermitidas);
+      }
+
       // Si el usuario tiene permisos de transacciones, devolver TODAS las minas
       // (sin filtrar por userId) para que pueda seleccionarlas en transacciones
-      const userPermissions = await getUserPermissions(userId);
       const hasTransactionPermissions = 
         userPermissions.includes("action.TRANSACCIONES.create") ||
         userPermissions.includes("action.TRANSACCIONES.completePending") ||
@@ -393,6 +664,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       const data = insertMinaSchema.parse(req.body);
       const mina = await storage.createMina({ ...data, userId });
+      try {
+        const useKey = `action.TRANSACCIONES.mina.${mina.id}.use`;
+        const permissionId = await ensurePermission({
+          key: useKey,
+          descripcion: `Usar mina: ${mina.nombre}`,
+          categoria: "action",
+        });
+        if (permissionId) {
+          await assignPermissionToAdminRole(useKey);
+          await assignAllowOverride(permissionId, userId);
+        }
+      } catch (permError) {
+        console.warn("⚠️  No se pudo crear permiso use para mina:", permError);
+      }
       res.json(mina);
     } catch (error: any) {
       console.error("Error creating mina:", error.message);
@@ -538,6 +823,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const deleteResult = await storage.deleteMina(minaId);
 
         if (deleteResult) {
+          try {
+            await deletePermissionByKey(`action.TRANSACCIONES.mina.${minaId}.use`);
+          } catch (permError) {
+            console.warn("⚠️  No se pudo eliminar permiso use de mina:", permError);
+          }
           res.json({ message: "Mina eliminada exitosamente" });
         } else {
           res.status(500).json({ error: "Error al eliminar la mina" });
@@ -574,6 +864,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .json({ error: "Mina not found or access denied" });
         }
 
+      try {
+        const useKey = `action.TRANSACCIONES.mina.${minaId}.use`;
+        await ensurePermission({
+          key: useKey,
+          descripcion: `Usar mina: ${data.nombre}`,
+          categoria: "action",
+        });
+        await updatePermissionDescription(useKey, `Usar mina: ${data.nombre}`);
+      } catch (permError) {
+        console.warn("⚠️  No se pudo actualizar permiso use de mina:", permError);
+      }
+
         res.json(updatedMina);
       } catch (error) {
         console.error("Error updating mina nombre:", error);
@@ -593,10 +895,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const userId = req.user!.id;
-        
+        const userPermissions = await getUserPermissions(userId);
+        const isUseMode = req.query.mode === "use";
+
+        if (isUseMode) {
+          const userOverrides = await db
+            .select({
+              permissionKey: permissions.key,
+              overrideType: userPermissionsOverride.overrideType,
+            })
+            .from(userPermissionsOverride)
+            .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+            .where(eq(userPermissionsOverride.userId, userId));
+
+          const deniedPermissions = new Set(
+            userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+          );
+          const permissionExistsCache = new Map<string, boolean>();
+
+          const allCompradores = await storage.getCompradores();
+          const compradoresPermitidos = await filterEntitiesByUsePermission({
+            entities: allCompradores,
+            userPermissions,
+            deniedPermissions,
+            permissionExistsCache,
+            getPermissionKey: (comprador) => `action.TRANSACCIONES.comprador.${comprador.id}.use`,
+          });
+
+          return res.json(compradoresPermitidos);
+        }
+
         // Si el usuario tiene permisos de transacciones, devolver TODOS los compradores
         // (sin filtrar por userId) para que pueda seleccionarlos en transacciones
-        const userPermissions = await getUserPermissions(userId);
         const hasTransactionPermissions = 
           userPermissions.includes("action.TRANSACCIONES.create") ||
           userPermissions.includes("action.TRANSACCIONES.completePending") ||
@@ -647,6 +977,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       const data = insertCompradorSchema.parse(req.body);
       const comprador = await storage.createComprador({ ...data, userId });
+      try {
+        const useKey = `action.TRANSACCIONES.comprador.${comprador.id}.use`;
+        const permissionId = await ensurePermission({
+          key: useKey,
+          descripcion: `Usar comprador: ${comprador.nombre}`,
+          categoria: "action",
+        });
+        if (permissionId) {
+          await assignPermissionToAdminRole(useKey);
+          await assignAllowOverride(permissionId, userId);
+        }
+      } catch (permError) {
+        console.warn("⚠️  No se pudo crear permiso use para comprador:", permError);
+      }
       res.json(comprador);
     } catch (error: any) {
       console.error("Error creating comprador:", error.message);
@@ -733,10 +1077,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Terceros routes
-  app.get("/api/terceros", requireAuth, requirePermission("module.RODMAR.tab.TERCEROS.view"), async (req, res) => {
+  app.get("/api/terceros", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
       const userPermissions = await getUserPermissions(userId);
+      const isUseMode = req.query.mode === "use";
+
+      if (!isUseMode && !userPermissions.includes("module.RODMAR.tab.TERCEROS.view")) {
+        return res.status(403).json({
+          error: "No tienes permiso para ver esta sección",
+          requiredPermission: "module.RODMAR.tab.TERCEROS.view",
+        });
+      }
 
       // Overrides del usuario para denegar terceros específicos
       const userOverrides = await db
@@ -753,11 +1105,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       const terceros = await storage.getTerceros();
-      const tercerosPermitidos = terceros.filter((tercero) => {
-        const permisoKey = getTerceroPermissionKey(tercero.id);
-        if (deniedPermissions.has(permisoKey)) return false;
-        return userPermissions.includes(permisoKey);
-      });
+      let tercerosPermitidos = terceros;
+
+      if (isUseMode) {
+        const permissionExistsCache = new Map<string, boolean>();
+        tercerosPermitidos = await filterEntitiesByUsePermission({
+          entities: terceros,
+          userPermissions,
+          deniedPermissions,
+          permissionExistsCache,
+          getPermissionKey: (tercero) => `action.TRANSACCIONES.tercero.${tercero.id}.use`,
+        });
+      } else {
+        tercerosPermitidos = terceros.filter((tercero) => {
+          const permisoKey = getTerceroPermissionKey(tercero.id);
+          if (deniedPermissions.has(permisoKey)) return false;
+          return userPermissions.includes(permisoKey);
+        });
+      }
       
       // Obtener todas las transacciones para calcular balances dinámicamente
       const transacciones = await storage.getTransacciones();
@@ -870,6 +1235,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      try {
+        const useKey = `action.TRANSACCIONES.tercero.${tercero.id}.use`;
+        const usePermissionId = await ensurePermission({
+          key: useKey,
+          descripcion: `Usar tercero: ${tercero.nombre}`,
+          categoria: "action",
+        });
+        if (usePermissionId) {
+          await assignPermissionToAdminRole(useKey);
+          await assignAllowOverride(usePermissionId, userId);
+        }
+      } catch (permError) {
+        console.warn("⚠️  No se pudo crear permiso use para tercero:", permError);
+      }
+
       res.json(tercero);
     } catch (error: any) {
       console.error("Error creating tercero:", error.message);
@@ -940,6 +1320,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(permissions.key, permisoKey));
       }
 
+      try {
+        const useKey = `action.TRANSACCIONES.tercero.${terceroId}.use`;
+        await ensurePermission({
+          key: useKey,
+          descripcion: `Usar tercero: ${data.nombre}`,
+          categoria: "action",
+        });
+        await updatePermissionDescription(useKey, `Usar tercero: ${data.nombre}`);
+      } catch (permError) {
+        console.warn("⚠️  No se pudo actualizar permiso use de tercero:", permError);
+      }
+
       res.json(tercero);
     } catch (error: any) {
       console.error("Error updating tercero nombre:", error);
@@ -1003,17 +1395,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Eliminar permiso y asignaciones antes de borrar
-      const [permiso] = await db
-        .select()
-        .from(permissions)
-        .where(eq(permissions.key, permisoKey))
-        .limit(1);
-
-      if (permiso) {
-        await db.delete(rolePermissions).where(eq(rolePermissions.permissionId, permiso.id));
-        await db.delete(userPermissionsOverride).where(eq(userPermissionsOverride.permissionId, permiso.id));
-        await db.delete(permissions).where(eq(permissions.id, permiso.id));
+      // Eliminar permisos y asignaciones antes de borrar
+      try {
+        await deletePermissionByKey(permisoKey);
+        await deletePermissionByKey(`action.TRANSACCIONES.tercero.${terceroId}.use`);
+      } catch (permError) {
+        console.warn("⚠️  No se pudieron eliminar permisos de tercero:", permError);
       }
 
       // Si no tiene transacciones, proceder con la eliminación
@@ -1107,6 +1494,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         await storage.deleteComprador(compradorId);
+        try {
+          await deletePermissionByKey(`action.TRANSACCIONES.comprador.${compradorId}.use`);
+        } catch (permError) {
+          console.warn("⚠️  No se pudo eliminar permiso use de comprador:", permError);
+        }
         res.json({ message: "Comprador eliminado exitosamente" });
       } catch (error) {
         res.status(500).json({ error: "Failed to delete comprador" });
@@ -1139,6 +1531,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .json({ error: "Comprador not found or access denied" });
         }
 
+        try {
+          const useKey = `action.TRANSACCIONES.comprador.${compradorId}.use`;
+          await ensurePermission({
+            key: useKey,
+            descripcion: `Usar comprador: ${data.nombre}`,
+            categoria: "action",
+          });
+          await updatePermissionDescription(useKey, `Usar comprador: ${data.nombre}`);
+        } catch (permError) {
+          console.warn("⚠️  No se pudo actualizar permiso use de comprador:", permError);
+        }
+
         res.json(updatedComprador);
       } catch (error) {
         console.error("Error updating comprador nombre:", error);
@@ -1158,10 +1562,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const userId = req.user!.id;
+        const userPermissions = await getUserPermissions(userId);
+        const isUseMode = req.query.mode === "use";
+
+        if (isUseMode) {
+          const userOverrides = await db
+            .select({
+              permissionKey: permissions.key,
+              overrideType: userPermissionsOverride.overrideType,
+            })
+            .from(userPermissionsOverride)
+            .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+            .where(eq(userPermissionsOverride.userId, userId));
+
+          const deniedPermissions = new Set(
+            userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+          );
+          const permissionExistsCache = new Map<string, boolean>();
+
+          const allVolqueteros = await storage.getVolqueteros();
+          const volqueterosPermitidos = await filterEntitiesByUsePermission({
+            entities: allVolqueteros,
+            userPermissions,
+            deniedPermissions,
+            permissionExistsCache,
+            getPermissionKey: (volquetero) => `action.TRANSACCIONES.volquetero.${volquetero.id}.use`,
+          });
+
+          return res.json(volqueterosPermitidos);
+        }
         
         // Si el usuario tiene permisos de transacciones, obtener TODOS los viajes
         // (sin filtrar por userId) para que pueda ver todos los volqueteros en transacciones
-        const userPermissions = await getUserPermissions(userId);
         const hasTransactionPermissions = 
           userPermissions.includes("action.TRANSACCIONES.create") ||
           userPermissions.includes("action.TRANSACCIONES.completePending") ||
@@ -1335,10 +1767,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/volqueteros", requireAuth, async (req, res) => {
     try {
       const data = insertVolqueteroSchema.parse(req.body);
+      const userId = req.user!.id;
       const volquetero = await storage.createVolquetero({
         ...data,
-        userId: req.user!.id,
+        userId,
       });
+      try {
+        const useKey = `action.TRANSACCIONES.volquetero.${volquetero.id}.use`;
+        const permissionId = await ensurePermission({
+          key: useKey,
+          descripcion: `Usar volquetero: ${volquetero.nombre}`,
+          categoria: "action",
+        });
+        if (permissionId) {
+          await assignPermissionToAdminRole(useKey);
+          await assignAllowOverride(permissionId, userId);
+        }
+      } catch (permError) {
+        console.warn("⚠️  No se pudo crear permiso use para volquetero:", permError);
+      }
       res.json(volquetero);
     } catch (error: any) {
       console.error("Error creating volquetero:", error.message);
@@ -1617,6 +2064,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .json({ error: "Volquetero not found or access denied" });
         }
 
+        try {
+          const useKey = `action.TRANSACCIONES.volquetero.${volqueteroId}.use`;
+          await ensurePermission({
+            key: useKey,
+            descripcion: `Usar volquetero: ${data.nombre}`,
+            categoria: "action",
+          });
+          await updatePermissionDescription(useKey, `Usar volquetero: ${data.nombre}`);
+        } catch (permError) {
+          console.warn("⚠️  No se pudo actualizar permiso use de volquetero:", permError);
+        }
+
         res.json(updatedVolquetero);
       } catch (error) {
         console.error("Error updating volquetero nombre:", error);
@@ -1658,6 +2117,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .json({ error: "Mina not found or access denied" });
         }
 
+        try {
+          const useKey = `action.TRANSACCIONES.mina.${minaId}.use`;
+          await ensurePermission({
+            key: useKey,
+            descripcion: `Usar mina: ${nombre.trim()}`,
+            categoria: "action",
+          });
+          await updatePermissionDescription(useKey, `Usar mina: ${nombre.trim()}`);
+        } catch (permError) {
+          console.warn("⚠️  No se pudo actualizar permiso use de mina:", permError);
+        }
+
         res.json(updatedMina);
       } catch (error) {
         console.error("Error updating mina nombre:", error);
@@ -1692,6 +2163,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res
             .status(404)
             .json({ error: "Comprador not found or access denied" });
+        }
+
+        try {
+          const useKey = `action.TRANSACCIONES.comprador.${compradorId}.use`;
+          await ensurePermission({
+            key: useKey,
+            descripcion: `Usar comprador: ${nombre.trim()}`,
+            categoria: "action",
+          });
+          await updatePermissionDescription(useKey, `Usar comprador: ${nombre.trim()}`);
+        } catch (permError) {
+          console.warn("⚠️  No se pudo actualizar permiso use de comprador:", permError);
         }
 
         res.json(updatedComprador);
@@ -1749,6 +2232,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(
           `✅ VOLQUETERO NOMBRE ACTUALIZADO CON SINCRONIZACIÓN: ID ${updatedVolquetero.id} -> "${updatedVolquetero.nombre}"`,
         );
+        try {
+          const useKey = `action.TRANSACCIONES.volquetero.${volqueteroId}.use`;
+          await ensurePermission({
+            key: useKey,
+            descripcion: `Usar volquetero: ${nombre.trim()}`,
+            categoria: "action",
+          });
+          await updatePermissionDescription(useKey, `Usar volquetero: ${nombre.trim()}`);
+        } catch (permError) {
+          console.warn("⚠️  No se pudo actualizar permiso use de volquetero:", permError);
+        }
         res.json(updatedVolquetero);
       } catch (error) {
         console.error(
@@ -3029,6 +3523,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = insertTransaccionSchema.parse(req.body);
       debugLog("Parsed transaction data:", data);
 
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const deQuienCheck = await checkUsePermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: data.deQuienTipo,
+        id: data.deQuienId,
+      });
+      if (!deQuienCheck.allowed) {
+        return res.status(deQuienCheck.status || 403).json({
+          error: deQuienCheck.message || "No tienes permiso para usar esta entidad",
+          requiredPermission: deQuienCheck.requiredPermission,
+        });
+      }
+
+      const paraQuienCheck = await checkUsePermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: data.paraQuienTipo,
+        id: data.paraQuienId,
+      });
+      if (!paraQuienCheck.allowed) {
+        return res.status(paraQuienCheck.status || 403).json({
+          error: paraQuienCheck.message || "No tienes permiso para usar esta entidad",
+          requiredPermission: paraQuienCheck.requiredPermission,
+        });
+      }
+
       // Create backwards compatibility data for storage
       // We'll determine tipoSocio and socioId based on the new "para quién" field
       // This determines who receives the transaction impact
@@ -3159,6 +3696,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({
           error: "Campos requeridos faltantes",
           details: "Se requiere: paraQuienTipo, paraQuienId, valor",
+        });
+      }
+
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const paraQuienCheck = await checkUsePermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: data.paraQuienTipo,
+        id: data.paraQuienId,
+      });
+      if (!paraQuienCheck.allowed) {
+        return res.status(paraQuienCheck.status || 403).json({
+          error: paraQuienCheck.message || "No tienes permiso para usar esta entidad",
+          requiredPermission: paraQuienCheck.requiredPermission,
         });
       }
 
@@ -3499,6 +4065,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Obtener transacción original para obtener datos de notificación
       const originalTransaction = await storage.getTransaccion(id);
+
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const deQuienCheck = await checkUsePermission({
+        userPermissions,
+        deniedPermissions,
+        permissionExistsCache,
+        tipo: data.deQuienTipo,
+        id: data.deQuienId,
+      });
+      if (!deQuienCheck.allowed) {
+        return res.status(deQuienCheck.status || 403).json({
+          error: deQuienCheck.message || "No tienes permiso para usar esta entidad",
+          requiredPermission: deQuienCheck.requiredPermission,
+        });
+      }
+
+      if (originalTransaction?.paraQuienTipo && originalTransaction?.paraQuienId) {
+        const paraQuienCheck = await checkUsePermission({
+          userPermissions,
+          deniedPermissions,
+          permissionExistsCache,
+          tipo: originalTransaction.paraQuienTipo,
+          id: originalTransaction.paraQuienId,
+        });
+        if (!paraQuienCheck.allowed) {
+          return res.status(paraQuienCheck.status || 403).json({
+            error: paraQuienCheck.message || "No tienes permiso para usar esta entidad",
+            requiredPermission: paraQuienCheck.requiredPermission,
+          });
+        }
+      }
       
       // Completar la transacción
       const transaccion = await storage.completarTransaccionPendiente(id, {
@@ -4226,6 +4837,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ 
           error: "Transacción no encontrada o no tienes permiso para actualizarla" 
         });
+      }
+
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+      const permissionExistsCache = new Map<string, boolean>();
+
+      const targetDeQuienTipo = req.body.deQuienTipo ?? originalTransaction.deQuienTipo;
+      const targetDeQuienId = req.body.deQuienId ?? originalTransaction.deQuienId;
+      const targetParaQuienTipo = req.body.paraQuienTipo ?? originalTransaction.paraQuienTipo;
+      const targetParaQuienId = req.body.paraQuienId ?? originalTransaction.paraQuienId;
+
+      if (targetDeQuienTipo && targetDeQuienId) {
+        const deQuienCheck = await checkUsePermission({
+          userPermissions,
+          deniedPermissions,
+          permissionExistsCache,
+          tipo: targetDeQuienTipo,
+          id: targetDeQuienId,
+        });
+        if (!deQuienCheck.allowed) {
+          return res.status(deQuienCheck.status || 403).json({
+            error: deQuienCheck.message || "No tienes permiso para usar esta entidad",
+            requiredPermission: deQuienCheck.requiredPermission,
+          });
+        }
+      }
+
+      if (targetParaQuienTipo && targetParaQuienId) {
+        const paraQuienCheck = await checkUsePermission({
+          userPermissions,
+          deniedPermissions,
+          permissionExistsCache,
+          tipo: targetParaQuienTipo,
+          id: targetParaQuienId,
+        });
+        if (!paraQuienCheck.allowed) {
+          return res.status(paraQuienCheck.status || 403).json({
+            error: paraQuienCheck.message || "No tienes permiso para usar esta entidad",
+            requiredPermission: paraQuienCheck.requiredPermission,
+          });
+        }
       }
 
       // Comparar fechas ANTES de construir updateData (solo día, mes y año, sin hora)
@@ -4970,13 +5632,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET cuentas RodMar permitidas para el usuario (para UI)
   // NOTA: module.RODMAR.accounts.view habilita la pestaña, pero NO da acceso a cuentas.
   // El acceso real se controla por module.RODMAR.account.{CODIGO}.view (y compatibilidad legacy por nombre).
-  app.get("/api/rodmar-cuentas", requireAuth, requirePermission("module.RODMAR.accounts.view"), async (req, res) => {
+  app.get("/api/rodmar-cuentas", requireAuth, async (req, res) => {
     try {
       if (!req.user?.id) {
         return res.status(401).json({ error: "No autenticado" });
       }
 
       const userPermissions = await getUserPermissions(req.user.id);
+      const isUseMode = req.query.mode === "use";
+
+      if (!isUseMode && !userPermissions.includes("module.RODMAR.accounts.view")) {
+        return res.status(403).json({
+          error: "No tienes permiso para ver esta sección",
+          requiredPermission: "module.RODMAR.accounts.view",
+        });
+      }
 
       // Overrides del usuario para denegar cuentas específicas
       const userOverrides = await db
@@ -4997,42 +5667,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(rodmarCuentas)
         .orderBy(rodmarCuentas.nombre);
 
-      const cuentasPermitidas = todasLasCuentas.filter((cuenta) => {
-        const permisoPorCodigo = `module.RODMAR.account.${cuenta.codigo}.view`;
+      let cuentasPermitidas = todasLasCuentas;
 
-        // deny explícito (override de usuario) siempre gana
-        if (deniedPermissions.has(permisoPorCodigo)) {
-          return false;
-        }
+      if (isUseMode) {
+        const permissionExistsCache = new Map<string, boolean>();
+        cuentasPermitidas = await filterEntitiesByUsePermission({
+          entities: todasLasCuentas,
+          userPermissions,
+          deniedPermissions,
+          permissionExistsCache,
+          getPermissionKey: (cuenta) => `action.TRANSACCIONES.rodmar.account.${cuenta.codigo}.use`,
+        });
+      } else {
+        cuentasPermitidas = todasLasCuentas.filter((cuenta) => {
+          const permisoPorCodigo = `module.RODMAR.account.${cuenta.codigo}.view`;
 
-        // permiso nuevo por código
-        if (userPermissions.includes(permisoPorCodigo)) {
-          return true;
-        }
-
-        // compatibilidad legacy por nombre
-        const permisoPorNombre = `module.RODMAR.account.${cuenta.nombre}.view`;
-        if (deniedPermissions.has(permisoPorNombre)) {
-          return false;
-        }
-        if (userPermissions.includes(permisoPorNombre)) {
-          return true;
-        }
-
-        // mapeo legacy nombre->codigo (fallback)
-        const codigoMapeado = nombreToCodigoMap[cuenta.nombre];
-        if (codigoMapeado && cuenta.codigo === codigoMapeado) {
-          const permisoMapeado = `module.RODMAR.account.${cuenta.nombre}.view`;
-          if (deniedPermissions.has(permisoMapeado)) {
+          // deny explícito (override de usuario) siempre gana
+          if (deniedPermissions.has(permisoPorCodigo)) {
             return false;
           }
-          if (userPermissions.includes(permisoMapeado)) {
+
+          // permiso nuevo por código
+          if (userPermissions.includes(permisoPorCodigo)) {
             return true;
           }
-        }
 
-        return false;
-      });
+          // compatibilidad legacy por nombre
+          const permisoPorNombre = `module.RODMAR.account.${cuenta.nombre}.view`;
+          if (deniedPermissions.has(permisoPorNombre)) {
+            return false;
+          }
+          if (userPermissions.includes(permisoPorNombre)) {
+            return true;
+          }
+
+          // mapeo legacy nombre->codigo (fallback)
+          const codigoMapeado = nombreToCodigoMap[cuenta.nombre];
+          if (codigoMapeado && cuenta.codigo === codigoMapeado) {
+            const permisoMapeado = `module.RODMAR.account.${cuenta.nombre}.view`;
+            if (deniedPermissions.has(permisoMapeado)) {
+              return false;
+            }
+            if (userPermissions.includes(permisoMapeado)) {
+              return true;
+            }
+          }
+
+          return false;
+        });
+      }
 
       res.json(cuentasPermitidas);
     } catch (error: any) {
@@ -5088,6 +5771,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Crear el permiso automáticamente
       await createRodMarAccountPermission(nuevaCuenta.codigo, nuevaCuenta.nombre);
       await assignPermissionToAdminRole(`module.RODMAR.account.${nuevaCuenta.codigo}.view`);
+
+      try {
+        const useKey = `action.TRANSACCIONES.rodmar.account.${nuevaCuenta.codigo}.use`;
+        const permissionId = await ensurePermission({
+          key: useKey,
+          descripcion: `Usar cuenta RodMar: ${nuevaCuenta.nombre}`,
+          categoria: "action",
+        });
+        if (permissionId) {
+          await assignPermissionToAdminRole(useKey);
+          await assignAllowOverride(permissionId, userId);
+        }
+      } catch (permError) {
+        console.warn("⚠️  No se pudo crear permiso use para cuenta RodMar:", permError);
+      }
 
       res.status(201).json(nuevaCuenta);
     } catch (error: any) {
@@ -5332,6 +6030,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Migrar tanto el permiso por código anterior como cualquier permiso legacy por nombre anterior (si existía)
           await migratePermissionKey(permisoAnteriorKey);
           await migratePermissionKey(permisoLegacyNombreAnteriorKey);
+
+          // 4. Migrar permiso USE por código
+          const permisoUseAnteriorKey = `action.TRANSACCIONES.rodmar.account.${codigoAnterior}.use`;
+          const permisoUseNuevoKey = `action.TRANSACCIONES.rodmar.account.${nuevoCodigo}.use`;
+
+          let nuevoPermisoUseId: number | null = null;
+          const [permisoUseNuevoExistente] = await tx
+            .select({ id: permissions.id })
+            .from(permissions)
+            .where(eq(permissions.key, permisoUseNuevoKey))
+            .limit(1);
+
+          if (permisoUseNuevoExistente) {
+            nuevoPermisoUseId = permisoUseNuevoExistente.id;
+            await tx
+              .update(permissions)
+              .set({ descripcion: `Usar cuenta RodMar: ${data.nombre}` })
+              .where(eq(permissions.id, nuevoPermisoUseId));
+          } else {
+            const [nuevoPermisoUse] = await tx
+              .insert(permissions)
+              .values({
+                key: permisoUseNuevoKey,
+                descripcion: `Usar cuenta RodMar: ${data.nombre}`,
+                categoria: "action",
+              })
+              .returning({ id: permissions.id });
+            nuevoPermisoUseId = nuevoPermisoUse?.id ?? null;
+          }
+
+          if (!nuevoPermisoUseId) {
+            throw new Error("No se pudo crear/obtener el permiso use nuevo para la cuenta RodMar");
+          }
+
+          const migrateUsePermissionKey = async (oldKey: string) => {
+            if (!oldKey || oldKey === permisoUseNuevoKey) return;
+
+            const [oldPerm] = await tx
+              .select({ id: permissions.id, key: permissions.key })
+              .from(permissions)
+              .where(eq(permissions.key, oldKey))
+              .limit(1);
+
+            if (!oldPerm) return;
+
+            const asignacionesRoles = await tx
+              .select({ roleId: rolePermissions.roleId })
+              .from(rolePermissions)
+              .where(eq(rolePermissions.permissionId, oldPerm.id));
+
+            for (const a of asignacionesRoles) {
+              try {
+                await tx.insert(rolePermissions).values({
+                  roleId: a.roleId,
+                  permissionId: nuevoPermisoUseId!,
+                });
+              } catch (error: any) {
+                if (error?.code !== "23505") throw error;
+              }
+            }
+
+            const overrides = await tx
+              .select({
+                userId: userPermissionsOverride.userId,
+                overrideType: userPermissionsOverride.overrideType,
+              })
+              .from(userPermissionsOverride)
+              .where(eq(userPermissionsOverride.permissionId, oldPerm.id));
+
+            for (const o of overrides) {
+              try {
+                await tx.insert(userPermissionsOverride).values({
+                  userId: o.userId,
+                  permissionId: nuevoPermisoUseId!,
+                  overrideType: o.overrideType,
+                });
+              } catch (error: any) {
+                if (error?.code !== "23505") throw error;
+              }
+            }
+
+            await tx.delete(rolePermissions).where(eq(rolePermissions.permissionId, oldPerm.id));
+            await tx.delete(userPermissionsOverride).where(eq(userPermissionsOverride.permissionId, oldPerm.id));
+            await tx.delete(permissions).where(eq(permissions.id, oldPerm.id));
+          };
+
+          await migrateUsePermissionKey(permisoUseAnteriorKey);
         });
 
         debugLog(`✅ Cuenta migrada: ${codigoAnterior} → ${nuevoCodigo}`);
@@ -5339,6 +6124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Asegurar que ADMIN tenga acceso a la cuenta (en caso de escenarios raros sin permiso previo)
         // (fuera de la transacción: usa helpers que consultan db global)
         await assignPermissionToAdminRole(`module.RODMAR.account.${nuevoCodigo}.view`);
+        await assignPermissionToAdminRole(`action.TRANSACCIONES.rodmar.account.${nuevoCodigo}.use`);
       } else {
         // Si el código no cambió, actualizar nombre y descripción del permiso
         // y absorber (migrar + eliminar) cualquier permiso legacy por NOMBRE anterior si existiera.
@@ -5360,6 +6146,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .update(permissions)
           .set({ descripcion: `Ver cuenta RodMar: ${data.nombre}` })
           .where(eq(permissions.key, permisoKey));
+
+          // Asegurar descripción actualizada en el permiso use por código
+          const permisoUseKey = `action.TRANSACCIONES.rodmar.account.${codigoAnterior}.use`;
+          await tx
+            .update(permissions)
+            .set({ descripcion: `Usar cuenta RodMar: ${data.nombre}` })
+            .where(eq(permissions.key, permisoUseKey));
 
           // Buscar ID del permiso por código
           const [permCodigo] = await tx
@@ -5488,28 +6281,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Eliminar permiso y asignaciones de roles antes de eliminar la cuenta
+      // Eliminar permisos y asignaciones de roles antes de eliminar la cuenta
       const permisoKey = `module.RODMAR.account.${cuenta[0].codigo}.view`;
-      
-      // Buscar el permiso
-      const [permiso] = await db
-        .select()
-        .from(permissions)
-        .where(eq(permissions.key, permisoKey))
-        .limit(1);
-
-      if (permiso) {
-        // Eliminar asignaciones de roles primero (foreign key constraint)
-        await db
-          .delete(rolePermissions)
-          .where(eq(rolePermissions.permissionId, permiso.id));
-
-        // Eliminar el permiso
-        await db
-          .delete(permissions)
-          .where(eq(permissions.id, permiso.id));
-
-        debugLog(`✅ Permiso eliminado: ${permisoKey}`);
+      const permisoUseKey = `action.TRANSACCIONES.rodmar.account.${cuenta[0].codigo}.use`;
+      try {
+        await deletePermissionByKey(permisoKey);
+        await deletePermissionByKey(permisoUseKey);
+        debugLog(`✅ Permisos eliminados: ${permisoKey}, ${permisoUseKey}`);
+      } catch (permError) {
+        console.warn("⚠️  No se pudieron eliminar permisos de cuenta RodMar:", permError);
       }
 
       // Eliminar la cuenta

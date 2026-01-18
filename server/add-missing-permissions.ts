@@ -1,6 +1,6 @@
 import { db } from './db';
-import { permissions, rolePermissions, roles, rodmarCuentas, terceros, userPermissionsOverride } from '../shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { permissions, rolePermissions, roles, rodmarCuentas, terceros, userPermissionsOverride, minas, compradores, volqueteros } from '../shared/schema';
+import { eq, and, inArray } from 'drizzle-orm';
 import { assignPermissionToAdminRole, createRodMarAccountPermission } from './rodmar-account-permissions';
 import { createTerceroPermission, getTerceroPermissionKey } from './tercero-permissions';
 
@@ -23,6 +23,54 @@ async function addMissingPermissions() {
       console.log('❌ No se encontró el rol ADMIN');
       return;
     }
+
+    const ensurePermission = async (key: string, descripcion: string, categoria: string) => {
+      const existing = await db
+        .select({ id: permissions.id })
+        .from(permissions)
+        .where(eq(permissions.key, key))
+        .limit(1);
+
+      if (existing.length > 0) {
+        return existing[0].id;
+      }
+
+      const [created] = await db
+        .insert(permissions)
+        .values({ key, descripcion, categoria })
+        .returning();
+      return created.id;
+    };
+
+    const transactionAccessKeys = [
+      'action.TRANSACCIONES.create',
+      'action.TRANSACCIONES.completePending',
+      'action.TRANSACCIONES.edit',
+      'action.TRANSACCIONES.solicitar',
+    ];
+
+    const rolesWithTransactionAccess = await db
+      .select({ roleId: rolePermissions.roleId })
+      .from(rolePermissions)
+      .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+      .where(inArray(permissions.key, transactionAccessKeys));
+
+    const rolesWithAccessSet = new Set(rolesWithTransactionAccess.map((r) => r.roleId));
+
+    const assignPermissionToRoles = async (permissionId: number) => {
+      for (const roleId of rolesWithAccessSet) {
+        try {
+          await db.insert(rolePermissions).values({
+            roleId,
+            permissionId,
+          });
+        } catch (error: any) {
+          if (error.code !== '23505') {
+            throw error;
+          }
+        }
+      }
+    };
 
     // Permisos a agregar/verificar
     const missingPermissions = [
@@ -190,6 +238,16 @@ async function addMissingPermissions() {
 
         // Asegurar que ADMIN lo tenga asignado (conveniencia)
         await assignPermissionToAdminRole(`module.RODMAR.account.${cuenta.codigo}.view`);
+
+        // Permiso USE por cuenta
+        const useKey = `action.TRANSACCIONES.rodmar.account.${cuenta.codigo}.use`;
+        const usePermissionId = await ensurePermission(
+          useKey,
+          `Usar cuenta RodMar: ${cuenta.nombre}`,
+          'action',
+        );
+        await assignPermissionToAdminRole(useKey);
+        await assignPermissionToRoles(usePermissionId);
       }
     } catch (error: any) {
       console.warn('⚠️  No se pudo verificar/crear permisos dinámicos de RodMar (se omite):', error?.message || error);
@@ -221,9 +279,82 @@ async function addMissingPermissions() {
             if (error?.code !== "23505") throw error;
           }
         }
+
+        // Permiso USE por tercero
+        const useKey = `action.TRANSACCIONES.tercero.${tercero.id}.use`;
+        const usePermissionId = await ensurePermission(
+          useKey,
+          `Usar tercero: ${tercero.nombre}`,
+          'action',
+        );
+        await assignPermissionToAdminRole(useKey);
+        await assignPermissionToRoles(usePermissionId);
       }
     } catch (error: any) {
       console.warn('⚠️  No se pudo verificar/crear permisos dinámicos de Terceros (se omite):', error?.message || error);
+    }
+
+    // Minas: permisos USE por ID
+    try {
+      const minasList = await db.select().from(minas);
+      if (minasList.length > 0) {
+        console.log(`🔐 Verificando permisos USE de Minas para ${minasList.length} registros...`);
+      }
+
+      for (const mina of minasList) {
+        const useKey = `action.TRANSACCIONES.mina.${mina.id}.use`;
+        const usePermissionId = await ensurePermission(
+          useKey,
+          `Usar mina: ${mina.nombre}`,
+          'action',
+        );
+        await assignPermissionToAdminRole(useKey);
+        await assignPermissionToRoles(usePermissionId);
+      }
+    } catch (error: any) {
+      console.warn('⚠️  No se pudo verificar/crear permisos USE de Minas (se omite):', error?.message || error);
+    }
+
+    // Compradores: permisos USE por ID
+    try {
+      const compradoresList = await db.select().from(compradores);
+      if (compradoresList.length > 0) {
+        console.log(`🔐 Verificando permisos USE de Compradores para ${compradoresList.length} registros...`);
+      }
+
+      for (const comprador of compradoresList) {
+        const useKey = `action.TRANSACCIONES.comprador.${comprador.id}.use`;
+        const usePermissionId = await ensurePermission(
+          useKey,
+          `Usar comprador: ${comprador.nombre}`,
+          'action',
+        );
+        await assignPermissionToAdminRole(useKey);
+        await assignPermissionToRoles(usePermissionId);
+      }
+    } catch (error: any) {
+      console.warn('⚠️  No se pudo verificar/crear permisos USE de Compradores (se omite):', error?.message || error);
+    }
+
+    // Volqueteros: permisos USE por ID
+    try {
+      const volqueterosList = await db.select().from(volqueteros);
+      if (volqueterosList.length > 0) {
+        console.log(`🔐 Verificando permisos USE de Volqueteros para ${volqueterosList.length} registros...`);
+      }
+
+      for (const volquetero of volqueterosList) {
+        const useKey = `action.TRANSACCIONES.volquetero.${volquetero.id}.use`;
+        const usePermissionId = await ensurePermission(
+          useKey,
+          `Usar volquetero: ${volquetero.nombre}`,
+          'action',
+        );
+        await assignPermissionToAdminRole(useKey);
+        await assignPermissionToRoles(usePermissionId);
+      }
+    } catch (error: any) {
+      console.warn('⚠️  No se pudo verificar/crear permisos USE de Volqueteros (se omite):', error?.message || error);
     }
 
     console.log('=== PERMISOS FALTANTES AGREGADOS EXITOSAMENTE ===');

@@ -35,15 +35,15 @@ export default function TransactionModal({ open, onClose }: TransactionModalProp
   const { toast } = useToast();
   
   const { data: minas = [] } = useQuery<Mina[]>({
-    queryKey: ["/api/minas"],
+    queryKey: ["/api/minas?mode=use"],
   });
 
   const { data: compradores = [] } = useQuery<Comprador[]>({
-    queryKey: ["/api/compradores"],
+    queryKey: ["/api/compradores?mode=use"],
   });
 
   const { data: volqueteros = [] } = useQuery<Volquetero[]>({
-    queryKey: ["/api/volqueteros"],
+    queryKey: ["/api/volqueteros?mode=use"],
   });
 
   const form = useForm<z.infer<typeof formSchema>>({

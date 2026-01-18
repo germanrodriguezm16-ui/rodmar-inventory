@@ -63,28 +63,28 @@ export function CompleteTransactionModal({
 
   // Fetch entities
   const { data: minas = [] } = useQuery<Mina[]>({
-    queryKey: ["/api/minas"],
+    queryKey: ["/api/minas?mode=use"],
     enabled: open,
   });
 
   const { data: compradores = [] } = useQuery<Comprador[]>({
-    queryKey: ["/api/compradores"],
+    queryKey: ["/api/compradores?mode=use"],
     enabled: open,
   });
 
   const { data: volqueteros = [] } = useQuery<Volquetero[]>({
-    queryKey: ["/api/volqueteros"],
+    queryKey: ["/api/volqueteros?mode=use"],
     enabled: open,
   });
 
   const { data: terceros = [] } = useQuery<Tercero[]>({
-    queryKey: ["/api/terceros"],
+    queryKey: ["/api/terceros?mode=use"],
     enabled: open,
   });
 
   // Cuentas RodMar dinámicas (desde BD)
   const { data: rodmarCuentas = [] } = useQuery<RodmarCuenta[]>({
-    queryKey: ["/api/rodmar-cuentas"],
+    queryKey: ["/api/rodmar-cuentas?mode=use"],
     enabled: open,
   });
 

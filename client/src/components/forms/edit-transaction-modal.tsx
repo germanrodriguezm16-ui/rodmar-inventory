@@ -97,28 +97,28 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
 
   // Fetch entities - exactamente igual que new-transaction-modal.tsx
   const { data: minas = [] } = useQuery<Mina[]>({
-    queryKey: ["/api/minas"],
+    queryKey: ["/api/minas?mode=use"],
     enabled: isOpen,
   });
 
   const { data: compradores = [] } = useQuery<Comprador[]>({
-    queryKey: ["/api/compradores"],
+    queryKey: ["/api/compradores?mode=use"],
     enabled: isOpen,
   });
 
   const { data: volqueteros = [] } = useQuery<Volquetero[]>({
-    queryKey: ["/api/volqueteros"],
+    queryKey: ["/api/volqueteros?mode=use"],
     enabled: isOpen,
   });
 
   const { data: terceros = [] } = useQuery<Tercero[]>({
-    queryKey: ["/api/terceros"],
+    queryKey: ["/api/terceros?mode=use"],
     enabled: isOpen,
   });
 
   // Obtener cuentas RodMar desde la API
   const { data: rodmarCuentas = [] } = useQuery({
-    queryKey: ["/api/rodmar-cuentas"],
+    queryKey: ["/api/rodmar-cuentas?mode=use"],
     enabled: isOpen,
   });
 
