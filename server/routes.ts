@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { requireAuth, optionalAuth } from "./middleware/auth";
 import { getUserPermissions, requirePermission, invalidateUserPermissionsCache } from "./middleware/permissions";
 import { canViewRodMarAccount } from "./rodmar-account-permissions";
+import { createTerceroPermission, getTerceroPermissionKey } from "./tercero-permissions";
 import { emitTransactionUpdate } from "./socket";
 import { db } from "./db";
 import { roles, permissions, rolePermissions, users, userPermissionsOverride, transacciones } from "../shared/schema";
@@ -732,16 +733,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Terceros routes
-  app.get("/api/terceros", requireAuth, async (req, res) => {
+  app.get("/api/terceros", requireAuth, requirePermission("module.RODMAR.tab.TERCEROS.view"), async (req, res) => {
     try {
       const userId = req.user!.id;
-      const terceros = await storage.getTerceros(userId);
+      const userPermissions = await getUserPermissions(userId);
+
+      // Overrides del usuario para denegar terceros específicos
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+
+      const terceros = await storage.getTerceros();
+      const tercerosPermitidos = terceros.filter((tercero) => {
+        const permisoKey = getTerceroPermissionKey(tercero.id);
+        if (deniedPermissions.has(permisoKey)) return false;
+        return userPermissions.includes(permisoKey);
+      });
       
       // Obtener todas las transacciones para calcular balances dinámicamente
       const transacciones = await storage.getTransacciones();
       
       // Calcular balance de cada tercero desde las transacciones (similar a cuentas RodMar)
-      const tercerosConBalance = terceros.map((tercero) => {
+      const tercerosConBalance = tercerosPermitidos.map((tercero) => {
         let positivos = 0;
         let negativos = 0;
 
@@ -782,16 +804,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/terceros/:id", async (req, res) => {
+  app.get("/api/terceros/:id", requireAuth, async (req, res) => {
     try {
       const terceroId = parseInt(req.params.id);
       if (isNaN(terceroId)) {
         return res.status(400).json({ error: "Invalid tercero ID" });
       }
 
+      const userId = req.user!.id;
       const tercero = await storage.getTerceroById(terceroId);
       if (!tercero) {
         return res.status(404).json({ error: "Tercero not found" });
+      }
+
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+
+      const permisoKey = getTerceroPermissionKey(terceroId);
+      if (deniedPermissions.has(permisoKey) || !userPermissions.includes(permisoKey)) {
+        return res.status(403).json({
+          error: "No tienes permiso para ver este tercero",
+          requiredPermission: permisoKey,
+        });
       }
 
       res.json(tercero);
@@ -801,11 +846,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/terceros", requireAuth, async (req, res) => {
+  app.post("/api/terceros", requireAuth, requirePermission("module.RODMAR.tab.TERCEROS.view"), async (req, res) => {
     try {
       const userId = req.user!.id;
       const data = insertTerceroSchema.parse(req.body);
       const tercero = await storage.createTercero({ ...data, userId });
+
+      // Crear permiso por tercero y asignarlo al ADMIN
+      const permisoId = await createTerceroPermission(tercero.id, tercero.nombre);
+      if (permisoId) {
+        const permisoKey = getTerceroPermissionKey(tercero.id);
+        await assignPermissionToAdminRole(permisoKey);
+
+        // Asegurar acceso al creador (override allow)
+        try {
+          await db.insert(userPermissionsOverride).values({
+            userId,
+            permissionId: permisoId,
+            overrideType: "allow",
+          });
+        } catch (error: any) {
+          if (error?.code !== "23505") throw error;
+        }
+      }
+
       res.json(tercero);
     } catch (error: any) {
       console.error("Error creating tercero:", error.message);
@@ -826,7 +890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/terceros/:id/nombre", requireAuth, async (req, res) => {
+  app.patch("/api/terceros/:id/nombre", requireAuth, requirePermission("module.RODMAR.tab.TERCEROS.view"), async (req, res) => {
     try {
       const terceroId = parseInt(req.params.id);
       if (isNaN(terceroId)) {
@@ -835,10 +899,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.user!.id;
       const data = updateTerceroNombreSchema.parse(req.body);
-      const tercero = await storage.updateTerceroNombre(terceroId, data.nombre, userId);
+      const terceroExistente = await storage.getTerceroById(terceroId);
+      if (!terceroExistente) {
+        return res.status(404).json({ error: "Tercero not found" });
+      }
 
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+
+      const permisoKey = getTerceroPermissionKey(terceroId);
+      if (deniedPermissions.has(permisoKey) || !userPermissions.includes(permisoKey)) {
+        return res.status(403).json({
+          error: "No tienes permiso para editar este tercero",
+          requiredPermission: permisoKey,
+        });
+      }
+
+      const tercero = await storage.updateTerceroNombre(terceroId, data.nombre);
       if (!tercero) {
         return res.status(404).json({ error: "Tercero not found" });
+      }
+
+      // Asegurar que el permiso exista y actualizar descripción
+      const permisoId = await createTerceroPermission(terceroId, data.nombre);
+      if (permisoId) {
+        await db
+          .update(permissions)
+          .set({ descripcion: `Ver tercero: ${data.nombre}` })
+          .where(eq(permissions.key, permisoKey));
       }
 
       res.json(tercero);
@@ -852,7 +951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/terceros/:id", requireAuth, async (req, res) => {
+  app.delete("/api/terceros/:id", requireAuth, requirePermission("module.RODMAR.tab.TERCEROS.view"), async (req, res) => {
     try {
       const terceroId = parseInt(req.params.id);
       if (isNaN(terceroId)) {
@@ -865,6 +964,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tercero = await storage.getTerceroById(terceroId);
       if (!tercero) {
         return res.status(404).json({ error: "Tercero no encontrado" });
+      }
+
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+
+      const permisoKey = getTerceroPermissionKey(terceroId);
+      if (deniedPermissions.has(permisoKey) || !userPermissions.includes(permisoKey)) {
+        return res.status(403).json({
+          error: "No tienes permiso para eliminar este tercero",
+          requiredPermission: permisoKey,
+        });
       }
 
       // Verificar si el tercero tiene transacciones asociadas
@@ -882,8 +1003,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Eliminar permiso y asignaciones antes de borrar
+      const [permiso] = await db
+        .select()
+        .from(permissions)
+        .where(eq(permissions.key, permisoKey))
+        .limit(1);
+
+      if (permiso) {
+        await db.delete(rolePermissions).where(eq(rolePermissions.permissionId, permiso.id));
+        await db.delete(userPermissionsOverride).where(eq(userPermissionsOverride.permissionId, permiso.id));
+        await db.delete(permissions).where(eq(permissions.id, permiso.id));
+      }
+
       // Si no tiene transacciones, proceder con la eliminación
-      const deleted = await storage.deleteTercero(terceroId, userId);
+      const deleted = await storage.deleteTercero(terceroId);
 
       if (!deleted) {
         return res.status(404).json({ error: "Tercero not found" });
@@ -896,16 +1030,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/terceros/:id/transacciones", async (req, res) => {
+  app.get("/api/terceros/:id/transacciones", requireAuth, async (req, res) => {
     try {
       const terceroId = parseInt(req.params.id);
       if (isNaN(terceroId)) {
         return res.status(400).json({ error: "Invalid tercero ID" });
       }
 
+      const userId = req.user!.id;
+      const tercero = await storage.getTerceroById(terceroId);
+      if (!tercero) {
+        return res.status(404).json({ error: "Tercero not found" });
+      }
+
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+
+      const permisoKey = getTerceroPermissionKey(terceroId);
+      if (deniedPermissions.has(permisoKey) || !userPermissions.includes(permisoKey)) {
+        return res.status(403).json({
+          error: "No tienes permiso para ver transacciones de este tercero",
+          requiredPermission: permisoKey,
+        });
+      }
+
       const transacciones = await storage.getTransaccionesBySocio(
         "tercero",
         terceroId,
+        undefined,
       );
       res.json(transacciones);
     } catch (error) {
@@ -4571,7 +4734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return true;
           }
         }
-
+        
         return false;
       };
 
@@ -5129,7 +5292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             for (const a of asignacionesRoles) {
               try {
                 await tx.insert(rolePermissions).values({
-                  roleId: a.roleId,
+                roleId: a.roleId,
                   permissionId: nuevoPermisoId!,
                 });
               } catch (error: any) {
@@ -5147,13 +5310,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .where(eq(userPermissionsOverride.permissionId, oldPerm.id));
 
             for (const o of overrides) {
-              try {
+                try {
                 await tx.insert(userPermissionsOverride).values({
                   userId: o.userId,
                   permissionId: nuevoPermisoId!,
                   overrideType: o.overrideType,
                 });
-              } catch (error: any) {
+                } catch (error: any) {
                 if (error?.code !== "23505") throw error;
               }
             }
@@ -5185,18 +5348,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         await db.transaction(async (tx) => {
           await tx
-            .update(rodmarCuentas)
-            .set({
-              nombre: data.nombre,
-              updatedAt: new Date(),
-            })
-            .where(eq(rodmarCuentas.id, cuentaId));
+          .update(rodmarCuentas)
+          .set({
+            nombre: data.nombre,
+            updatedAt: new Date(),
+          })
+          .where(eq(rodmarCuentas.id, cuentaId));
 
           // Asegurar descripción actualizada en el permiso por código
           await tx
-            .update(permissions)
-            .set({ descripcion: `Ver cuenta RodMar: ${data.nombre}` })
-            .where(eq(permissions.key, permisoKey));
+          .update(permissions)
+          .set({ descripcion: `Ver cuenta RodMar: ${data.nombre}` })
+          .where(eq(permissions.key, permisoKey));
 
           // Buscar ID del permiso por código
           const [permCodigo] = await tx
@@ -6232,6 +6395,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching roles:", error);
       res.status(500).json({ error: "Error al obtener roles" });
+    }
+  });
+
+  // Diagnóstico: terceros visibles para un usuario específico
+  app.get("/api/admin/terceros/visible", requireAuth, requirePermission("module.ADMIN.view"), async (req, res) => {
+    try {
+      const userId = req.query.userId as string | undefined;
+      const shouldLog = req.query.log === "1" || req.query.log === "true";
+
+      if (!userId) {
+        return res.status(400).json({ error: "userId es requerido" });
+      }
+
+      const [user] = await db
+        .select({ id: users.id, roleId: users.roleId })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!user) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      const userPermissions = await getUserPermissions(userId);
+      const userOverrides = await db
+        .select({
+          permissionKey: permissions.key,
+          overrideType: userPermissionsOverride.overrideType,
+        })
+        .from(userPermissionsOverride)
+        .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+        .where(eq(userPermissionsOverride.userId, userId));
+
+      const deniedPermissions = new Set(
+        userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+      );
+
+      const terceros = await storage.getTerceros();
+      const visible: Array<{ id: number; nombre: string; permisoKey: string; reason: string }> = [];
+      const denied: Array<{ id: number; nombre: string; permisoKey: string; reason: string }> = [];
+
+      terceros.forEach((tercero) => {
+        const permisoKey = getTerceroPermissionKey(tercero.id);
+        const isDenied = deniedPermissions.has(permisoKey);
+        const isAllowed = userPermissions.includes(permisoKey);
+
+        if (!isDenied && isAllowed) {
+          visible.push({
+            id: tercero.id,
+            nombre: tercero.nombre,
+            permisoKey,
+            reason: "allow",
+          });
+        } else {
+          denied.push({
+            id: tercero.id,
+            nombre: tercero.nombre,
+            permisoKey,
+            reason: isDenied ? "deny" : "missing",
+          });
+        }
+      });
+
+      const result = {
+        userId,
+        total: terceros.length,
+        visibleCount: visible.length,
+        deniedCount: denied.length,
+        visible,
+        denied,
+      };
+
+      if (shouldLog) {
+        console.log("🔎 Diagnóstico terceros visibles:", result);
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching terceros visibles:", error);
+      res.status(500).json({ error: "Error al obtener terceros visibles" });
     }
   });
 

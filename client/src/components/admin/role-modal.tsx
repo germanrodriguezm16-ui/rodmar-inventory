@@ -106,6 +106,7 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/roles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/permissions"] });
       toast({
         title: "Rol creado",
         description: "El rol ha sido creado correctamente",
@@ -145,6 +146,7 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/roles"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/permissions"] });
       toast({
         title: "Rol actualizado",
         description: "El rol ha sido actualizado correctamente",
@@ -202,6 +204,15 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
   const allPermissions = permissionsData?.all || [];
   const categories = Array.from(new Set(allPermissions.map((p) => p.categoria).filter(Boolean)));
 
+  const categoryLabels: Record<string, string> = {
+    module: "Módulo",
+    tab: "Pestaña",
+    action: "Acción",
+    account: "Cuentas RodMar",
+    tercero: "Terceros",
+    other: "Otros",
+  };
+
   const filteredPermissions = allPermissions.filter((perm) => {
     const matchesSearch =
       perm.key.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -251,6 +262,33 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
           <div className="space-y-2">
             <Label>Permisos ({selectedPermissions.size} seleccionados)</Label>
             
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={categoryFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCategoryFilter("all")}
+              >
+                Todos
+              </Button>
+              <Button
+                type="button"
+                variant={categoryFilter === "tercero" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCategoryFilter("tercero")}
+              >
+                Terceros
+              </Button>
+              <Button
+                type="button"
+                variant={categoryFilter === "account" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCategoryFilter("account")}
+              >
+                Cuentas RodMar
+              </Button>
+            </div>
+
             <div className="flex gap-2 mb-2">
               <div className="relative flex-1">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -269,7 +307,7 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
                   <SelectItem value="all">Todas las categorías</SelectItem>
                   {categories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
-                      {cat}
+                      {categoryLabels[cat] || cat}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -281,7 +319,7 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
                 {Object.entries(groupedPermissions).map(([categoria, perms]) => (
                   <div key={categoria}>
                     <h4 className="font-semibold mb-2 text-sm uppercase text-muted-foreground">
-                      {categoria}
+                      {categoryLabels[categoria] || categoria}
                     </h4>
                     <div className="space-y-2">
                       {perms.map((perm) => (

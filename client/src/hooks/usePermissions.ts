@@ -11,7 +11,7 @@ interface PermissionsResponse {
  */
 export function usePermissions() {
   const { data, isLoading, error } = useQuery<PermissionsResponse>({
-    queryKey: ["user-permissions"],
+    queryKey: ["/api/user/permissions"],
     queryFn: async () => {
       const token = getAuthToken();
       const headers: Record<string, string> = {};

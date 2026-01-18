@@ -218,14 +218,14 @@ export default function CompradorViajesImageModal({
                   <th className="border border-gray-300 p-1 sm:p-2 text-left">PESO</th>
                   <th className="border border-gray-300 p-1 sm:p-2 text-left">VUT</th>
                   {hayFletesPagadosPorComprador && (
-                    <th className="border border-gray-300 p-1 sm:p-2 text-left">FUT</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">FUT</th>
                   )}
                   {hayFletesPagadosPorComprador && (
-                    <th className="border border-gray-300 p-1 sm:p-2 text-left">OGF</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">OGF</th>
                   )}
                   <th className="border border-gray-300 p-1 sm:p-2 text-left">T. VENTA</th>
                   {hayFletesPagadosPorComprador && (
-                    <th className="border border-gray-300 p-1 sm:p-2 text-left">T. FLETE</th>
+                  <th className="border border-gray-300 p-1 sm:p-2 text-left">T. FLETE</th>
                   )}
                   <th className="border border-gray-300 p-1 sm:p-2 text-left">A CONSIGNAR</th>
                 </tr>
@@ -248,22 +248,22 @@ export default function CompradorViajesImageModal({
                       {viaje.vut ? formatCurrency(viaje.vut) : "-"}
                     </td>
                     {hayFletesPagadosPorComprador && (
-                      <td className="border border-gray-300 p-1 sm:p-2">
+                    <td className="border border-gray-300 p-1 sm:p-2">
                         {esCompradorPagaFlete(viaje.quienPagaFlete) && viaje.fleteTon ? formatCurrency(viaje.fleteTon) : "-"}
-                      </td>
+                    </td>
                     )}
                     {hayFletesPagadosPorComprador && (
-                      <td className="border border-gray-300 p-1 sm:p-2">
+                    <td className="border border-gray-300 p-1 sm:p-2">
                         {esCompradorPagaFlete(viaje.quienPagaFlete) && viaje.otrosGastosFlete ? formatCurrency(viaje.otrosGastosFlete) : "-"}
-                      </td>
+                    </td>
                     )}
                     <td className="border border-gray-300 p-1 sm:p-2">
                       {viaje.totalVenta ? formatCurrency(viaje.totalVenta) : "-"}
                     </td>
                     {hayFletesPagadosPorComprador && (
-                      <td className="border border-gray-300 p-1 sm:p-2">
+                    <td className="border border-gray-300 p-1 sm:p-2">
                         {esCompradorPagaFlete(viaje.quienPagaFlete) && viaje.totalFlete ? formatCurrency(viaje.totalFlete) : "-"}
-                      </td>
+                    </td>
                     )}
                     <td className="border border-gray-300 p-1 sm:p-2 font-semibold text-green-600">
                       {viaje.valorConsignar ? formatCurrency(viaje.valorConsignar) : "-"}
@@ -292,7 +292,7 @@ export default function CompradorViajesImageModal({
                   )}
                   <td className="border border-gray-300 p-1 sm:p-2">{formatCurrency(totalVenta)}</td>
                   {hayFletesPagadosPorComprador && (
-                    <td className="border border-gray-300 p-1 sm:p-2">{formatCurrency(totalFlete)}</td>
+                  <td className="border border-gray-300 p-1 sm:p-2">{formatCurrency(totalFlete)}</td>
                   )}
                   <td className="border border-gray-300 p-1 sm:p-2">{formatCurrency(totalConsignar)}</td>
                 </tr>

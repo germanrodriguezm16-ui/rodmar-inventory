@@ -108,6 +108,16 @@ export default function RolesTab() {
     return <div className="text-center py-8">Cargando roles...</div>;
   }
 
+  const getPreviewText = (items: Role["permissions"], limit = 2) => {
+    const preview = items
+      .map((perm) => perm.descripcion || perm.permissionKey)
+      .filter(Boolean)
+      .slice(0, limit);
+    const remaining = items.length - preview.length;
+    if (preview.length === 0) return "";
+    return `${preview.join(", ")}${remaining > 0 ? ` y ${remaining} más` : ""}`;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -137,6 +147,30 @@ export default function RolesTab() {
                     <p className="text-xs text-muted-foreground mt-1">
                       {role.permissions.length} permiso{role.permissions.length !== 1 ? "s" : ""}
                     </p>
+                    {(() => {
+                      const tercerosPerms = role.permissions.filter((perm) =>
+                        perm.permissionKey.startsWith("module.RODMAR.tercero."),
+                      );
+                      const cuentasPerms = role.permissions.filter((perm) =>
+                        perm.permissionKey.startsWith("module.RODMAR.account."),
+                      );
+                      return (
+                        <>
+                          {tercerosPerms.length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Terceros asignados: {tercerosPerms.length}
+                              {getPreviewText(tercerosPerms) ? ` — ${getPreviewText(tercerosPerms)}` : ""}
+                            </p>
+                          )}
+                          {cuentasPerms.length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Cuentas RodMar: {cuentasPerms.length}
+                              {getPreviewText(cuentasPerms) ? ` — ${getPreviewText(cuentasPerms)}` : ""}
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
                 <div className="flex gap-2">

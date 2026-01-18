@@ -541,14 +541,14 @@ export default function RodMar() {
               })()
             }`}>
               {has("module.RODMAR.accounts.view") && (
-                <>
-                  <TabsTrigger value="cuentas" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
-                    Cuentas
-                  </TabsTrigger>
-                  <TabsTrigger value="terceros" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
-                    Terceros
-                  </TabsTrigger>
-                </>
+                <TabsTrigger value="cuentas" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
+                  Cuentas
+                </TabsTrigger>
+              )}
+              {has("module.RODMAR.tab.TERCEROS.view") && (
+                <TabsTrigger value="terceros" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
+                  Terceros
+                </TabsTrigger>
               )}
               {has("module.RODMAR.LCDM.view") && (
                 <TabsTrigger value="lcdm" className="text-xs sm:text-sm px-2 py-1.5 sm:px-4 sm:py-2">
@@ -665,7 +665,7 @@ export default function RodMar() {
                     <User className="w-5 h-5 text-blue-600" />
                     <h3 className="text-lg font-semibold text-foreground">Terceros</h3>
                   </div>
-                  {has("module.RODMAR.accounts.view") && (
+                  {isAdmin && (
                     <Button 
                       onClick={() => setShowAddTerceroModal(true)} 
                       size="sm"
@@ -681,7 +681,7 @@ export default function RodMar() {
                   {terceros.length === 0 ? (
                     <Card>
                       <CardContent className="p-6 text-center">
-                        <p className="text-muted-foreground">No hay terceros registrados</p>
+                        <p className="text-muted-foreground">No tienes terceros asignados</p>
                       </CardContent>
                     </Card>
                   ) : (
@@ -711,29 +711,31 @@ export default function RodMar() {
                             </CardContent>
                           </Card>
                         </ContextMenuTrigger>
-                        <ContextMenuContent>
-                          <ContextMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedTercero(tercero);
-                              setShowEditTerceroModal(true);
-                            }}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar nombre
-                          </ContextMenuItem>
-                          <ContextMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedTercero(tercero);
-                              setShowDeleteTerceroModal(true);
-                            }}
-                            className="text-red-600 focus:text-red-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
-                          </ContextMenuItem>
-                        </ContextMenuContent>
+                        {isAdmin && (
+                          <ContextMenuContent>
+                            <ContextMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedTercero(tercero);
+                                setShowEditTerceroModal(true);
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar nombre
+                            </ContextMenuItem>
+                            <ContextMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedTercero(tercero);
+                                setShowDeleteTerceroModal(true);
+                              }}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Eliminar
+                            </ContextMenuItem>
+                          </ContextMenuContent>
+                        )}
                       </ContextMenu>
                     ))
                   )}

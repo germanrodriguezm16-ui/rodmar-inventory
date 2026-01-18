@@ -1,7 +1,8 @@
 import { db } from './db';
-import { permissions, rolePermissions, roles, rodmarCuentas } from '../shared/schema';
+import { permissions, rolePermissions, roles, rodmarCuentas, terceros, userPermissionsOverride } from '../shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { assignPermissionToAdminRole, createRodMarAccountPermission } from './rodmar-account-permissions';
+import { createTerceroPermission, getTerceroPermissionKey } from './tercero-permissions';
 
 /**
  * Script para agregar los permisos faltantes de pestañas de Viajes
@@ -192,6 +193,37 @@ async function addMissingPermissions() {
       }
     } catch (error: any) {
       console.warn('⚠️  No se pudo verificar/crear permisos dinámicos de RodMar (se omite):', error?.message || error);
+    }
+
+    // Terceros: permisos por ID (dinámicos)
+    try {
+      const tercerosList = await db.select().from(terceros);
+      if (tercerosList.length > 0) {
+        console.log(`🔐 Verificando permisos dinámicos de Terceros para ${tercerosList.length} registros...`);
+      }
+
+      for (const tercero of tercerosList) {
+        const permissionId = await createTerceroPermission(tercero.id, tercero.nombre);
+        if (!permissionId) continue;
+
+        const permisoKey = getTerceroPermissionKey(tercero.id);
+        await assignPermissionToAdminRole(permisoKey);
+
+        // Mantener acceso al dueño (override allow) para compatibilidad con el flujo actual
+        if (tercero.userId) {
+          try {
+            await db.insert(userPermissionsOverride).values({
+              userId: tercero.userId,
+              permissionId,
+              overrideType: "allow",
+            });
+          } catch (error: any) {
+            if (error?.code !== "23505") throw error;
+          }
+        }
+      }
+    } catch (error: any) {
+      console.warn('⚠️  No se pudo verificar/crear permisos dinámicos de Terceros (se omite):', error?.message || error);
     }
 
     console.log('=== PERMISOS FALTANTES AGREGADOS EXITOSAMENTE ===');
