@@ -256,9 +256,11 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl w-[calc(100vw-1rem)] sm:w-full mx-2 sm:mx-auto my-2 sm:my-auto p-4 sm:p-6 h-[95vh] sm:h-[90vh] max-h-[95vh] h-[95dvh] sm:h-[90dvh] max-h-[95dvh] sm:max-h-[90dvh] overflow-hidden overflow-x-hidden flex flex-col min-h-0">
-        <DialogHeader className="shrink-0">
-          <DialogTitle>{role ? "Editar Rol" : "Crear Nuevo Rol"}</DialogTitle>
+      <DialogContent className="max-w-5xl w-[calc(100vw-1.5rem)] sm:w-full mx-3 sm:mx-auto my-3 sm:my-auto p-4 sm:p-6 h-[92vh] sm:h-[90vh] max-h-[92vh] h-[92dvh] sm:h-[90dvh] max-h-[92dvh] sm:max-h-[90dvh] overflow-hidden overflow-x-hidden flex flex-col min-h-0 border border-blue-200/60 ring-1 ring-blue-100/60 shadow-xl sm:rounded-2xl">
+        <DialogHeader className="shrink-0 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-blue-100/70 bg-gradient-to-r from-blue-50/90 via-blue-50/30 to-transparent sm:rounded-t-2xl">
+          <DialogTitle className="text-blue-800">
+            {role ? "Editar Rol" : "Crear Nuevo Rol"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 min-h-0 flex-1">
@@ -310,7 +312,7 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
               </Select>
             </div>
 
-            <ScrollArea className="flex-1 min-h-0 border rounded-md">
+            <ScrollArea className="flex-1 min-h-0 border rounded-xl border-blue-200/60 bg-white/40">
               <div className="p-4 space-y-5">
                 {["ui", "visibility", "ops", "other"]
                   .filter((group) => groupedPermissions[group])
@@ -353,13 +355,18 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
           </div>
         </div>
 
-        <DialogFooter className="shrink-0">
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="shrink-0 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 px-4 sm:px-6 py-3 border-t border-blue-100/70 bg-gradient-to-r from-white via-white to-blue-50/20 sm:rounded-b-2xl">
+          <Button
+            variant="outline"
+            className="border-blue-200/70 hover:bg-blue-50/60"
+            onClick={onClose}
+          >
             Cancelar
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={createMutation.isPending || updateMutation.isPending}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm focus-visible:ring-blue-300"
           >
             {createMutation.isPending || updateMutation.isPending
               ? "Guardando..."

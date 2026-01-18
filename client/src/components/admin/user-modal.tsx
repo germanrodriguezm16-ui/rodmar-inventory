@@ -338,17 +338,17 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="max-w-3xl w-[calc(100vw-1.5rem)] sm:w-full mx-3 sm:mx-auto my-3 sm:my-auto p-4 sm:p-6 h-[92vh] sm:h-[90vh] max-h-[92vh] h-[92dvh] sm:h-[90dvh] max-h-[92dvh] sm:max-h-[90dvh] overflow-hidden overflow-x-hidden flex flex-col min-h-0 border border-blue-200/60 ring-1 ring-blue-100/60 shadow-xl sm:rounded-2xl">
+        <DialogHeader className="shrink-0 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-blue-100/70 bg-gradient-to-r from-blue-50/90 via-blue-50/30 to-transparent sm:rounded-t-2xl">
+          <DialogTitle className="text-blue-800">
             {user ? `Editar Usuario: ${user.firstName && user.lastName
               ? `${user.firstName} ${user.lastName}`
               : user.email || user.id}` : "Crear Nuevo Usuario"}
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh] pr-4">
-          <div className="space-y-4">
+        <ScrollArea className="flex-1 min-h-0 mt-4 border rounded-xl border-blue-200/60 bg-white/40">
+          <div className="p-4 space-y-4">
             {/* Campos para crear/editar usuario */}
             <div className="space-y-2">
               <Label htmlFor="phone">Número de Celular *</Label>
@@ -614,13 +614,18 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
           </div>
         </ScrollArea>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="shrink-0 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 px-4 sm:px-6 py-3 border-t border-blue-100/70 bg-gradient-to-r from-white via-white to-blue-50/20 sm:rounded-b-2xl">
+          <Button
+            variant="outline"
+            className="border-blue-200/70 hover:bg-blue-50/60"
+            onClick={onClose}
+          >
             Cancelar
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={createMutation.isPending || updateMutation.isPending}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm focus-visible:ring-blue-300"
           >
             {createMutation.isPending || updateMutation.isPending
               ? "Guardando..."
