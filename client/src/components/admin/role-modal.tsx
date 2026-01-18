@@ -256,7 +256,7 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl w-[calc(100vw-1.5rem)] sm:w-full mx-3 sm:mx-auto my-3 sm:my-auto p-4 sm:p-6 h-[92vh] sm:h-[90vh] max-h-[92vh] h-[92dvh] sm:h-[90dvh] max-h-[92dvh] sm:max-h-[90dvh] overflow-hidden overflow-x-hidden flex flex-col min-h-0 border border-blue-200/60 ring-1 ring-blue-100/60 shadow-xl sm:rounded-2xl">
+      <DialogContent className="max-w-5xl w-[calc(100vw-1.5rem)] sm:w-full p-4 sm:p-6 h-[92vh] sm:h-[90vh] max-h-[92vh] h-[92dvh] sm:h-[90dvh] max-h-[92dvh] sm:max-h-[90dvh] overflow-hidden overflow-x-hidden flex flex-col min-h-0 border border-blue-200/60 ring-1 ring-blue-100/60 shadow-xl sm:rounded-2xl">
         <DialogHeader className="shrink-0 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-blue-100/70 bg-gradient-to-r from-blue-50/90 via-blue-50/30 to-transparent sm:rounded-t-2xl">
           <DialogTitle className="text-blue-800">
             {role ? "Editar Rol" : "Crear Nuevo Rol"}
