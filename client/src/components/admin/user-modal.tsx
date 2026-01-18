@@ -338,7 +338,10 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl w-full p-4 sm:p-6 overflow-hidden overflow-x-hidden flex flex-col min-h-0 border border-blue-200/60 ring-1 ring-blue-100/60 shadow-xl sm:rounded-2xl">
+      <DialogContent
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="max-w-3xl w-full p-4 sm:p-6 overflow-hidden overflow-x-hidden flex flex-col min-h-0 border border-blue-200/60 ring-1 ring-blue-100/60 shadow-xl sm:rounded-2xl"
+      >
         <DialogHeader className="shrink-0 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-blue-100/70 bg-gradient-to-r from-blue-50/90 via-blue-50/30 to-transparent sm:rounded-t-2xl">
           <DialogTitle className="text-blue-800">
             {user ? `Editar Usuario: ${user.firstName && user.lastName
@@ -614,10 +617,10 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
           </div>
         </ScrollArea>
 
-        <DialogFooter className="shrink-0 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 px-4 sm:px-6 py-3 border-t border-blue-100/70 bg-gradient-to-r from-white via-white to-blue-50/20 sm:rounded-b-2xl">
+        <DialogFooter className="shrink-0 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 px-4 sm:px-6 py-3 border-t border-blue-100/70 bg-gradient-to-r from-white via-white to-blue-50/20 sm:rounded-b-2xl flex-row gap-2 justify-end">
           <Button
             variant="outline"
-            className="border-blue-200/70 hover:bg-blue-50/60"
+            className="border-blue-200/70 hover:bg-blue-50/60 flex-1 sm:flex-none"
             onClick={onClose}
           >
             Cancelar
@@ -625,7 +628,7 @@ export default function UserModal({ open, onClose, user }: UserModalProps) {
           <Button
             onClick={handleSubmit}
             disabled={createMutation.isPending || updateMutation.isPending}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm focus-visible:ring-blue-300"
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm focus-visible:ring-blue-300 flex-1 sm:flex-none"
           >
             {createMutation.isPending || updateMutation.isPending
               ? "Guardando..."
