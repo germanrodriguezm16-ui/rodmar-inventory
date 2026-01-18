@@ -182,23 +182,11 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
       return;
     }
 
-    if (!role) {
-      toast({
-        title: "Error",
-        description: "No se puede actualizar: rol no encontrado",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const permissionIds = Array.from(selectedPermissions);
     const data = { nombre, descripcion, permissionIds };
 
-    if (role) {
-      updateMutation.mutate({ roleId: role.id, ...data });
-    } else {
-      createMutation.mutate(data);
-    }
+    if (role) updateMutation.mutate({ roleId: role.id, ...data });
+    else createMutation.mutate(data);
   };
 
   const allPermissions = permissionsData?.all || [];
@@ -268,8 +256,8 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl w-[calc(100vw-1rem)] sm:w-full mx-2 sm:mx-auto my-2 sm:my-auto p-4 sm:p-6 max-h-[95vh] overflow-hidden overflow-x-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-5xl w-[calc(100vw-1rem)] sm:w-full mx-2 sm:mx-auto my-2 sm:my-auto p-4 sm:p-6 h-[95vh] sm:h-[90vh] max-h-[95vh] h-[95dvh] sm:h-[90dvh] max-h-[95dvh] sm:max-h-[90dvh] overflow-hidden overflow-x-hidden flex flex-col min-h-0">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{role ? "Editar Rol" : "Crear Nuevo Rol"}</DialogTitle>
         </DialogHeader>
 
@@ -295,7 +283,7 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
             />
           </div>
 
-          <div className="space-y-2 flex-1 min-h-0">
+          <div className="flex flex-col gap-2 flex-1 min-h-0">
             <Label>Permisos ({selectedPermissions.size} seleccionados)</Label>
             <div className="flex flex-col sm:flex-row gap-2 mb-2">
               <div className="relative flex-1 min-w-0">
@@ -322,8 +310,8 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
               </Select>
             </div>
 
-            <ScrollArea className="flex-1 min-h-0 border rounded-md p-4">
-              <div className="space-y-5">
+            <ScrollArea className="flex-1 min-h-0 border rounded-md">
+              <div className="p-4 space-y-5">
                 {["ui", "visibility", "ops", "other"]
                   .filter((group) => groupedPermissions[group])
                   .map((group) => (
@@ -365,7 +353,7 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>

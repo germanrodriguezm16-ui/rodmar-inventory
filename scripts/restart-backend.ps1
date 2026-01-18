@@ -12,7 +12,13 @@ Start-Sleep -Seconds 2
 # Iniciar backend
 Write-Host "Iniciando servidor Backend..." -ForegroundColor Green
 Set-Location $rootPath
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Servidor Backend' -ForegroundColor Green; npm run dev" -WindowStyle Minimized
+$cmd = @"
+if (-not \$env:PERMISSIONS_SYNC_ON_BOOT -or \$env:PERMISSIONS_SYNC_ON_BOOT.Trim() -eq '') { \$env:PERMISSIONS_SYNC_ON_BOOT = 'off' }
+if (-not \$env:PERMISSIONS_SYNC_VERBOSE -or \$env:PERMISSIONS_SYNC_VERBOSE.Trim() -eq '') { \$env:PERMISSIONS_SYNC_VERBOSE = '0' }
+Write-Host 'Servidor Backend' -ForegroundColor Green;
+npm run dev
+"@
+Start-Process powershell -ArgumentList "-NoExit", "-Command", $cmd -WindowStyle Minimized
 
 Start-Sleep -Seconds 3
 

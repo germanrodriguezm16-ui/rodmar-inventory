@@ -2,6 +2,11 @@ import { db } from './db';
 import { permissions, roles, rolePermissions } from '../shared/schema';
 import { eq, and } from 'drizzle-orm';
 
+function isPermissionsSyncVerbose(): boolean {
+  const v = (process.env.PERMISSIONS_SYNC_VERBOSE || "").toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
 /**
  * Crea un permiso para una cuenta RodMar específica
  * Ahora usa el código de la cuenta en lugar del nombre para que sea persistente
@@ -33,7 +38,9 @@ export async function createRodMarAccountPermission(cuentaCodigo: string, cuenta
       })
       .returning();
 
-    console.log(`✅ Permiso creado para cuenta RodMar: ${cuentaNombre} (${permissionKey})`);
+    if (isPermissionsSyncVerbose()) {
+      console.log(`✅ Permiso creado para cuenta RodMar: ${cuentaNombre} (${permissionKey})`);
+    }
     return newPermission.id;
   } catch (error) {
     console.error(`❌ Error creando permiso para cuenta RodMar ${cuentaNombre}:`, error);
@@ -100,7 +107,9 @@ export async function assignPermissionToAdminRole(permissionKey: string): Promis
       .limit(1);
 
     if (existing.length > 0) {
-      console.log(`✅ Permiso ${permissionKey} ya está asignado al rol ADMIN`);
+      if (isPermissionsSyncVerbose()) {
+        console.log(`✅ Permiso ${permissionKey} ya está asignado al rol ADMIN`);
+      }
       return;
     }
 
@@ -110,11 +119,15 @@ export async function assignPermissionToAdminRole(permissionKey: string): Promis
       permissionId: permission.id,
     });
 
-    console.log(`✅ Permiso ${permissionKey} asignado al rol ADMIN`);
+    if (isPermissionsSyncVerbose()) {
+      console.log(`✅ Permiso ${permissionKey} asignado al rol ADMIN`);
+    }
   } catch (error: any) {
     // Si ya existe (error 23505), ignorar
     if (error.code === '23505') {
-      console.log(`✅ Permiso ${permissionKey} ya está asignado al rol ADMIN`);
+      if (isPermissionsSyncVerbose()) {
+        console.log(`✅ Permiso ${permissionKey} ya está asignado al rol ADMIN`);
+      }
       return;
     }
     console.error(`❌ Error asignando permiso ${permissionKey} al rol ADMIN:`, error);

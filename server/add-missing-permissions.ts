@@ -12,6 +12,12 @@ async function addMissingPermissions() {
   console.log('=== AGREGANDO PERMISOS FALTANTES ===');
   
   try {
+    const verboseEnv = (process.env.PERMISSIONS_SYNC_VERBOSE || "").toLowerCase();
+    const verbose = verboseEnv === "1" || verboseEnv === "true" || verboseEnv === "yes";
+    const detail = (...args: any[]) => {
+      if (verbose) console.log(...args);
+    };
+
     // Obtener rol ADMIN
     const adminRole = await db
       .select()
@@ -146,11 +152,11 @@ async function addMissingPermissions() {
             permissionId: perm.id,
           });
           assignedCount++;
-          console.log(`✅ Permiso ${perm.key} asignado al rol ADMIN`);
+          detail(`✅ Permiso ${perm.key} asignado al rol ADMIN`);
         } catch (error: any) {
           // Si ya está asignado (error 23505), ignorar
           if (error.code === '23505' && error.constraint_name === 'unique_role_permission') {
-            console.log(`✅ Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
+            detail(`✅ Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
           } else {
             throw error; // Re-lanzar otros errores
           }
@@ -175,7 +181,7 @@ async function addMissingPermissions() {
 
       if (existing.length > 0) {
         permissionId = existing[0].id;
-        console.log(`✅ Permiso ${perm.key} ya existe (ID: ${permissionId})`);
+        detail(`✅ Permiso ${perm.key} ya existe (ID: ${permissionId})`);
       } else {
         // Crear el permiso con manejo de duplicados
         try {
@@ -195,7 +201,7 @@ async function addMissingPermissions() {
               .limit(1);
             if (existingPerm.length > 0) {
               permissionId = existingPerm[0].id;
-              console.log(`✅ Permiso ${perm.key} ya existía (ID: ${permissionId})`);
+              detail(`✅ Permiso ${perm.key} ya existía (ID: ${permissionId})`);
             } else {
               throw error; // Re-lanzar si no podemos obtenerlo
             }
@@ -223,17 +229,17 @@ async function addMissingPermissions() {
             roleId: adminRole[0].id,
             permissionId: permissionId,
           });
-          console.log(`✅ Permiso ${perm.key} asignado al rol ADMIN`);
+          detail(`✅ Permiso ${perm.key} asignado al rol ADMIN`);
         } catch (error: any) {
           // Si ya está asignado (error 23505), ignorar
           if (error.code === '23505' && error.constraint_name === 'unique_role_permission') {
-            console.log(`✅ Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
+            detail(`✅ Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
           } else {
             throw error; // Re-lanzar otros errores
           }
         }
       } else {
-        console.log(`✅ Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
+        detail(`✅ Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
       }
     }
 

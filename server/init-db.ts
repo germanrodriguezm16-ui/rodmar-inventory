@@ -586,7 +586,23 @@ export async function initializeDatabase() {
     await initializeRolesAndPermissions();
     
     // Agregar permisos faltantes (para bases de datos existentes)
-    await addMissingPermissionsFromFile();
+    // IMPORTANTE: puede ser costoso (miles de queries) si hay muchas entidades.
+    // Controlado por env var:
+    // - PERMISSIONS_SYNC_ON_BOOT=background (default): corre en background, no bloquea el arranque
+    // - PERMISSIONS_SYNC_ON_BOOT=off: no corre en el arranque
+    // - PERMISSIONS_SYNC_ON_BOOT=blocking: bloquea el arranque (comportamiento anterior)
+    const defaultSyncMode = (process.env.NODE_ENV === "production") ? "background" : "off";
+    const syncMode = (process.env.PERMISSIONS_SYNC_ON_BOOT || defaultSyncMode).toLowerCase();
+    if (syncMode === "blocking") {
+      await addMissingPermissionsFromFile();
+    } else if (syncMode === "off") {
+      console.log("ℹ️  PERMISSIONS_SYNC_ON_BOOT=off → omitiendo verificación masiva de permisos en el arranque");
+    } else {
+      console.log("ℹ️  PERMISSIONS_SYNC_ON_BOOT=background → verificación masiva de permisos en background (no bloquea)");
+      void addMissingPermissionsFromFile().catch((error: any) => {
+        console.warn("⚠️  Error en verificación masiva de permisos (background):", error?.message || error);
+      });
+    }
     
     // Luego crear usuario admin por defecto si no existe
     await initializeAdminUser();

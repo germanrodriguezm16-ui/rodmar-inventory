@@ -121,11 +121,11 @@ export default function PermissionsTab() {
                       key={perm.id}
                       className="p-2 border rounded-md hover:bg-muted/50 transition-colors"
                     >
-                      <div className="font-mono text-sm font-medium">
-                        {perm.key}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
+                      <div className="text-sm font-medium break-words">
                         {perm.descripcion}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 break-all">
+                        {perm.key}
                       </div>
                     </div>
                   ))}

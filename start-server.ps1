@@ -42,4 +42,12 @@ Write-Host ""
 Write-Host ("=" * 60) -ForegroundColor Gray
 Write-Host ""
 
+# Local dev: rápido y silencioso (evitar sync masivo de permisos en cada arranque)
+if (-not $env:PERMISSIONS_SYNC_ON_BOOT -or $env:PERMISSIONS_SYNC_ON_BOOT.Trim() -eq "") {
+    $env:PERMISSIONS_SYNC_ON_BOOT = "off"
+}
+if (-not $env:PERMISSIONS_SYNC_VERBOSE -or $env:PERMISSIONS_SYNC_VERBOSE.Trim() -eq "") {
+    $env:PERMISSIONS_SYNC_VERBOSE = "0"
+}
+
 npm run dev

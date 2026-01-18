@@ -31,6 +31,10 @@ $envContent = @"
 # Generado automáticamente - NO SUBIR A GIT
 
 DATABASE_URL=$databaseUrl
+
+# Sync masivo de permisos (en local conviene apagarlo para arranque rápido)
+PERMISSIONS_SYNC_ON_BOOT=off
+PERMISSIONS_SYNC_VERBOSE=0
 "@
 
 $envContent | Out-File -FilePath ".env" -Encoding UTF8 -NoNewline

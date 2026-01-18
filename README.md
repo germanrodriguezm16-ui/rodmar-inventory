@@ -31,6 +31,12 @@ Sistema completo de gestión de operaciones mineras y logística de transporte.
    SESSION_SECRET=tu-secret-key-segura-aqui
    PORT=5000
    NODE_ENV=development
+   # Opcional: control del sync masivo de permisos al iniciar (puede ser lento con muchas entidades)
+   # En desarrollo (local) el default es OFF para arranque rápido y silencioso.
+   # PERMISSIONS_SYNC_ON_BOOT=background | off | blocking
+   PERMISSIONS_SYNC_ON_BOOT=off
+   # Opcional: logs detallados del sync (por defecto es resumen)
+   PERMISSIONS_SYNC_VERBOSE=0
    ```
 
 4. **Configurar base de datos**
@@ -51,6 +57,15 @@ Sistema completo de gestión de operaciones mineras y logística de transporte.
    npm run build
    npm start
    ```
+
+### Frontend (dev)
+
+Por defecto el frontend corre en **`http://localhost:5173/`** (puerto fijo para evitar confusiones).
+
+### Nota sobre permisos (dev local)
+
+Si tienes muchas entidades, el “sync” masivo de permisos puede tardar. En desarrollo el default es **rápido y silencioso** (no corre en boot).
+Ver `ENV_EXAMPLE.md` y `CAMBIOS_RECIENTES_2026-01-18_PERMISOS_Y_UI.md`.
 
 ## 📱 Funcionalidades
 
