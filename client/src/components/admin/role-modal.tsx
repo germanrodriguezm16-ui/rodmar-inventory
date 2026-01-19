@@ -258,7 +258,7 @@ export default function RoleModal({ open, onClose, role }: RoleModalProps) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
         onOpenAutoFocus={(e) => e.preventDefault()}
-        className="max-w-5xl w-full p-4 sm:p-6 overflow-hidden overflow-x-hidden flex flex-col min-h-0 border border-blue-200/60 ring-1 ring-blue-100/60 shadow-xl rounded-2xl"
+        className="max-w-5xl w-full h-[90dvh] sm:h-[90vh] max-h-[90dvh] sm:max-h-[90vh] p-4 sm:p-6 overflow-hidden overflow-x-hidden flex flex-col min-h-0 border border-blue-200/60 ring-1 ring-blue-100/60 shadow-xl rounded-2xl"
       >
         <DialogHeader className="shrink-0 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-blue-100/70 bg-gradient-to-r from-blue-50/90 via-blue-50/30 to-transparent rounded-t-2xl">
           <DialogTitle className="text-blue-800">
