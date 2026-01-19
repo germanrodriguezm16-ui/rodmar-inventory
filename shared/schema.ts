@@ -211,6 +211,8 @@ export const terceroLoans = pgTable("tercero_loans", {
   direction: text("direction").default("pay").notNull(), // pay = yo debo (interés a favor del tercero)
   dayOfMonth: integer("day_of_month").notNull(), // 1-28
   startDate: timestamp("start_date").defaultNow().notNull(),
+  pausedAt: timestamp("paused_at"),
+  resumeAt: timestamp("resume_at"),
   nextRunAt: timestamp("next_run_at"),
   status: text("status").default("active").notNull(),
   notes: text("notes"),

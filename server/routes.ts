@@ -1826,6 +1826,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Number.isFinite(num) ? num : 0;
   };
 
+  const parseDateOnly = (value: any) => {
+    if (!value) return null;
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+    if (typeof value === "string") {
+      const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (match) {
+        const year = Number(match[1]);
+        const month = Number(match[2]) - 1;
+        const day = Number(match[3]);
+        const date = new Date(year, month, day);
+        if (!Number.isNaN(date.getTime())) return date;
+      }
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) return parsed;
+    }
+    return null;
+  };
+
   const buildPeriodKey = (date: Date) => {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     return `${date.getFullYear()}-${month}`;
@@ -1998,7 +2016,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const principalAmount = parseAmount(principalTx.valor);
-      const start = startDate ? new Date(startDate) : (principalTx.fecha ? new Date(principalTx.fecha) : new Date());
+      const start =
+        parseDateOnly(startDate) ||
+        (principalTx.fecha ? new Date(principalTx.fecha) : new Date());
       const nextRunAt = computeNextRunAt(start, day);
       const rate = rateValue / 100;
 
@@ -2097,6 +2117,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: parseAmount(run.interestAmount),
           baseAmount: parseAmount(run.baseAmount),
           rate: parseAmount(run.rate),
+          runId: run.id,
+          interestTransactionId: run.interestTransactionId,
           transaction: tx,
           date: tx?.fecha || run.createdAt,
         });
@@ -2110,6 +2132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: parseAmount(alloc.appliedInterest) + parseAmount(alloc.appliedPrincipal),
           appliedInterest: parseAmount(alloc.appliedInterest),
           appliedPrincipal: parseAmount(alloc.appliedPrincipal),
+          paymentTransactionId: alloc.paymentTransactionId,
           transaction: tx,
           date: tx?.fecha || alloc.createdAt,
         });
@@ -2143,8 +2166,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!loan) {
         return res.status(404).json({ error: "Préstamo no encontrado" });
       }
+      if (loan.status && loan.status !== "active") {
+        return res.status(400).json({ error: "El préstamo está cerrado" });
+      }
 
-      const periodKey = buildPeriodKey(new Date());
+      const requestedDate = parseDateOnly(req.body?.periodDate);
+      const periodDate = requestedDate || new Date();
+      if (Number.isNaN(periodDate.getTime())) {
+        return res.status(400).json({ error: "Fecha de interés inválida" });
+      }
+      const minDate = loan.resumeAt ? new Date(loan.resumeAt) : (loan.startDate ? new Date(loan.startDate) : null);
+      if (minDate && periodDate < minDate) {
+        return res.status(400).json({ error: "La fecha debe ser posterior al inicio de intereses" });
+      }
+
+      const periodKey = buildPeriodKey(periodDate);
       const existingRun = await db
         .select()
         .from(terceroLoanInterestRuns)
@@ -2170,14 +2206,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const terceroIdStr = terceroId.toString();
-      const now = new Date();
       const interestValue = interestAmount.toFixed(2);
       const baseConcept = `Interés préstamo ${loan.name} (${periodKey})`;
 
       const interestTxPayload: any = {
         concepto: baseConcept,
         valor: interestValue,
-        fecha: now,
+        fecha: periodDate,
         formaPago: "Interés",
         comentario: `AUTO_INTEREST loanId=${loan.id}`,
         tipoTransaccion: "auto_interest",
@@ -2246,6 +2281,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!loan) {
         return res.status(404).json({ error: "Préstamo no encontrado" });
+      }
+      if (loan.status && loan.status !== "active") {
+        return res.status(400).json({ error: "El préstamo está cerrado" });
       }
 
       const [paymentTx] = await db
@@ -2320,6 +2358,331 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error applying payment:", error);
       res.status(500).json({ error: "Failed to apply payment" });
+    }
+  });
+
+  app.patch("/api/terceros/:id/loans/:loanId/close", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      const loanId = parseInt(req.params.loanId);
+      if (isNaN(terceroId) || isNaN(loanId)) {
+        return res.status(400).json({ error: "Invalid IDs" });
+      }
+
+      const access = await ensureTerceroAccess(req, res, terceroId);
+      if (!access) return;
+
+      const [loan] = await db
+        .select()
+        .from(terceroLoans)
+        .where(and(eq(terceroLoans.id, loanId), eq(terceroLoans.terceroId, terceroId)))
+        .limit(1);
+
+      if (!loan) {
+        return res.status(404).json({ error: "Préstamo no encontrado" });
+      }
+
+      const [updated] = await db
+        .update(terceroLoans)
+        .set({ status: "closed", pausedAt: new Date() })
+        .where(eq(terceroLoans.id, loanId))
+        .returning();
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error closing loan:", error);
+      res.status(500).json({ error: "Failed to close loan" });
+    }
+  });
+
+  app.delete("/api/terceros/:id/loans/:loanId", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      const loanId = parseInt(req.params.loanId);
+      if (isNaN(terceroId) || isNaN(loanId)) {
+        return res.status(400).json({ error: "Invalid IDs" });
+      }
+
+      const access = await ensureTerceroAccess(req, res, terceroId);
+      if (!access) return;
+
+      const [loan] = await db
+        .select()
+        .from(terceroLoans)
+        .where(and(eq(terceroLoans.id, loanId), eq(terceroLoans.terceroId, terceroId)))
+        .limit(1);
+
+      if (!loan) {
+        return res.status(404).json({ error: "Préstamo no encontrado" });
+      }
+
+      const runs = await db
+        .select({ id: terceroLoanInterestRuns.id })
+        .from(terceroLoanInterestRuns)
+        .where(eq(terceroLoanInterestRuns.loanId, loanId))
+        .limit(1);
+
+      if (runs.length > 0) {
+        return res.status(400).json({ error: "No se puede eliminar: ya tiene intereses generados" });
+      }
+
+      const allocations = await db
+        .select({ id: terceroLoanPaymentAllocations.id })
+        .from(terceroLoanPaymentAllocations)
+        .where(eq(terceroLoanPaymentAllocations.loanId, loanId))
+        .limit(1);
+
+      if (allocations.length > 0) {
+        return res.status(400).json({ error: "No se puede eliminar: ya tiene pagos aplicados" });
+      }
+
+      await db.delete(terceroLoans).where(eq(terceroLoans.id, loanId));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting loan:", error);
+      res.status(500).json({ error: "Failed to delete loan" });
+    }
+  });
+
+  app.patch("/api/terceros/:id/loans/:loanId/reopen", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      const loanId = parseInt(req.params.loanId);
+      if (isNaN(terceroId) || isNaN(loanId)) {
+        return res.status(400).json({ error: "Invalid IDs" });
+      }
+
+      const access = await ensureTerceroAccess(req, res, terceroId);
+      if (!access) return;
+
+      const [loan] = await db
+        .select()
+        .from(terceroLoans)
+        .where(and(eq(terceroLoans.id, loanId), eq(terceroLoans.terceroId, terceroId)))
+        .limit(1);
+
+      if (!loan) {
+        return res.status(404).json({ error: "Préstamo no encontrado" });
+      }
+
+      const resumeDate = parseDateOnly(req.body?.resumeDate) || new Date();
+      if (Number.isNaN(resumeDate.getTime())) {
+        return res.status(400).json({ error: "Fecha de reanudación inválida" });
+      }
+
+      const updates: any = {
+        status: "active",
+        resumeAt: resumeDate,
+      };
+
+      if (req.body?.ratePercent) {
+        const rateValue = parseFloat(req.body.ratePercent);
+        if (!Number.isFinite(rateValue) || rateValue <= 0) {
+          return res.status(400).json({ error: "ratePercent inválido" });
+        }
+        updates.rate = (rateValue / 100).toFixed(6);
+      }
+
+      if (req.body?.dayOfMonth) {
+        const day = parseInt(req.body.dayOfMonth);
+        if (isNaN(day) || day < 1 || day > 28) {
+          return res.status(400).json({ error: "dayOfMonth debe estar entre 1 y 28" });
+        }
+        updates.dayOfMonth = day;
+      }
+
+      const [updated] = await db
+        .update(terceroLoans)
+        .set(updates)
+        .where(eq(terceroLoans.id, loanId))
+        .returning();
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error reopening loan:", error);
+      res.status(500).json({ error: "Failed to reopen loan" });
+    }
+  });
+
+  app.post("/api/terceros/:id/loans/:loanId/reopen-stage", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      const loanId = parseInt(req.params.loanId);
+      if (isNaN(terceroId) || isNaN(loanId)) {
+        return res.status(400).json({ error: "Invalid IDs" });
+      }
+
+      const access = await ensureTerceroAccess(req, res, terceroId);
+      if (!access) return;
+
+      const [loan] = await db
+        .select()
+        .from(terceroLoans)
+        .where(and(eq(terceroLoans.id, loanId), eq(terceroLoans.terceroId, terceroId)))
+        .limit(1);
+
+      if (!loan) {
+        return res.status(404).json({ error: "Préstamo no encontrado" });
+      }
+
+      const resumeDate = parseDateOnly(req.body?.resumeDate) || new Date();
+      if (Number.isNaN(resumeDate.getTime())) {
+        return res.status(400).json({ error: "Fecha de reanudación inválida" });
+      }
+
+      const day = req.body?.dayOfMonth ? parseInt(req.body.dayOfMonth) : loan.dayOfMonth;
+      if (!day || day < 1 || day > 28) {
+        return res.status(400).json({ error: "dayOfMonth debe estar entre 1 y 28" });
+      }
+
+      const ratePercent = req.body?.ratePercent ? parseFloat(req.body.ratePercent) : parseAmount(loan.rate) * 100;
+      if (!Number.isFinite(ratePercent) || ratePercent <= 0) {
+        return res.status(400).json({ error: "ratePercent inválido" });
+      }
+
+      const allocations = await db
+        .select()
+        .from(terceroLoanPaymentAllocations)
+        .where(eq(terceroLoanPaymentAllocations.loanId, loanId));
+
+      const appliedPrincipal = allocations.reduce((sum, a) => sum + parseAmount(a.appliedPrincipal), 0);
+      const principalPending = Math.max(parseAmount(loan.principalAmount) - appliedPrincipal, 0);
+      if (principalPending <= 0) {
+        return res.status(400).json({ error: "No hay capital pendiente para reabrir en nueva etapa" });
+      }
+
+      await db
+        .update(terceroLoans)
+        .set({ status: "closed", pausedAt: resumeDate })
+        .where(eq(terceroLoans.id, loanId));
+
+      const name = (req.body?.name || "").trim() || `${loan.name} (Etapa ${buildPeriodKey(resumeDate)})`;
+      const [created] = await db
+        .insert(terceroLoans)
+        .values({
+          terceroId,
+          name,
+          principalTransactionId: loan.principalTransactionId,
+          principalAmount: principalPending.toFixed(2),
+          rate: (ratePercent / 100).toFixed(6),
+          ratePeriod: "monthly",
+          rateType: "simple",
+          direction: loan.direction,
+          dayOfMonth: day,
+          startDate: resumeDate,
+          nextRunAt: computeNextRunAt(resumeDate, day),
+          status: "active",
+          notes: loan.notes,
+          createdBy: access.userId,
+        })
+        .returning();
+
+      res.json(created);
+    } catch (error: any) {
+      console.error("Error reopening loan stage:", error);
+      res.status(500).json({ error: "Failed to reopen loan stage" });
+    }
+  });
+
+  app.delete("/api/terceros/:id/loans/:loanId/interest/:runId", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      const loanId = parseInt(req.params.loanId);
+      const runId = parseInt(req.params.runId);
+      if (isNaN(terceroId) || isNaN(loanId) || isNaN(runId)) {
+        return res.status(400).json({ error: "Invalid IDs" });
+      }
+
+      const access = await ensureTerceroAccess(req, res, terceroId);
+      if (!access) return;
+
+      const [loan] = await db
+        .select()
+        .from(terceroLoans)
+        .where(and(eq(terceroLoans.id, loanId), eq(terceroLoans.terceroId, terceroId)))
+        .limit(1);
+
+      if (!loan) {
+        return res.status(404).json({ error: "Préstamo no encontrado" });
+      }
+
+      const [run] = await db
+        .select()
+        .from(terceroLoanInterestRuns)
+        .where(and(eq(terceroLoanInterestRuns.id, runId), eq(terceroLoanInterestRuns.loanId, loanId)))
+        .limit(1);
+
+      if (!run) {
+        return res.status(404).json({ error: "Interés no encontrado" });
+      }
+
+      const allocations = await db
+        .select()
+        .from(terceroLoanPaymentAllocations)
+        .where(eq(terceroLoanPaymentAllocations.loanId, loanId));
+
+      const appliedInterestTotal = allocations.reduce((sum, a) => sum + parseAmount(a.appliedInterest), 0);
+      if (appliedInterestTotal > 0) {
+        return res.status(400).json({
+          error: "No se puede eliminar: hay pagos aplicados a intereses de este préstamo",
+        });
+      }
+
+      await db
+        .delete(terceroLoanInterestRuns)
+        .where(eq(terceroLoanInterestRuns.id, runId));
+
+      await db
+        .delete(transacciones)
+        .where(eq(transacciones.id, run.interestTransactionId));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting interest run:", error);
+      res.status(500).json({ error: "Failed to delete interest" });
+    }
+  });
+
+  app.delete("/api/terceros/:id/loans/:loanId/payments/:paymentTransactionId", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      const loanId = parseInt(req.params.loanId);
+      const paymentTransactionId = parseInt(req.params.paymentTransactionId);
+      if (isNaN(terceroId) || isNaN(loanId) || isNaN(paymentTransactionId)) {
+        return res.status(400).json({ error: "Invalid IDs" });
+      }
+
+      const access = await ensureTerceroAccess(req, res, terceroId);
+      if (!access) return;
+
+      const [loan] = await db
+        .select()
+        .from(terceroLoans)
+        .where(and(eq(terceroLoans.id, loanId), eq(terceroLoans.terceroId, terceroId)))
+        .limit(1);
+
+      if (!loan) {
+        return res.status(404).json({ error: "Préstamo no encontrado" });
+      }
+
+      const deleted = await db
+        .delete(terceroLoanPaymentAllocations)
+        .where(
+          and(
+            eq(terceroLoanPaymentAllocations.loanId, loanId),
+            eq(terceroLoanPaymentAllocations.paymentTransactionId, paymentTransactionId),
+          ),
+        )
+        .returning();
+
+      if (deleted.length === 0) {
+        return res.status(404).json({ error: "No se encontró el pago aplicado" });
+      }
+
+      res.json({ success: true, deletedCount: deleted.length });
+    } catch (error: any) {
+      console.error("Error unlinking payment:", error);
+      res.status(500).json({ error: "Failed to unlink payment" });
     }
   });
 

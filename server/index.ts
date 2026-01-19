@@ -209,9 +209,12 @@ app.use((req, res, next) => {
     }
   });
 
-  // Setup Vite in development, serve static in production
+  // Setup Vite in development (optional), serve static in production
   if (app.get("env") === "development") {
-    await setupVite(app, server);
+    const enableDevUi = (process.env.DEV_SERVER_UI || "off").toLowerCase() === "on";
+    if (enableDevUi) {
+      await setupVite(app, server);
+    }
   } else {
     serveStatic(app);
   }

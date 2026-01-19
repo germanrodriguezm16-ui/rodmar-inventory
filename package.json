@@ -4,7 +4,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development tsx server/index.ts",
+    "dev": "cross-env NODE_ENV=development DEV_SERVER_UI=off tsx watch server/index.ts",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "build:client": "vite build",
     "build:server": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
@@ -20,6 +20,7 @@
     "add-auth-columns-direct": "tsx add-auth-columns-direct.ts",
     "fix-db-auth": "tsx fix-db-auth.ts",
     "add-missing-permissions": "tsx server/add-missing-permissions.ts",
+    "migrations:run": "tsx server/run-migrations.ts",
     "check-admin-permissions": "tsx server/check-admin-permissions.ts",
     "migrate:replit": "tsx migrate-from-replit.ts",
     "migrate:supabase-to-railway": "tsx migrate-supabase-to-railway.ts",

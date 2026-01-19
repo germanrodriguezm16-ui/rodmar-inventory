@@ -607,11 +607,23 @@ export async function initializeDatabase() {
     // Luego crear usuario admin por defecto si no existe
     await initializeAdminUser();
     
-    // Migrar volqueteros desde viajes (crear IDs reales para todos los conductores)
-    await migrateVolqueterosFromViajes();
-    
-    // Migrar transacciones huérfanas (actualizar IDs artificiales a reales)
-    await migrateTransaccionesOrphanas();
+    // Migraciones históricas (on-demand)
+    const migrationsMode = (process.env.MIGRATIONS_ON_BOOT || "off").toLowerCase();
+    const runMigrations = async () => {
+      await migrateVolqueterosFromViajes();
+      await migrateTransaccionesOrphanas();
+    };
+    if (migrationsMode === "blocking") {
+      console.log("ℹ️  MIGRATIONS_ON_BOOT=blocking → ejecutando migraciones históricas");
+      await runMigrations();
+    } else if (migrationsMode === "background") {
+      console.log("ℹ️  MIGRATIONS_ON_BOOT=background → migraciones históricas en background");
+      void runMigrations().catch((error: any) => {
+        console.warn("⚠️  Error en migraciones históricas (background):", error?.message || error);
+      });
+    } else {
+      console.log("ℹ️  MIGRATIONS_ON_BOOT=off → omitiendo migraciones históricas");
+    }
     
     // Verificar si ya hay datos
     const existingMinas = await db.select().from(minas);

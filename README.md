@@ -31,10 +31,15 @@ Sistema completo de gestión de operaciones mineras y logística de transporte.
    SESSION_SECRET=tu-secret-key-segura-aqui
    PORT=5000
    NODE_ENV=development
+   # UI en el backend (dev). Por defecto está apagada para evitar confusión con 5173.
+   DEV_SERVER_UI=off
    # Opcional: control del sync masivo de permisos al iniciar (puede ser lento con muchas entidades)
    # En desarrollo (local) el default es OFF para arranque rápido y silencioso.
    # PERMISSIONS_SYNC_ON_BOOT=background | off | blocking
    PERMISSIONS_SYNC_ON_BOOT=off
+   # Migraciones históricas (desactivadas por defecto)
+   # MIGRATIONS_ON_BOOT=off | background | blocking
+   MIGRATIONS_ON_BOOT=off
    # Opcional: logs detallados del sync (por defecto es resumen)
    PERMISSIONS_SYNC_VERBOSE=0
    ```
@@ -60,7 +65,8 @@ Sistema completo de gestión de operaciones mineras y logística de transporte.
 
 ### Frontend (dev)
 
-Por defecto el frontend corre en **`http://localhost:5173/`** (puerto fijo para evitar confusiones).
+En desarrollo, el frontend corre en **`http://localhost:5173/`** (puerto fijo para evitar confusiones).
+Nota: `http://localhost:5000` es solo API en local; la UI oficial de dev es `5173`.
 
 ### Nota sobre permisos (dev local)
 
@@ -153,7 +159,8 @@ Asegúrate de configurar:
 
 ## 📝 Scripts Disponibles
 
-- `npm run dev`: Inicia servidor en modo desarrollo
+- `npm run dev`: Backend en modo desarrollo con reinicio automático (watch). Por defecto no sirve UI.
+- `npm run migrations:run`: Ejecuta migraciones históricas bajo demanda
 - `npm run build`: Construye la aplicación para producción
 - `npm start`: Inicia servidor en modo producción
 - `npm run check`: Verifica tipos TypeScript
