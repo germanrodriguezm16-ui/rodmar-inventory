@@ -996,7 +996,13 @@ export default function TerceroDetail() {
                         <Badge variant="outline" className="text-xs px-1 py-0 h-4">M</Badge>
                       )}
                     </div>
-                    <div className="text-xs sm:text-sm text-gray-900 truncate pr-1">
+                    {/* Comentario como título (no truncar) */}
+                    {transaccion.comentario && transaccion.comentario.trim() && (
+                      <div className="text-xs sm:text-sm text-gray-900 mt-0.5 leading-tight whitespace-pre-wrap break-words">
+                        {highlightText(transaccion.comentario, searchTerm)}
+                      </div>
+                    )}
+                    <div className="text-[11px] sm:text-xs text-gray-500 truncate pr-1">
                       {(() => {
                         const conceptoText = transaccion.concepto && transaccion.concepto.includes('data:image') ? 
                           '[Imagen]' : 
@@ -1006,17 +1012,6 @@ export default function TerceroDetail() {
                         return highlightText(conceptoText, searchTerm);
                       })()}
                     </div>
-                    {/* Comentario compacto si existe */}
-                    {transaccion.comentario && transaccion.comentario.trim() && (
-                      <div className="text-xs text-gray-500 mt-0.5 leading-tight">
-                        {(() => {
-                          const comentarioText = transaccion.comentario.length > 50 ? 
-                            `${transaccion.comentario.substring(0, 50)}...` : 
-                            transaccion.comentario;
-                          return highlightText(comentarioText, searchTerm);
-                        })()}
-                      </div>
-                    )}
                   </div>
 
                   {/* Lado derecho: Valor y botones de acción */}
