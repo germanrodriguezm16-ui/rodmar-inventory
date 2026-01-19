@@ -8,7 +8,7 @@ import { canViewRodMarAccount } from "./rodmar-account-permissions";
 import { createTerceroPermission, getTerceroPermissionKey } from "./tercero-permissions";
 import { emitTransactionUpdate } from "./socket";
 import { db } from "./db";
-import { roles, permissions, rolePermissions, users, userPermissionsOverride, transacciones } from "../shared/schema";
+import { roles, permissions, rolePermissions, users, userPermissionsOverride, transacciones, terceroLoans, terceroLoanInterestRuns, terceroLoanPaymentAllocations } from "../shared/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { findUserByPhone, verifyPassword, updateLastLogin, hashPassword, generateToken, verifyToken } from "./middleware/auth-helpers";
 import {
@@ -1817,6 +1817,509 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching transacciones for tercero:", error);
       res.status(500).json({ error: "Failed to fetch transacciones for tercero" });
+    }
+  });
+
+  // === Préstamos (MVP: solo terceros) ===
+  const parseAmount = (value: any) => {
+    const num = typeof value === "string" ? parseFloat(value) : Number(value || 0);
+    return Number.isFinite(num) ? num : 0;
+  };
+
+  const buildPeriodKey = (date: Date) => {
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    return `${date.getFullYear()}-${month}`;
+  };
+
+  const computeNextRunAt = (startDate: Date, dayOfMonth: number) => {
+    const next = new Date(startDate);
+    next.setHours(0, 0, 0, 0);
+    next.setDate(dayOfMonth);
+    if (next <= startDate) {
+      next.setMonth(next.getMonth() + 1);
+    }
+    return next;
+  };
+
+  const ensureTerceroAccess = async (req: any, res: any, terceroId: number) => {
+    const userId = req.user!.id;
+    const tercero = await storage.getTerceroById(terceroId);
+    if (!tercero) {
+      res.status(404).json({ error: "Tercero not found" });
+      return null;
+    }
+
+    const userPermissions = await getUserPermissions(userId);
+    const userOverrides = await db
+      .select({
+        permissionKey: permissions.key,
+        overrideType: userPermissionsOverride.overrideType,
+      })
+      .from(userPermissionsOverride)
+      .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+      .where(eq(userPermissionsOverride.userId, userId));
+
+    const deniedPermissions = new Set(
+      userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+    );
+
+    const permisoKey = getTerceroPermissionKey(terceroId);
+    if (deniedPermissions.has(permisoKey) || !userPermissions.includes(permisoKey)) {
+      res.status(403).json({
+        error: "No tienes permiso para ver este tercero",
+        requiredPermission: permisoKey,
+      });
+      return null;
+    }
+
+    return { userId, tercero };
+  };
+
+  app.get("/api/terceros/:id/loans", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      if (isNaN(terceroId)) {
+        return res.status(400).json({ error: "Invalid tercero ID" });
+      }
+
+      const access = await ensureTerceroAccess(req, res, terceroId);
+      if (!access) return;
+
+      const loans = await db
+        .select()
+        .from(terceroLoans)
+        .where(eq(terceroLoans.terceroId, terceroId));
+
+      if (loans.length === 0) return res.json([]);
+
+      const loanIds = loans.map((l) => l.id);
+      const runs = await db
+        .select()
+        .from(terceroLoanInterestRuns)
+        .where(inArray(terceroLoanInterestRuns.loanId, loanIds));
+
+      const allocations = await db
+        .select()
+        .from(terceroLoanPaymentAllocations)
+        .where(inArray(terceroLoanPaymentAllocations.loanId, loanIds));
+
+      const runsByLoan = new Map<number, typeof runs>();
+      runs.forEach((run) => {
+        const list = runsByLoan.get(run.loanId) || [];
+        list.push(run);
+        runsByLoan.set(run.loanId, list);
+      });
+
+      const allocByLoan = new Map<number, typeof allocations>();
+      allocations.forEach((alloc) => {
+        const list = allocByLoan.get(alloc.loanId) || [];
+        list.push(alloc);
+        allocByLoan.set(alloc.loanId, list);
+      });
+
+      const response = loans.map((loan) => {
+        const loanRuns = runsByLoan.get(loan.id) || [];
+        const loanAllocs = allocByLoan.get(loan.id) || [];
+        const interestGenerated = loanRuns.reduce((sum, r) => sum + parseAmount(r.interestAmount), 0);
+        const appliedInterest = loanAllocs.reduce((sum, a) => sum + parseAmount(a.appliedInterest), 0);
+        const appliedPrincipal = loanAllocs.reduce((sum, a) => sum + parseAmount(a.appliedPrincipal), 0);
+        const principalInitial = parseAmount(loan.principalAmount);
+        const interestPending = Math.max(interestGenerated - appliedInterest, 0);
+        const principalPending = Math.max(principalInitial - appliedPrincipal, 0);
+        return {
+          ...loan,
+          interestGenerated,
+          appliedInterest,
+          appliedPrincipal,
+          interestPending,
+          principalPending,
+          totalDue: interestPending + principalPending,
+        };
+      });
+
+      res.json(response);
+    } catch (error: any) {
+      console.error("Error fetching loans:", error);
+      res.status(500).json({ error: "Failed to fetch loans" });
+    }
+  });
+
+  app.post("/api/terceros/:id/loans", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      if (isNaN(terceroId)) {
+        return res.status(400).json({ error: "Invalid tercero ID" });
+      }
+
+      const access = await ensureTerceroAccess(req, res, terceroId);
+      if (!access) return;
+
+      const {
+        name,
+        principalTransactionId,
+        ratePercent,
+        dayOfMonth,
+        direction,
+        startDate,
+        notes,
+      } = req.body || {};
+
+      if (!name || !principalTransactionId || !ratePercent || !dayOfMonth) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const day = parseInt(dayOfMonth);
+      if (isNaN(day) || day < 1 || day > 28) {
+        return res.status(400).json({ error: "dayOfMonth debe estar entre 1 y 28" });
+      }
+
+      const rateValue = parseFloat(ratePercent);
+      if (!Number.isFinite(rateValue) || rateValue <= 0) {
+        return res.status(400).json({ error: "ratePercent inválido" });
+      }
+
+      const [principalTx] = await db
+        .select()
+        .from(transacciones)
+        .where(eq(transacciones.id, Number(principalTransactionId)))
+        .limit(1);
+
+      if (!principalTx) {
+        return res.status(404).json({ error: "Transacción base no encontrada" });
+      }
+
+      const terceroIdStr = terceroId.toString();
+      const matchesTercero =
+        (principalTx.deQuienTipo === "tercero" && principalTx.deQuienId === terceroIdStr) ||
+        (principalTx.paraQuienTipo === "tercero" && principalTx.paraQuienId === terceroIdStr);
+
+      if (!matchesTercero) {
+        return res.status(400).json({ error: "La transacción no pertenece a este tercero" });
+      }
+
+      const principalAmount = parseAmount(principalTx.valor);
+      const start = startDate ? new Date(startDate) : (principalTx.fecha ? new Date(principalTx.fecha) : new Date());
+      const nextRunAt = computeNextRunAt(start, day);
+      const rate = rateValue / 100;
+
+      const [created] = await db
+        .insert(terceroLoans)
+        .values({
+          terceroId,
+          name,
+          principalTransactionId: Number(principalTransactionId),
+          principalAmount: principalAmount.toFixed(2),
+          rate: rate.toFixed(6),
+          ratePeriod: "monthly",
+          rateType: "simple",
+          direction: direction === "receive" ? "receive" : "pay",
+          dayOfMonth: day,
+          startDate: start,
+          nextRunAt,
+          status: "active",
+          notes,
+          createdBy: access.userId,
+        })
+        .returning();
+
+      res.json(created);
+    } catch (error: any) {
+      console.error("Error creating loan:", error);
+      res.status(500).json({ error: "Failed to create loan" });
+    }
+  });
+
+  app.get("/api/terceros/:id/loans/:loanId/history", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      const loanId = parseInt(req.params.loanId);
+      if (isNaN(terceroId) || isNaN(loanId)) {
+        return res.status(400).json({ error: "Invalid IDs" });
+      }
+
+      const access = await ensureTerceroAccess(req, res, terceroId);
+      if (!access) return;
+
+      const [loan] = await db
+        .select()
+        .from(terceroLoans)
+        .where(and(eq(terceroLoans.id, loanId), eq(terceroLoans.terceroId, terceroId)))
+        .limit(1);
+
+      if (!loan) {
+        return res.status(404).json({ error: "Préstamo no encontrado" });
+      }
+
+      const events: any[] = [];
+      const txIds: number[] = [];
+
+      if (loan.principalTransactionId) {
+        txIds.push(loan.principalTransactionId);
+      }
+
+      const runs = await db
+        .select()
+        .from(terceroLoanInterestRuns)
+        .where(eq(terceroLoanInterestRuns.loanId, loanId));
+
+      runs.forEach((r) => txIds.push(r.interestTransactionId));
+
+      const allocations = await db
+        .select()
+        .from(terceroLoanPaymentAllocations)
+        .where(eq(terceroLoanPaymentAllocations.loanId, loanId));
+
+      allocations.forEach((a) => txIds.push(a.paymentTransactionId));
+
+      const transactions = txIds.length > 0
+        ? await db.select().from(transacciones).where(inArray(transacciones.id, Array.from(new Set(txIds))))
+        : [];
+
+      const txMap = new Map<number, any>();
+      transactions.forEach((tx) => txMap.set(tx.id, tx));
+
+      const principalTx = txMap.get(loan.principalTransactionId);
+      if (principalTx) {
+        events.push({
+          type: "principal",
+          label: "Desembolso",
+          amount: parseAmount(loan.principalAmount),
+          transaction: principalTx,
+          date: principalTx.fecha,
+        });
+      }
+
+      runs.forEach((run) => {
+        const tx = txMap.get(run.interestTransactionId);
+        events.push({
+          type: "interest",
+          label: `Interés ${run.periodKey}`,
+          amount: parseAmount(run.interestAmount),
+          baseAmount: parseAmount(run.baseAmount),
+          rate: parseAmount(run.rate),
+          transaction: tx,
+          date: tx?.fecha || run.createdAt,
+        });
+      });
+
+      allocations.forEach((alloc) => {
+        const tx = txMap.get(alloc.paymentTransactionId);
+        events.push({
+          type: "payment",
+          label: "Pago aplicado",
+          amount: parseAmount(alloc.appliedInterest) + parseAmount(alloc.appliedPrincipal),
+          appliedInterest: parseAmount(alloc.appliedInterest),
+          appliedPrincipal: parseAmount(alloc.appliedPrincipal),
+          transaction: tx,
+          date: tx?.fecha || alloc.createdAt,
+        });
+      });
+
+      events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      res.json({ loan, events });
+    } catch (error: any) {
+      console.error("Error fetching loan history:", error);
+      res.status(500).json({ error: "Failed to fetch loan history" });
+    }
+  });
+
+  app.post("/api/terceros/:id/loans/:loanId/generate-interest", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      const loanId = parseInt(req.params.loanId);
+      if (isNaN(terceroId) || isNaN(loanId)) {
+        return res.status(400).json({ error: "Invalid IDs" });
+      }
+
+      const access = await ensureTerceroAccess(req, res, terceroId);
+      if (!access) return;
+
+      const [loan] = await db
+        .select()
+        .from(terceroLoans)
+        .where(and(eq(terceroLoans.id, loanId), eq(terceroLoans.terceroId, terceroId)))
+        .limit(1);
+
+      if (!loan) {
+        return res.status(404).json({ error: "Préstamo no encontrado" });
+      }
+
+      const periodKey = buildPeriodKey(new Date());
+      const existingRun = await db
+        .select()
+        .from(terceroLoanInterestRuns)
+        .where(and(eq(terceroLoanInterestRuns.loanId, loanId), eq(terceroLoanInterestRuns.periodKey, periodKey)))
+        .limit(1);
+
+      if (existingRun.length > 0) {
+        return res.status(400).json({ error: "Ya existe interés generado para este periodo" });
+      }
+
+      const allocations = await db
+        .select()
+        .from(terceroLoanPaymentAllocations)
+        .where(eq(terceroLoanPaymentAllocations.loanId, loanId));
+
+      const appliedPrincipal = allocations.reduce((sum, a) => sum + parseAmount(a.appliedPrincipal), 0);
+      const principalPending = Math.max(parseAmount(loan.principalAmount) - appliedPrincipal, 0);
+      const rate = parseAmount(loan.rate);
+      const interestAmount = Math.max(principalPending * rate, 0);
+
+      if (interestAmount <= 0) {
+        return res.status(400).json({ error: "No hay base para generar interés" });
+      }
+
+      const terceroIdStr = terceroId.toString();
+      const now = new Date();
+      const interestValue = interestAmount.toFixed(2);
+      const baseConcept = `Interés préstamo ${loan.name} (${periodKey})`;
+
+      const interestTxPayload: any = {
+        concepto: baseConcept,
+        valor: interestValue,
+        fecha: now,
+        formaPago: "Interés",
+        comentario: `AUTO_INTEREST loanId=${loan.id}`,
+        tipoTransaccion: "auto_interest",
+        estado: "completada",
+        userId: access.userId,
+      };
+
+      if (loan.direction === "pay") {
+        interestTxPayload.deQuienTipo = "tercero";
+        interestTxPayload.deQuienId = terceroIdStr;
+        interestTxPayload.paraQuienTipo = "rodmar";
+        interestTxPayload.paraQuienId = "interest";
+      } else {
+        interestTxPayload.deQuienTipo = "rodmar";
+        interestTxPayload.deQuienId = "interest";
+        interestTxPayload.paraQuienTipo = "tercero";
+        interestTxPayload.paraQuienId = terceroIdStr;
+      }
+
+      const [interestTx] = await db
+        .insert(transacciones)
+        .values(interestTxPayload)
+        .returning();
+
+      const [run] = await db
+        .insert(terceroLoanInterestRuns)
+        .values({
+          loanId,
+          periodKey,
+          interestTransactionId: interestTx.id,
+          baseAmount: principalPending.toFixed(2),
+          rate: loan.rate,
+          interestAmount: interestValue,
+          createdBy: access.userId,
+        })
+        .returning();
+
+      res.json({ run, transaction: interestTx });
+    } catch (error: any) {
+      console.error("Error generating interest:", error);
+      res.status(500).json({ error: "Failed to generate interest" });
+    }
+  });
+
+  app.post("/api/terceros/:id/loans/:loanId/apply-payment", requireAuth, async (req, res) => {
+    try {
+      const terceroId = parseInt(req.params.id);
+      const loanId = parseInt(req.params.loanId);
+      if (isNaN(terceroId) || isNaN(loanId)) {
+        return res.status(400).json({ error: "Invalid IDs" });
+      }
+
+      const access = await ensureTerceroAccess(req, res, terceroId);
+      if (!access) return;
+
+      const { paymentTransactionId, appliedInterest, appliedPrincipal } = req.body || {};
+      if (!paymentTransactionId) {
+        return res.status(400).json({ error: "paymentTransactionId requerido" });
+      }
+
+      const [loan] = await db
+        .select()
+        .from(terceroLoans)
+        .where(and(eq(terceroLoans.id, loanId), eq(terceroLoans.terceroId, terceroId)))
+        .limit(1);
+
+      if (!loan) {
+        return res.status(404).json({ error: "Préstamo no encontrado" });
+      }
+
+      const [paymentTx] = await db
+        .select()
+        .from(transacciones)
+        .where(eq(transacciones.id, Number(paymentTransactionId)))
+        .limit(1);
+
+      if (!paymentTx) {
+        return res.status(404).json({ error: "Transacción de pago no encontrada" });
+      }
+
+      const terceroIdStr = terceroId.toString();
+      const matchesTercero =
+        (paymentTx.deQuienTipo === "tercero" && paymentTx.deQuienId === terceroIdStr) ||
+        (paymentTx.paraQuienTipo === "tercero" && paymentTx.paraQuienId === terceroIdStr);
+
+      if (!matchesTercero) {
+        return res.status(400).json({ error: "La transacción no pertenece a este tercero" });
+      }
+
+      const runs = await db
+        .select()
+        .from(terceroLoanInterestRuns)
+        .where(eq(terceroLoanInterestRuns.loanId, loanId));
+
+      const allocations = await db
+        .select()
+        .from(terceroLoanPaymentAllocations)
+        .where(eq(terceroLoanPaymentAllocations.loanId, loanId));
+
+      const interestGenerated = runs.reduce((sum, r) => sum + parseAmount(r.interestAmount), 0);
+      const appliedInterestTotal = allocations.reduce((sum, a) => sum + parseAmount(a.appliedInterest), 0);
+      const appliedPrincipalTotal = allocations.reduce((sum, a) => sum + parseAmount(a.appliedPrincipal), 0);
+      const interestPending = Math.max(interestGenerated - appliedInterestTotal, 0);
+      const principalPending = Math.max(parseAmount(loan.principalAmount) - appliedPrincipalTotal, 0);
+
+      const paymentAmount = parseAmount(paymentTx.valor);
+      const requestedInterest = appliedInterest !== undefined ? parseAmount(appliedInterest) : null;
+      const requestedPrincipal = appliedPrincipal !== undefined ? parseAmount(appliedPrincipal) : null;
+
+      let finalInterest = 0;
+      let finalPrincipal = 0;
+
+      if (requestedInterest !== null || requestedPrincipal !== null) {
+        finalInterest = Math.min(requestedInterest || 0, interestPending);
+        finalPrincipal = Math.min(requestedPrincipal || 0, principalPending);
+        if (finalInterest + finalPrincipal > paymentAmount) {
+          return res.status(400).json({ error: "Asignación supera el valor del pago" });
+        }
+      } else {
+        finalInterest = Math.min(paymentAmount, interestPending);
+        finalPrincipal = Math.min(paymentAmount - finalInterest, principalPending);
+      }
+
+      if (finalInterest <= 0 && finalPrincipal <= 0) {
+        return res.status(400).json({ error: "No hay saldo pendiente para aplicar" });
+      }
+
+      const [allocation] = await db
+        .insert(terceroLoanPaymentAllocations)
+        .values({
+          loanId,
+          paymentTransactionId: Number(paymentTransactionId),
+          appliedInterest: finalInterest.toFixed(2),
+          appliedPrincipal: finalPrincipal.toFixed(2),
+          createdBy: access.userId,
+        })
+        .returning();
+
+      res.json({ allocation });
+    } catch (error: any) {
+      console.error("Error applying payment:", error);
+      res.status(500).json({ error: "Failed to apply payment" });
     }
   });
 

@@ -198,6 +198,52 @@ export const transacciones = pgTable("transacciones", {
   socioId: integer("socio_id"), // Mantenemos para compatibilidad
 });
 
+// Préstamos explícitos por tercero (MVP: solo terceros)
+export const terceroLoans = pgTable("tercero_loans", {
+  id: serial("id").primaryKey(),
+  terceroId: integer("tercero_id").references(() => terceros.id, { onDelete: "cascade" }).notNull(),
+  name: text("name").notNull(),
+  principalTransactionId: integer("principal_transaction_id").references(() => transacciones.id).notNull(),
+  principalAmount: decimal("principal_amount", { precision: 15, scale: 2 }).notNull(),
+  rate: decimal("rate", { precision: 8, scale: 6 }).notNull(), // 0.05 = 5%
+  ratePeriod: text("rate_period").default("monthly").notNull(),
+  rateType: text("rate_type").default("simple").notNull(),
+  direction: text("direction").default("pay").notNull(), // pay = yo debo (interés a favor del tercero)
+  dayOfMonth: integer("day_of_month").notNull(), // 1-28
+  startDate: timestamp("start_date").defaultNow().notNull(),
+  nextRunAt: timestamp("next_run_at"),
+  status: text("status").default("active").notNull(),
+  notes: text("notes"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const terceroLoanInterestRuns = pgTable("tercero_loan_interest_runs", {
+  id: serial("id").primaryKey(),
+  loanId: integer("loan_id").references(() => terceroLoans.id, { onDelete: "cascade" }).notNull(),
+  periodKey: varchar("period_key", { length: 7 }).notNull(), // YYYY-MM
+  interestTransactionId: integer("interest_transaction_id").references(() => transacciones.id).notNull(),
+  baseAmount: decimal("base_amount", { precision: 15, scale: 2 }).notNull(),
+  rate: decimal("rate", { precision: 8, scale: 6 }).notNull(),
+  interestAmount: decimal("interest_amount", { precision: 15, scale: 2 }).notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("unique_loan_period").on(table.loanId, table.periodKey),
+]);
+
+export const terceroLoanPaymentAllocations = pgTable("tercero_loan_payment_allocations", {
+  id: serial("id").primaryKey(),
+  loanId: integer("loan_id").references(() => terceroLoans.id, { onDelete: "cascade" }).notNull(),
+  paymentTransactionId: integer("payment_transaction_id").references(() => transacciones.id).notNull(),
+  appliedInterest: decimal("applied_interest", { precision: 15, scale: 2 }).notNull(),
+  appliedPrincipal: decimal("applied_principal", { precision: 15, scale: 2 }).notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_loan_payment_tx").on(table.paymentTransactionId),
+]);
+
 // Inversiones - Sistema separado para inversiones en cuentas Postobón
 export const inversiones = pgTable("inversiones", {
   id: serial("id").primaryKey(),

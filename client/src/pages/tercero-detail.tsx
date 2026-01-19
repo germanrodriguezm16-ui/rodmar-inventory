@@ -13,9 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatCurrency, highlightText } from "@/lib/utils";
 import { calculateTerceroBalance } from "@/lib/calculations";
-import { ArrowLeft, X, Image, Plus, Edit, Search, Trash2, Eye } from "lucide-react";
+import { ArrowLeft, X, Image, Plus, Edit, Search, Trash2, Eye, Percent, CalendarClock } from "lucide-react";
 import { TransaccionWithSocio } from "@shared/schema";
 import { getDateRangeFromFilter, filterTransactionsByDateRange } from "@/lib/date-filter-utils";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
@@ -90,6 +91,23 @@ export default function TerceroDetail() {
   const [showEditTransaction, setShowEditTransaction] = useState(false);
   const [showDeleteTransaction, setShowDeleteTransaction] = useState(false);
 
+  // Préstamos (MVP)
+  const [showLoanModal, setShowLoanModal] = useState(false);
+  const [loanName, setLoanName] = useState("");
+  const [loanRatePercent, setLoanRatePercent] = useState("5");
+  const [loanDayOfMonth, setLoanDayOfMonth] = useState("1");
+  const [loanDirection, setLoanDirection] = useState<"pay" | "receive">("pay");
+  const [loanPrincipalTransactionId, setLoanPrincipalTransactionId] = useState("");
+  const [loanNotes, setLoanNotes] = useState("");
+
+  const [selectedLoan, setSelectedLoan] = useState<any>(null);
+  const [showLoanHistory, setShowLoanHistory] = useState(false);
+
+  const [showApplyPayment, setShowApplyPayment] = useState(false);
+  const [paymentTransactionId, setPaymentTransactionId] = useState("");
+  const [applyInterestValue, setApplyInterestValue] = useState("");
+  const [applyPrincipalValue, setApplyPrincipalValue] = useState("");
+
   // Paginación con memoria en localStorage
   const { currentPage, setCurrentPage, pageSize, setPageSize, getLimitForServer } = usePagination({
     storageKey: `tercero-${terceroId}-pageSize`,
@@ -113,6 +131,148 @@ export default function TerceroDetail() {
   });
 
   const tercero = (terceros as any[]).find((t: any) => t.id === terceroId);
+
+  const { data: loans = [] } = useQuery<any[]>({
+    queryKey: [`/api/terceros/${terceroId}/loans`],
+    queryFn: async () => {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const response = await fetch(apiUrl(`/api/terceros/${terceroId}/loans`), {
+        credentials: "include",
+        headers,
+      });
+      if (!response.ok) throw new Error("Error al cargar préstamos");
+      return response.json();
+    },
+    enabled: terceroId > 0,
+    staleTime: 300000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: loanHistory } = useQuery({
+    queryKey: [`/api/terceros/${terceroId}/loans/${selectedLoan?.id}/history`],
+    queryFn: async () => {
+      if (!selectedLoan?.id) return null;
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const response = await fetch(apiUrl(`/api/terceros/${terceroId}/loans/${selectedLoan.id}/history`), {
+        credentials: "include",
+        headers,
+      });
+      if (!response.ok) throw new Error("Error al cargar historial del préstamo");
+      return response.json();
+    },
+    enabled: !!selectedLoan?.id && showLoanHistory,
+  });
+
+  const createLoanMutation = useMutation({
+    mutationFn: async () => {
+      const token = getAuthToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const response = await fetch(apiUrl(`/api/terceros/${terceroId}/loans`), {
+        method: "POST",
+        credentials: "include",
+        headers,
+        body: JSON.stringify({
+          name: loanName.trim(),
+          principalTransactionId: Number(loanPrincipalTransactionId),
+          ratePercent: Number(loanRatePercent),
+          dayOfMonth: Number(loanDayOfMonth),
+          direction: loanDirection,
+          notes: loanNotes.trim() || undefined,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "No se pudo crear el préstamo");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/terceros/${terceroId}/loans`] });
+      setShowLoanModal(false);
+      setLoanName("");
+      setLoanRatePercent("5");
+      setLoanDayOfMonth("1");
+      setLoanDirection("pay");
+      setLoanPrincipalTransactionId("");
+      setLoanNotes("");
+      toast({ title: "Préstamo creado", description: "Se creó el préstamo correctamente" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const generateInterestMutation = useMutation({
+    mutationFn: async (loanId: number) => {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const response = await fetch(apiUrl(`/api/terceros/${terceroId}/loans/${loanId}/generate-interest`), {
+        method: "POST",
+        credentials: "include",
+        headers,
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "No se pudo generar interés");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/terceros/${terceroId}/loans`] });
+      if (selectedLoan?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/terceros/${terceroId}/loans/${selectedLoan.id}/history`] });
+      }
+      toast({ title: "Interés generado", description: "Se creó la transacción de interés" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const applyPaymentMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedLoan?.id) throw new Error("Selecciona un préstamo");
+      const token = getAuthToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const response = await fetch(apiUrl(`/api/terceros/${terceroId}/loans/${selectedLoan.id}/apply-payment`), {
+        method: "POST",
+        credentials: "include",
+        headers,
+        body: JSON.stringify({
+          paymentTransactionId: Number(paymentTransactionId),
+          appliedInterest: applyInterestValue ? Number(applyInterestValue) : undefined,
+          appliedPrincipal: applyPrincipalValue ? Number(applyPrincipalValue) : undefined,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "No se pudo aplicar el pago");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/terceros/${terceroId}/loans`] });
+      if (selectedLoan?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/terceros/${terceroId}/loans/${selectedLoan.id}/history`] });
+      }
+      setShowApplyPayment(false);
+      setPaymentTransactionId("");
+      setApplyInterestValue("");
+      setApplyPrincipalValue("");
+      toast({ title: "Pago aplicado", description: "El pago se aplicó al préstamo" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   // Función para ocultar transacciones localmente (sin llamar a la API)
   const handleHideTransaction = (transactionId: number) => {
@@ -177,6 +337,17 @@ export default function TerceroDetail() {
   });
 
   const allTransaccionesReales = transaccionesData || [];
+  const terceroIdStr = terceroId.toString();
+
+  const transaccionesPrestamo = useMemo(() => {
+    return allTransaccionesReales.filter((t: any) => typeof t.id === "number");
+  }, [allTransaccionesReales]);
+
+  const transaccionesPago = useMemo(() => {
+    return allTransaccionesReales.filter((t: any) =>
+      t.paraQuienTipo === "tercero" && t.paraQuienId === terceroIdStr
+    );
+  }, [allTransaccionesReales, terceroIdStr]);
   // Contar transacciones ocultas localmente (solo visual)
   const hiddenTerceroCount = getHiddenTransactionsCount();
 
@@ -406,6 +577,98 @@ export default function TerceroDetail() {
               <p className="text-xs text-muted-foreground text-center mt-2">
                 Período: {FILTROS_FECHA.find(f => f.value === filtros.fechaTipo)?.label}
               </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Préstamos */}
+      <div className="px-4 pb-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Préstamos</CardTitle>
+              <Button size="sm" onClick={() => setShowLoanModal(true)}>
+                <Plus className="h-4 w-4 mr-1" />
+                Nuevo préstamo
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 pt-2 space-y-3">
+            {loans.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                Aún no hay préstamos configurados para este tercero.
+              </div>
+            ) : (
+              loans.map((loan) => (
+                <Card key={loan.id} className="border border-blue-100">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-sm">{loan.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Percent className="h-3 w-3" />
+                          {Number(loan.rate) * 100}% mensual ·
+                          <CalendarClock className="h-3 w-3 ml-1" />
+                          Día {loan.dayOfMonth}
+                        </div>
+                      </div>
+                      <Badge variant={loan.direction === "pay" ? "destructive" : "default"}>
+                        {loan.direction === "pay" ? "Yo debo" : "Me deben"}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                      <div className="p-2 rounded-lg bg-blue-50">
+                        <p className="text-muted-foreground">Capital pendiente</p>
+                        <p className="font-semibold text-blue-700">{formatCurrency(loan.principalPending)}</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-orange-50">
+                        <p className="text-muted-foreground">Interés pendiente</p>
+                        <p className="font-semibold text-orange-700">{formatCurrency(loan.interestPending)}</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-emerald-50">
+                        <p className="text-muted-foreground">Total deuda</p>
+                        <p className="font-semibold text-emerald-700">{formatCurrency(loan.totalDue)}</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-slate-50">
+                        <p className="text-muted-foreground">Principal inicial</p>
+                        <p className="font-semibold text-slate-700">{formatCurrency(loan.principalAmount)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedLoan(loan);
+                          setShowLoanHistory(true);
+                        }}
+                      >
+                        Historial
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => generateInterestMutation.mutate(loan.id)}
+                        disabled={generateInterestMutation.isPending}
+                      >
+                        Generar interés
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedLoan(loan);
+                          setShowApplyPayment(true);
+                        }}
+                      >
+                        Aplicar pago
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
             )}
           </CardContent>
         </Card>
@@ -728,6 +991,194 @@ export default function TerceroDetail() {
         }}
         transaction={selectedTransaction}
       />
+
+      {/* Modal: Crear préstamo */}
+      <Dialog open={showLoanModal} onOpenChange={setShowLoanModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Crear préstamo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Nombre</label>
+              <Input
+                placeholder="Ej: Préstamo Danitza Dic-2026"
+                value={loanName}
+                onChange={(e) => setLoanName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Transacción base (desembolso)</label>
+              <Select value={loanPrincipalTransactionId} onValueChange={setLoanPrincipalTransactionId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar transacción" />
+                </SelectTrigger>
+                <SelectContent>
+                  {transaccionesPrestamo.map((t: any) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {new Date(t.fecha).toLocaleDateString("es-CO")} · {t.concepto} · {formatCurrency(t.valor)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Tasa mensual (%)</label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  value={loanRatePercent}
+                  onChange={(e) => setLoanRatePercent(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Día de generación</label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="28"
+                  value={loanDayOfMonth}
+                  onChange={(e) => setLoanDayOfMonth(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Dirección del interés</label>
+              <Select value={loanDirection} onValueChange={(v) => setLoanDirection(v as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pay">Yo debo (interés a favor del tercero)</SelectItem>
+                  <SelectItem value="receive">Me deben (interés a mi favor)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Notas (opcional)</label>
+              <Input
+                placeholder="Observaciones"
+                value={loanNotes}
+                onChange={(e) => setLoanNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLoanModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => createLoanMutation.mutate()}
+              disabled={!loanName.trim() || !loanPrincipalTransactionId || createLoanMutation.isPending}
+            >
+              Crear préstamo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Historial de préstamo */}
+      <Dialog open={showLoanHistory} onOpenChange={setShowLoanHistory}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Historial · {selectedLoan?.name || ""}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+            {loanHistory?.events?.length ? (
+              loanHistory.events.map((event: any, idx: number) => (
+                <div key={`${event.type}-${idx}`} className="border rounded-md p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{event.label}</span>
+                    <span className="text-sm font-semibold">{formatCurrency(event.amount)}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(event.date).toLocaleDateString("es-CO")}
+                    {event.rate !== undefined && ` · Tasa ${(event.rate * 100).toFixed(2)}%`}
+                  </div>
+                  {event.appliedInterest !== undefined && (
+                    <div className="text-xs text-muted-foreground">
+                      Aplicado a interés: {formatCurrency(event.appliedInterest)} ·
+                      capital: {formatCurrency(event.appliedPrincipal)}
+                    </div>
+                  )}
+                  {event.transaction?.concepto && (
+                    <div className="text-xs text-muted-foreground">“{event.transaction.concepto}”</div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-muted-foreground">Sin historial aún.</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Aplicar pago */}
+      <Dialog open={showApplyPayment} onOpenChange={setShowApplyPayment}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Aplicar pago · {selectedLoan?.name || ""}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Transacción de pago</label>
+              <Select value={paymentTransactionId} onValueChange={setPaymentTransactionId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar transacción" />
+                </SelectTrigger>
+                <SelectContent>
+                  {transaccionesPago.map((t: any) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {new Date(t.fecha).toLocaleDateString("es-CO")} · {t.concepto} · {formatCurrency(t.valor)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Aplicar a interés (opcional)</label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  value={applyInterestValue}
+                  onChange={(e) => setApplyInterestValue(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Aplicar a capital (opcional)</label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  value={applyPrincipalValue}
+                  onChange={(e) => setApplyPrincipalValue(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Si dejas los campos vacíos, se aplica automáticamente (interés → capital).
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApplyPayment(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => applyPaymentMutation.mutate()}
+              disabled={!paymentTransactionId || applyPaymentMutation.isPending}
+            >
+              Aplicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Botón flotante para gestionar transacciones - Solo visible si tiene permisos */}
       {(has("action.TRANSACCIONES.create") || 
