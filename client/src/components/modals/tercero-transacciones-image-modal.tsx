@@ -237,7 +237,7 @@ export function TerceroTransaccionesImageModal({
                     fontSize: visualSizes.fontSize,
                     verticalAlign: 'middle',
                     lineHeight: '1.2'
-                  }}>CONCEPTO</th>
+                  }}>COMENTARIO</th>
                   <th className="border border-gray-300 px-2 text-right font-semibold" style={{ 
                     fontSize: visualSizes.fontSize,
                     verticalAlign: 'middle',
@@ -277,7 +277,7 @@ export function TerceroTransaccionesImageModal({
                         verticalAlign: 'middle',
                         lineHeight: '1.2'
                       }}>
-                        {transaccion.concepto || '-'}
+                        {transaccion.comentario || '-'}
                       </td>
                       <td className={`border border-gray-300 px-2 text-right font-semibold ${colorClass}`} style={{ 
                         fontSize: visualSizes.fontSize,
@@ -405,7 +405,7 @@ export function TerceroTransaccionesImageModal({
                         paddingBottom: '0px',
                         transform: 'translateY(-10px)'
                       }}>
-                        CONCEPTO
+                        COMENTARIO
                       </div>
                     </th>
                     <th style={{
@@ -492,7 +492,7 @@ export function TerceroTransaccionesImageModal({
                             paddingBottom: '0px',
                             transform: 'translateY(-8px)'
                           }}>
-                            {transaccion.concepto || '-'}
+                            {transaccion.comentario || '-'}
                           </div>
                         </td>
                         <td style={{

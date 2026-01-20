@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useState, useMemo, useCallback, memo, lazy, Suspense, useEffect } from "react";
@@ -191,7 +190,7 @@ export default function RodMar() {
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       } else {
-        console.warn('[LCDM] ⚠️ No token available!');
+        console.warn('[LCDM] �a�️ No token available!');
         removeAuthToken();
         throw new Error('No autenticado');
       }
@@ -237,7 +236,7 @@ export default function RodMar() {
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       } else {
-        console.warn('[Banco] ⚠️ No token available!');
+        console.warn('[Banco] �a�️ No token available!');
         removeAuthToken();
         throw new Error('No autenticado');
       }
@@ -284,7 +283,7 @@ export default function RodMar() {
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       } else {
-        console.warn('[Postobón] ⚠️ No token available!');
+        console.warn('[Postobón] �a�️ No token available!');
         removeAuthToken();
         throw new Error('No autenticado');
       }
@@ -325,10 +324,10 @@ export default function RodMar() {
   // Debug: verificar qué cuentas se están cargando
   useEffect(() => {
     if (cuentasRodMar) {
-      console.log('🔍 [RODMAR] Cuentas cargadas:', cuentasRodMar.length, cuentasRodMar);
+      console.log('�x� [RODMAR] Cuentas cargadas:', cuentasRodMar.length, cuentasRodMar);
     }
     if (errorCuentas) {
-      console.error('❌ [RODMAR] Error al cargar cuentas:', errorCuentas);
+      console.error('�R [RODMAR] Error al cargar cuentas:', errorCuentas);
     }
   }, [cuentasRodMar, errorCuentas]);
 
@@ -412,7 +411,7 @@ export default function RodMar() {
     };
   };
 
-  // Calcular balance consolidado de compradores (USANDO HOOK COMPARTIDO CON INVERSIÓN DE PERSPECTIVA)
+  // Calcular balance consolidado de compradores (USANDO HOOK COMPARTIDO CON INVERSI�N DE PERSPECTIVA)
   const calcularBalanceCompradores = () => {
     // Usar exactamente el mismo cálculo del módulo compradores pero con perspectiva invertida
     const balanceOriginal = resumenCompradoresOriginal;
@@ -425,7 +424,7 @@ export default function RodMar() {
     };
   };
 
-  // Calcular balance consolidado de volqueteros (USANDO HOOK COMPARTIDO CON INVERSIÓN DE PERSPECTIVA)
+  // Calcular balance consolidado de volqueteros (USANDO HOOK COMPARTIDO CON INVERSI�N DE PERSPECTIVA)
   const calcularBalanceVolqueteros = () => {
     // Usar exactamente el mismo cálculo del módulo volqueteros pero con perspectiva invertida
     const balanceOriginal = resumenVolqueterosOriginal;
@@ -2457,7 +2456,7 @@ function LcdmTransactionsTab({ transactions }: { transactions: any[] }) {
                         <Badge variant="outline" className="text-xs px-1 py-0 h-4">M</Badge>
                       )}
                       <Badge variant="outline" className="text-xs px-1 py-0 h-4">
-                        {transaccion.deQuienTipo === 'lcdm' ? 'L→R' : 'R→L'}
+                        {transaccion.deQuienTipo === 'lcdm' ? 'L� R' : 'R� L'}
                       </Badge>
                     </div>
                     <div className="text-xs sm:text-sm text-gray-900 truncate pr-1">
@@ -3214,7 +3213,7 @@ function BancoTransactionsTab({ transactions }: { transactions: any[] }) {
                         <Badge variant="outline" className="text-xs px-1 py-0 h-4">M</Badge>
                       )}
                       <Badge variant="outline" className="text-xs px-1 py-0 h-4">
-                        {transaccion.deQuienTipo === 'banco' ? 'B→R' : 'R→B'}
+                        {transaccion.deQuienTipo === 'banco' ? 'B� R' : 'R� B'}
                       </Badge>
                     </div>
                     <div className="text-xs sm:text-sm text-gray-900 truncate pr-1">

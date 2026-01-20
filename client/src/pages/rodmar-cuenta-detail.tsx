@@ -302,6 +302,32 @@ export default function RodMarCuentaDetail() {
   // Contar transacciones ocultas localmente (solo visual)
   const hiddenCuentaCount = getHiddenTransactionsCount();
 
+  // Inferir identificador real de la cuenta desde transacciones (id numérico o código)
+  const cuentaCodigoInferido = useMemo(() => {
+    const conteo = new Map<string, number>();
+    const list = (allTransaccionesReales || []) as any[];
+    for (const t of list) {
+      if (t?.deQuienTipo === "rodmar" && t?.deQuienId) {
+        const k = String(t.deQuienId);
+        conteo.set(k, (conteo.get(k) || 0) + 1);
+      }
+      if (t?.paraQuienTipo === "rodmar" && t?.paraQuienId) {
+        const k = String(t.paraQuienId);
+        conteo.set(k, (conteo.get(k) || 0) + 1);
+      }
+    }
+    let best: string | null = null;
+    let bestCount = 0;
+    for (const [k, c] of conteo.entries()) {
+      if (c > bestCount) {
+        best = k;
+        bestCount = c;
+      }
+    }
+    return best;
+  }, [allTransaccionesReales]);
+
+
   // Filtrado client-side sobre la página activa
   const transaccionesReales = useMemo(() => {
     let filtered = [...allTransaccionesReales];
@@ -449,12 +475,18 @@ export default function RodMarCuentaDetail() {
   const cuentaIdentificadores = useMemo(() => {
     const ids: string[] = [];
     
+    // Siempre incluir el slug si es numérico (ej: /rodmar/cuenta/4)
+    const cuentaIdNum = parseInt(cuentaSlug);
+    if (!isNaN(cuentaIdNum)) {
+      ids.push(cuentaIdNum.toString());
+    }
+
     if (cuentaEncontrada) {
       // ID numérico como string
       if (cuentaEncontrada.id) {
         ids.push(cuentaEncontrada.id.toString());
       }
-      // Código (ej: 'BEMOVIL')
+      // Código (persistente)
       if (cuentaEncontrada.codigo) {
         ids.push(cuentaEncontrada.codigo);
         ids.push(cuentaEncontrada.codigo.toLowerCase());
@@ -472,9 +504,22 @@ export default function RodMarCuentaDetail() {
       ids.push(legacyId.toLowerCase());
       ids.push(legacyId.toUpperCase());
     }
+
+    // Siempre incluir el nombre visible como fallback
+    if (cuentaNombre) {
+      ids.push(cuentaNombre);
+      ids.push(cuentaNombre.toLowerCase());
+    }
+
+    // Incluir el identificador real inferido desde transacciones
+    if (cuentaCodigoInferido) {
+      ids.push(cuentaCodigoInferido);
+      ids.push(cuentaCodigoInferido.toLowerCase());
+      ids.push(cuentaCodigoInferido.toUpperCase());
+    }
     
     return ids;
-  }, [cuentaEncontrada, cuentaNombre]);
+  }, [cuentaEncontrada, cuentaNombre, cuentaSlug, cuentaCodigoInferido]);
 
   // Función helper para verificar si un ID coincide con la cuenta
   const coincideConCuenta = (id: string | number | null | undefined): boolean => {
@@ -1104,6 +1149,8 @@ export default function RodMarCuentaDetail() {
         onOpenChange={setIsImageModalOpen}
         transacciones={transaccionesFiltradas}
         cuentaNombre={cuentaNombre}
+        cuentaCodigo={cuentaEncontrada?.codigo || cuentaCodigoInferido || undefined}
+        cuentaIdentificadores={cuentaIdentificadores}
         filtroAplicado={filtros.fechaTipo === "todos" ? "Todas" : 
           FILTROS_FECHA.find(f => f.value === filtros.fechaTipo)?.label || "Personalizado"}
       />

@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, X } from "lucide-react";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import html2canvas from "html2canvas";
 import { formatCurrency } from "@/lib/utils";
 
@@ -10,6 +10,8 @@ interface RodMarCuentasImageModalProps {
   onOpenChange: (open: boolean) => void;
   transacciones: any[];
   cuentaNombre: string;
+  cuentaCodigo?: string;
+  cuentaIdentificadores?: string[];
   filtroAplicado?: string;
 }
 
@@ -30,6 +32,8 @@ export function RodMarCuentasImageModal({
   onOpenChange, 
   transacciones, 
   cuentaNombre,
+  cuentaCodigo,
+  cuentaIdentificadores,
   filtroAplicado = "Todas" 
 }: RodMarCuentasImageModalProps) {
   const [isDownloading, setIsDownloading] = useState(false);
@@ -63,40 +67,87 @@ export function RodMarCuentasImageModal({
 
   // Calcular balance dinámico de transacciones filtradas
   const cuentaId = cuentaNameToId(cuentaNombre);
+  const cuentaNombreLower = (cuentaNombre || "").toLowerCase();
+  const cuentaCodigoLower = (cuentaCodigo || "").toLowerCase();
+  const matchCuenta = (id: string | number | null | undefined) => {
+    if (!id) return false;
+    // Si tenemos el código real (ej: BANCOLOMBIA_JHON), usarlo como referencia principal
+    if (cuentaCodigoLower) {
+      const idLower = id.toString().toLowerCase();
+      if (idLower === cuentaCodigoLower) return true;
+    }
+    if (cuentaIdentificadores && cuentaIdentificadores.length > 0) {
+      const idStr = id.toString().toLowerCase();
+      return cuentaIdentificadores.some((item) => item.toLowerCase() === idStr);
+    }
+    return id.toString().toLowerCase() === cuentaId.toLowerCase();
+  };
+  const matchCuentaNombre = (value?: string | null) => {
+    if (!value || !cuentaNombreLower) return false;
+    return value.toString().toLowerCase().includes(cuentaNombreLower);
+  };
+
+  // Debug en desarrollo: ayuda a detectar por qué se queda todo gris / en cero
+  useEffect(() => {
+    if (!open || !import.meta.env.DEV) return;
+    const sample = transacciones?.[0];
+    // eslint-disable-next-line no-console
+    console.log("[RodMarCuentasImageModal]", {
+      cuentaNombre,
+      cuentaCodigo,
+      cuentaIdentificadores,
+      transaccionesCount: transacciones?.length ?? 0,
+      sample: sample
+        ? {
+            id: sample.id,
+            deQuienTipo: sample.deQuienTipo,
+            deQuienId: sample.deQuienId,
+            paraQuienTipo: sample.paraQuienTipo,
+            paraQuienId: sample.paraQuienId,
+          }
+        : null,
+    });
+  }, [open, cuentaNombre, cuentaCodigo, cuentaIdentificadores, transacciones]);
   
   let totalPositivos = 0;
   let totalNegativos = 0;
 
   const transaccionesConValores = transacciones.map(transaccion => {
-    const valor = parseFloat(transaccion.valor.replace(/[$,]/g, ''));
+    const valor = parseFloat(
+      typeof transaccion.valor === "string" ? transaccion.valor.replace(/[$,]/g, "") : transaccion.valor,
+    );
+    const valorAbs = Math.abs(valor);
     
-    const esIngresoACuenta = transaccion.paraQuienTipo === 'rodmar' && 
-                             transaccion.paraQuienId && 
-                             transaccion.paraQuienId === cuentaId;
+    // IMPORTANTE: no depender de flags precalculados (pueden venir false y "bloquear" el cálculo con ??).
+    // Siempre recalcular con la fuente de verdad: deQuienTipo/deQuienId/paraQuienTipo/paraQuienId.
+    const esIngresoACuenta = transaccion.esInversion
+      ? !!transaccion.esPositiva
+      : (transaccion.paraQuienTipo === 'rodmar' && matchCuenta(transaccion.paraQuienId));
     
-    const esEgresoDeEstaCuenta = transaccion.deQuienTipo === 'rodmar' && 
-                                 transaccion.deQuienId && 
-                                 transaccion.deQuienId === cuentaId;
+    const esEgresoDeEstaCuenta = transaccion.esInversion
+      ? !transaccion.esPositiva
+      : (transaccion.deQuienTipo === 'rodmar' && matchCuenta(transaccion.deQuienId));
 
     // Para transacciones temporales: si el origen es esta cuenta, contar como egreso
-    const esEgresoTemporal = transaccion.esTemporal && 
-                             transaccion.deQuienTipo === 'rodmar' && 
-                             transaccion.deQuienId === cuentaId;
+    const esEgresoTemporal =
+      !!transaccion.esTemporal && transaccion.deQuienTipo === 'rodmar' && matchCuenta(transaccion.deQuienId);
 
     // Para transacciones temporales con origen en esta cuenta: siempre contar como negativo
-    if (transaccion.esTemporal && transaccion.deQuienTipo === 'rodmar' && transaccion.deQuienId === cuentaId) {
-      totalNegativos += valor;
+    if (esEgresoTemporal) {
+      totalNegativos += valorAbs;
     } else if (esIngresoACuenta) {
-      totalPositivos += valor;
+      totalPositivos += valorAbs;
     } else if (esEgresoDeEstaCuenta) {
-      totalNegativos += valor;
+      totalNegativos += valorAbs;
     }
 
     return {
       ...transaccion,
       valor,
+      valorAbs,
       esIngresoACuenta,
-      esEgresoDeEstaCuenta: esEgresoDeEstaCuenta || esEgresoTemporal
+      esEgresoDeEstaCuenta: esEgresoDeEstaCuenta || esEgresoTemporal,
+      esEgresoTemporal
     };
   });
 
@@ -270,8 +321,8 @@ export function RodMarCuentasImageModal({
                     paddingTop: '1px'
                   }}>
                     {transaccion.esIngresoACuenta ? '+' : 
-                     transaccion.esEgresoDeEstaCuenta ? '-' : ''}
-                    {formatCurrency(transaccion.valor)}
+                     transaccion.esEgresoDeEstaCuenta ? '-' : (transaccion.valor < 0 ? '-' : '')}
+                    {formatCurrency(transaccion.valorAbs ?? transaccion.valor)}
                   </div>
                 </div>
               );

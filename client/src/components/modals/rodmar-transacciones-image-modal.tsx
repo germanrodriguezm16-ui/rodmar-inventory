@@ -98,7 +98,7 @@ export function RodmarTransaccionesImageModal({
     }
   };
 
-  // Calcular totales para cuentas RodMar (LCDM/Postobón)
+  // Calcular totales para cuentas RodMar (LCDM/Postobón/Banco)
   const totalTransacciones = transactions.length;
   
   let positiveSum = 0;
@@ -126,6 +126,16 @@ export function RodmarTransaccionesImageModal({
     // Negativos: transacciones donde Postobón es destino (paraQuienTipo === 'postobon')
     negativeSum = transactions
       .filter(t => t.paraQuienTipo === 'postobon')
+      .reduce((sum, t) => sum + parseFloat(t.valor || '0'), 0);
+  } else if (accountType === 'banco') {
+    // Positivos: transacciones donde Banco es origen (deQuienTipo === 'banco')
+    positiveSum = transactions
+      .filter(t => t.deQuienTipo === 'banco')
+      .reduce((sum, t) => sum + parseFloat(t.valor || '0'), 0);
+
+    // Negativos: transacciones donde Banco es destino (paraQuienTipo === 'banco')
+    negativeSum = transactions
+      .filter(t => t.paraQuienTipo === 'banco')
       .reduce((sum, t) => sum + parseFloat(t.valor || '0'), 0);
   }
 
@@ -257,10 +267,12 @@ export function RodmarTransaccionesImageModal({
                     paddingLeft: '8px'
                   }}>
                     <span className={`${
-                      accountType === 'postobon' 
+                      accountType === 'postobon'
                         ? (transaccion.paraQuienTipo === 'postobon' ? 'text-red-600' : 'text-green-600')
-                        : accountType === 'lcdm' 
+                        : accountType === 'lcdm'
                         ? (transaccion.paraQuienTipo === 'lcdm' ? 'text-red-600' : 'text-green-600')
+                        : accountType === 'banco'
+                        ? (transaccion.paraQuienTipo === 'banco' ? 'text-red-600' : 'text-green-600')
                         : 'text-gray-600'
                     }`}>
                       {(() => {
@@ -272,6 +284,10 @@ export function RodmarTransaccionesImageModal({
                         } else if (accountType === 'lcdm') {
                           return transaccion.paraQuienTipo === 'lcdm' ? 
                             `-$${valor.toLocaleString()}` : 
+                            `+$${valor.toLocaleString()}`;
+                        } else if (accountType === 'banco') {
+                          return transaccion.paraQuienTipo === 'banco' ?
+                            `-$${valor.toLocaleString()}` :
                             `+$${valor.toLocaleString()}`;
                         }
                         return `$${valor.toLocaleString()}`;
