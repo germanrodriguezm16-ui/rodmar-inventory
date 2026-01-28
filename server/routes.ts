@@ -3129,10 +3129,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       // Usar getTransaccionesForModule con módulo 'volquetero' para filtrado correcto
+      const hasTransactionPermissions = 
+        userPermissions.includes("action.TRANSACCIONES.create") ||
+        userPermissions.includes("action.TRANSACCIONES.completePending") ||
+        userPermissions.includes("action.TRANSACCIONES.edit") ||
+        userPermissions.includes("action.TRANSACCIONES.delete");
+
+      // Si tiene permisos de transacciones, no filtrar por userId (ver todas)
+      const effectiveUserId = hasTransactionPermissions ? undefined : userId;
+
       const transacciones = await storage.getTransaccionesForModule(
         "volquetero",
         volqueteroId,
-        userId,
+        effectiveUserId,
         false, // includeHidden
         'volquetero', // módulo correcto
       );
