@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import TripCard from "@/components/trip-card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
@@ -30,6 +31,7 @@ import BottomNavigation from "@/components/layout/bottom-navigation";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
+import { EditTripModal } from "@/components/forms/edit-trip-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
 import { CompleteTransactionModal } from "@/components/modals/complete-transaction-modal";
@@ -263,6 +265,8 @@ export default function MinaDetail() {
   const [showDeleteTransaction, setShowDeleteTransaction] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<TransaccionWithSocio | null>(null);
   const [showEditPendingTransaction, setShowEditPendingTransaction] = useState(false);
+  const [showEditTrip, setShowEditTrip] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState<ViajeWithDetails | null>(null);
   const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
@@ -922,73 +926,20 @@ export default function MinaDetail() {
                 </CardContent>
               </Card>
             ) : (
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">ID</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">F. CARGUE</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">F. DESCARGUE</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">CONDUCTOR</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">TIPO CARRO</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">PLACA</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">PESO (Ton)</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">CUT</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">COMPRA</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wide">ESTADO</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {viajesFiltrados.map((viaje) => (
-                        <TableRow key={viaje.id} className="hover:bg-gray-50">
-                          <TableCell className="font-medium">{viaje.id}</TableCell>
-                          <TableCell>
-                            {viaje.fechaCargue ? (() => {
-                              const dateStr = viaje.fechaCargue.toString().split('T')[0];
-                              const [year, month, day] = dateStr.split('-');
-                              const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                              return date.toLocaleDateString('es-ES', { 
-                                weekday: 'short',
-                                day: '2-digit', 
-                                month: '2-digit', 
-                                year: '2-digit' 
-                              });
-                            })() : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {viaje.fechaDescargue ? (() => {
-                              const dateStr = viaje.fechaDescargue.toString().split('T')[0];
-                              const [year, month, day] = dateStr.split('-');
-                              const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                              return date.toLocaleDateString('es-ES', { 
-                                weekday: 'short',
-                                day: '2-digit', 
-                                month: '2-digit', 
-                                year: '2-digit' 
-                              });
-                            })() : '-'}
-                          </TableCell>
-                          <TableCell>{viaje.conductor || '-'}</TableCell>
-                          <TableCell>{viaje.tipoCarro || '-'}</TableCell>
-                          <TableCell>{viaje.placa || '-'}</TableCell>
-                          <TableCell>{viaje.peso ? `${viaje.peso} Ton` : '-'}</TableCell>
-                          <TableCell>{viaje.cut ? formatCurrency(parseFloat(viaje.cut)) : '-'}</TableCell>
-                          <TableCell>{viaje.totalCompra ? formatCurrency(parseFloat(viaje.totalCompra)) : '-'}</TableCell>
-                          <TableCell>
-                            <Badge 
-                              variant={viaje.fechaDescargue ? "default" : "secondary"}
-                              className={viaje.fechaDescargue ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"}
-                            >
-                              {viaje.fechaDescargue ? "completado" : "pendiente"}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              <div className="space-y-3">
+                {viajesFiltrados.map((viaje, index) => (
+                  <TripCard
+                    key={viaje.id}
+                    viaje={viaje as any}
+                    context="mina"
+                    index={index}
+                    onEditTrip={(trip) => {
+                      setSelectedTrip(trip);
+                      setShowEditTrip(true);
+                    }}
+                  />
+                ))}
+              </div>
             )}
           </TabsContent>
 
@@ -1793,6 +1744,17 @@ export default function MinaDetail() {
           setShowPendingModal(false);
         }}
       />
+
+      {selectedTrip && (
+        <EditTripModal
+          isOpen={showEditTrip}
+          onClose={() => {
+            setShowEditTrip(false);
+            setSelectedTrip(null);
+          }}
+          viaje={selectedTrip}
+        />
+      )}
 
       {/* Navegación inferior */}
       <BottomNavigation />

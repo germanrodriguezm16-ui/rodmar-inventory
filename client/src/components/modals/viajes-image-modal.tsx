@@ -74,6 +74,9 @@ export default function ViajesImageModal({
   filterValueEnd
 }: ViajesImageModalProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [previewScale, setPreviewScale] = useState(1);
+  const previewWrapperRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
   const { hideNavigation, showNavigation } = useNavigationVisibility();
 
@@ -91,18 +94,43 @@ export default function ViajesImageModal({
     };
   }, [open, hideNavigation, showNavigation]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const updateScale = () => {
+      const wrapper = previewWrapperRef.current;
+      const content = imageRef.current;
+      if (!wrapper || !content) return;
+      const availableWidth = wrapper.clientWidth;
+      const contentWidth = content.scrollWidth;
+      if (!availableWidth || !contentWidth) return;
+      const nextScale = Math.min(1, availableWidth / contentWidth);
+      setPreviewScale(nextScale);
+    };
+
+    const rafId = requestAnimationFrame(updateScale);
+    window.addEventListener("resize", updateScale);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", updateScale);
+    };
+  }, [open, viajes.length, filterType, filterValue, filterValueEnd]);
+
   if (!open) return null;
 
   // Calcular balance de viajes
   const viajesCompletados = viajes.filter(viaje => viaje.fechaDescargue && viaje.totalCompra);
   const totalCompras = viajesCompletados.reduce((sum, viaje) => sum + parseFloat(viaje.totalCompra!), 0);
+  const totalPeso = viajesCompletados.reduce((sum, viaje) => sum + parseFloat(viaje.peso || "0"), 0);
   const filterLabel = getFilterLabel(filterType, filterValue, filterValueEnd);
 
   const handleDownload = async () => {
     if (!imageRef.current) return;
 
     setIsGenerating(true);
+    setIsExporting(true);
     try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
       const canvas = await html2canvas(imageRef.current, {
         backgroundColor: '#ffffff',
         scale: 2,
@@ -120,15 +148,16 @@ export default function ViajesImageModal({
       console.error('Error generando imagen:', error);
     } finally {
       setIsGenerating(false);
+      setIsExporting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-auto p-2 sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Vista Previa - Reporte de Viajes</span>
+            <span className="text-sm sm:text-base">Vista Previa - Reporte de Viajes</span>
             <div className="flex items-center gap-2">
               <Button
                 onClick={handleDownload}
@@ -137,11 +166,12 @@ export default function ViajesImageModal({
                 size="sm"
               >
                 <Download className="w-4 h-4 mr-2" />
-                {isGenerating ? "Generando..." : "Descargar"}
+                {isGenerating ? "Generando..." : "PNG"}
               </Button>
               <Button
-                variant="ghost"
-                size="sm"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                 onClick={() => onOpenChange(false)}
               >
                 <X className="w-4 h-4" />
@@ -151,13 +181,21 @@ export default function ViajesImageModal({
         </DialogHeader>
 
         {/* Contenido de la imagen */}
-        <div 
-          ref={imageRef}
-          className="bg-white p-4 rounded-lg"
-          style={{ width: '800px', fontSize: '12px', lineHeight: '1.3' }}
-        >
+        <div ref={previewWrapperRef} className="w-full overflow-hidden">
+          <div
+            style={{
+              transform: `scale(${isExporting ? 1 : previewScale})`,
+              transformOrigin: "top left",
+              width: "fit-content"
+            }}
+          >
+            <div 
+              ref={imageRef}
+              className="bg-white p-3 sm:p-4 rounded-lg"
+              style={{ width: '800px', fontSize: '12px', lineHeight: '1.3' }}
+            >
           {/* Header del reporte compacto */}
-          <div className="text-center mb-4 border-b border-gray-200 pb-3">
+          <div className="text-center mb-4 border-b border-gray-200 pb-3 bg-slate-50/70 rounded-md">
             <h1 className="text-2xl font-bold text-gray-800 mb-1">RodMar</h1>
             <h2 className="text-base font-semibold text-gray-700 mb-1">Reporte de Viajes</h2>
             <h3 className="text-sm text-gray-600 mb-2">{mina.nombre}</h3>
@@ -169,7 +207,7 @@ export default function ViajesImageModal({
 
           {/* Resumen de balance compacto */}
           <div className="mb-4">
-            <div className="bg-gray-50 rounded p-3">
+            <div className="rounded p-3">
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Resumen</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div className="text-center">
@@ -186,66 +224,68 @@ export default function ViajesImageModal({
             </div>
           </div>
 
-          {/* Lista de viajes compacta */}
+          {/* Tabla de viajes compacta */}
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-gray-700 mb-2">
               Detalle de Viajes ({viajes.length})
             </h4>
-            
             {viajes.length === 0 ? (
               <div className="text-center py-4 text-gray-500 text-sm">
                 No hay viajes que coincidan con el filtro aplicado
               </div>
             ) : (
-              <div className="space-y-1">
-                {viajes.map((viaje, index) => (
-                  <div key={viaje.id} className="border border-gray-200 rounded p-2">
-                    {/* Header con ID y estado en línea compacta */}
-                    <div className="flex justify-between items-center mb-1">
-                      <div className="font-semibold text-gray-700 text-sm">ID: {viaje.id}</div>
-                      <div>
-                        {viaje.fechaDescargue ? (
-                          <Badge variant="default" className="text-[11px] px-1 py-0 h-4 leading-none">Completado</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[11px] px-1 py-0 h-4 leading-none">Pendiente</Badge>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Información del viaje en grid ultra compacto */}
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <div className="font-medium text-gray-700 text-sm">Conductor</div>
-                        <div className="text-gray-600">{viaje.conductor}</div>
-                        <div className="text-[11px] text-gray-500">{viaje.placa}</div>
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-700 text-sm">Fechas</div>
-                        <div className="text-gray-600 text-[11px]">
-                          C: {viaje.fechaCargue ? formatDateWithDaySpanish(viaje.fechaCargue) : 'N/A'}
-                        </div>
-                        {viaje.fechaDescargue && (
-                          <div className="text-gray-600 text-[11px]">
-                            D: {formatDateWithDaySpanish(viaje.fechaDescargue)}
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-700 text-sm">Valores</div>
-                        {viaje.peso && (
-                          <div className="text-gray-600 text-[11px]">
-                            Peso: {viaje.peso} ton
-                          </div>
-                        )}
-                        {viaje.totalCompra && (
-                          <div className="text-green-600 text-[11px] font-medium">
-                            {formatCurrency(viaje.totalCompra)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-300 text-xs">
+                  <thead>
+                    <tr className="bg-blue-600 text-white">
+                      <th className="border border-gray-300 p-1 text-left">ID</th>
+                      <th className="border border-gray-300 p-1 text-left">ESTADO</th>
+                      <th className="border border-gray-300 p-1 text-left">CONDUCTOR</th>
+                      <th className="border border-gray-300 p-1 text-left">PLACA</th>
+                      <th className="border border-gray-300 p-1 text-left">F. CARGUE</th>
+                      <th className="border border-gray-300 p-1 text-left">F. DESCARGUE</th>
+                      <th className="border border-gray-300 p-1 text-right">PESO</th>
+                      <th className="border border-gray-300 p-1 text-right">TOTAL COMPRA</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {viajes.map((viaje, index) => (
+                      <tr key={viaje.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                        <td className="border border-gray-300 p-1 font-medium text-gray-700 break-words whitespace-normal">{viaje.id}</td>
+                        <td className="border border-gray-300 p-1 text-gray-600 break-words whitespace-normal">
+                          {viaje.fechaDescargue ? "Completado" : "Pendiente"}
+                        </td>
+                        <td className="border border-gray-300 p-1 text-gray-700 break-words whitespace-normal">{viaje.conductor}</td>
+                        <td className="border border-gray-300 p-1 text-gray-600 break-words whitespace-normal">{viaje.placa}</td>
+                        <td className="border border-gray-300 p-1 text-gray-600 break-words whitespace-normal">
+                          {viaje.fechaCargue ? formatDateWithDaySpanish(viaje.fechaCargue) : "N/A"}
+                        </td>
+                        <td className="border border-gray-300 p-1 text-gray-600 break-words whitespace-normal">
+                          {viaje.fechaDescargue ? formatDateWithDaySpanish(viaje.fechaDescargue) : "Pendiente"}
+                        </td>
+                        <td className="border border-gray-300 p-1 text-right text-gray-600 break-words whitespace-normal">
+                          {viaje.peso ? `${viaje.peso} ton` : "-"}
+                        </td>
+                        <td className="border border-gray-300 p-1 text-right font-medium text-green-600 break-words whitespace-normal">
+                          {viaje.totalCompra ? formatCurrency(viaje.totalCompra) : "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-green-600 text-white font-bold">
+                      <td className="border border-gray-300 p-1" colSpan={6}>
+                        TOTALES
+                      </td>
+                      <td className="border border-gray-300 p-1 text-right">
+                        {totalPeso.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="border border-gray-300 p-1 text-right">
+                        {formatCurrency(totalCompras.toString())}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             )}
           </div>
@@ -255,11 +295,7 @@ export default function ViajesImageModal({
             <div>Generado por RodMar - Sistema de Gestión Minera</div>
             <div>© 2025 - Todos los derechos reservados</div>
           </div>
-
-          {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-gray-200 text-center text-xs text-gray-500">
-            <div>Generado por RodMar - Sistema de Gestión Minera</div>
-            <div>© 2024 - Todos los derechos reservados</div>
+            </div>
           </div>
         </div>
       </DialogContent>

@@ -37,6 +37,8 @@ import { GestionarTransaccionesModal } from "@/components/modals/gestionar-trans
 import { PendingListModal } from "@/components/pending-transactions/pending-list-modal";
 import { TransactionDetailModal } from "@/components/modals/transaction-detail-modal";
 import { TransaccionesImageModal } from "@/components/modals/transacciones-image-modal";
+import VolqueteroViajesImageModal from "@/components/modals/volquetero-viajes-image-modal";
+import { EditTripModal } from "@/components/forms/edit-trip-modal";
 import { useHiddenTransactions } from "@/hooks/useHiddenTransactions";
 import type { ViajeWithDetails, TransaccionWithSocio } from "@shared/schema";
 
@@ -116,6 +118,9 @@ export default function VolqueteroDetail() {
   const [showTransactionDetail, setShowTransactionDetail] = useState(false);
   const [selectedRelatedTrip, setSelectedRelatedTrip] = useState<any>(null);
   const [showTransaccionesImagePreview, setShowTransaccionesImagePreview] = useState(false);
+  const [showViajesImagePreview, setShowViajesImagePreview] = useState(false);
+  const [showEditTrip, setShowEditTrip] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState<ViajeWithDetails | null>(null);
   
   // Estado para transacciones temporales (solo en memoria)
   const [transaccionesTemporales, setTransaccionesTemporales] = useState<TransaccionWithSocio[]>([]);
@@ -127,12 +132,18 @@ export default function VolqueteroDetail() {
   const [transaccionesFechaFilterType, setTransaccionesFechaFilterType] = useState<DateFilterType>("todos");
   const [transaccionesFechaFilterValue, setTransaccionesFechaFilterValue] = useState("");
   const [transaccionesFechaFilterValueEnd, setTransaccionesFechaFilterValueEnd] = useState("");
+
+  // Estados de filtros de fecha para viajes
+  const [viajesFechaFilterType, setViajesFechaFilterType] = useState<DateFilterType>("todos");
+  const [viajesFechaFilterValue, setViajesFechaFilterValue] = useState("");
+  const [viajesFechaFilterValueEnd, setViajesFechaFilterValueEnd] = useState("");
   
   // Estado para filtrar entre todas y ocultas
   const [filterType, setFilterType] = useState<"todas" | "ocultas">("todas");
   
   // Estado para búsqueda
   const [searchTerm, setSearchTerm] = useState("");
+  const [viajesSearchTerm, setViajesSearchTerm] = useState("");
   
   // Estado para filtro de balance (positivos, negativos, todos)
   const [balanceFilter, setBalanceFilter] = useState<'all' | 'positivos' | 'negativos'>('all');
@@ -571,6 +582,32 @@ export default function VolqueteroDetail() {
     });
   }, [getDateRange]);
 
+  // Función para filtrar viajes por fecha (usa fecha de descargue)
+  const filterViajesByDate = useCallback((viajes: ViajeWithDetails[], filterType: DateFilterType, filterValue: string, filterValueEnd: string) => {
+    if (filterType === "todos") return viajes;
+
+    const range = getDateRange(filterType, filterValue, filterValueEnd);
+    if (!range) return viajes;
+
+    return viajes.filter(v => {
+      if (!v.fechaDescargue) return false;
+      const fechaStr = (() => {
+        if (v.fechaDescargue instanceof Date) return formatDateForInputBogota(v.fechaDescargue);
+        if (typeof (v as any).fechaDescargue === "string") return (v as any).fechaDescargue.includes("T") ? (v as any).fechaDescargue.split("T")[0] : (v as any).fechaDescargue;
+        return formatDateForInputBogota(new Date((v as any).fechaDescargue));
+      })();
+
+      if (range.start && range.end) {
+        return fechaStr >= range.start && fechaStr <= range.end;
+      } else if (range.start) {
+        return fechaStr >= range.start;
+      } else if (range.end) {
+        return fechaStr <= range.end;
+      }
+      return true;
+    });
+  }, [getDateRange]);
+
   // Función para ocultar transacciones localmente (sin llamar a la API)
   const handleHideTransaction = (transactionId: number) => {
     hideTransactionLocal(transactionId);
@@ -746,6 +783,35 @@ export default function VolqueteroDetail() {
     
     return filtered;
   }, [transaccionesFormateadas, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, searchTerm, filterTransaccionesByDate, balanceFilter, isTransactionHidden]);
+
+  // Aplicar filtros a viajes
+  const viajesFiltrados = useMemo(() => {
+    let filtered = Array.isArray(viajesVolquetero) ? viajesVolquetero : [];
+
+    filtered = filterViajesByDate(
+      filtered,
+      viajesFechaFilterType,
+      viajesFechaFilterValue,
+      viajesFechaFilterValueEnd
+    );
+
+    if (viajesSearchTerm.trim()) {
+      const searchLower = viajesSearchTerm.toLowerCase();
+      const searchNumeric = viajesSearchTerm.replace(/[^\d]/g, "");
+      filtered = filtered.filter(v => {
+        const idStr = String(v.id || "");
+        const conductor = (v.conductor || "").toLowerCase();
+        const placa = (v.placa || "").toLowerCase();
+        const tipoCarro = (v.tipoCarro || "").toLowerCase();
+        return idStr.includes(searchNumeric || searchLower) ||
+          conductor.includes(searchLower) ||
+          placa.includes(searchLower) ||
+          tipoCarro.includes(searchLower);
+      });
+    }
+
+    return filtered;
+  }, [viajesVolquetero, viajesFechaFilterType, viajesFechaFilterValue, viajesFechaFilterValueEnd, viajesSearchTerm, filterViajesByDate]);
   
   // Balance del encabezado (INCLUYE todas las transacciones y viajes, incluso ocultos)
   // Este balance NO debe cambiar al ocultar/mostrar transacciones
@@ -815,6 +881,38 @@ export default function VolqueteroDetail() {
       balance: positivos - negativos
     };
   }, [transaccionesFiltradas]);
+
+  const viajesFilterLabel = useMemo(() => {
+    const formatDateForLabel = (dateString: string): string => {
+      if (!dateString) return "";
+      if (dateString.includes("-")) {
+        const [year, month, day] = dateString.split("-");
+        return `${day}/${month}/${year}`;
+      }
+      return dateString;
+    };
+
+    const formatValue = formatDateForLabel(viajesFechaFilterValue);
+    const formatValueEnd = formatDateForLabel(viajesFechaFilterValueEnd);
+
+    const filterLabels: Record<string, string> = {
+      "todos": "Todos los Viajes",
+      "exactamente": `Fecha: ${formatValue}`,
+      "entre": `Entre: ${formatValue} - ${formatValueEnd}`,
+      "despues-de": `Después de ${formatValue}`,
+      "antes-de": `Antes de ${formatValue}`,
+      "hoy": "Hoy",
+      "ayer": "Ayer",
+      "esta-semana": "Esta Semana",
+      "semana-pasada": "Semana Pasada",
+      "este-mes": "Este Mes",
+      "mes-pasado": "Mes Pasado",
+      "este-año": "Este Año",
+      "año-pasado": "Año Pasado"
+    };
+
+    return filterLabels[viajesFechaFilterType] || "Filtro Personalizado";
+  }, [viajesFechaFilterType, viajesFechaFilterValue, viajesFechaFilterValueEnd]);
   
   // Función para crear transacción temporal
   const handleCreateTemporalTransaction = (data: any) => {
@@ -958,7 +1056,68 @@ export default function VolqueteroDetail() {
 
           {has("module.VOLQUETEROS.tab.VIAJES.view") && (
             <TabsContent value="viajes" className="space-y-4">
-            {viajesVolquetero.length === 0 ? (
+            <div className="space-y-2">
+              <div className="flex gap-2 items-center">
+                <Input
+                  type="text"
+                  placeholder="Buscar..."
+                  value={viajesSearchTerm}
+                  onChange={(e) => setViajesSearchTerm(e.target.value)}
+                  className="flex-1 h-8 text-xs"
+                />
+                <Select value={viajesFechaFilterType} onValueChange={(value: DateFilterType) => setViajesFechaFilterType(value)}>
+                  <SelectTrigger className="h-8 text-xs px-2 w-40">
+                    <SelectValue placeholder="Filtrar por fecha" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="exactamente">Exactamente</SelectItem>
+                    <SelectItem value="entre">Entre</SelectItem>
+                    <SelectItem value="despues-de">Después de</SelectItem>
+                    <SelectItem value="antes-de">Antes de</SelectItem>
+                    <SelectItem value="hoy">Hoy</SelectItem>
+                    <SelectItem value="ayer">Ayer</SelectItem>
+                    <SelectItem value="esta-semana">Esta semana</SelectItem>
+                    <SelectItem value="semana-pasada">Semana pasada</SelectItem>
+                    <SelectItem value="este-mes">Este mes</SelectItem>
+                    <SelectItem value="mes-pasado">Mes pasado</SelectItem>
+                    <SelectItem value="este-año">Este año</SelectItem>
+                    <SelectItem value="año-pasado">Año pasado</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={() => setShowViajesImagePreview(true)}
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 text-xs flex items-center gap-1"
+                  title="Descargar imagen de viajes"
+                  disabled={viajesFiltrados.length === 0}
+                >
+                  <Image className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Imagen</span>
+                  <span className="sm:hidden">IMG</span>
+                </Button>
+              </div>
+
+              {(viajesFechaFilterType === "exactamente" || viajesFechaFilterType === "entre" || viajesFechaFilterType === "despues-de" || viajesFechaFilterType === "antes-de") && (
+                <div className="flex gap-2">
+                  <Input
+                    type="date"
+                    value={viajesFechaFilterValue}
+                    onChange={(e) => setViajesFechaFilterValue(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                  {viajesFechaFilterType === "entre" && (
+                    <Input
+                      type="date"
+                      value={viajesFechaFilterValueEnd}
+                      onChange={(e) => setViajesFechaFilterValueEnd(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+            {viajesFiltrados.length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center">
                   <Truck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -967,10 +1126,15 @@ export default function VolqueteroDetail() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {viajesVolquetero.map((viaje) => (
+                {viajesFiltrados.map((viaje) => (
                   <TripCard 
                     key={viaje.id} 
                     viaje={viaje as any}
+                    context="volquetero"
+                    onEditTrip={(trip) => {
+                      setSelectedTrip(trip);
+                      setShowEditTrip(true);
+                    }}
                   />
                 ))}
               </div>
@@ -1897,6 +2061,28 @@ export default function VolqueteroDetail() {
           return filterLabels[transaccionesFechaFilterType] || "Filtro Personalizado";
         })()}
       />
+
+      {/* Modal de imagen de viajes */}
+      {volquetero && (
+        <VolqueteroViajesImageModal
+          open={showViajesImagePreview}
+          onOpenChange={setShowViajesImagePreview}
+          volquetero={{ id: volquetero.id, nombre: volquetero.nombre }}
+          viajes={viajesFiltrados || []}
+          filterLabel={viajesFilterLabel}
+        />
+      )}
+
+      {selectedTrip && (
+        <EditTripModal
+          isOpen={showEditTrip}
+          onClose={() => {
+            setShowEditTrip(false);
+            setSelectedTrip(null);
+          }}
+          viaje={selectedTrip}
+        />
+      )}
 
       {/* Navegación inferior */}
       <BottomNavigation />

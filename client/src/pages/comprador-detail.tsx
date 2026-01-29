@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import TripCard from "@/components/trip-card";
 import { 
   ArrowLeft, Users, Receipt, DollarSign, Truck, Calendar, X, Download, Eye, EyeOff, Image,
   TrendingUp, TrendingDown, PieChart, BarChart3, LineChart, Calculator, Edit, Trash2, Plus, Search
@@ -41,6 +42,7 @@ import BottomNavigation from "@/components/layout/bottom-navigation";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
+import { EditTripModal } from "@/components/forms/edit-trip-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
 import { CompleteTransactionModal } from "@/components/modals/complete-transaction-modal";
@@ -96,6 +98,8 @@ export default function CompradorDetail() {
   const [showEditPendingTransaction, setShowEditPendingTransaction] = useState(false);
   const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showEditTrip, setShowEditTrip] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState<ViajeWithDetails | null>(null);
   const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
   
   // Estados para filtros de viajes
@@ -836,6 +840,8 @@ export default function CompradorDetail() {
                   setShowImagePreview={setShowImagePreview}
                   setExcelPreviewData={setExcelPreviewData}
                   setShowExcelPreview={setShowExcelPreview}
+                  setSelectedTrip={setSelectedTrip}
+                  setShowEditTrip={setShowEditTrip}
                   comprador={comprador}
                 />
               </TabsContent>
@@ -1124,6 +1130,17 @@ export default function CompradorDetail() {
       {/* Navegación inferior */}
       <BottomNavigation />
 
+      {selectedTrip && (
+        <EditTripModal
+          isOpen={showEditTrip}
+          onClose={() => {
+            setShowEditTrip(false);
+            setSelectedTrip(null);
+          }}
+          viaje={selectedTrip}
+        />
+      )}
+
       {/* Modal de vista previa Excel */}
       <ExcelPreviewModal
         open={showExcelPreview}
@@ -1157,6 +1174,8 @@ function CompradorViajesTab({
   setShowImagePreview,
   setExcelPreviewData,
   setShowExcelPreview,
+  setSelectedTrip,
+  setShowEditTrip,
   comprador
 }: { 
   viajes: ViajeWithDetails[];
@@ -1172,6 +1191,8 @@ function CompradorViajesTab({
   setShowImagePreview: (value: boolean) => void;
   setExcelPreviewData: (data: any[]) => void;
   setShowExcelPreview: (value: boolean) => void;
+  setSelectedTrip: (trip: ViajeWithDetails | null) => void;
+  setShowEditTrip: (value: boolean) => void;
   comprador: Comprador | undefined;
 }) {
   return (
@@ -1306,116 +1327,17 @@ function CompradorViajesTab({
         </div>
       ) : (
         <div className="space-y-3">
-          {viajes.map((viaje) => (
-            <Card key={viaje.id} className="border-l-4 border-l-blue-500 dark:border-l-blue-400">
-              <CardContent className="p-4">
-                <div className="grid gap-3">
-                  {/* Fila 1: ID, fechas */}
-                  <div className="grid grid-cols-3 gap-3 text-sm">
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs font-medium">ID</span>
-                      <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{viaje.id}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs font-medium">F. CARGUE</span>
-                      <span className="text-xs">{viaje.fechaCargue ? (() => {
-                        const fecha = viaje.fechaCargue;
-                        if (typeof fecha === 'string') {
-                          const dateStr = fecha.includes('T') ? fecha.split('T')[0] : fecha;
-                          const [year, month, day] = dateStr.split('-');
-                          return `${day}/${month}/${year?.slice(-2) || ''}`;
-                        }
-                        return "-";
-                      })() : "-"}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs font-medium">F. DESCARGUE</span>
-                      <span className="text-xs">{viaje.fechaDescargue ? (() => {
-                        const fecha = viaje.fechaDescargue;
-                        if (typeof fecha === 'string') {
-                          const dateStr = fecha.includes('T') ? fecha.split('T')[0] : fecha;
-                          const [year, month, day] = dateStr.split('-');
-                          return `${day}/${month}/${year?.slice(-2) || ''}`;
-                        }
-                        return "-";
-                      })() : "-"}</span>
-                    </div>
-                  </div>
-
-                  {/* Fila 2: Conductor, tipo carro, placa */}
-                  <div className="grid grid-cols-3 gap-3 text-sm">
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs font-medium">CONDUCTOR</span>
-                      <span className="truncate">{viaje.conductor || "-"}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs font-medium">TIPO CARRO</span>
-                      <span className="truncate">{viaje.tipoCarro || "-"}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs font-medium">PLACA</span>
-                      <span className="truncate">{viaje.placa || "-"}</span>
-                    </div>
-                  </div>
-
-                  {/* Fila 3: Peso, precios unitarios */}
-                  <div className="grid grid-cols-3 gap-3 text-sm">
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs font-medium">PESO</span>
-                      <span className="font-medium">{viaje.peso ? `${viaje.peso} Ton` : "-"}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs font-medium">VUT</span>
-                      <span className="text-blue-600 dark:text-blue-400 font-bold">
-                        {viaje.vut ? formatCurrency(parseFloat(viaje.vut)) : "-"}
-                      </span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs font-medium">FUT</span>
-                      <span className="text-orange-600 dark:text-orange-400 font-bold">
-                        {viaje.fleteTon ? formatCurrency(parseFloat(viaje.fleteTon)) : "-"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Fila 4: Gastos y totales */}
-                  <div className="grid grid-cols-3 gap-3 text-sm">
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs font-medium">OGF</span>
-                      <span className="text-purple-600 dark:text-purple-400 font-bold">
-                        {viaje.otrosGastosFlete ? formatCurrency(parseFloat(viaje.otrosGastosFlete)) : "-"}
-                      </span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs font-medium">TOTAL VENTA</span>
-                      <span className="text-green-600 dark:text-green-400 font-bold">
-                        {viaje.totalVenta ? formatCurrency(parseFloat(viaje.totalVenta)) : "-"}
-                      </span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs font-medium">TOTAL FLETE</span>
-                      <span className="text-red-600 dark:text-red-400 font-bold">
-                        {viaje.totalFlete ? formatCurrency(parseFloat(viaje.totalFlete)) : "-"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Fila 4: Valor a consignar */}
-                  {viaje.valorConsignar && (
-                    <div className="pt-2 border-t">
-                      <div className="flex justify-center">
-                        <div className="text-center">
-                          <span className="text-muted-foreground text-xs">VALOR A CONSIGNAR:</span>
-                          <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                            {formatCurrency(parseFloat(viaje.valorConsignar))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+          {viajes.map((viaje, index) => (
+            <TripCard
+              key={viaje.id}
+              viaje={viaje as any}
+              context="comprador"
+              index={index}
+              onEditTrip={(trip) => {
+                setSelectedTrip(trip);
+                setShowEditTrip(true);
+              }}
+            />
           ))}
         </div>
       )}

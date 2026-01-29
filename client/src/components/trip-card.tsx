@@ -187,7 +187,9 @@ function TripCard({ viaje, showExtended = false, onClick, onEditTrip, onDeleteTr
               <p className="text-xs text-muted-foreground">{viaje.estado}</p>
             </div>
           </div>
-          {getStatusBadge()}
+          <div className="flex items-center gap-2">
+            {getStatusBadge()}
+          </div>
         </div>
 
         {/* Grid principal ultra-compacto 3x3 */}
@@ -354,17 +356,71 @@ function TripCard({ viaje, showExtended = false, onClick, onEditTrip, onDeleteTr
           
           {/* Fila 4: QPF para volqueteros */}
           {context === 'volquetero' && (
-            <div className="col-span-3 pt-1 border-t border-border/30">
-              <p className="text-muted-foreground text-[10px] mb-0.5">
-                ¿QPF?
-              </p>
-              <p className="font-medium text-xs leading-tight text-indigo-600">
-                {viaje.quienPagaFlete === "comprador" || viaje.quienPagaFlete === "El comprador" 
-                  ? "El comprador" 
-                  : viaje.quienPagaFlete === "tu" || viaje.quienPagaFlete === "Tú" || viaje.quienPagaFlete === "RodMar"
-                  ? "RodMar" 
-                  : viaje.quienPagaFlete || "N/A"}
-              </p>
+            <div className="col-span-3 pt-1 border-t border-border/30 flex items-center justify-between gap-2">
+              <div>
+                <p className="text-muted-foreground text-[10px] mb-0.5">
+                  ¿QPF?
+                </p>
+                <p className="font-medium text-xs leading-tight text-indigo-600">
+                  {viaje.quienPagaFlete === "comprador" || viaje.quienPagaFlete === "El comprador" 
+                    ? "El comprador" 
+                    : viaje.quienPagaFlete === "tu" || viaje.quienPagaFlete === "Tú" || viaje.quienPagaFlete === "RodMar"
+                    ? "RodMar" 
+                    : viaje.quienPagaFlete || "N/A"}
+                </p>
+              </div>
+              {viaje.tieneRecibo ? (
+                <button
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!receiptImageUrl && !isLoadingReceipt) {
+                      setIsLoadingReceipt(true);
+                      try {
+                        const token = getAuthToken();
+                        const headers: Record<string, string> = {};
+                        if (token) {
+                          headers["Authorization"] = `Bearer ${token}`;
+                        }
+                        const response = await fetch(apiUrl(`/recibo/${viaje.id}`), {
+                          credentials: "include",
+                          headers,
+                        });
+                        if (response.ok) {
+                          const contentType = response.headers.get("content-type") || "";
+                          if (contentType.includes("application/json")) {
+                            const data = await response.json();
+                            if (typeof data?.recibo === "string") {
+                              setReceiptImageUrl(data.recibo);
+                            }
+                          } else {
+                            const blob = await response.blob();
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              const dataUrl = reader.result as string;
+                              setReceiptImageUrl(dataUrl);
+                            };
+                            reader.readAsDataURL(blob);
+                          }
+                        }
+                      } catch (error) {
+                        console.error("Error loading receipt:", error);
+                      } finally {
+                        setIsLoadingReceipt(false);
+                      }
+                    }
+                    setShowReceipt(true);
+                  }}
+                  className="text-[10px] py-1 px-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md transition-colors flex items-center justify-center gap-1"
+                  title="Ver recibo"
+                  disabled={isLoadingReceipt}
+                >
+                  <Receipt className="w-2.5 h-2.5" />
+                  <span className="text-[9px]">Ver recibo</span>
+                </button>
+              ) : (
+                <div className="text-[10px] text-muted-foreground">Sin recibo</div>
+              )}
             </div>
           )}
         </div>
