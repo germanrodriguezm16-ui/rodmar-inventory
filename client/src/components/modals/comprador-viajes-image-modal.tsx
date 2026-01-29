@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, X } from "lucide-react";
@@ -47,7 +47,34 @@ export default function CompradorViajesImageModal({
   filterValueEnd
 }: CompradorViajesImageModalProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [saldoAnteriorInput, setSaldoAnteriorInput] = useState("");
+  const [saldoAnteriorTipo, setSaldoAnteriorTipo] = useState<"contra" | "favor">("contra");
+  const [previewScale, setPreviewScale] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
+  const previewWrapperRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const updateScale = () => {
+      const wrapper = previewWrapperRef.current;
+      const content = imageRef.current;
+      if (!wrapper || !content) return;
+      const availableWidth = wrapper.clientWidth;
+      const contentWidth = content.scrollWidth;
+      if (!availableWidth || !contentWidth) return;
+      const nextScale = Math.min(1, availableWidth / contentWidth);
+      setPreviewScale(nextScale);
+    };
+
+    const rafId = requestAnimationFrame(updateScale);
+    window.addEventListener("resize", updateScale);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", updateScale);
+    };
+  }, [open, viajes.length, filterType, filterValue, filterValueEnd, saldoAnteriorInput, saldoAnteriorTipo]);
 
   if (!open) return null;
 
@@ -95,17 +122,17 @@ export default function CompradorViajesImageModal({
   }, 0);
   const filterLabel = getFilterLabel(filterType, filterValue, filterValueEnd);
 
+  const saldoAnteriorNumerico = parseFloat(saldoAnteriorInput.replace(/[^\d.-]/g, "")) || 0;
+  const saldoAnteriorAjuste = saldoAnteriorTipo === "contra" ? saldoAnteriorNumerico : -saldoAnteriorNumerico;
+  const totalConSaldoAnterior = totalConsignar + saldoAnteriorAjuste;
+
   const handleDownload = async () => {
     if (!imageRef.current) return;
 
-    // Validar que no haya más de 20 viajes
-    if (viajes.length > 20) {
-      alert('No se puede descargar la imagen con más de 20 viajes. Por favor, aplica filtros para reducir el número de viajes a máximo 20.');
-      return;
-    }
-
     setIsGenerating(true);
+    setIsExporting(true);
     try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
       const canvas = await html2canvas(imageRef.current, {
         backgroundColor: '#ffffff',
         scale: 2,
@@ -123,6 +150,7 @@ export default function CompradorViajesImageModal({
       console.error('Error generando imagen:', error);
     } finally {
       setIsGenerating(false);
+      setIsExporting(false);
     }
   };
 
@@ -131,22 +159,23 @@ export default function CompradorViajesImageModal({
       <DialogContent className="w-full max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto p-2 sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Vista Previa - Viajes de {comprador.nombre}</span>
+            <span className="text-sm sm:text-base">Vista Previa - Viajes de {comprador.nombre}</span>
             <div className="flex items-center gap-2">
               <Button
                 onClick={handleDownload}
-                disabled={isGenerating || viajes.length > 20}
+                disabled={isGenerating}
                 variant="default"
                 size="sm"
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />
-                {isGenerating ? "Generando..." : "Descargar PNG"}
+                {isGenerating ? "Generando..." : "PNG"}
               </Button>
               <Button
                 onClick={() => onOpenChange(false)}
-                variant="ghost"
-                size="sm"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -154,27 +183,50 @@ export default function CompradorViajesImageModal({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Advertencia si hay más de 20 viajes */}
-        {viajes.length > 20 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-            <div className="flex items-start gap-3">
-              <div className="text-amber-600 mt-0.5">⚠️</div>
-              <div>
-                <h4 className="text-amber-800 font-medium text-sm mb-1">
-                  Demasiados viajes para descargar ({viajes.length} viajes)
-                </h4>
-                <p className="text-amber-700 text-sm">
-                  La descarga de imagen está limitada a máximo 20 viajes. Por favor, aplica filtros para reducir el número de viajes antes de descargar.
-                </p>
-              </div>
+        {/* Controles rápidos (no aparecen en la imagen) */}
+        <div className="mb-3 sm:mb-4 p-3 sm:p-4 border rounded-lg bg-gray-50">
+          <div className="text-xs sm:text-sm font-medium text-gray-700 mb-2">
+            Saldo anterior (manual, afecta total del reporte)
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <select
+              className="border rounded px-2 py-1 text-xs sm:text-sm bg-white"
+              value={saldoAnteriorTipo}
+              onChange={(e) => setSaldoAnteriorTipo(e.target.value as "contra" | "favor")}
+            >
+              <option value="contra">En contra del comprador</option>
+              <option value="favor">A favor del comprador</option>
+            </select>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="Valor"
+              className="border rounded px-2 py-1 text-xs sm:text-sm w-32 bg-white"
+              value={saldoAnteriorInput}
+              onChange={(e) => {
+                const next = e.target.value.replace(/[^\d.,-]/g, "");
+                setSaldoAnteriorInput(next);
+              }}
+            />
+            <div className="text-[11px] sm:text-xs text-gray-500">
+              Vista previa: {saldoAnteriorTipo === "contra" ? "+" : "-"}
+              {formatCurrency(Math.abs(saldoAnteriorNumerico))}
             </div>
           </div>
-        )}
+        </div>
 
         {/* Contenido de la imagen */}
-        <div ref={imageRef} className="bg-white p-3 sm:p-6 rounded-lg">
+        <div ref={previewWrapperRef} className="w-full overflow-hidden">
+          <div
+            style={{
+              transform: `scale(${isExporting ? 1 : previewScale})`,
+              transformOrigin: "top left",
+              width: "fit-content"
+            }}
+          >
+            <div ref={imageRef} className="bg-white p-3 sm:p-6 rounded-lg">
           {/* Header */}
-          <div className="text-center mb-4 sm:mb-6 border-b pb-2 sm:pb-4">
+          <div className="text-center mb-4 sm:mb-6 border-b pb-2 sm:pb-4 bg-slate-50/70 rounded-md">
             <h2 className="text-lg sm:text-2xl font-bold text-gray-800 mb-1 sm:mb-2">RodMar - Historial de Viajes</h2>
             <h3 className="text-base sm:text-xl font-semibold text-blue-600 mb-1 sm:mb-2">Comprador: {comprador.nombre}</h3>
             <div className="flex flex-wrap justify-center gap-2 sm:gap-4 text-[10px] sm:text-sm text-gray-600">
@@ -187,7 +239,7 @@ export default function CompradorViajesImageModal({
           </div>
 
           {/* Resumen Financiero */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6 p-2 sm:p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6 p-2 sm:p-4">
             <div className="text-center">
               <p className="text-[10px] sm:text-xs text-gray-600 mb-1">VIAJES COMPLETADOS</p>
               <p className="text-sm sm:text-lg font-bold text-blue-600">{viajesCompletados.length}</p>
@@ -197,10 +249,23 @@ export default function CompradorViajesImageModal({
               <p className="text-sm sm:text-lg font-bold text-green-600">{formatCurrency(totalConsignar)}</p>
             </div>
             <div className="text-center">
-              <p className="text-[10px] sm:text-xs text-gray-600 mb-1">SALDO ACTUAL</p>
-              <p className={`text-sm sm:text-lg font-bold ${parseFloat(comprador.saldo || "0") >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {formatCurrency(comprador.saldo || "0")}
+              <p className="text-[10px] sm:text-xs text-gray-600 mb-1">SALDO ANTERIOR</p>
+              <p className={`text-sm sm:text-lg font-bold ${saldoAnteriorTipo === "contra" ? "text-green-600" : "text-red-600"}`}>
+                {saldoAnteriorAjuste >= 0 ? "+" : "-"}
+                {formatCurrency(Math.abs(saldoAnteriorAjuste))}
               </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] sm:text-xs text-gray-600 mb-1">TOTAL CON SALDO ANTERIOR</p>
+              <div
+                className={`mx-auto inline-block rounded-md border border-gray-200 px-2 py-1 ${
+                  isExporting ? "bg-transparent" : "bg-green-50/60"
+                }`}
+              >
+                <p className={`text-sm sm:text-lg font-bold ${totalConSaldoAnterior >= 0 ? "text-green-700" : "text-red-700"}`}>
+                  {formatCurrency(totalConSaldoAnterior)}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -304,6 +369,8 @@ export default function CompradorViajesImageModal({
           <div className="mt-4 sm:mt-6 pt-2 sm:pt-4 border-t text-center text-[10px] sm:text-xs text-gray-500">
             <p>Reporte generado por RodMar - Sistema de Gestión de Operaciones Mineras</p>
             <p>Fecha de generación: {new Date().toLocaleString('es-ES')}</p>
+          </div>
+            </div>
           </div>
         </div>
       </DialogContent>
