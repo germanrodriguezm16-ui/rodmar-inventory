@@ -32,6 +32,8 @@ import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
 import { EditTripModal } from "@/components/forms/edit-trip-modal";
+import RegisterCargueModal from "@/components/forms/register-cargue-modal";
+import RegisterDescargueModal from "@/components/forms/register-descargue-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
 import { CompleteTransactionModal } from "@/components/modals/complete-transaction-modal";
@@ -61,6 +63,13 @@ export default function MinaDetail() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { has } = usePermissions();
+
+  const canViewCargue = has("action.VIAJES.cargue.view");
+  const canUseCargue = has("action.VIAJES.cargue.use");
+  const canViewDescargue = has("action.VIAJES.descargue.view");
+  const canUseDescargue = has("action.VIAJES.descargue.use");
+  const canViewEditTrip = has("action.VIAJES.edit.view") || has("action.VIAJES.edit");
+  const canUseEditTrip = has("action.VIAJES.edit.use") || has("action.VIAJES.edit");
   
   const minaId = parseInt(params?.id || "0");
   
@@ -96,7 +105,7 @@ export default function MinaDetail() {
   }, [minaId]);
 
   // Función para ocultar transacciones localmente (sin llamar a la API)
-  const handleHideTransaction = (transactionId: number) => {
+  const handleHideTransaction = (transactionId: string | number) => {
     hideTransactionLocal(transactionId);
     toast({
       title: "Transacción ocultada",
@@ -113,43 +122,6 @@ export default function MinaDetail() {
     });
   };
 
-  // Mutación para ocultar viajes individuales
-  const hideViajeMutation = useMutation({
-    mutationFn: async (viajeId: string) => {
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/viajes/${viajeId}/hide`), {
-        method: 'PATCH',
-        headers,
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Error al ocultar viaje');
-      return await response.json();
-    },
-    onSuccess: () => {
-      // Invalidar solo las queries específicas del socio (similar a volqueteros)
-      queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`, "includeHidden"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}/all`] });
-      
-      toast({
-        title: "Viaje ocultado",
-        description: "El viaje se ha ocultado de las transacciones"
-      });
-    },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo ocultar el viaje",
-        variant: "destructive"
-      });
-    }
-  });
 
   // Mutación para eliminar transacciones pendientes
   const deletePendingTransactionMutation = useMutation({
@@ -204,57 +176,6 @@ export default function MinaDetail() {
     },
   });
 
-  // Mutación para mostrar todos los viajes ocultos (los viajes sí usan ocultamiento en BD)
-  const showAllHiddenViajesMutation = useMutation({
-    mutationFn: async () => {
-      const { apiUrl } = await import('@/lib/api');
-      
-      if (!minaId) {
-        throw new Error('Mina no encontrada');
-      }
-      
-      // Mostrar viajes ocultos específicos de esta mina
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const viajesResponse = await fetch(apiUrl(`/api/viajes/mina/${minaId}/show-all`), {
-        method: 'POST',
-        headers,
-        credentials: "include",
-      });
-      
-      if (!viajesResponse.ok) {
-        throw new Error('Error al mostrar viajes');
-      }
-      
-      const viajesResult = await viajesResponse.json();
-      return viajesResult.updatedCount || 0;
-    },
-    onSuccess: (updatedCount) => {
-      // Invalidar queries de viajes
-      queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/minas/${minaId}/viajes`, "includeHidden"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaId}`] });
-      
-      if (updatedCount > 0) {
-        toast({
-          title: "Viajes restaurados",
-          description: `${updatedCount} viajes restaurados`
-        });
-      }
-    },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "No se pudieron restaurar los viajes ocultos",
-        variant: "destructive"
-      });
-    }
-  });
   
   // Estados locales
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
@@ -267,6 +188,8 @@ export default function MinaDetail() {
   const [showEditPendingTransaction, setShowEditPendingTransaction] = useState(false);
   const [showEditTrip, setShowEditTrip] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<ViajeWithDetails | null>(null);
+  const [showRegisterCargue, setShowRegisterCargue] = useState(false);
+  const [showRegisterDescargue, setShowRegisterDescargue] = useState(false);
   const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
@@ -376,7 +299,7 @@ export default function MinaDetail() {
   const todasTransacciones = useMemo(() => {
     // Transacciones dinámicas de viajes completados (excluir viajes ocultos)
     const viajesCompletados = viajes
-      .filter(viaje => viaje.fechaDescargue && viaje.estado === "completado" && !viaje.oculta)
+      .filter(viaje => viaje.fechaDescargue && viaje.estado === "completado")
       .map(viaje => {
         const totalCompra = parseFloat(viaje.totalCompra || "0");
         
@@ -478,22 +401,12 @@ export default function MinaDetail() {
   const transaccionesFiltradas = useMemo(() => {
     // Primero filtrar por ocultas localmente (solo visual, no afecta BD)
     // Filtrar solo transacciones manuales (las de viajes se manejan diferente)
-    let filtered = todasTransacciones.filter(t => {
-      if (t.tipo !== "Viaje" && typeof t.id === 'number') {
-        return !isTransactionHidden(t.id);
-      }
-      return true; // Mantener viajes visibles
-    });
+    let filtered = todasTransacciones.filter(t => !isTransactionHidden(t.id));
     
     // Luego aplicar el filtro de tipo (todos/ocultas)
     if (filterType === "ocultas") {
       // Para mostrar ocultas, usar las que están ocultas localmente
-      filtered = todasTransacciones.filter(t => {
-        if (t.tipo !== "Viaje" && typeof t.id === 'number') {
-          return isTransactionHidden(t.id);
-        }
-        return false; // No mostrar viajes en la vista de ocultas
-      });
+      filtered = todasTransacciones.filter(t => isTransactionHidden(t.id));
     }
 
     // Aplicar filtro de fecha
@@ -877,6 +790,40 @@ export default function MinaDetail() {
                     </div>
                     
                     <div className="flex items-center space-x-2">
+                      {canViewCargue && (
+                        <Button
+                          onClick={() => {
+                            if (canUseCargue) setShowRegisterCargue(true);
+                          }}
+                          size="sm"
+                          variant="outline"
+                          disabled={!canUseCargue}
+                          className={`h-8 px-3 text-xs font-medium ${
+                            canUseCargue
+                              ? "text-blue-600 border-blue-600 hover:bg-blue-50"
+                              : "text-gray-400 border-gray-200"
+                          }`}
+                        >
+                          Registrar Cargue
+                        </Button>
+                      )}
+                      {canViewDescargue && (
+                        <Button
+                          onClick={() => {
+                            if (canUseDescargue) setShowRegisterDescargue(true);
+                          }}
+                          size="sm"
+                          variant="outline"
+                          disabled={!canUseDescargue}
+                          className={`h-8 px-3 text-xs font-medium ${
+                            canUseDescargue
+                              ? "text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+                              : "text-gray-400 border-gray-200"
+                          }`}
+                        >
+                          Registrar Descargue
+                        </Button>
+                      )}
                       <Button
                         onClick={() => {/* TODO: Export Excel */}}
                         size="sm"
@@ -972,6 +919,8 @@ export default function MinaDetail() {
                       setSelectedTrip(trip);
                       setShowEditTrip(true);
                     }}
+                    showEditButton={canViewEditTrip}
+                    editDisabled={!canUseEditTrip}
                   />
                 ))}
               </div>
@@ -1114,26 +1063,15 @@ export default function MinaDetail() {
                       {/* Botón mostrar ocultas */}
                       {(() => {
                         const transaccionesOcultas = getHiddenTransactionsCount();
-                        // Usar todosViajesIncOcultos para contar viajes ocultos (estos sí están en BD)
-                        const viajesOcultos = todosViajesIncOcultos?.filter((v: ViajeWithDetails) => v.oculta).length || 0;
-                        const totalOcultos = transaccionesOcultas + viajesOcultos;
-                        const hayElementosOcultos = totalOcultos > 0;
-                        
-                        return hayElementosOcultos ? (
+                        return transaccionesOcultas > 0 ? (
                           <Button
-                            onClick={() => {
-                              handleShowAllHidden(); // Mostrar transacciones ocultas localmente
-                              if (viajesOcultos > 0) {
-                                showAllHiddenViajesMutation.mutate(); // También mostrar viajes ocultos (estos sí están en BD)
-                              }
-                            }}
+                            onClick={handleShowAllHidden}
                             size="sm"
                             className="h-8 px-2 bg-blue-600 hover:bg-blue-700 text-xs"
-                            disabled={showAllHiddenViajesMutation.isPending}
-                            title={`Mostrar ${totalOcultos} elementos ocultos (${transaccionesOcultas} transacciones, ${viajesOcultos} viajes)`}
+                            title={`Mostrar ${transaccionesOcultas} transacciones ocultas`}
                           >
                             <Eye className="w-3 h-3 mr-1" />
-                            {totalOcultos}
+                            {transaccionesOcultas}
                           </Button>
                         ) : null;
                       })()}
@@ -1465,16 +1403,15 @@ export default function MinaDetail() {
                                 <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-500" />
                               </Button>
                             </div>
-                          ) : transaccion.tipo === "Viaje" && (transaccion as any).viajeId ? (
+                          ) : transaccion.tipo === "Viaje" ? (
                             <Button
                               size="sm"
                               variant="ghost"
                               className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-gray-100 shrink-0"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                hideViajeMutation.mutate((transaccion as any).viajeId);
+                                handleHideTransaction(transaccion.id);
                               }}
-                              disabled={hideViajeMutation.isPending}
                               title="Ocultar viaje de transacciones"
                             >
                               <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-500" />
@@ -1783,6 +1720,16 @@ export default function MinaDetail() {
           viaje={selectedTrip}
         />
       )}
+
+      <RegisterCargueModal
+        open={showRegisterCargue}
+        onClose={() => setShowRegisterCargue(false)}
+      />
+
+      <RegisterDescargueModal
+        open={showRegisterDescargue}
+        onClose={() => setShowRegisterDescargue(false)}
+      />
 
       {/* Navegación inferior */}
       <BottomNavigation />

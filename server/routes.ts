@@ -3699,6 +3699,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const userId = req.user!.id;
+        const userPermissions = await getUserPermissions(userId);
+        const canViewPendings =
+          userPermissions.includes("action.VIAJES.descargue.view") ||
+          userPermissions.includes("action.VIAJES.descargue.use") ||
+          userPermissions.includes("action.VIAJES.edit") ||
+          userPermissions.includes("action.VIAJES.edit.use");
+        if (!canViewPendings) {
+          return res.status(403).json({
+            error: "No tienes permiso para ver viajes pendientes",
+            requiredPermission: "action.VIAJES.descargue.view",
+          });
+        }
         debugLog(`=== GET /api/viajes/pendientes - userId: ${userId}`);
         const viajes = await storage.getViajesPendientes(userId);
         debugLog(`=== Found ${viajes.length} pending viajes`);
@@ -3822,6 +3834,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const viajeId = req.params.id;
         const userId = req.user!.id;
+        const userPermissions = await getUserPermissions(userId);
+
+        const isDescargueUpdate = Boolean(
+          req.body.fechaDescargue ||
+            req.body.peso ||
+            req.body.ventaTon ||
+            req.body.fleteTon ||
+            req.body.otrosGastosFlete ||
+            req.body.quienPagaFlete ||
+            req.body.totalVenta ||
+            req.body.totalCompra ||
+            req.body.totalFlete ||
+            req.body.valorConsignar ||
+            req.body.ganancia ||
+            req.body.vut ||
+            req.body.cut ||
+            req.body.fut ||
+            req.body.compradorId ||
+            req.body.recibo
+        );
+
+        const canEditViaje =
+          userPermissions.includes("action.VIAJES.edit.use") ||
+          userPermissions.includes("action.VIAJES.edit");
+        const canDescargue =
+          userPermissions.includes("action.VIAJES.descargue.use") ||
+          canEditViaje;
+
+        if (isDescargueUpdate && !canDescargue) {
+          return res.status(403).json({
+            error: "No tienes permiso para registrar descargues",
+            requiredPermission: "action.VIAJES.descargue.use",
+          });
+        }
+        if (!isDescargueUpdate && !canEditViaje) {
+          return res.status(403).json({
+            error: "No tienes permiso para editar viajes",
+            requiredPermission: "action.VIAJES.edit.use",
+          });
+        }
 
         // Check if viaje exists first
         const existingViaje = await storage.getViaje(viajeId);
@@ -4219,6 +4271,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/viajes", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
+      const userPermissions = await getUserPermissions(userId);
+      const canCreateViaje =
+        userPermissions.includes("action.VIAJES.cargue.use") ||
+        userPermissions.includes("action.VIAJES.create");
+      if (!canCreateViaje) {
+        return res.status(403).json({
+          error: "No tienes permiso para registrar cargues",
+          requiredPermission: "action.VIAJES.cargue.use",
+        });
+      }
       debugLog("Received viaje data:", req.body);
 
       // If this request includes a fileHash, register it to prevent future duplicates

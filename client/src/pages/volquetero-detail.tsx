@@ -39,6 +39,8 @@ import { TransactionDetailModal } from "@/components/modals/transaction-detail-m
 import { TransaccionesImageModal } from "@/components/modals/transacciones-image-modal";
 import VolqueteroViajesImageModal from "@/components/modals/volquetero-viajes-image-modal";
 import { EditTripModal } from "@/components/forms/edit-trip-modal";
+import RegisterCargueModal from "@/components/forms/register-cargue-modal";
+import RegisterDescargueModal from "@/components/forms/register-descargue-modal";
 import { useHiddenTransactions } from "@/hooks/useHiddenTransactions";
 import type { ViajeWithDetails, TransaccionWithSocio } from "@shared/schema";
 
@@ -95,6 +97,12 @@ interface VolqueteroTransaccion {
 export default function VolqueteroDetail() {
   const { id } = useParams();
   const { has } = usePermissions();
+  const canViewCargue = has("action.VIAJES.cargue.view");
+  const canUseCargue = has("action.VIAJES.cargue.use");
+  const canViewDescargue = has("action.VIAJES.descargue.view");
+  const canUseDescargue = has("action.VIAJES.descargue.use");
+  const canViewEditTrip = has("action.VIAJES.edit.view") || has("action.VIAJES.edit");
+  const canUseEditTrip = has("action.VIAJES.edit.use") || has("action.VIAJES.edit");
   
   // Estado inicial de activeTab basado en permisos
   const getInitialTab = () => {
@@ -121,6 +129,8 @@ export default function VolqueteroDetail() {
   const [showViajesImagePreview, setShowViajesImagePreview] = useState(false);
   const [showEditTrip, setShowEditTrip] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<ViajeWithDetails | null>(null);
+  const [showRegisterCargue, setShowRegisterCargue] = useState(false);
+  const [showRegisterDescargue, setShowRegisterDescargue] = useState(false);
   
   // Estado para transacciones temporales (solo en memoria)
   const [transaccionesTemporales, setTransaccionesTemporales] = useState<TransaccionWithSocio[]>([]);
@@ -609,50 +619,13 @@ export default function VolqueteroDetail() {
   }, [getDateRange]);
 
   // Función para ocultar transacciones localmente (sin llamar a la API)
-  const handleHideTransaction = (transactionId: number) => {
+  const handleHideTransaction = (transactionId: string | number) => {
     hideTransactionLocal(transactionId);
     toast({
       title: "Transacción ocultada",
       description: "La transacción se ha ocultado correctamente"
     });
   };
-
-  // Mutación para ocultar viajes individuales
-  const hideViajeMutation = useMutation({
-    mutationFn: async (viajeId: string) => {
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/viajes/${viajeId}/hide`), {
-        method: 'PATCH',
-        headers,
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error('Error al ocultar viaje');
-      return await response.json();
-    },
-    onSuccess: () => {
-      // Invalidar solo las queries necesarias
-      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "viajes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros", volqueteroIdActual, "transacciones"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/socio/volquetero", volqueteroIdActual, "all"] });
-      
-      toast({
-        title: "Viaje ocultado",
-        description: "El viaje se ha ocultado de las transacciones"
-      });
-    },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo ocultar el viaje",
-        variant: "destructive"
-      });
-    }
-  });
 
   // Mutación para eliminar transacciones pendientes
   const deletePendingTransactionMutation = useMutation({
@@ -734,15 +707,10 @@ export default function VolqueteroDetail() {
 
   // Aplicar filtros a transacciones (incluyendo filtro de ocultas local)
   const transaccionesFiltradas = useMemo(() => {
-    // Primero filtrar transacciones ocultas localmente (solo transacciones manuales con IDs numéricos)
-    let filtered = transaccionesFormateadas.filter(t => {
-      // Si es una transacción manual (tiene originalTransaction), verificar si está oculta localmente
-      if (t.tipo === "Manual" && t.originalTransaction && typeof t.originalTransaction.id === 'number') {
-        return !isTransactionHidden(t.originalTransaction.id);
-      }
-      // Para viajes y temporales, siempre mostrar (el hook solo maneja transacciones manuales)
-      return true;
-    });
+    // Primero filtrar transacciones ocultas localmente (aplica a viajes y manuales)
+    let filtered = filterType === "ocultas"
+      ? transaccionesFormateadas.filter(t => isTransactionHidden(t.id))
+      : transaccionesFormateadas.filter(t => !isTransactionHidden(t.id));
     
     // Luego filtrar por fecha
     filtered = filterTransaccionesByDate(
@@ -782,7 +750,7 @@ export default function VolqueteroDetail() {
     // Si balanceFilter === 'all', no filtrar por balance
     
     return filtered;
-  }, [transaccionesFormateadas, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, searchTerm, filterTransaccionesByDate, balanceFilter, isTransactionHidden]);
+  }, [transaccionesFormateadas, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, searchTerm, filterTransaccionesByDate, balanceFilter, isTransactionHidden, filterType]);
 
   // Aplicar filtros a viajes
   const viajesFiltrados = useMemo(() => {
@@ -1115,6 +1083,40 @@ export default function VolqueteroDetail() {
                     <SelectItem value="año-pasado">Año pasado</SelectItem>
                   </SelectContent>
                 </Select>
+                {canViewCargue && (
+                  <Button
+                    onClick={() => {
+                      if (canUseCargue) setShowRegisterCargue(true);
+                    }}
+                    size="sm"
+                    variant="outline"
+                    disabled={!canUseCargue}
+                    className={`h-8 px-3 text-xs font-medium ${
+                      canUseCargue
+                        ? "text-blue-600 border-blue-600 hover:bg-blue-50"
+                        : "text-gray-400 border-gray-200"
+                    }`}
+                  >
+                    Registrar Cargue
+                  </Button>
+                )}
+                {canViewDescargue && (
+                  <Button
+                    onClick={() => {
+                      if (canUseDescargue) setShowRegisterDescargue(true);
+                    }}
+                    size="sm"
+                    variant="outline"
+                    disabled={!canUseDescargue}
+                    className={`h-8 px-3 text-xs font-medium ${
+                      canUseDescargue
+                        ? "text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+                        : "text-gray-400 border-gray-200"
+                    }`}
+                  >
+                    Registrar Descargue
+                  </Button>
+                )}
                 <Button
                   onClick={() => setShowViajesImagePreview(true)}
                   size="sm"
@@ -1165,6 +1167,8 @@ export default function VolqueteroDetail() {
                       setSelectedTrip(trip);
                       setShowEditTrip(true);
                     }}
+                    showEditButton={canViewEditTrip}
+                    editDisabled={!canUseEditTrip}
                   />
                 ))}
               </div>
@@ -1551,9 +1555,7 @@ export default function VolqueteroDetail() {
                                       <Button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          if (typeof transaccion.originalTransaction.id === 'number') {
-                                            handleHideTransaction(transaccion.originalTransaction.id);
-                                          }
+                                          handleHideTransaction(transaccion.id);
                                         }}
                                         variant="ghost"
                                         size="sm"
@@ -1563,16 +1565,15 @@ export default function VolqueteroDetail() {
                                         <Eye className="h-3 w-3 text-gray-500" />
                                       </Button>
                                     </>
-                                  ) : transaccion.tipo === "Viaje" && transaccion.viajeId ? (
+                                  ) : transaccion.tipo === "Viaje" ? (
                                     <Button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        hideViajeMutation.mutate(transaccion.viajeId!);
+                                        handleHideTransaction(transaccion.id);
                                       }}
                                       variant="ghost"
                                       size="sm"
                                       className="h-6 w-6 p-0 hover:bg-gray-100"
-                                      disabled={hideViajeMutation.isPending}
                                       title="Ocultar viaje de transacciones"
                                     >
                                       <Eye className="h-3 w-3 text-gray-500" />
@@ -1767,25 +1768,22 @@ export default function VolqueteroDetail() {
                                     className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-gray-100 shrink-0"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      if (typeof transaccion.originalTransaction.id === 'number') {
-                                        handleHideTransaction(transaccion.originalTransaction.id);
-                                      }
+                                      handleHideTransaction(transaccion.id);
                                     }}
                                     title="Ocultar transacción"
                                   >
                                     <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-500" />
                                   </Button>
                                 </div>
-                              ) : transaccion.tipo === "Viaje" && transaccion.viajeId ? (
+                              ) : transaccion.tipo === "Viaje" ? (
                                 <Button
                                   size="sm"
                                   variant="ghost"
                                   className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-gray-100 shrink-0"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    hideViajeMutation.mutate(transaccion.viajeId!);
+                                    handleHideTransaction(transaccion.id);
                                   }}
-                                  disabled={hideViajeMutation.isPending}
                                   title="Ocultar viaje de transacciones"
                                 >
                                   <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-500" />
@@ -1825,7 +1823,7 @@ export default function VolqueteroDetail() {
                       )}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {transaccionesFormateadas.filter(t => t.tipo === "Viaje" && !t.oculta).length} viajes donde RodMar paga el flete
+                      {transaccionesFormateadas.filter(t => t.tipo === "Viaje" && !isTransactionHidden(t.id)).length} viajes donde RodMar paga el flete
                     </p>
                   </div>
                   
@@ -1842,7 +1840,7 @@ export default function VolqueteroDetail() {
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {transaccionesFormateadas.filter(t => (t.tipo === "Manual" || t.tipo === "Temporal") && !t.oculta && parseFloat(t.valor) > 0).length} transacciones
+                          {transaccionesFormateadas.filter(t => (t.tipo === "Manual" || t.tipo === "Temporal") && !isTransactionHidden(t.id) && parseFloat(t.valor) > 0).length} transacciones
                         </p>
                       </div>
                       <div>
@@ -1854,7 +1852,7 @@ export default function VolqueteroDetail() {
                           ))}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {transaccionesFormateadas.filter(t => (t.tipo === "Manual" || t.tipo === "Temporal") && !t.oculta && parseFloat(t.valor) < 0).length} transacciones
+                          {transaccionesFormateadas.filter(t => (t.tipo === "Manual" || t.tipo === "Temporal") && !isTransactionHidden(t.id) && parseFloat(t.valor) < 0).length} transacciones
                         </p>
                       </div>
                     </div>
@@ -2113,6 +2111,16 @@ export default function VolqueteroDetail() {
           viaje={selectedTrip}
         />
       )}
+
+      <RegisterCargueModal
+        open={showRegisterCargue}
+        onClose={() => setShowRegisterCargue(false)}
+      />
+
+      <RegisterDescargueModal
+        open={showRegisterDescargue}
+        onClose={() => setShowRegisterDescargue(false)}
+      />
 
       {/* Navegación inferior */}
       <BottomNavigation />

@@ -11,23 +11,23 @@ export function useHiddenTransactions(moduleKey: string) {
   const storageKey = `hidden_transactions_${moduleKey}`;
   
   // Inicializar desde sessionStorage o crear Set vacío
-  const [hiddenTransactions, setHiddenTransactions] = useState<Set<number>>(() => {
+  const [hiddenTransactions, setHiddenTransactions] = useState<Set<string>>(() => {
     try {
       const stored = sessionStorage.getItem(storageKey);
       if (stored) {
-        const ids = JSON.parse(stored) as number[];
-        return new Set(ids);
+        const ids = JSON.parse(stored) as Array<string | number>;
+        return new Set(ids.map((id) => String(id)));
       }
     } catch (error) {
       console.error('Error reading hidden transactions from sessionStorage:', error);
     }
-    return new Set<number>();
+    return new Set<string>();
   });
 
   // Sincronizar con sessionStorage cuando cambie el estado
   useEffect(() => {
     try {
-      const ids = Array.from(hiddenTransactions);
+      const ids = Array.from(hiddenTransactions).map((id) => String(id));
       sessionStorage.setItem(storageKey, JSON.stringify(ids));
     } catch (error) {
       console.error('Error saving hidden transactions to sessionStorage:', error);
@@ -47,19 +47,21 @@ export function useHiddenTransactions(moduleKey: string) {
   }, [storageKey]);
 
   // Función para ocultar una transacción
-  const hideTransaction = useCallback((transactionId: number) => {
+  const hideTransaction = useCallback((transactionId: string | number) => {
+    const normalizedId = String(transactionId);
     setHiddenTransactions(prev => {
       const newSet = new Set(prev);
-      newSet.add(transactionId);
+      newSet.add(normalizedId);
       return newSet;
     });
   }, []);
 
   // Función para mostrar una transacción
-  const showTransaction = useCallback((transactionId: number) => {
+  const showTransaction = useCallback((transactionId: string | number) => {
+    const normalizedId = String(transactionId);
     setHiddenTransactions(prev => {
       const newSet = new Set(prev);
-      newSet.delete(transactionId);
+      newSet.delete(normalizedId);
       return newSet;
     });
   }, []);
@@ -70,8 +72,8 @@ export function useHiddenTransactions(moduleKey: string) {
   }, []);
 
   // Función para verificar si una transacción está oculta
-  const isHidden = useCallback((transactionId: number) => {
-    return hiddenTransactions.has(transactionId);
+  const isHidden = useCallback((transactionId: string | number) => {
+    return hiddenTransactions.has(String(transactionId));
   }, [hiddenTransactions]);
 
   // Función para obtener el conteo de transacciones ocultas
@@ -80,8 +82,8 @@ export function useHiddenTransactions(moduleKey: string) {
   }, [hiddenTransactions]);
 
   // Función para filtrar transacciones (excluir las ocultas)
-  const filterVisible = useCallback(<T extends { id: number }>(transactions: T[]): T[] => {
-    return transactions.filter(t => !hiddenTransactions.has(t.id));
+  const filterVisible = useCallback(<T extends { id: string | number }>(transactions: T[]): T[] => {
+    return transactions.filter(t => !hiddenTransactions.has(String(t.id)));
   }, [hiddenTransactions]);
 
   return {

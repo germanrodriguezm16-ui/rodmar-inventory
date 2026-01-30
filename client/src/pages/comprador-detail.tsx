@@ -43,6 +43,8 @@ import NewTransactionModal from "@/components/forms/new-transaction-modal";
 import EditTransactionModal from "@/components/forms/edit-transaction-modal";
 import DeleteTransactionModal from "@/components/forms/delete-transaction-modal";
 import { EditTripModal } from "@/components/forms/edit-trip-modal";
+import RegisterCargueModal from "@/components/forms/register-cargue-modal";
+import RegisterDescargueModal from "@/components/forms/register-descargue-modal";
 import { SolicitarTransaccionModal } from "@/components/modals/solicitar-transaccion-modal";
 import { PendingDetailModal } from "@/components/pending-transactions/pending-detail-modal";
 import { CompleteTransactionModal } from "@/components/modals/complete-transaction-modal";
@@ -86,6 +88,12 @@ export default function CompradorDetail() {
   const [, params] = useRoute("/compradores/:id");
   const [, setLocation] = useLocation();
   const { has } = usePermissions();
+  const canViewCargue = has("action.VIAJES.cargue.view");
+  const canUseCargue = has("action.VIAJES.cargue.use");
+  const canViewDescargue = has("action.VIAJES.descargue.view");
+  const canUseDescargue = has("action.VIAJES.descargue.use");
+  const canViewEditTrip = has("action.VIAJES.edit.view") || has("action.VIAJES.edit");
+  const canUseEditTrip = has("action.VIAJES.edit.use") || has("action.VIAJES.edit");
   const [showNewTransaction, setShowNewTransaction] = useState(false);
   const [showGestionarModal, setShowGestionarModal] = useState(false);
   const [showSolicitarModal, setShowSolicitarModal] = useState(false);
@@ -100,6 +108,8 @@ export default function CompradorDetail() {
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showEditTrip, setShowEditTrip] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<ViajeWithDetails | null>(null);
+  const [showRegisterCargue, setShowRegisterCargue] = useState(false);
+  const [showRegisterDescargue, setShowRegisterDescargue] = useState(false);
   const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
   
   // Estados para filtros de viajes
@@ -206,7 +216,7 @@ export default function CompradorDetail() {
 
   // Viajes completados (con fechaDescargue) excluyendo ocultos
   const viajesCompletados = useMemo(() => 
-    viajes.filter(viaje => viaje.fechaDescargue && viaje.estado === "completado" && !viaje.oculta),
+    viajes.filter(viaje => viaje.fechaDescargue && viaje.estado === "completado"),
     [viajes]
   );
 
@@ -264,7 +274,7 @@ export default function CompradorDetail() {
 
   // Combinar transacciones reales con transacciones dinámicas de viajes
   const transaccionesConViajes = useMemo(() => {
-    const viajesCompletados = viajes?.filter(v => v.fechaDescargue && v.compradorId === parseInt(compradorId) && !v.oculta) || [];
+    const viajesCompletados = viajes?.filter(v => v.fechaDescargue && v.compradorId === parseInt(compradorId)) || [];
     
     const transaccionesDinamicas = viajesCompletados.map(viaje => {
       // Usar directamente el valorConsignar ya calculado en la base de datos
@@ -525,7 +535,7 @@ export default function CompradorDetail() {
   };
 
   // Función para ocultar transacciones localmente (sin llamar a la API)
-  const handleHideTransaction = (transactionId: number) => {
+  const handleHideTransaction = (transactionId: string | number) => {
     hideTransactionLocal(transactionId);
     toast({
       description: "Transacción ocultada",
@@ -542,72 +552,6 @@ export default function CompradorDetail() {
     });
   };
 
-  // Mutación para ocultar viajes
-  const hideViajesMutation = useMutation({
-    mutationFn: async (viajeId: string) => {
-      const { getAuthToken } = await import('@/hooks/useAuth');
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(apiUrl(`/api/viajes/${viajeId}/hide`), {
-        method: 'PATCH',
-        headers,
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Error al ocultar viaje');
-      return response.json();
-    },
-    onMutate: async (viajeId: string) => {
-      // Actualización optimista: actualizar el cache inmediatamente
-      await queryClient.cancelQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
-      await queryClient.cancelQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
-      
-      // Snapshot del valor anterior
-      const previousViajes = queryClient.getQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId]);
-      const previousViajesIncOcultos = queryClient.getQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId, "includeHidden"]);
-      
-      // Actualizar optimistamente
-      if (previousViajes) {
-        queryClient.setQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId], (old) => 
-          (old || []).map(v => v.id === viajeId ? { ...v, oculta: true } : v)
-        );
-      }
-      if (previousViajesIncOcultos) {
-        queryClient.setQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId, "includeHidden"], (old) => 
-          (old || []).map(v => v.id === viajeId ? { ...v, oculta: true } : v)
-        );
-      }
-      
-      return { previousViajes, previousViajesIncOcultos };
-    },
-    onSuccess: async () => {
-      toast({
-        description: "Viaje ocultado",
-        duration: 2000,
-      });
-      // Invalidar queries para sincronizar con el backend
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId, "includeHidden"] });
-    },
-    onError: (error, viajeId, context) => {
-      // Revertir actualización optimista en caso de error
-      if (context?.previousViajes) {
-        queryClient.setQueryData(["/api/viajes/comprador", compradorId], context.previousViajes);
-      }
-      if (context?.previousViajesIncOcultos) {
-        queryClient.setQueryData(["/api/viajes/comprador", compradorId, "includeHidden"], context.previousViajesIncOcultos);
-      }
-      toast({
-        description: "Error al ocultar viaje",
-        variant: "destructive",
-        duration: 3000,
-      });
-    }
-  });
 
   // Mutación para eliminar transacciones pendientes
   const deletePendingTransactionMutation = useMutation({
@@ -663,81 +607,6 @@ export default function CompradorDetail() {
     },
   });
 
-  // Mutación para mostrar todos los viajes ocultos (los viajes sí usan ocultamiento en BD)
-  const showAllHiddenViajesMutation = useMutation({
-    mutationFn: async () => {
-      const { apiUrl } = await import('@/lib/api');
-      const { getAuthToken } = await import('@/hooks/useAuth');
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      // Mostrar viajes ocultos
-      const viajesResponse = await fetch(apiUrl(`/api/viajes/comprador/${compradorId}/show-all`), {
-        method: 'POST', 
-        headers,
-        credentials: "include",
-      });
-      
-      if (!viajesResponse.ok) {
-        throw new Error('Error al mostrar viajes ocultos');
-      }
-      
-      const viajesResult = await viajesResponse.json();
-      return viajesResult.updatedCount || 0;
-    },
-    onMutate: async () => {
-      // Actualización optimista: mostrar todos los viajes ocultos inmediatamente
-      await queryClient.cancelQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
-      await queryClient.cancelQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
-      
-      // Snapshot del valor anterior
-      const previousViajes = queryClient.getQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId]);
-      const previousViajesIncOcultos = queryClient.getQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId, "includeHidden"]);
-      
-      // Actualizar optimistamente: marcar todos los viajes ocultos como visibles
-      if (previousViajes) {
-        queryClient.setQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId], (old) => 
-          (old || []).map(v => ({ ...v, oculta: false }))
-        );
-      }
-      if (previousViajesIncOcultos) {
-        queryClient.setQueryData<ViajeWithDetails[]>(["/api/viajes/comprador", compradorId, "includeHidden"], (old) => 
-          (old || []).map(v => ({ ...v, oculta: false }))
-        );
-      }
-      
-      return { previousViajes, previousViajesIncOcultos };
-    },
-    onSuccess: (updatedCount) => {
-      if (updatedCount > 0) {
-        toast({
-          description: `${updatedCount} viajes restaurados`,
-          duration: 2000,
-        });
-      }
-      // Invalidar queries para sincronizar con el backend
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/viajes/comprador", compradorId, "includeHidden"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
-    },
-    onError: (error, variables, context) => {
-      // Revertir actualización optimista en caso de error
-      if (context?.previousViajes) {
-        queryClient.setQueryData(["/api/viajes/comprador", compradorId], context.previousViajes);
-      }
-      if (context?.previousViajesIncOcultos) {
-        queryClient.setQueryData(["/api/viajes/comprador", compradorId, "includeHidden"], context.previousViajesIncOcultos);
-      }
-      toast({
-        description: "Error al mostrar viajes ocultos",
-        variant: "destructive",
-        duration: 3000,
-      });
-    }
-  });
 
   if (isLoadingComprador || !comprador) {
     return (
@@ -842,6 +711,14 @@ export default function CompradorDetail() {
                   setShowExcelPreview={setShowExcelPreview}
                   setSelectedTrip={setSelectedTrip}
                   setShowEditTrip={setShowEditTrip}
+                  canViewEditTrip={canViewEditTrip}
+                  canUseEditTrip={canUseEditTrip}
+                  canViewCargue={canViewCargue}
+                  canUseCargue={canUseCargue}
+                  canViewDescargue={canViewDescargue}
+                  canUseDescargue={canUseDescargue}
+                  setShowRegisterCargue={setShowRegisterCargue}
+                  setShowRegisterDescargue={setShowRegisterDescargue}
                   comprador={comprador}
                 />
               </TabsContent>
@@ -865,13 +742,10 @@ export default function CompradorDetail() {
                   setExcelPreviewData={setExcelPreviewData}
                   setShowExcelPreview={setShowExcelPreview}
                   hideTransactionMutation={handleHideTransaction}
-                  hideViajesMutation={hideViajesMutation}
-                  showAllHiddenViajesMutation={showAllHiddenViajesMutation}
                   handleShowAllHidden={handleShowAllHidden}
                   isTransactionHidden={isTransactionHidden}
                   getHiddenTransactionsCount={getHiddenTransactionsCount}
                   viajes={viajes}
-                  todosViajesIncOcultos={todosViajesIncOcultos}
                   setTransaccionesFiltradas={setTransaccionesFiltradas}
                   setSelectedTransaction={setSelectedTransaction}
                   setShowTransactionDetail={setShowTransactionDetail}
@@ -1141,6 +1015,16 @@ export default function CompradorDetail() {
         />
       )}
 
+      <RegisterCargueModal
+        open={showRegisterCargue}
+        onClose={() => setShowRegisterCargue(false)}
+      />
+
+      <RegisterDescargueModal
+        open={showRegisterDescargue}
+        onClose={() => setShowRegisterDescargue(false)}
+      />
+
       {/* Modal de vista previa Excel */}
       <ExcelPreviewModal
         open={showExcelPreview}
@@ -1176,6 +1060,14 @@ function CompradorViajesTab({
   setShowExcelPreview,
   setSelectedTrip,
   setShowEditTrip,
+  canViewEditTrip,
+  canUseEditTrip,
+  canViewCargue,
+  canUseCargue,
+  canViewDescargue,
+  canUseDescargue,
+  setShowRegisterCargue,
+  setShowRegisterDescargue,
   comprador
 }: { 
   viajes: ViajeWithDetails[];
@@ -1193,6 +1085,14 @@ function CompradorViajesTab({
   setShowExcelPreview: (value: boolean) => void;
   setSelectedTrip: (trip: ViajeWithDetails | null) => void;
   setShowEditTrip: (value: boolean) => void;
+  canViewEditTrip: boolean;
+  canUseEditTrip: boolean;
+  canViewCargue: boolean;
+  canUseCargue: boolean;
+  canViewDescargue: boolean;
+  canUseDescargue: boolean;
+  setShowRegisterCargue: (value: boolean) => void;
+  setShowRegisterDescargue: (value: boolean) => void;
   comprador: Comprador | undefined;
 }) {
   return (
@@ -1282,6 +1182,40 @@ function CompradorViajesTab({
           {/* Botones de descarga */}
           {viajes && viajes.length > 0 && (
             <div className="flex items-center gap-2">
+              {canViewCargue && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`h-6 px-2 text-xs ${
+                    canUseCargue
+                      ? "text-blue-600 border-blue-600 hover:bg-blue-50"
+                      : "text-gray-400 border-gray-200"
+                  }`}
+                  onClick={() => {
+                    if (canUseCargue) setShowRegisterCargue(true);
+                  }}
+                  disabled={!canUseCargue}
+                >
+                  Registrar Cargue
+                </Button>
+              )}
+              {canViewDescargue && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`h-6 px-2 text-xs ${
+                    canUseDescargue
+                      ? "text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+                      : "text-gray-400 border-gray-200"
+                  }`}
+                  onClick={() => {
+                    if (canUseDescargue) setShowRegisterDescargue(true);
+                  }}
+                  disabled={!canUseDescargue}
+                >
+                  Registrar Descargue
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -1337,6 +1271,8 @@ function CompradorViajesTab({
                 setSelectedTrip(trip);
                 setShowEditTrip(true);
               }}
+              showEditButton={canViewEditTrip}
+              editDisabled={!canUseEditTrip}
             />
           ))}
         </div>
@@ -1362,13 +1298,10 @@ function CompradorTransaccionesTab({
   setExcelPreviewData,
   setShowExcelPreview,
   hideTransactionMutation,
-  hideViajesMutation,
-  showAllHiddenViajesMutation,
   handleShowAllHidden,
   isTransactionHidden,
   getHiddenTransactionsCount,
   viajes,
-  todosViajesIncOcultos,
   setTransaccionesFiltradas,
   setSelectedTransaction,
   setShowTransactionDetail,
@@ -1395,14 +1328,11 @@ function CompradorTransaccionesTab({
   setShowTransaccionesImagePreview: (value: boolean) => void;
   setExcelPreviewData: (data: any[]) => void;
   setShowExcelPreview: (show: boolean) => void;
-  hideTransactionMutation: any;
-  hideViajesMutation: any;
-  showAllHiddenViajesMutation: any;
+  hideTransactionMutation: (transactionId: string | number) => void;
   handleShowAllHidden: () => void;
-  isTransactionHidden: (id: number) => boolean;
+  isTransactionHidden: (id: string | number) => boolean;
   getHiddenTransactionsCount: () => number;
   viajes: ViajeWithDetails[];
-  todosViajesIncOcultos: ViajeWithDetails[];
   setTransaccionesFiltradas: (transacciones: any[]) => void;
   setSelectedTransaction: (transaction: any) => void;
   setShowTransactionDetail: (show: boolean) => void;
@@ -1685,15 +1615,8 @@ function CompradorTransaccionesTab({
     // Si balanceFilter === 'all', no filtrar por balance
     
     // Filtrar transacciones ocultas localmente (solo visual, no afecta BD)
-    // Solo filtrar transacciones manuales (las de viajes se manejan diferente)
     if (isTransactionHidden) {
-      filtered = filtered.filter(t => {
-        if (t.tipo === "Manual" && t.id.toString().startsWith('manual-')) {
-          const realTransactionId = parseInt(t.id.toString().replace('manual-', ''));
-          return !isTransactionHidden(realTransactionId);
-        }
-        return true; // Mantener viajes y temporales visibles
-      });
+      filtered = filtered.filter(t => !isTransactionHidden(t.id));
     }
     
     return filtered;
@@ -1822,26 +1745,16 @@ function CompradorTransaccionesTab({
             <div className="flex gap-1.5 flex-wrap">
               {/* Botón para mostrar elementos ocultos */}
               {(() => {
-                // Contar transacciones ocultas localmente (solo visual)
                 const transaccionesOcultas = getHiddenTransactionsCount();
-                const viajesOcultos = todosViajesIncOcultos?.filter((v: ViajeWithDetails) => v.oculta && v.compradorId === compradorId).length || 0;
-                const totalOcultos = transaccionesOcultas + viajesOcultos;
-                
-                return totalOcultos > 0 ? (
+                return transaccionesOcultas > 0 ? (
                   <Button
-                    onClick={() => {
-                      handleShowAllHidden(); // Mostrar transacciones ocultas localmente
-                      if (viajesOcultos > 0) {
-                        showAllHiddenViajesMutation.mutate(); // También mostrar viajes ocultos (estos sí están en BD)
-                      }
-                    }}
-                    disabled={showAllHiddenViajesMutation.isPending}
+                    onClick={handleShowAllHidden}
                     size="sm"
                     className="h-8 px-2 bg-blue-600 hover:bg-blue-700 text-xs"
-                    title={`Mostrar ${totalOcultos} elementos ocultos`}
+                    title={`Mostrar ${transaccionesOcultas} transacciones ocultas`}
                   >
                     <Eye className="w-3 h-3 mr-1" />
-                    {totalOcultos}
+                    {transaccionesOcultas}
                   </Button>
                 ) : null;
               })()}
@@ -2320,9 +2233,7 @@ function CompradorTransaccionesTab({
                             <Button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const transactionIdStr = transaccion.id.toString();
-                                const realTransactionId = parseInt(transactionIdStr.replace('manual-', ''));
-                                hideTransactionMutation(realTransactionId);
+                                hideTransactionMutation(transaccion.id);
                               }}
                               variant="ghost"
                               size="sm"
@@ -2336,11 +2247,7 @@ function CompradorTransaccionesTab({
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (transaccion.tipo === "Viaje") {
-                                // Para viajes, extraer ID del viaje del concepto "Viaje G24" -> "G24"
-                                const viajeId = transaccion.concepto.replace("Viaje ", "");
-                                hideViajesMutation.mutate(viajeId);
-                              }
+                              hideTransactionMutation(transaccion.id);
                             }}
                             variant="ghost"
                             size="sm"
@@ -2630,9 +2537,7 @@ function CompradorTransaccionesTab({
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
-                          const transactionIdStr = transaccion.id.toString();
-                          const realTransactionId = transactionIdStr.replace('manual-', '');
-                          hideTransactionMutation(parseInt(realTransactionId));
+                          hideTransactionMutation(transaccion.id);
                         }}
                         variant="ghost"
                         size="sm"
@@ -2646,10 +2551,7 @@ function CompradorTransaccionesTab({
                     <Button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (transaccion.tipo === "Viaje") {
-                          const viajeId = transaccion.concepto.replace("Viaje ", "");
-                          hideViajesMutation.mutate(viajeId);
-                        }
+                        hideTransactionMutation(transaccion.id);
                       }}
                       variant="ghost"
                       size="sm"

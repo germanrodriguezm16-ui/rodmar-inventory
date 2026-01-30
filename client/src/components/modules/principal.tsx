@@ -19,6 +19,7 @@ import BulkDeleteModal from "@/components/forms/bulk-delete-modal";
 import { exportTripsToExcel } from "@/lib/excel-export-new";
 import ExcelPreviewModal from "@/components/modals/excel-preview-modal";
 import { BalanceFinanciero } from "@/components/balance-financiero";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { getDateRangeFilter, isDateInRange } from "@/lib/utils";
 import DateFilterDropdown from "@/components/ui/date-filter-dropdown";
@@ -34,8 +35,13 @@ interface PrincipalProps {
 
 export default function Principal({ onOpenCargue, onOpenDescargue }: PrincipalProps) {
   const { isAuthenticated, isLoading } = useAuth();
+  const { has } = usePermissions();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const canViewCargue = has("action.VIAJES.cargue.view");
+  const canUseCargue = has("action.VIAJES.cargue.use");
+  const canViewDescargue = has("action.VIAJES.descargue.view");
+  const canUseDescargue = has("action.VIAJES.descargue.use");
 
   const handleClearCache = () => {
     clearCache();
@@ -456,20 +462,38 @@ export default function Principal({ onOpenCargue, onOpenDescargue }: PrincipalPr
       {/* Action Buttons */}
       <div className="px-4 py-4 bg-card border-b border-border">
         <div className="grid grid-cols-2 gap-3">
-          <Button 
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={onOpenCargue}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Registrar Cargue
-          </Button>
-          <Button 
-            className="bg-success text-white hover:bg-success/90"
-            onClick={onOpenDescargue}
-          >
-            <Check className="w-4 h-4 mr-2" />
-            Registrar Descargue
-          </Button>
+          {canViewCargue && (
+            <Button 
+              className={`${
+                canUseCargue
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              }`}
+              onClick={() => {
+                if (canUseCargue) onOpenCargue();
+              }}
+              disabled={!canUseCargue}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Registrar Cargue
+            </Button>
+          )}
+          {canViewDescargue && (
+            <Button 
+              className={`${
+                canUseDescargue
+                  ? "bg-success text-white hover:bg-success/90"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              }`}
+              onClick={() => {
+                if (canUseDescargue) onOpenDescargue();
+              }}
+              disabled={!canUseDescargue}
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Registrar Descargue
+            </Button>
+          )}
         </div>
       </div>
 

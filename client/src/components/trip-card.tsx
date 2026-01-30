@@ -25,9 +25,23 @@ interface TripCardProps {
   onSelect?: (isSelected: boolean) => void;
   context?: 'default' | 'volquetero' | 'mina' | 'comprador';
   index?: number;
+  showEditButton?: boolean;
+  editDisabled?: boolean;
 }
 
-function TripCard({ viaje, showExtended = false, onClick, onEditTrip, onDeleteTrip, isSelected = false, onSelect, context = 'default', index = 0 }: TripCardProps) {
+function TripCard({
+  viaje,
+  showExtended = false,
+  onClick,
+  onEditTrip,
+  onDeleteTrip,
+  isSelected = false,
+  onSelect,
+  context = 'default',
+  index = 0,
+  showEditButton = true,
+  editDisabled = false
+}: TripCardProps) {
   const [showIndividualFinancial, setShowIndividualFinancial] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
@@ -427,20 +441,28 @@ function TripCard({ viaje, showExtended = false, onClick, onEditTrip, onDeleteTr
 
         {/* Botones de acción siempre visibles */}
         <div className="flex gap-1.5 pt-2 mt-2 border-t border-border/50">
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (onEditTrip) {
-                onEditTrip(viaje);
-              } else if (onClick) {
-                onClick();
-              }
-            }}
-            className="flex-1 text-xs py-1.5 px-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors"
-          >
-            Editar
-          </button>
+          {showEditButton && (
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (editDisabled) return;
+                if (onEditTrip) {
+                  onEditTrip(viaje);
+                } else if (onClick) {
+                  onClick();
+                }
+              }}
+              disabled={editDisabled}
+              className={`flex-1 text-xs py-1.5 px-2 rounded-md transition-colors ${
+                editDisabled
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-primary/10 hover:bg-primary/20 text-primary"
+              }`}
+            >
+              Editar
+            </button>
+          )}
           
           {/* Botón individual de información financiera - solo para viajes completados */}
           {viaje.fechaDescargue && (viaje.vut || viaje.cut || viaje.fleteTon || viaje.totalVenta || viaje.totalCompra || viaje.totalFlete) && (
