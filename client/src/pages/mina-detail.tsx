@@ -552,6 +552,41 @@ export default function MinaDetail() {
     return filtered;
   }, [todasTransacciones, filterType, searchTerm, transaccionesFechaFilterType, transaccionesFechaFilterValue, transaccionesFechaFilterValueEnd, sortByFecha, sortByValor, filterTransaccionesByDate, balanceFilter, isTransactionHidden]);
 
+  const viajesById = useMemo(() => {
+    const source = (todosViajesIncOcultos && todosViajesIncOcultos.length > 0)
+      ? todosViajesIncOcultos
+      : viajes;
+    return new Map(source.map((viaje) => [String(viaje.id), viaje]));
+  }, [todosViajesIncOcultos, viajes]);
+
+  const buildConceptoForTransaccion = useCallback((transaccion: any) => {
+    const conceptoBase = transaccion.concepto && transaccion.concepto.includes("data:image")
+      ? "[Imagen]"
+      : transaccion.tipo === "Temporal"
+        ? `${transaccion.concepto} (Temporal)`
+        : transaccion.concepto;
+
+    if (transaccion.tipo !== "Viaje" && transaccion.deQuienTipo !== "viaje") {
+      return conceptoBase;
+    }
+
+    const idFromId = typeof transaccion.id === "string" && transaccion.id.startsWith("viaje-")
+      ? transaccion.id.replace("viaje-", "")
+      : null;
+    const idFromConcepto = typeof transaccion.concepto === "string"
+      ? (transaccion.concepto.match(/Viaje\s+([A-Za-z0-9_-]+)/i)?.[1] || null)
+      : null;
+    const viajeId = idFromId || idFromConcepto;
+    if (!viajeId) return conceptoBase;
+
+    const viaje = viajesById.get(String(viajeId));
+    if (!viaje) return conceptoBase;
+
+    const placa = viaje.placa || "-";
+    const peso = viaje.peso ? String(viaje.peso) : "-";
+    return `${conceptoBase} | ${placa} | ${peso}`;
+  }, [viajesById]);
+
   // Aplicar filtros a viajes
   const viajesFiltrados = useMemo(() => {
     let filtered = filterViajesByDate(viajes, viajesFechaFilterType, viajesFechaFilterValue, viajesFechaFilterValueEnd);
@@ -1311,14 +1346,7 @@ export default function MinaDetail() {
                             )}
                           </div>
                           <div className="text-xs sm:text-sm text-gray-900 truncate pr-1">
-                            {(() => {
-                              const conceptoText = transaccion.concepto && transaccion.concepto.includes('data:image') ? 
-                                '[Imagen]' : 
-                                transaccion.tipo === "Temporal" ? 
-                                  `${transaccion.concepto} (Temporal)` :
-                                  transaccion.concepto;
-                              return highlightText(conceptoText, searchTerm);
-                            })()}
+                            {highlightText(buildConceptoForTransaccion(transaccion), searchTerm)}
                           </div>
                           {/* Comentario compacto si existe */}
                           {transaccion.comentario && transaccion.comentario.trim() && (

@@ -812,6 +812,36 @@ export default function VolqueteroDetail() {
 
     return filtered;
   }, [viajesVolquetero, viajesFechaFilterType, viajesFechaFilterValue, viajesFechaFilterValueEnd, viajesSearchTerm, filterViajesByDate]);
+
+  const viajesById = useMemo(() => {
+    const source = (todosViajesIncOcultos && todosViajesIncOcultos.length > 0)
+      ? todosViajesIncOcultos
+      : viajesVolquetero;
+    return new Map(source.map((viaje) => [String(viaje.id), viaje]));
+  }, [todosViajesIncOcultos, viajesVolquetero]);
+
+  const buildConceptoForTransaccion = useCallback((transaccion: any) => {
+    const conceptoBase = transaccion.concepto || "";
+    if (transaccion.tipo !== "Viaje" && transaccion.deQuienTipo !== "viaje") {
+      return conceptoBase;
+    }
+
+    const idFromId = typeof transaccion.id === "string" && transaccion.id.startsWith("viaje-")
+      ? transaccion.id.replace("viaje-", "")
+      : null;
+    const idFromConcepto = typeof transaccion.concepto === "string"
+      ? (transaccion.concepto.match(/Viaje\s+([A-Za-z0-9_-]+)/i)?.[1] || null)
+      : null;
+    const viajeId = idFromId || idFromConcepto;
+    if (!viajeId) return conceptoBase;
+
+    const viaje = viajesById.get(String(viajeId));
+    if (!viaje) return conceptoBase;
+
+    const placa = viaje.placa || "-";
+    const peso = viaje.peso ? String(viaje.peso) : "-";
+    return `${conceptoBase} | ${placa} | ${peso}`;
+  }, [viajesById]);
   
   // Balance del encabezado (INCLUYE todas las transacciones y viajes, incluso ocultos)
   // Este balance NO debe cambiar al ocultar/mostrar transacciones
@@ -1424,7 +1454,7 @@ export default function VolqueteroDetail() {
                               </TableCell>
                               <TableCell className="p-3 text-sm">
                                 <div className="flex items-center gap-2">
-                                  <span>{highlightText(transaccion.concepto, searchTerm)}</span>
+                                  <span>{highlightText(buildConceptoForTransaccion(transaccion), searchTerm)}</span>
                                   <Badge 
                                     variant="outline" 
                                     className="text-xs px-1.5 py-0.5"
@@ -1638,7 +1668,7 @@ export default function VolqueteroDetail() {
                                 )}
                               </div>
                               <div className="text-xs sm:text-sm text-gray-900 truncate pr-1">
-                                {highlightText(transaccion.concepto, searchTerm)}
+                                {highlightText(buildConceptoForTransaccion(transaccion), searchTerm)}
                               </div>
                               {/* Comentario compacto si existe */}
                               {transaccion.comentario && transaccion.comentario.trim() && (

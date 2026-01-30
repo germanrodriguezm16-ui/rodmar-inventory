@@ -9,6 +9,8 @@ import { VoucherViewer } from "@/components/ui/voucher-viewer";
 import { useTransactionVoucher } from "@/hooks/useTransactionVoucher";
 import { TransactionReceiptModal } from "@/components/modals/transaction-receipt-modal";
 import { getSocioNombre } from "@/lib/getSocioNombre";
+import { apiUrl } from "@/lib/api";
+import { getAuthToken } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import html2canvas from "html2canvas";
@@ -80,6 +82,8 @@ export function TransactionDetailModal({
   const [showFullTripVoucher, setShowFullTripVoucher] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [tripImageError, setTripImageError] = useState(false);
+  const [tripReceiptUrl, setTripReceiptUrl] = useState<string | null>(null);
+  const [isLoadingTripReceipt, setIsLoadingTripReceipt] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -89,7 +93,46 @@ export function TransactionDetailModal({
     setShowFullTripVoucher(false);
     setImageError(false);
     setTripImageError(false);
+    setTripReceiptUrl(null);
+    setIsLoadingTripReceipt(false);
   }, [transaction?.id, open]);
+
+  const loadTripReceipt = async () => {
+    if (!relatedTrip?.id || isLoadingTripReceipt) return;
+    setIsLoadingTripReceipt(true);
+    try {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const response = await fetch(apiUrl(`/recibo/${relatedTrip.id}`), {
+        credentials: "include",
+        headers,
+      });
+      if (response.ok) {
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const data = await response.json();
+          if (typeof data?.recibo === "string") {
+            setTripReceiptUrl(data.recibo);
+          }
+        } else {
+          const blob = await response.blob();
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const dataUrl = reader.result as string;
+            setTripReceiptUrl(dataUrl);
+          };
+          reader.readAsDataURL(blob);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading trip receipt:", error);
+    } finally {
+      setIsLoadingTripReceipt(false);
+    }
+  };
 
   // Función para descargar imagen del modal
   const downloadModalImage = async () => {
@@ -265,28 +308,63 @@ export function TransactionDetailModal({
                   <FileText className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
                     <p className="text-xs font-medium text-orange-700 mb-1">Concepto</p>
-                    <p className="text-sm text-gray-900 leading-relaxed">
-                      {transaction.concepto}
-                    </p>
+                    {transaction.tipo === "Viaje" && relatedTrip ? (
+                      <div className="text-sm text-gray-900 leading-relaxed space-y-1">
+                        <div>
+                          <span className="font-medium">ID:</span> {relatedTrip.id}
+                        </div>
+                        <div>
+                          <span className="font-medium">Conductor:</span> {relatedTrip.conductor || "-"}
+                        </div>
+                        <div>
+                          <span className="font-medium">Placa:</span> {relatedTrip.placa || "-"}
+                        </div>
+                        <div>
+                          <span className="font-medium">Mina:</span> {relatedTrip.mina?.nombre || "-"}
+                        </div>
+                        <div>
+                          <span className="font-medium">Comprador:</span> {relatedTrip.comprador?.nombre || "-"}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-900 leading-relaxed">
+                        {transaction.concepto}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Fecha */}
+            {/* Fechas */}
             <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50">
               <CardContent className="p-3">
                 <div className="flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-blue-600 flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="text-xs font-medium text-blue-700 mb-1">Fecha</p>
-                    <p className="text-sm text-gray-900">
-                      {formatDateWithDaySpanish(transaction.fecha)}
-                    </p>
+                    <p className="text-xs font-medium text-blue-700 mb-1">Fechas</p>
+                    {transaction.tipo === "Viaje" && relatedTrip ? (
+                      <div className="text-sm text-gray-900 space-y-1">
+                        <div>
+                          <span className="font-medium">Cargue:</span>{" "}
+                          {relatedTrip.fechaCargue ? formatDateWithDaySpanish(relatedTrip.fechaCargue) : "Pendiente"}
+                        </div>
+                        <div>
+                          <span className="font-medium">Descargue:</span>{" "}
+                          {relatedTrip.fechaDescargue ? formatDateWithDaySpanish(relatedTrip.fechaDescargue) : "Pendiente"}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-900">
+                        {formatDateWithDaySpanish(transaction.fecha)}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Recibo del viaje (se maneja en el bloque de recibo del descargue) */}
 
             {/* Voucher - Posicionado después de fecha */}
             {(currentVoucher && currentVoucher.trim() !== "") && (
@@ -406,7 +484,7 @@ export function TransactionDetailModal({
 
 
             {/* Voucher del viaje relacionado para transacciones automáticas */}
-            {transaction.tipo === "Viaje" && relatedTrip?.recibo && relatedTrip.recibo !== "0" && relatedTrip.recibo !== "" && (
+            {transaction.tipo === "Viaje" && (relatedTrip?.tieneRecibo || (relatedTrip?.recibo && relatedTrip.recibo !== "0" && relatedTrip.recibo !== "")) && (
               <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50">
                 <CardContent className="p-3">
                   <div className="flex items-start gap-3">
@@ -417,20 +495,26 @@ export function TransactionDetailModal({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setShowFullTripVoucher(!showFullTripVoucher)}
+                          onClick={async () => {
+                            if (!tripReceiptUrl && (!relatedTrip?.recibo || relatedTrip.recibo === "0" || relatedTrip.recibo === "")) {
+                              await loadTripReceipt();
+                            }
+                            setShowFullTripVoucher(!showFullTripVoucher);
+                          }}
                           className="h-6 px-2 text-purple-600 hover:text-purple-800 hover:bg-purple-100"
                         >
                           {(() => {
-                            const isImageUrl = relatedTrip.recibo.startsWith('data:image') || 
-                                             relatedTrip.recibo.startsWith('IMAGE:data:image') ||
-                                             relatedTrip.recibo.startsWith('%7CIMAGE:data:image') ||
-                                             relatedTrip.recibo.startsWith('|IMAGE:data:image') ||
-                                             relatedTrip.recibo.includes('data:image') ||
-                                             (relatedTrip.recibo.startsWith('http') && 
-                                             (relatedTrip.recibo.includes('.jpg') || 
-                                              relatedTrip.recibo.includes('.jpeg') || 
-                                              relatedTrip.recibo.includes('.png') || 
-                                              relatedTrip.recibo.includes('.gif')));
+                            const tripVoucherValue = (tripReceiptUrl || relatedTrip?.recibo || "").toString();
+                            const isImageUrl = tripVoucherValue.startsWith('data:image') || 
+                                             tripVoucherValue.startsWith('IMAGE:data:image') ||
+                                             tripVoucherValue.startsWith('%7CIMAGE:data:image') ||
+                                             tripVoucherValue.startsWith('|IMAGE:data:image') ||
+                                             tripVoucherValue.includes('data:image') ||
+                                             (tripVoucherValue.startsWith('http') && 
+                                             (tripVoucherValue.includes('.jpg') || 
+                                              tripVoucherValue.includes('.jpeg') || 
+                                              tripVoucherValue.includes('.png') || 
+                                              tripVoucherValue.includes('.gif')));
                             
                             if (showFullTripVoucher) {
                               return (
@@ -443,7 +527,9 @@ export function TransactionDetailModal({
                               return (
                                 <>
                                   <Eye className="h-3 w-3 mr-1" />
-                                  <span className="text-xs">{isImageUrl ? 'Ver imagen' : 'Ver todo'}</span>
+                                  <span className="text-xs">
+                                    {isLoadingTripReceipt ? "Cargando..." : (isImageUrl ? 'Ver imagen' : 'Ver todo')}
+                                  </span>
                                 </>
                               );
                             }
@@ -452,16 +538,20 @@ export function TransactionDetailModal({
                       </div>
                       <div className="text-sm text-gray-900 break-words leading-relaxed">
                         {(() => {
-                          const isImageUrl = relatedTrip.recibo.startsWith('data:image') || 
-                                           relatedTrip.recibo.startsWith('IMAGE:data:image') ||
-                                           relatedTrip.recibo.startsWith('%7CIMAGE:data:image') ||
-                                           relatedTrip.recibo.startsWith('|IMAGE:data:image') ||
-                                           relatedTrip.recibo.includes('data:image') ||
-                                           (relatedTrip.recibo.startsWith('http') && 
-                                           (relatedTrip.recibo.includes('.jpg') || 
-                                            relatedTrip.recibo.includes('.jpeg') || 
-                                            relatedTrip.recibo.includes('.png') || 
-                                            relatedTrip.recibo.includes('.gif')));
+                          const tripVoucherValue = (tripReceiptUrl || relatedTrip?.recibo || "").toString();
+                          if (!tripVoucherValue) {
+                            return <div className="text-gray-500 text-xs">Cargando recibo...</div>;
+                          }
+                          const isImageUrl = tripVoucherValue.startsWith('data:image') || 
+                                           tripVoucherValue.startsWith('IMAGE:data:image') ||
+                                           tripVoucherValue.startsWith('%7CIMAGE:data:image') ||
+                                           tripVoucherValue.startsWith('|IMAGE:data:image') ||
+                                           tripVoucherValue.includes('data:image') ||
+                                           (tripVoucherValue.startsWith('http') && 
+                                           (tripVoucherValue.includes('.jpg') || 
+                                            tripVoucherValue.includes('.jpeg') || 
+                                            tripVoucherValue.includes('.png') || 
+                                            tripVoucherValue.includes('.gif')));
                           
                           if (isImageUrl) {
                             return showFullTripVoucher ? (
@@ -469,7 +559,7 @@ export function TransactionDetailModal({
                                 {!tripImageError ? (
                                   <img 
                                     src={(() => {
-                                      let cleanUrl = relatedTrip.recibo;
+                                      let cleanUrl = tripVoucherValue;
                                       
                                       // Remover prefijo "IMAGE:" si existe
                                       if (cleanUrl.startsWith('IMAGE:')) {
@@ -503,13 +593,13 @@ export function TransactionDetailModal({
                           } else {
                             return showFullTripVoucher ? (
                               <div className="max-h-48 overflow-y-auto bg-white p-3 rounded border border-purple-200 text-sm">
-                                {relatedTrip.recibo}
+                                {tripVoucherValue}
                               </div>
                             ) : (
                               <span>
-                                {relatedTrip.recibo.length > 50 
-                                  ? `${relatedTrip.recibo.substring(0, 50)}...` 
-                                  : relatedTrip.recibo
+                                {tripVoucherValue.length > 50 
+                                  ? `${tripVoucherValue.substring(0, 50)}...` 
+                                  : tripVoucherValue
                                 }
                               </span>
                             );

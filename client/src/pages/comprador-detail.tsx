@@ -1421,6 +1421,37 @@ function CompradorTransaccionesTab({
   // Estado para filtro de balance (positivos, negativos, todos)
   const [balanceFilter, setBalanceFilter] = useState<'all' | 'positivos' | 'negativos'>('all');
 
+  const viajesById = useMemo(() => {
+    const source = (todosViajesIncOcultos && todosViajesIncOcultos.length > 0)
+      ? todosViajesIncOcultos
+      : viajes;
+    return new Map(source.map((viaje) => [String(viaje.id), viaje]));
+  }, [todosViajesIncOcultos, viajes]);
+
+  const buildConceptoForTransaccion = (transaccion: any) => {
+    const conceptoBase = transaccion.concepto || "";
+
+    if (transaccion.tipo !== "Viaje") {
+      return conceptoBase;
+    }
+
+    const idFromId = typeof transaccion.id === "string" && transaccion.id.startsWith("viaje-")
+      ? transaccion.id.replace("viaje-", "")
+      : null;
+    const idFromConcepto = typeof transaccion.concepto === "string"
+      ? (transaccion.concepto.match(/Viaje\s+([A-Za-z0-9_-]+)/i)?.[1] || null)
+      : null;
+    const viajeId = idFromId || idFromConcepto;
+    if (!viajeId) return conceptoBase;
+
+    const viaje = viajesById.get(String(viajeId));
+    if (!viaje) return conceptoBase;
+
+    const placa = viaje.placa || "-";
+    const peso = viaje.peso ? String(viaje.peso) : "-";
+    return `${conceptoBase} | ${placa} | ${peso}`;
+  };
+
   // Combinar transacciones reales con transacciones dinámicas de viajes
   const todasTransacciones = useMemo(() => {
     const transaccionesDinamicas = viajesCompletados
@@ -2083,7 +2114,7 @@ function CompradorTransaccionesTab({
                     </td>
                     <td className="p-3 text-sm">
                       <div className="flex items-center gap-2">
-                        <span>{highlightText(transaccion.concepto, searchTerm)}</span>
+                        <span>{highlightText(buildConceptoForTransaccion(transaccion), searchTerm)}</span>
                         {transaccion.isTemporal ? (
                           <Badge 
                             variant="outline" 
