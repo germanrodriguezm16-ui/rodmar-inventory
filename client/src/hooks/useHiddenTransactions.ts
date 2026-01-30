@@ -6,45 +6,10 @@ import { useState, useEffect, useCallback } from 'react';
  * al cambiar de pestaña, página o módulo.
  */
 export function useHiddenTransactions(moduleKey: string) {
-  // Usar sessionStorage para persistir solo durante la sesión del navegador
-  // Se limpia automáticamente al cerrar la pestaña
-  const storageKey = `hidden_transactions_${moduleKey}`;
-  
-  // Inicializar desde sessionStorage o crear Set vacío
+  // Estado en memoria: se reinicia al refrescar o cambiar de página/pestaña
   const [hiddenTransactions, setHiddenTransactions] = useState<Set<string>>(() => {
-    try {
-      const stored = sessionStorage.getItem(storageKey);
-      if (stored) {
-        const ids = JSON.parse(stored) as Array<string | number>;
-        return new Set(ids.map((id) => String(id)));
-      }
-    } catch (error) {
-      console.error('Error reading hidden transactions from sessionStorage:', error);
-    }
     return new Set<string>();
   });
-
-  // Sincronizar con sessionStorage cuando cambie el estado
-  useEffect(() => {
-    try {
-      const ids = Array.from(hiddenTransactions).map((id) => String(id));
-      sessionStorage.setItem(storageKey, JSON.stringify(ids));
-    } catch (error) {
-      console.error('Error saving hidden transactions to sessionStorage:', error);
-    }
-  }, [hiddenTransactions, storageKey]);
-
-  // Limpiar al cambiar de módulo/página
-  useEffect(() => {
-    return () => {
-      // Cleanup: limpiar al desmontar el componente o cambiar de módulo
-      try {
-        sessionStorage.removeItem(storageKey);
-      } catch (error) {
-        console.error('Error clearing hidden transactions from sessionStorage:', error);
-      }
-    };
-  }, [storageKey]);
 
   // Función para ocultar una transacción
   const hideTransaction = useCallback((transactionId: string | number) => {
