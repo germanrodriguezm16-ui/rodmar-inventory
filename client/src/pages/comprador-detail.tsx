@@ -1158,7 +1158,7 @@ function CompradorViajesTab({
         {/* Badge de filtro activo y botón de descarga */}
         <div className="flex items-center justify-between">
           {dateFilter !== "todos" && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="text-xs h-6">
                 Filtro: {getFilterText(dateFilter)}
               </Badge>
@@ -1196,7 +1196,8 @@ function CompradorViajesTab({
                   }}
                   disabled={!canUseCargue}
                 >
-                  Registrar Cargue
+                  <span className="sm:hidden">+ Cargue</span>
+                  <span className="hidden sm:inline">Registrar Cargue</span>
                 </Button>
               )}
               {canViewDescargue && (
@@ -1213,7 +1214,8 @@ function CompradorViajesTab({
                   }}
                   disabled={!canUseDescargue}
                 >
-                  Registrar Descargue
+                  <span className="sm:hidden">+ Descargue</span>
+                  <span className="hidden sm:inline">Registrar Descargue</span>
                 </Button>
               )}
               <Button

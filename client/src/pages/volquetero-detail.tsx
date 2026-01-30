@@ -1055,7 +1055,7 @@ export default function VolqueteroDetail() {
           {has("module.VOLQUETEROS.tab.VIAJES.view") && (
             <TabsContent value="viajes" className="space-y-4">
             <div className="space-y-2">
-              <div className="flex gap-2 items-center">
+              <div className="flex flex-wrap gap-2 items-center">
                 <Input
                   type="text"
                   placeholder="Buscar..."
@@ -1097,7 +1097,8 @@ export default function VolqueteroDetail() {
                         : "text-gray-400 border-gray-200"
                     }`}
                   >
-                    Registrar Cargue
+                    <span className="sm:hidden">+ Cargue</span>
+                    <span className="hidden sm:inline">Registrar Cargue</span>
                   </Button>
                 )}
                 {canViewDescargue && (
@@ -1114,7 +1115,8 @@ export default function VolqueteroDetail() {
                         : "text-gray-400 border-gray-200"
                     }`}
                   >
-                    Registrar Descargue
+                    <span className="sm:hidden">+ Descargue</span>
+                    <span className="hidden sm:inline">Registrar Descargue</span>
                   </Button>
                 )}
                 <Button

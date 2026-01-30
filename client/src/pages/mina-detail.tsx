@@ -789,7 +789,7 @@ export default function MinaDetail() {
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {canViewCargue && (
                         <Button
                           onClick={() => {
@@ -804,7 +804,8 @@ export default function MinaDetail() {
                               : "text-gray-400 border-gray-200"
                           }`}
                         >
-                          Registrar Cargue
+                          <span className="sm:hidden">+ Cargue</span>
+                          <span className="hidden sm:inline">Registrar Cargue</span>
                         </Button>
                       )}
                       {canViewDescargue && (
@@ -821,7 +822,8 @@ export default function MinaDetail() {
                               : "text-gray-400 border-gray-200"
                           }`}
                         >
-                          Registrar Descargue
+                          <span className="sm:hidden">+ Descargue</span>
+                          <span className="hidden sm:inline">Registrar Descargue</span>
                         </Button>
                       )}
                       <Button
