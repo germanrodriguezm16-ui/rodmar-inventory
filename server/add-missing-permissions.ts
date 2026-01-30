@@ -96,6 +96,12 @@ async function addMissingPermissions() {
     const missingPermissions = [
       { key: 'module.PRINCIPAL.view', descripcion: 'Ver módulo Principal (Viajes)', categoria: 'module' },
       { key: 'action.TRANSACCIONES.solicitar', descripcion: 'Solicitar transacciones pendientes', categoria: 'action' },
+      { key: 'action.VIAJES.cargue.view', descripcion: 'Ver registrar cargue', categoria: 'action' },
+      { key: 'action.VIAJES.cargue.use', descripcion: 'Usar registrar cargue', categoria: 'action' },
+      { key: 'action.VIAJES.descargue.view', descripcion: 'Ver registrar descargue', categoria: 'action' },
+      { key: 'action.VIAJES.descargue.use', descripcion: 'Usar registrar descargue', categoria: 'action' },
+      { key: 'action.VIAJES.edit.view', descripcion: 'Ver editar viaje', categoria: 'action' },
+      { key: 'action.VIAJES.edit.use', descripcion: 'Usar editar viaje', categoria: 'action' },
       { key: 'module.COMPRADORES.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Compradores', categoria: 'tab' },
       { key: 'module.VOLQUETEROS.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Volqueteros', categoria: 'tab' },
       { key: 'module.RODMAR.tab.TERCEROS.view', descripcion: 'Ver pestaña Terceros en RodMar', categoria: 'tab' },
@@ -103,6 +109,15 @@ async function addMissingPermissions() {
       { key: 'module.RODMAR.Banco.view', descripcion: 'Ver sección Banco en RodMar', categoria: 'tab' },
       { key: 'module.RODMAR.Postobon.view', descripcion: 'Ver sección Postobón en RodMar', categoria: 'tab' },
     ];
+
+    const tripActionPermissionKeys = new Set([
+      'action.VIAJES.cargue.view',
+      'action.VIAJES.cargue.use',
+      'action.VIAJES.descargue.view',
+      'action.VIAJES.descargue.use',
+      'action.VIAJES.edit.view',
+      'action.VIAJES.edit.use',
+    ]);
 
     // Obtener todos los permisos del sistema para verificar si faltan asignaciones
     const allPermissions = await db.select().from(permissions);
@@ -240,6 +255,10 @@ async function addMissingPermissions() {
         }
       } else {
         detail(`✅ Permiso ${perm.key} ya estaba asignado al rol ADMIN`);
+      }
+
+      if (tripActionPermissionKeys.has(perm.key)) {
+        await assignPermissionToRoles(permissionId);
       }
     }
 
