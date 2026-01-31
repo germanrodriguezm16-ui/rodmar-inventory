@@ -15,7 +15,7 @@ import { X, FileText } from "lucide-react";
 import { apiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import type { Mina, Comprador, Volquetero, Tercero } from "@shared/schema";
+import type { Mina, Comprador, Volquetero, Tercero, RodmarCuenta } from "@shared/schema";
 
 const solicitarSchema = z.object({
   paraQuienTipo: z.string().min(1, "Debe seleccionar para quién es la transacción"),
@@ -37,16 +37,6 @@ interface SolicitarTransaccionModalProps {
     detalle_solicitud: string;
   };
 }
-
-// Opciones para RodMar
-const rodmarOptions = [
-  { value: "bemovil", label: "Bemovil" },
-  { value: "corresponsal", label: "Corresponsal" },
-  { value: "efectivo", label: "Efectivo" },
-  { value: "cuentas-german", label: "Cuentas German" },
-  { value: "cuentas-jhon", label: "Cuentas Jhon" },
-  { value: "otras", label: "Otras" },
-];
 
 // Función para formatear números con separadores de miles
 const formatNumber = (value: string): string => {
@@ -180,6 +170,12 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
     enabled: open,
   });
 
+  // Cuentas RodMar dinámicas (desde BD)
+  const { data: rodmarCuentas = [] } = useQuery<RodmarCuenta[]>({
+    queryKey: ["/api/rodmar-cuentas?mode=use"],
+    enabled: open,
+  });
+
   const form = useForm<z.infer<typeof solicitarSchema>>({
     resolver: zodResolver(solicitarSchema),
     defaultValues: {
@@ -229,7 +225,7 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
       case "tercero":
         return terceros.map(tercero => ({ value: tercero.id.toString(), label: tercero.nombre }));
       case "rodmar":
-        return rodmarOptions;
+        return rodmarCuentas.map((cuenta) => ({ value: cuenta.codigo, label: cuenta.nombre }));
       case "banco":
         return [{ value: "banco", label: "Banco" }];
       case "lcdm":
@@ -271,8 +267,8 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
         nombreDestino = volquetero?.nombre || data.paraQuienId;
         break;
       case "rodmar":
-        const rodmarOption = rodmarOptions.find(o => o.value === data.paraQuienId);
-        nombreDestino = rodmarOption?.label || data.paraQuienId;
+        const rodmarCuenta = rodmarCuentas.find(c => c.codigo === data.paraQuienId);
+        nombreDestino = rodmarCuenta?.nombre || data.paraQuienId;
         break;
       case "banco":
         nombreDestino = "Banco";
@@ -557,9 +553,9 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {rodmarOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
+                        {rodmarCuentas.map((option) => (
+                          <SelectItem key={option.codigo} value={option.codigo}>
+                            {option.nombre}
                           </SelectItem>
                         ))}
                       </SelectContent>
