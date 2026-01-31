@@ -37,6 +37,14 @@ const getDayOfWeek = (dateInput: string | Date): string => {
   return daysOfWeek[date.getDay()];
 };
 
+const formatConductorShort = (name?: string | null): string => {
+  if (!name) return "-";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "-";
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[1].charAt(0)}.`;
+};
+
 // Components
 import BottomNavigation from "@/components/layout/bottom-navigation";
 import NewTransactionModal from "@/components/forms/new-transaction-modal";
