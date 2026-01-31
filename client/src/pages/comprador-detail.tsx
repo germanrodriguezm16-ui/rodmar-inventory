@@ -1354,11 +1354,8 @@ function CompradorTransaccionesTab({
   const [balanceFilter, setBalanceFilter] = useState<'all' | 'positivos' | 'negativos'>('all');
 
   const viajesById = useMemo(() => {
-    const source = (todosViajesIncOcultos && todosViajesIncOcultos.length > 0)
-      ? todosViajesIncOcultos
-      : viajes;
-    return new Map(source.map((viaje) => [String(viaje.id), viaje]));
-  }, [todosViajesIncOcultos, viajes]);
+    return new Map(viajes.map((viaje) => [String(viaje.id), viaje]));
+  }, [viajes]);
 
   const buildConceptoForTransaccion = (transaccion: any) => {
     const conceptoBase = transaccion.concepto || "";
