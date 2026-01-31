@@ -85,6 +85,7 @@ export function invalidateTripRelatedQueries(
   queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
   queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
   queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+  queryClient.invalidateQueries({ queryKey: ["/api/volqueteros/resumen"] });
   
   // Si tenemos información del viaje, invalidar y refetchear queries específicas de socios involucrados
   if (tripChangeInfo) {
@@ -135,6 +136,7 @@ export function invalidateTripRelatedQueries(
     if (conductoresAfectados.size > 0) {
       // Refetchear explícitamente la lista de volqueteros para actualizar el conteo
       queryClient.refetchQueries({ queryKey: ["/api/volqueteros"] });
+      queryClient.refetchQueries({ queryKey: ["/api/volqueteros/resumen"] });
       
       // Invalidar y refetchear TODAS las queries de viajes de volqueteros (sin importar si están activas)
       // Esto asegura que cuando se cambia el conductor, las pestañas de viajes de ambos volqueteros
@@ -172,6 +174,7 @@ export function invalidateTripRelatedQueries(
   // Esto asegura que el conteo de viajes se actualice inmediatamente
   if (tripChangeInfo && (tripChangeInfo.oldConductor || tripChangeInfo.newConductor)) {
     queryClient.refetchQueries({ queryKey: ["/api/volqueteros"] });
+    queryClient.refetchQueries({ queryKey: ["/api/volqueteros/resumen"] });
     
     // También invalidar y refetchear todas las queries de viajes de volqueteros
     // para asegurar que las pestañas de viajes se actualicen

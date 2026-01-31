@@ -558,6 +558,7 @@ export default function EditTransactionModal({ isOpen, onClose, transaction }: E
       }
       if (affectedEntityTypes.has('volquetero')) {
         queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/volqueteros/resumen"] });
         queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
         queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
         // Invalidar queries específicas de volqueteros

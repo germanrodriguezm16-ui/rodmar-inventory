@@ -39,6 +39,7 @@ export default function AddVolqueteroModal({ open, onOpenChange }: AddVolquetero
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros/resumen"] });
       toast({
         title: "Volquetero agregado",
         description: "El volquetero ha sido agregado exitosamente.",

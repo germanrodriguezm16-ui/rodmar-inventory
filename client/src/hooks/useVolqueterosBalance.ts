@@ -8,7 +8,7 @@ export const useVolqueterosBalance = () => {
   const socket = useSocket();
 
   const { data: volqueteros = [] } = useQuery({
-    queryKey: ["/api/volqueteros"],
+    queryKey: ["/api/volqueteros/resumen"],
     staleTime: 30000,
   });
 

@@ -256,6 +256,7 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
       }
       if (transaction?.deQuienTipo === 'volquetero' || transaction?.paraQuienTipo === 'volquetero') {
         queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/volqueteros/resumen"] });
         queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
         // Forzar refetch incluso si la query no está activa
         queryClient.refetchQueries({ 
@@ -265,6 +266,10 @@ export default function DeleteTransactionModal({ isOpen, onClose, transaction }:
         queryClient.refetchQueries({ 
           queryKey: ["/api/volqueteros"],
           type: 'all' // Refetch todas las queries, no solo las activas
+        });
+        queryClient.refetchQueries({
+          queryKey: ["/api/volqueteros/resumen"],
+          type: 'all'
         });
       }
 

@@ -27,12 +27,7 @@ export default function Volqueteros() {
   
   // Mantener queries locales para datos específicos del módulo
   const { data: volqueteros = [], isLoading } = useQuery({
-    queryKey: ["/api/volqueteros"],
-    staleTime: 30000,
-  });
-
-  const { data: viajes = [] } = useQuery({
-    queryKey: ["/api/viajes"],
+    queryKey: ["/api/volqueteros/resumen"],
     staleTime: 30000,
   });
 
@@ -51,7 +46,7 @@ export default function Volqueteros() {
     return sum + (volquetero.viajesCount || 0);
   }, 0);
 
-  const totalViajes = Array.isArray(viajes) ? viajes.length : 0;
+  const totalViajes = Object.values(viajesStats).reduce((sum, stats) => sum + (stats?.viajesCount || 0), 0);
 
   // Función optimizada: usar estadísticas del hook (mapear por ID en lugar de nombre)
   const getViajesUltimoMes = (volqueteroId: number): number => {

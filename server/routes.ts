@@ -8,7 +8,7 @@ import { canViewRodMarAccount } from "./rodmar-account-permissions";
 import { createTerceroPermission, getTerceroPermissionKey } from "./tercero-permissions";
 import { emitTransactionUpdate } from "./socket";
 import { db } from "./db";
-import { roles, permissions, rolePermissions, users, userPermissionsOverride, transacciones, terceroLoans, terceroLoanInterestRuns, terceroLoanPaymentAllocations } from "../shared/schema";
+import { roles, permissions, rolePermissions, users, userPermissionsOverride, transacciones, terceroLoans, terceroLoanInterestRuns, terceroLoanPaymentAllocations, viajes, volqueteros as volqueterosTable } from "../shared/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { findUserByPhone, verifyPassword, updateLastLogin, hashPassword, generateToken, verifyToken } from "./middleware/auth-helpers";
 import {
@@ -698,6 +698,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   });
+
+  // Endpoint optimizado para listado de volqueteros con placas/conteos (sin cargar todos los viajes en Node)
+  // IMPORTANTE: Debe ir ANTES de /api/volqueteros para evitar conflictos de rutas
+  app.get(
+    "/api/volqueteros/resumen",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const userId = req.user!.id;
+        const userPermissions = await getUserPermissions(userId);
+
+        const userOverrides = await db
+          .select({
+            permissionKey: permissions.key,
+            overrideType: userPermissionsOverride.overrideType,
+          })
+          .from(userPermissionsOverride)
+          .innerJoin(permissions, eq(userPermissionsOverride.permissionId, permissions.id))
+          .where(eq(userPermissionsOverride.userId, userId));
+
+        const deniedPermissions = new Set(
+          userOverrides.filter((o) => o.overrideType === "deny").map((o) => o.permissionKey),
+        );
+        const permissionExistsCache = new Map<string, boolean>();
+
+        const hasTransactionPermissions =
+          userPermissions.includes("action.TRANSACCIONES.create") ||
+          userPermissions.includes("action.TRANSACCIONES.completePending") ||
+          userPermissions.includes("action.TRANSACCIONES.edit") ||
+          userPermissions.includes("action.TRANSACCIONES.delete");
+
+        const volqueterosSource = hasTransactionPermissions
+          ? await storage.getVolqueteros()
+          : await storage.getVolqueteros(userId);
+
+        const volqueterosPermitidos = await filterEntitiesByUsePermission({
+          entities: volqueterosSource,
+          userPermissions,
+          deniedPermissions,
+          permissionExistsCache,
+          getPermissionKey: (v) => buildViewPermissionKey("volquetero", v.id),
+        });
+
+        // Agregar conteos por placa/tipoCarro desde DB (solo viajes completados con fechaDescargue)
+        const placaRows = await db
+          .select({
+            volqueteroId: volqueterosTable.id,
+            placa: viajes.placa,
+            tipoCarro: viajes.tipoCarro,
+            count: sql<number>`count(*)::int`,
+          })
+          .from(viajes)
+          .innerJoin(
+            volqueterosTable,
+            sql`LOWER(CAST(${volqueterosTable.nombre} AS TEXT)) = LOWER(CAST(${viajes.conductor} AS TEXT))`,
+          )
+          .where(
+            and(
+              eq(viajes.estado, "completado"),
+              sql`${viajes.fechaDescargue} IS NOT NULL`,
+              hasTransactionPermissions ? sql`TRUE` : eq(viajes.userId, userId),
+            ),
+          )
+          .groupBy(volqueterosTable.id, viajes.placa, viajes.tipoCarro);
+
+        const placasByVolqId = new Map<
+          number,
+          Array<{ placa: string; tipoCarro: string; viajesCount: number }>
+        >();
+
+        for (const row of placaRows) {
+          const volqId = row.volqueteroId;
+          const placa = row.placa || "Sin placa";
+          const tipoCarro = row.tipoCarro || "Sin especificar";
+          const viajesCount = row.count || 0;
+
+          const arr = placasByVolqId.get(volqId) || [];
+          arr.push({ placa, tipoCarro, viajesCount });
+          placasByVolqId.set(volqId, arr);
+        }
+
+        const result = (volqueterosPermitidos as any[]).map((v) => {
+          const placas = placasByVolqId.get(v.id) || [];
+
+          // Asegurar que al menos exista la placa principal del registro si no hay viajes
+          if (placas.length === 0 && v.placa) {
+            placas.push({ placa: v.placa, tipoCarro: "Sin especificar", viajesCount: 0 });
+          }
+
+          // Si existe placa en tabla y no está en el agregado, agregarla (conteo 0)
+          if (v.placa && !placas.some((p) => p.placa === v.placa)) {
+            placas.push({ placa: v.placa, tipoCarro: "Sin especificar", viajesCount: 0 });
+          }
+
+          const viajesCount = placas.reduce((sum, p) => sum + (p.viajesCount || 0), 0);
+          const saldo = v.saldo === null || v.saldo === undefined ? "0" : String(v.saldo);
+
+          return {
+            id: v.id,
+            nombre: v.nombre,
+            placas,
+            viajesCount,
+            saldo,
+          };
+        });
+
+        res.json(result);
+      } catch (error: any) {
+        console.error("Error in /api/volqueteros/resumen:", error?.message || error);
+        res.status(500).json({ error: "Failed to fetch volqueteros resumen" });
+      }
+    },
+  );
 
   // Endpoint optimizado para resumen de minas con datos pre-calculados
   // IMPORTANTE: Debe ir ANTES de /api/minas/:id para evitar conflictos de rutas

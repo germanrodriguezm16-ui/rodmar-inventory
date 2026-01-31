@@ -89,6 +89,7 @@ export function useSocket() {
 
       if (affectedEntityTypes.includes("volquetero")) {
         queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/volqueteros/resumen"] });
         queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
         queryClient.invalidateQueries({
           predicate: (query) => {

@@ -122,6 +122,7 @@ export default function TransactionModal({ open, onClose }: TransactionModalProp
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] }); // Refresh volqueteros list
+      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros/resumen"] });
       queryClient.invalidateQueries({ queryKey: ["/api/minas"] }); // Refresh minas list
       queryClient.invalidateQueries({ queryKey: ["/api/compradores"] }); // Refresh compradores list
       // Invalidate specific socio transactions

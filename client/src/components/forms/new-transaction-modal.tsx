@@ -352,6 +352,7 @@ function NewTransactionModal({
         }
         if (data.deQuienTipo === 'volquetero' || data.paraQuienTipo === 'volquetero') {
           queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/volqueteros/resumen"] });
           queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
           queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
           
