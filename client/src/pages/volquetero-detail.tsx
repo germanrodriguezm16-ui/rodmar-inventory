@@ -788,6 +788,14 @@ export default function VolqueteroDetail() {
     return new Map(source.map((viaje) => [String(viaje.id), viaje]));
   }, [todosViajesIncOcultos, viajesVolquetero]);
 
+  const formatConductorShort = useCallback((name?: string | null) => {
+    if (!name) return "-";
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "-";
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[1].charAt(0)}.`;
+  }, []);
+
   const buildConceptoForTransaccion = useCallback((transaccion: any) => {
     const conceptoBase = transaccion.concepto || "";
     if (transaccion.tipo !== "Viaje" && transaccion.deQuienTipo !== "viaje") {
@@ -806,10 +814,18 @@ export default function VolqueteroDetail() {
     const viaje = viajesById.get(String(viajeId));
     if (!viaje) return conceptoBase;
 
+    const conductorLabel = formatConductorShort(viaje.conductor || viaje.volquetero?.nombre);
     const placa = viaje.placa || "-";
     const peso = viaje.peso ? String(viaje.peso) : "-";
-    return `${conceptoBase} | ${placa} | ${peso}`;
-  }, [viajesById]);
+    return `${conceptoBase} | ${conductorLabel} | ${placa} | ${peso}`;
+  }, [viajesById, formatConductorShort]);
+
+  const transaccionesParaImagen = useMemo(() => {
+    return transaccionesFiltradas.map((transaccion) => ({
+      ...transaccion,
+      concepto: buildConceptoForTransaccion(transaccion),
+    }));
+  }, [transaccionesFiltradas, buildConceptoForTransaccion]);
   
   // Balance del encabezado (INCLUYE todas las transacciones y viajes, incluso ocultos)
   // Este balance NO debe cambiar al ocultar/mostrar transacciones
@@ -2055,7 +2071,7 @@ export default function VolqueteroDetail() {
       <TransaccionesImageModal
         open={showTransaccionesImagePreview}
         onOpenChange={(open) => setShowTransaccionesImagePreview(open)}
-        transacciones={transaccionesFiltradas}
+        transacciones={transaccionesParaImagen}
         title={volquetero?.nombre || "Volquetero"}
         volquetero={volquetero ? { id: volquetero.id, nombre: volquetero.nombre } : undefined}
         subtitle={(() => {

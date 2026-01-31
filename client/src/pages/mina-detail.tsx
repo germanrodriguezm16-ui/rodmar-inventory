@@ -472,6 +472,14 @@ export default function MinaDetail() {
     return new Map(source.map((viaje) => [String(viaje.id), viaje]));
   }, [todosViajesIncOcultos, viajes]);
 
+  const formatConductorShort = useCallback((name?: string | null) => {
+    if (!name) return "-";
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "-";
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[1].charAt(0)}.`;
+  }, []);
+
   const buildConceptoForTransaccion = useCallback((transaccion: any) => {
     const conceptoBase = transaccion.concepto && transaccion.concepto.includes("data:image")
       ? "[Imagen]"
@@ -495,10 +503,18 @@ export default function MinaDetail() {
     const viaje = viajesById.get(String(viajeId));
     if (!viaje) return conceptoBase;
 
+    const conductorLabel = formatConductorShort(viaje.conductor || viaje.volquetero?.nombre);
     const placa = viaje.placa || "-";
     const peso = viaje.peso ? String(viaje.peso) : "-";
-    return `${conceptoBase} | ${placa} | ${peso}`;
-  }, [viajesById]);
+    return `${conceptoBase} | ${conductorLabel} | ${placa} | ${peso}`;
+  }, [viajesById, formatConductorShort]);
+
+  const transaccionesParaImagen = useMemo(() => {
+    return transaccionesFiltradas.map((transaccion) => ({
+      ...transaccion,
+      concepto: buildConceptoForTransaccion(transaccion),
+    }));
+  }, [transaccionesFiltradas, buildConceptoForTransaccion]);
 
   // Aplicar filtros a viajes
   const viajesFiltrados = useMemo(() => {
@@ -1636,7 +1652,7 @@ export default function MinaDetail() {
       <TransaccionesImageModal
         open={showTransaccionesImagePreview}
         onOpenChange={(open) => setShowTransaccionesImagePreview(open)}
-        transacciones={transaccionesFiltradas}
+        transacciones={transaccionesParaImagen}
         mina={mina}
         filterLabel={(() => {
           // Función para formatear fecha en formato DD/MM/YYYY

@@ -371,6 +371,49 @@ export default function CompradorDetail() {
     return balanceTotal;
   }, [todosViajesIncOcultos, transacciones, compradorId]);
 
+  const viajesById = useMemo(() => {
+    return new Map(viajes.map((viaje) => [String(viaje.id), viaje]));
+  }, [viajes]);
+
+  const formatConductorShort = useCallback((name?: string | null) => {
+    if (!name) return "-";
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "-";
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[1].charAt(0)}.`;
+  }, []);
+
+  const buildConceptoForTransaccionImagen = useCallback((transaccion: any) => {
+    const conceptoBase = transaccion.concepto || "";
+    if (transaccion.tipo !== "Viaje" && transaccion.deQuienTipo !== "viaje") {
+      return conceptoBase;
+    }
+
+    const idFromId = typeof transaccion.id === "string" && transaccion.id.startsWith("viaje-")
+      ? transaccion.id.replace("viaje-", "")
+      : null;
+    const idFromConcepto = typeof transaccion.concepto === "string"
+      ? (transaccion.concepto.match(/Viaje\s+([A-Za-z0-9_-]+)/i)?.[1] || null)
+      : null;
+    const viajeId = idFromId || idFromConcepto;
+    if (!viajeId) return conceptoBase;
+
+    const viaje = viajesById.get(String(viajeId));
+    if (!viaje) return conceptoBase;
+
+    const conductorLabel = formatConductorShort(viaje.conductor || viaje.volquetero?.nombre);
+    const placa = viaje.placa || "-";
+    const peso = viaje.peso ? String(viaje.peso) : "-";
+    return `${conceptoBase} | ${conductorLabel} | ${placa} | ${peso}`;
+  }, [viajesById, formatConductorShort]);
+
+  const transaccionesParaImagen = useMemo(() => {
+    return transaccionesFiltradas.map((transaccion) => ({
+      ...transaccion,
+      concepto: buildConceptoForTransaccionImagen(transaccion),
+    }));
+  }, [transaccionesFiltradas, buildConceptoForTransaccionImagen]);
+
   // Función para obtener rangos de fecha
   const getDateRange = (filterType: string, startDate?: string, endDate?: string) => {
     const now = new Date();
@@ -818,7 +861,7 @@ export default function CompradorDetail() {
         <CompradorTransaccionesImageModal
           open={showTransaccionesImagePreview}
           onOpenChange={setShowTransaccionesImagePreview}
-          transacciones={transaccionesFiltradas || []}
+          transacciones={transaccionesParaImagen || []}
           comprador={comprador}
           filterLabel={(() => {
             switch (transaccionesFechaFilterType) {
@@ -1376,9 +1419,10 @@ function CompradorTransaccionesTab({
     const viaje = viajesById.get(String(viajeId));
     if (!viaje) return conceptoBase;
 
+    const conductorLabel = formatConductorShort(viaje.conductor || viaje.volquetero?.nombre);
     const placa = viaje.placa || "-";
     const peso = viaje.peso ? String(viaje.peso) : "-";
-    return `${conceptoBase} | ${placa} | ${peso}`;
+    return `${conceptoBase} | ${conductorLabel} | ${placa} | ${peso}`;
   };
 
   // Combinar transacciones reales con transacciones dinámicas de viajes
