@@ -102,6 +102,8 @@ export default function CompradorDetail() {
   const canUseDescargue = has("action.VIAJES.descargue.use");
   const canViewEditTrip = has("action.VIAJES.edit.view") || has("action.VIAJES.edit");
   const canUseEditTrip = has("action.VIAJES.edit.use") || has("action.VIAJES.edit");
+  const canViewExtendedFinancial = has("action.VIAJES.extendedFinancial.view");
+  const canUseExtendedFinancial = has("action.VIAJES.extendedFinancial.use");
   const [showNewTransaction, setShowNewTransaction] = useState(false);
   const [showGestionarModal, setShowGestionarModal] = useState(false);
   const [showSolicitarModal, setShowSolicitarModal] = useState(false);
@@ -768,6 +770,8 @@ export default function CompradorDetail() {
                   canUseCargue={canUseCargue}
                   canViewDescargue={canViewDescargue}
                   canUseDescargue={canUseDescargue}
+                  canViewExtendedFinancial={canViewExtendedFinancial}
+                  canUseExtendedFinancial={canUseExtendedFinancial}
                   setShowRegisterCargue={setShowRegisterCargue}
                   setShowRegisterDescargue={setShowRegisterDescargue}
                   comprador={comprador}
@@ -1117,6 +1121,8 @@ function CompradorViajesTab({
   canUseCargue,
   canViewDescargue,
   canUseDescargue,
+  canViewExtendedFinancial,
+  canUseExtendedFinancial,
   setShowRegisterCargue,
   setShowRegisterDescargue,
   comprador
@@ -1142,6 +1148,8 @@ function CompradorViajesTab({
   canUseCargue: boolean;
   canViewDescargue: boolean;
   canUseDescargue: boolean;
+  canViewExtendedFinancial: boolean;
+  canUseExtendedFinancial: boolean;
   setShowRegisterCargue: (value: boolean) => void;
   setShowRegisterDescargue: (value: boolean) => void;
   comprador: Comprador | undefined;
@@ -1326,6 +1334,8 @@ function CompradorViajesTab({
               }}
               showEditButton={canViewEditTrip}
               editDisabled={!canUseEditTrip}
+              showExtendedFinancialToggle={canViewExtendedFinancial}
+              extendedFinancialDisabled={!canUseExtendedFinancial}
             />
           ))}
         </div>

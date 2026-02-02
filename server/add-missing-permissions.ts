@@ -102,6 +102,8 @@ async function addMissingPermissions() {
       { key: 'action.VIAJES.descargue.use', descripcion: 'Usar registrar descargue', categoria: 'action' },
       { key: 'action.VIAJES.edit.view', descripcion: 'Ver editar viaje', categoria: 'action' },
       { key: 'action.VIAJES.edit.use', descripcion: 'Usar editar viaje', categoria: 'action' },
+      { key: 'action.VIAJES.extendedFinancial.view', descripcion: 'Ver botón (ojo) de vista financiera extendida en tarjetas de viajes', categoria: 'action' },
+      { key: 'action.VIAJES.extendedFinancial.use', descripcion: 'Usar vista financiera extendida en tarjetas de viajes', categoria: 'action' },
       { key: 'module.COMPRADORES.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Compradores', categoria: 'tab' },
       { key: 'module.VOLQUETEROS.tab.VIAJES.view', descripcion: 'Ver pestaña Viajes en Volqueteros', categoria: 'tab' },
       { key: 'module.RODMAR.tab.TERCEROS.view', descripcion: 'Ver pestaña Terceros en RodMar', categoria: 'tab' },
@@ -117,6 +119,8 @@ async function addMissingPermissions() {
       'action.VIAJES.descargue.use',
       'action.VIAJES.edit.view',
       'action.VIAJES.edit.use',
+      'action.VIAJES.extendedFinancial.view',
+      'action.VIAJES.extendedFinancial.use',
     ]);
 
     // Obtener todos los permisos del sistema para verificar si faltan asignaciones

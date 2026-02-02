@@ -1,7 +1,7 @@
 import { useState, memo, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Truck, Calendar, User, Mountain, Handshake, Weight, DollarSign, Eye, EyeOff, Receipt } from "lucide-react";
+import { Truck, Calendar, User, Mountain, Handshake, Weight, DollarSign, ChevronDown, ChevronUp, Receipt } from "lucide-react";
 import { formatDateWithDaySpanish } from "@/lib/date-utils";
 import { ImageViewer } from "@/components/ui/image-viewer";
 import { apiUrl } from "@/lib/api";
@@ -18,6 +18,8 @@ declare global {
 interface TripCardProps {
   viaje: ViajeWithDetails;
   showExtended?: boolean;
+  showExtendedFinancialToggle?: boolean;
+  extendedFinancialDisabled?: boolean;
   onClick?: () => void;
   onEditTrip?: (viaje: ViajeWithDetails) => void;
   onDeleteTrip?: (viaje: ViajeWithDetails) => void;
@@ -32,6 +34,8 @@ interface TripCardProps {
 function TripCard({
   viaje,
   showExtended = false,
+  showExtendedFinancialToggle = true,
+  extendedFinancialDisabled = false,
   onClick,
   onEditTrip,
   onDeleteTrip,
@@ -465,20 +469,28 @@ function TripCard({
           )}
           
           {/* Botón individual de información financiera - solo para viajes completados */}
-          {viaje.fechaDescargue && (viaje.vut || viaje.cut || viaje.fleteTon || viaje.totalVenta || viaje.totalCompra || viaje.totalFlete) && (
+          {showExtendedFinancialToggle && viaje.fechaDescargue && (viaje.vut || viaje.cut || viaje.fleteTon || viaje.totalVenta || viaje.totalCompra || viaje.totalFlete) && (
             <button 
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                if (extendedFinancialDisabled) return;
                 setShowIndividualFinancial(!showIndividualFinancial);
               }}
+              disabled={extendedFinancialDisabled}
               className={`text-xs py-1.5 px-2 rounded-md transition-colors ${
+                extendedFinancialDisabled
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  :
                 showIndividualFinancial 
                   ? 'bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/30 dark:hover:bg-green-800/40 dark:text-green-300' 
                   : 'bg-green-50 hover:bg-green-100 text-green-600 dark:bg-green-950/20 dark:hover:bg-green-900/30 dark:text-green-400'
               }`}
             >
-              {showIndividualFinancial ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+              <span className="flex items-center gap-1">
+                <span>{showIndividualFinancial ? "Ver menos" : "Ver más"}</span>
+                {showIndividualFinancial ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </span>
             </button>
           )}
           
@@ -499,7 +511,7 @@ function TripCard({
 
 
         {/* Vista individual de información financiera */}
-        {showIndividualFinancial && viaje.fechaDescargue && (viaje.vut || viaje.cut || viaje.fleteTon || viaje.totalVenta || viaje.totalCompra || viaje.totalFlete) && (
+        {showExtendedFinancialToggle && !extendedFinancialDisabled && showIndividualFinancial && viaje.fechaDescargue && (viaje.vut || viaje.cut || viaje.fleteTon || viaje.totalVenta || viaje.totalCompra || viaje.totalFlete) && (
           <div className="mt-3 pt-3 border-t border-border">
             <h4 className="font-medium mb-3 text-foreground text-sm flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-green-600" />

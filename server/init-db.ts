@@ -63,6 +63,8 @@ export async function initializeRolesAndPermissions() {
       { key: 'action.VIAJES.descargue.use', descripcion: 'Usar registrar descargue', categoria: 'action' },
       { key: 'action.VIAJES.edit.view', descripcion: 'Ver editar viaje', categoria: 'action' },
       { key: 'action.VIAJES.edit.use', descripcion: 'Usar editar viaje', categoria: 'action' },
+      { key: 'action.VIAJES.extendedFinancial.view', descripcion: 'Ver botón (ojo) de vista financiera extendida en tarjetas de viajes', categoria: 'action' },
+      { key: 'action.VIAJES.extendedFinancial.use', descripcion: 'Usar vista financiera extendida en tarjetas de viajes', categoria: 'action' },
       { key: 'action.VIAJES.delete', descripcion: 'Eliminar viajes', categoria: 'action' },
       { key: 'action.RODMAR.createTransaction', descripcion: 'Crear transacciones desde RodMar', categoria: 'action' },
       { key: 'action.RODMAR.viewGlobalBalances', descripcion: 'Ver balances globales', categoria: 'action' },

@@ -42,6 +42,8 @@ export default function Principal({ onOpenCargue, onOpenDescargue }: PrincipalPr
   const canUseCargue = has("action.VIAJES.cargue.use");
   const canViewDescargue = has("action.VIAJES.descargue.view");
   const canUseDescargue = has("action.VIAJES.descargue.use");
+  const canViewExtendedFinancial = has("action.VIAJES.extendedFinancial.view");
+  const canUseExtendedFinancial = has("action.VIAJES.extendedFinancial.use");
 
   const handleClearCache = () => {
     clearCache();
@@ -769,6 +771,8 @@ export default function Principal({ onOpenCargue, onOpenDescargue }: PrincipalPr
                 key={viaje.id} 
                 viaje={viaje} 
                 showExtended={showExtended}
+                showExtendedFinancialToggle={canViewExtendedFinancial}
+                extendedFinancialDisabled={!canUseExtendedFinancial}
                 onEditTrip={handleEditTrip}
                 onDeleteTrip={handleDeleteTrip}
                 isSelected={selectedViajes.has(viaje.id)}

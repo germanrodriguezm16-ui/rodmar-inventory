@@ -103,6 +103,8 @@ export default function VolqueteroDetail() {
   const canUseDescargue = has("action.VIAJES.descargue.use");
   const canViewEditTrip = has("action.VIAJES.edit.view") || has("action.VIAJES.edit");
   const canUseEditTrip = has("action.VIAJES.edit.use") || has("action.VIAJES.edit");
+  const canViewExtendedFinancial = has("action.VIAJES.extendedFinancial.view");
+  const canUseExtendedFinancial = has("action.VIAJES.extendedFinancial.use");
   
   // Estado inicial de activeTab basado en permisos
   const getInitialTab = () => {
@@ -1187,6 +1189,8 @@ export default function VolqueteroDetail() {
                     }}
                     showEditButton={canViewEditTrip}
                     editDisabled={!canUseEditTrip}
+                    showExtendedFinancialToggle={canViewExtendedFinancial}
+                    extendedFinancialDisabled={!canUseExtendedFinancial}
                   />
                 ))}
               </div>
