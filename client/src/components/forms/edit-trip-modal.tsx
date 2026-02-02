@@ -345,6 +345,20 @@ export function EditTripModal({ viaje, isOpen, onClose }: EditTripModalProps) {
       fut: ((calculatedTotalFlete / data.peso) || 0).toString(),
     };
 
+    // QUIRÚRGICO: no re-escribir fechas si no cambiaron.
+    // Si enviamos "YYYY-MM-DD" de nuevo, el backend lo convierte a Date y puede alterar el timestamp
+    // (por UTC/local), cambiando el orden dentro del mismo día.
+    const originalFechaCargue = formatDateForInput(viaje?.fechaCargue);
+    if (dataWithCalculations.fechaCargue === originalFechaCargue) {
+      delete (dataWithCalculations as any).fechaCargue;
+    }
+
+    const originalFechaDescargue = formatDateForInput(viaje?.fechaDescargue);
+    const submittedFechaDescargue = (dataWithCalculations as any).fechaDescargue;
+    if (!submittedFechaDescargue || submittedFechaDescargue === originalFechaDescargue) {
+      delete (dataWithCalculations as any).fechaDescargue;
+    }
+
     // OPTIMIZACIÓN + SEGURIDAD DE DATOS:
     // El listado de viajes ya no trae el recibo (base64) para reducir payload.
     // Si el viaje tiene recibo guardado pero el formulario llega sin recibo (porque no se cargó),
