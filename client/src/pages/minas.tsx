@@ -19,8 +19,11 @@ import { formatCurrency } from "@/lib/utils";
 import type { ViajeWithDetails, TransaccionWithSocio } from "@shared/schema";
 import MergeEntitiesModal from "@/components/fusion/MergeEntitiesModal";
 import FusionHistoryModal from "@/components/fusion/FusionHistoryModal";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function Minas() {
+  const { has } = usePermissions();
+  const canViewListBalances = has("module.MINAS.list.BALANCES.view");
   const [showAddMina, setShowAddMina] = useState(false);
   const [showDeleteMina, setShowDeleteMina] = useState(false);
   const [minaToDelete, setMinaToDelete] = useState<Mina | null>(null);
@@ -97,6 +100,7 @@ export default function Minas() {
 
   // Función para obtener balance de mina usando el hook compartido
   const getBalanceForMina = (minaId: number): number => {
+    if (!canViewListBalances) return 0;
     return balancesMinas[minaId] || 0;
   };
 
@@ -173,7 +177,7 @@ export default function Minas() {
     return acc;
   }, { saldoAFavor: 0, saldoEnContra: 0 });
 
-  const balanceTotalMinas = saldoAFavor - saldoEnContra;
+  const balanceTotalMinas = canViewListBalances ? (saldoAFavor - saldoEnContra) : 0;
 
   if (isLoading) {
     return (
@@ -213,6 +217,7 @@ export default function Minas() {
         </div>
         
         {/* Segunda fila: Balance en formato compacto */}
+        {canViewListBalances && (
         <div className="grid grid-cols-3 gap-2 text-xs">
           <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-2 border border-green-200 dark:border-green-800">
             <div className="text-muted-foreground mb-0.5">Positivos</div>
@@ -254,6 +259,7 @@ export default function Minas() {
             </div>
           </div>
         </div>
+        )}
         
         {/* Tercera fila: Botones de ordenamiento y recálculo */}
         <div className="flex items-center justify-between gap-2">
@@ -317,7 +323,7 @@ export default function Minas() {
       </div>
 
       {/* Indicador sutil de actualización en segundo plano */}
-      {isFetchingBalances && Object.keys(balancesMinas).length > 0 && (
+      {canViewListBalances && isFetchingBalances && Object.keys(balancesMinas).length > 0 && (
         <div className="px-4 py-1 bg-blue-50 dark:bg-blue-950/20 border-b border-blue-200 dark:border-blue-800 mb-2">
           <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
             <RefreshCw className="w-3 h-3 animate-spin" />

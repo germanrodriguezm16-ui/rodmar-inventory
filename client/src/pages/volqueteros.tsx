@@ -12,8 +12,11 @@ import { useVolqueterosBalance } from "@/hooks/useVolqueterosBalance";
 import MergeEntitiesModal from "@/components/fusion/MergeEntitiesModal";
 import FusionHistoryModal from "@/components/fusion/FusionHistoryModal";
 import AddVolqueteroModal from "@/components/modals/add-volquetero-modal";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function Volqueteros() {
+  const { has } = usePermissions();
+  const canViewListBalances = has("module.VOLQUETEROS.list.BALANCES.view");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [sortBy, setSortBy] = useState<"alfabetico" | "viajes">("alfabetico");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -33,6 +36,7 @@ export default function Volqueteros() {
 
   // Función optimizada para obtener balance (ahora usa hook compartido)
   const calcularBalanceDinamico = (volquetero: VolqueteroConPlacas) => {
+    if (!canViewListBalances) return 0;
     return balancesVolqueteros[volquetero.id] || 0;
   };
 
@@ -134,6 +138,7 @@ export default function Volqueteros() {
   return (
     <div className="p-4">
       {/* Resumen Financiero */}
+      {canViewListBalances && (
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-semibold text-foreground">Volqueteros</h2>
@@ -178,9 +183,10 @@ export default function Volqueteros() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Indicador sutil de actualización en segundo plano */}
-      {isFetchingBalances && Object.keys(balancesVolqueteros).length > 0 && (
+      {canViewListBalances && isFetchingBalances && Object.keys(balancesVolqueteros).length > 0 && (
         <div className="px-4 py-1 bg-blue-50 dark:bg-blue-950/20 border-b border-blue-200 dark:border-blue-800 mb-2">
           <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
             <RefreshCw className="w-3 h-3 animate-spin" />

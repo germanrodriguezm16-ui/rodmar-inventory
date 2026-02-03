@@ -619,6 +619,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/balances/minas", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
+      const userPermissions = await getUserPermissions(userId);
+      const canViewListBalances = userPermissions.includes("module.MINAS.list.BALANCES.view");
+      if (!canViewListBalances) {
+        return res.json({});
+      }
       const balances = await storage.getMinasBalances(userId);
       res.json(balances);
     } catch (error: any) {
@@ -639,6 +644,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/balances/compradores", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
+      const userPermissions = await getUserPermissions(userId);
+      const canViewListBalances = userPermissions.includes("module.COMPRADORES.list.BALANCES.view");
+      if (!canViewListBalances) {
+        return res.json({});
+      }
       const balances = await storage.getCompradoresBalances(userId);
       res.json(balances);
     } catch (error: any) {
@@ -659,6 +669,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/balances/volqueteros", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
+      const userPermissions = await getUserPermissions(userId);
+      const canViewListBalances = userPermissions.includes("module.VOLQUETEROS.list.BALANCES.view");
+      if (!canViewListBalances) {
+        return res.json({});
+      }
       debugLog(`🔍 [ROUTE] /api/balances/volqueteros - INICIANDO (userId: ${userId})`);
       const balances = await storage.getVolqueterosBalances(userId);
       debugLog(`🔍 [ROUTE] /api/balances/volqueteros - COMPLETADO (${Object.keys(balances).length} volqueteros con balance)`);

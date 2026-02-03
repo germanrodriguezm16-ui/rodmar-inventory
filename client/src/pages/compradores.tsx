@@ -9,6 +9,7 @@ import type { Comprador } from "@shared/schema";
 import { formatCurrency } from "@/lib/utils";
 import { useCompradoresBalance } from "@/hooks/useCompradoresBalance";
 import { useRecalculatePrecalculos } from "@/hooks/useRecalculatePrecalculos";
+import { usePermissions } from "@/hooks/usePermissions";
 
 
 // Importar componentes localmente
@@ -20,6 +21,8 @@ import MergeEntitiesModal from "@/components/fusion/MergeEntitiesModal";
 import FusionHistoryModal from "@/components/fusion/FusionHistoryModal";
 
 export default function Compradores() {
+  const { has } = usePermissions();
+  const canViewListBalances = has("module.COMPRADORES.list.BALANCES.view");
   const [showAddComprador, setShowAddComprador] = useState(false);
   const [showDeleteComprador, setShowDeleteComprador] = useState(false);
   const [compradorToDelete, setCompradorToDelete] = useState<Comprador | null>(null);
@@ -71,6 +74,7 @@ export default function Compradores() {
 
   // Función optimizada para obtener balance (ahora usa hook compartido)
   const calcularBalanceNeto = (compradorId: number): number => {
+    if (!canViewListBalances) return 0;
     return balancesCompradores[compradorId] || 0;
   };
 
@@ -171,7 +175,7 @@ export default function Compradores() {
     return acc;
   }, { saldoAFavor: 0, saldoEnContra: 0 });
 
-  const balanceTotalCompradores = saldoAFavor - saldoEnContra;
+  const balanceTotalCompradores = canViewListBalances ? (saldoAFavor - saldoEnContra) : 0;
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -206,7 +210,7 @@ export default function Compradores() {
     <div className="min-h-screen bg-background pb-16">
       <div className="p-4">
         {/* Indicador sutil de actualización en segundo plano */}
-        {isFetchingBalances && Object.keys(balancesCompradores).length > 0 && (
+        {canViewListBalances && isFetchingBalances && Object.keys(balancesCompradores).length > 0 && (
           <div className="px-4 py-1 bg-blue-50 dark:bg-blue-950/20 border-b border-blue-200 dark:border-blue-800 mb-2">
             <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
               <RefreshCw className="w-3 h-3 animate-spin" />
@@ -231,6 +235,7 @@ export default function Compradores() {
           </div>
           
           {/* Segunda fila: Balance en formato compacto */}
+          {canViewListBalances && (
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-2 border border-green-200 dark:border-green-800">
               <div className="text-muted-foreground mb-0.5">Positivos</div>
@@ -272,6 +277,7 @@ export default function Compradores() {
               </div>
             </div>
           </div>
+          )}
           
           {/* Tercera fila: Botones de ordenamiento y recálculo */}
           <div className="flex items-center justify-between gap-2">
