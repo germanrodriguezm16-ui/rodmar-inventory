@@ -624,7 +624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!canViewListBalances) {
         return res.json({});
       }
-      const balances = await storage.getMinasBalances(userId);
+      const balances = await storage.getMinasBalances();
       res.json(balances);
     } catch (error: any) {
       console.error("Error fetching minas balances:", error.message);
@@ -649,7 +649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!canViewListBalances) {
         return res.json({});
       }
-      const balances = await storage.getCompradoresBalances(userId);
+      const balances = await storage.getCompradoresBalances();
       res.json(balances);
     } catch (error: any) {
       console.error("Error fetching compradores balances:", error.message);
@@ -675,7 +675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({});
       }
       debugLog(`🔍 [ROUTE] /api/balances/volqueteros - INICIANDO (userId: ${userId})`);
-      const balances = await storage.getVolqueterosBalances(userId);
+      const balances = await storage.getVolqueterosBalances();
       debugLog(`🔍 [ROUTE] /api/balances/volqueteros - COMPLETADO (${Object.keys(balances).length} volqueteros con balance)`);
       res.json(balances);
     } catch (error: any) {
