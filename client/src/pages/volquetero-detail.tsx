@@ -164,16 +164,16 @@ export default function VolqueteroDetail() {
   const queryClient = useQueryClient();
 
   const { data: volqueteros = [] } = useQuery({
-    queryKey: ["/api/volqueteros"],
+    queryKey: ["/api/volqueteros/resumen"],
   });
 
   // Usar viajes específicos del volquetero en lugar de todos los viajes
   // Esto se define después de obtener el volquetero
 
   // Procesar datos
-  const volquetero = (volqueteros as VolqueteroConPlacas[]).find(v => 
-    v.nombre === decodeURIComponent(id || "") || 
-    v.placas.some((p: any) => p.placa === decodeURIComponent(id || ""))
+  const volqueteroIdParam = id ? parseInt(id, 10) : 0;
+  const volquetero = (volqueteros as VolqueteroConPlacas[]).find(
+    (v) => v.id === volqueteroIdParam
   );
 
   const volqueteroIdActual = volquetero?.id || 0;

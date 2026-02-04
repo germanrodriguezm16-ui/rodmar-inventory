@@ -566,6 +566,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userPermissions.includes("action.TRANSACCIONES.edit") ||
         userPermissions.includes("action.TRANSACCIONES.delete");
       
+      const effectiveUserId = hasTransactionPermissions ? undefined : userId;
+      
       const minas = hasTransactionPermissions 
         ? await storage.getMinas() // Sin userId = todas las minas
         : await storage.getMinas(userId); // Con userId = solo las del usuario
@@ -765,10 +767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             count: sql<number>`count(*)::int`,
           })
           .from(viajes)
-          .innerJoin(
-            volqueterosTable,
-            sql`LOWER(CAST(${volqueterosTable.nombre} AS TEXT)) = LOWER(CAST(${viajes.conductor} AS TEXT))`,
-          )
+          .innerJoin(volqueterosTable, eq(viajes.volqueteroId, volqueterosTable.id))
           .where(
             and(
               eq(viajes.estado, "completado"),
@@ -3477,9 +3476,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Obtener viajes del volquetero por nombre del conductor
       // Si tiene permisos de transacciones, no filtrar por userId
-      const viajes = hasTransactionPermissions
-        ? await storage.getViajesByVolquetero(volqueteroNombre) // Sin userId = todos los viajes
-        : await storage.getViajesByVolquetero(volqueteroNombre, userId); // Con userId = solo los del usuario
+      const viajes = await storage.getViajesByVolqueteroId(
+        volqueteroId,
+        effectiveUserId,
+      );
       
       if (DEBUG_VOLQUETEROS) {
         debugLog(`🔍 [GET /api/volqueteros/:id/viajes] Viajes encontrados: ${viajes.length} viajes con conductor="${volqueteroNombre}"`);
@@ -4013,14 +4013,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Auto-crear volquetero si el conductor cambió y no existe
+        // Resolver volqueteroId si cambia el conductor o si viene explícito
+        let resolvedVolqueteroId = req.body.volqueteroId
+          ? Number(req.body.volqueteroId)
+          : existingViaje.volqueteroId ?? undefined;
         if (req.body.conductor && req.body.conductor !== existingViaje.conductor) {
           try {
-            await storage.findOrCreateVolqueteroByNombre(
+            const volquetero = await storage.findOrCreateVolqueteroByNombre(
               req.body.conductor,
               req.body.placa || existingViaje.placa || "Sin placa",
               userId
             );
+            if (volquetero?.id) {
+              resolvedVolqueteroId = volquetero.id;
+            }
           } catch (error) {
             console.error("Error al buscar/crear volquetero:", error);
             // No fallar la edición del viaje si hay error con el volquetero
@@ -4034,6 +4040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           conductor: req.body.conductor,
           placa: req.body.placa,
           tipoCarro: req.body.tipoCarro,
+          volqueteroId: resolvedVolqueteroId,
           minaId: req.body.minaId ? Number(req.body.minaId) : undefined,
           compradorId: req.body.compradorId
             ? Number(req.body.compradorId)
@@ -4212,6 +4219,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     undefined // userId no disponible en bulk import
                   );
                   volqueterosByName.set(conductorName, newVolquetero);
+                }
+                const volquetero = volqueterosByName.get(conductorName);
+                if (volquetero?.id) {
+                  (parsedData as any).volqueteroId = volquetero.id;
                 }
               }
 
@@ -4425,14 +4436,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = insertViajeSchema.parse(req.body);
       debugLog("Parsed viaje data:", data);
 
-      // Auto-crear volquetero si el conductor no existe
-      if (data.conductor) {
+      // Resolver volqueteroId a partir del conductor (para evitar ambigüedad por nombre)
+      if (!data.volqueteroId && data.conductor) {
         try {
-          await storage.findOrCreateVolqueteroByNombre(
+          const volquetero = await storage.findOrCreateVolqueteroByNombre(
             data.conductor,
             data.placa || "Sin placa",
             userId
           );
+          if (volquetero?.id) {
+            (data as any).volqueteroId = volquetero.id;
+          }
         } catch (error) {
           console.error("Error al buscar/crear volquetero:", error);
           // No fallar la creación del viaje si hay error con el volquetero
@@ -4525,21 +4539,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Remove the temporary field and set the proper compradorId
         delete (data as any).compradorNombre;
         (data as any).compradorId = compradorId;
-      }
-
-      // Auto-crear volquetero basado en conductor
-      if (data.conductor) {
-        const volqueteros = await storage.getVolqueteros();
-        const existingVolquetero = volqueteros.find(
-          (v) => v.nombre.toLowerCase() === data.conductor.toLowerCase(),
-        );
-        if (!existingVolquetero) {
-          // Crear volquetero automáticamente
-          await storage.createVolquetero({
-            nombre: data.conductor,
-            placa: data.placa || "Vehículo por definir",
-          });
-        }
       }
 
       console.log(
@@ -8372,23 +8371,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Endpoint para mostrar todos los viajes ocultos de un volquetero específico
-  app.post("/api/viajes/volquetero/:volqueteroNombre/show-all", async (req, res) => {
+  app.post("/api/viajes/volquetero/:volqueteroId/show-all", async (req, res) => {
     try {
       const userId = req.user?.id || "main_user";
-      const volqueteroNombre = decodeURIComponent(req.params.volqueteroNombre);
+      const volqueteroId = parseInt(req.params.volqueteroId);
 
-      if (!volqueteroNombre) {
-        return res.status(400).json({ error: "Nombre de volquetero inválido" });
-      }
+      if (isNaN(volqueteroId)) { return res.status(400).json({ error: "ID de volquetero inválido" }); }
 
       // Mostrar todos los viajes ocultos específicamente de este volquetero
       const updatedCount = await storage.showAllHiddenViajesForVolquetero(
-        volqueteroNombre,
+        volqueteroId,
         userId,
       );
 
       console.log(
-        `🔄 Mostrando ${updatedCount} viajes ocultos de volquetero ${volqueteroNombre}`,
+        `🔄 Mostrando ${updatedCount} viajes ocultos de volquetero ${volqueteroId}`,
       );
 
       res.json({
@@ -9293,3 +9290,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+

@@ -389,23 +389,44 @@ export class DatabaseStorage implements IStorage {
       
       // Buscar volquetero existente por nombre (case-insensitive)
       const todosVolqueteros = await this.getVolqueteros(userId);
-      let volqueteroExistente = todosVolqueteros.find(
+      const volqueterosPorNombre = todosVolqueteros.filter(
         (v) => v.nombre.toLowerCase().trim() === nombreNormalizado
       );
       
-      // Si existe, retornarlo (no importa la placa, las placas se agrupan en /api/volqueteros)
-      if (volqueteroExistente) {
+      if (volqueterosPorNombre.length > 0) {
+        const placaNormalizada = placaDelViaje?.toLowerCase().trim();
+        const volqueteroPorPlaca = placaNormalizada
+          ? volqueterosPorNombre.find(
+              (v) => v.placa?.toLowerCase().trim() === placaNormalizada
+            )
+          : undefined;
+        
+        const volqueteroExistente =
+          volqueteroPorPlaca ||
+          (volqueterosPorNombre.length === 1 ? volqueterosPorNombre[0] : undefined) ||
+          volqueterosPorNombre[0];
+        
         console.log(`✅ Volquetero existente encontrado: "${volqueteroExistente.nombre}" (ID: ${volqueteroExistente.id})`);
         return volqueteroExistente;
       }
       
       // Si no existe, verificar nuevamente justo antes de crear para evitar race conditions
       const volqueterosUpdated = await this.getVolqueteros(userId);
-      volqueteroExistente = volqueterosUpdated.find(
+      const volqueterosUpdatedPorNombre = volqueterosUpdated.filter(
         (v) => v.nombre.toLowerCase().trim() === nombreNormalizado
       );
       
-      if (volqueteroExistente) {
+      if (volqueterosUpdatedPorNombre.length > 0) {
+        const placaNormalizada = placaDelViaje?.toLowerCase().trim();
+        const volqueteroPorPlaca = placaNormalizada
+          ? volqueterosUpdatedPorNombre.find(
+              (v) => v.placa?.toLowerCase().trim() === placaNormalizada
+            )
+          : undefined;
+        const volqueteroExistente =
+          volqueteroPorPlaca ||
+          (volqueterosUpdatedPorNombre.length === 1 ? volqueterosUpdatedPorNombre[0] : undefined) ||
+          volqueterosUpdatedPorNombre[0];
         console.log(`✅ Volquetero existente encontrado (segunda verificación): "${volqueteroExistente.nombre}" (ID: ${volqueteroExistente.id})`);
         return volqueteroExistente;
       }
@@ -472,65 +493,26 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`✅ VOLQUETERO NOMBRE ACTUALIZADO: ID ${id} → "${nombre}" ${updatedVolquetero ? '✓' : '✗'}`);
       
-      // 3. SINCRONIZAR VIAJES: Buscar conductores que puedan estar relacionados con este volquetero
+      // 3. SINCRONIZAR VIAJES: actualizar por volqueteroId (evita ambigüedad por nombre)
       if (updatedVolquetero && nombreAnterior !== nombre) {
         console.log(`🔄 SINCRONIZANDO VIAJES: Actualizando conductor "${nombreAnterior}" → "${nombre}"`);
         
-        // Buscar variaciones del nombre que puedan existir en viajes
-        const viajesCandidatos = await db
-          .select({ conductor: viajes.conductor })
-          .from(viajes)
-          .groupBy(viajes.conductor);
+        const viajesResult = await db
+          .update(viajes)
+          .set({ conductor: nombre })
+          .where(eq(viajes.volqueteroId, id))
+          .returning({ id: viajes.id });
         
-        // Encontrar conductores que puedan corresponder a este volquetero
-        const conductoresParaSincronizar = viajesCandidatos
-          .map(v => v.conductor)
-          .filter(conductor => {
-            // Buscar coincidencias flexibles
-            const base1 = nombreAnterior.toLowerCase().replace(/[^a-z]/g, '');
-            const base2 = conductor.toLowerCase().replace(/[^a-z]/g, '');
-            const baseNuevo = nombre.toLowerCase().replace(/[^a-z]/g, '');
-            
-            // Si el conductor coincide parcialmente con el nombre anterior o nuevo
-            return base2.includes(base1.substring(0, Math.min(8, base1.length))) || 
-                   base1.includes(base2.substring(0, Math.min(8, base2.length))) ||
-                   base2.includes(baseNuevo.substring(0, Math.min(8, baseNuevo.length)));
-          });
+        console.log(`✅ TOTAL VIAJES SINCRONIZADOS: ${viajesResult.length} viajes actualizados`);
         
-        console.log(`🔍 CONDUCTORES ENCONTRADOS PARA SINCRONIZAR:`, conductoresParaSincronizar);
+        // 4. SINCRONIZAR TRANSACCIONES: actualizar conceptos con el nombre anterior
+        const transaccionesResult = await db
+          .update(transacciones)
+          .set({ concepto: sql`REPLACE(concepto, ${nombreAnterior}, ${nombre})` })
+          .where(sql`concepto LIKE '%' || ${nombreAnterior} || '%'`)
+          .returning({ id: transacciones.id });
         
-        let totalViajesActualizados = 0;
-        for (const conductor of conductoresParaSincronizar) {
-          const viajesResult = await db
-            .update(viajes)
-            .set({ conductor: nombre })
-            .where(eq(viajes.conductor, conductor))
-            .returning({ id: viajes.id });
-          
-          totalViajesActualizados += viajesResult.length;
-          if (viajesResult.length > 0) {
-            console.log(`✅ VIAJES SINCRONIZADOS: "${conductor}" → "${nombre}" (${viajesResult.length} viajes)`);
-          }
-        }
-        
-        console.log(`✅ TOTAL VIAJES SINCRONIZADOS: ${totalViajesActualizados} viajes actualizados`);
-        
-        // 4. SINCRONIZAR TRANSACCIONES: Actualizar conceptos que contengan cualquiera de los nombres
-        let totalTransaccionesActualizadas = 0;
-        for (const conductor of [nombreAnterior, ...conductoresParaSincronizar]) {
-          const transaccionesResult = await db
-            .update(transacciones)
-            .set({ concepto: sql`REPLACE(concepto, ${conductor}, ${nombre})` })
-            .where(sql`concepto LIKE '%' || ${conductor} || '%'`)
-            .returning({ id: transacciones.id });
-          
-          totalTransaccionesActualizadas += transaccionesResult.length;
-          if (transaccionesResult.length > 0) {
-            console.log(`✅ TRANSACCIONES SINCRONIZADAS: "${conductor}" → "${nombre}" (${transaccionesResult.length} transacciones)`);
-          }
-        }
-        
-        console.log(`✅ TOTAL TRANSACCIONES SINCRONIZADAS: ${totalTransaccionesActualizadas} transacciones actualizadas`);
+        console.log(`✅ TOTAL TRANSACCIONES SINCRONIZADAS: ${transaccionesResult.length} transacciones actualizadas`);
       }
       
       return updatedVolquetero;
@@ -2010,6 +1992,7 @@ export class DatabaseStorage implements IStorage {
           conductor: viajes.conductor,
           tipoCarro: viajes.tipoCarro,
           placa: viajes.placa,
+          volqueteroId: viajes.volqueteroId,
           minaId: viajes.minaId,
           compradorId: viajes.compradorId,
           peso: viajes.peso,
@@ -2076,6 +2059,7 @@ export class DatabaseStorage implements IStorage {
           conductor: viajes.conductor,
           tipoCarro: viajes.tipoCarro,
           placa: viajes.placa,
+          volqueteroId: viajes.volqueteroId,
           minaId: viajes.minaId,
           compradorId: viajes.compradorId,
           peso: viajes.peso,
@@ -2125,12 +2109,10 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getViajesByVolquetero(conductor: string, userId?: string): Promise<ViajeWithDetails[]> {
-    // Usar comparación case-insensitive y normalizada (trim) para evitar problemas
-    // con diferencias en mayúsculas/minúsculas o espacios
-    console.log(`🔍 [getViajesByVolquetero] Buscando viajes con conductor="${conductor}"`);
+  async getViajesByVolqueteroId(volqueteroId: number, userId?: string): Promise<ViajeWithDetails[]> {
+    console.log(`[getViajesByVolqueteroId] Buscando viajes con volqueteroId=${volqueteroId}`);
     const conditions = [
-      sql`LOWER(TRIM(${viajes.conductor})) = LOWER(TRIM(${conductor}))`
+      eq(viajes.volqueteroId, volqueteroId)
     ];
     if (userId) {
       conditions.push(eq(viajes.userId, userId));
@@ -2147,6 +2129,7 @@ export class DatabaseStorage implements IStorage {
           conductor: viajes.conductor,
           tipoCarro: viajes.tipoCarro,
           placa: viajes.placa,
+          volqueteroId: viajes.volqueteroId,
           minaId: viajes.minaId,
           compradorId: viajes.compradorId,
           peso: viajes.peso,
@@ -2185,10 +2168,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .orderBy(desc(viajes.createdAt));
 
-    console.log(`🔍 [getViajesByVolquetero] Resultados de la query: ${results.length} viajes encontrados`);
-    if (results.length > 0) {
-      console.log(`🔍 [getViajesByVolquetero] Primer viaje: ID=${results[0].viaje.id}, conductor="${results[0].viaje.conductor}", estado="${results[0].viaje.estado}", fechaDescargue=${results[0].viaje.fechaDescargue}`);
-    }
+    console.log(`[getViajesByVolqueteroId] Resultados de la query: ${results.length} viajes encontrados`);
 
     return results.map(result => ({
       ...result.viaje,
@@ -2202,36 +2182,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getVolqueterosWithPlacas(userId?: string): Promise<VolqueteroConPlacas[]> {
-    // Obtener viajes agrupados por conductor
+    // Obtener viajes agrupados por volqueteroId (evita ambigüedad por nombre)
     const viajesQuery = db
       .select({
-        conductor: viajes.conductor,
+        volqueteroId: viajes.volqueteroId,
+        nombre: volqueteros.nombre,
         placa: viajes.placa,
         tipoCarro: viajes.tipoCarro,
         count: sql<number>`count(*)::int`,
       })
       .from(viajes)
-      .groupBy(viajes.conductor, viajes.placa, viajes.tipoCarro);
+      .innerJoin(volqueteros, eq(viajes.volqueteroId, volqueteros.id))
+      .where(sql`${viajes.volqueteroId} IS NOT NULL`)
+      .groupBy(viajes.volqueteroId, volqueteros.nombre, viajes.placa, viajes.tipoCarro);
 
     const viajesResults = userId 
       ? await viajesQuery.where(eq(viajes.userId, userId))
       : await viajesQuery;
 
-    // Agrupar por conductor
-    const volqueterosMap = new Map<string, VolqueteroConPlacas>();
+    // Agrupar por volqueteroId
+    const volqueterosMap = new Map<number, VolqueteroConPlacas>();
 
     for (const viaje of viajesResults) {
-      if (!volqueterosMap.has(viaje.conductor)) {
-        volqueterosMap.set(viaje.conductor, {
-          id: 0, // Se asignará después
-          nombre: viaje.conductor,
+      if (!viaje.volqueteroId) continue;
+      if (!volqueterosMap.has(viaje.volqueteroId)) {
+        volqueterosMap.set(viaje.volqueteroId, {
+          id: viaje.volqueteroId,
+          nombre: viaje.nombre,
           placas: [],
           viajesCount: 0,
           saldo: "0.00",
         });
       }
 
-      const volquetero = volqueterosMap.get(viaje.conductor)!;
+      const volquetero = volqueterosMap.get(viaje.volqueteroId)!;
       volquetero.placas.push({
         placa: viaje.placa,
         tipoCarro: viaje.tipoCarro,
@@ -3218,14 +3202,14 @@ export class DatabaseStorage implements IStorage {
     return 0;
   }
 
-  async showAllHiddenViajesForVolquetero(volqueteroNombre: string, userId?: string): Promise<number> {
+  async showAllHiddenViajesForVolquetero(volqueteroId: number, userId?: string): Promise<number> {
     try {
-      console.log(`🔍 [showAllHiddenViajesForVolquetero] Volquetero: ${volqueteroNombre}`);
+      console.log(`🔍 [showAllHiddenViajesForVolquetero] Volquetero ID: ${volqueteroId}`);
       
       // Mostrar viajes ocultos que pertenezcan a este volquetero específico (por conductor)
       const conditions = [
         eq(viajes.oculta, true),
-        eq(viajes.conductor, volqueteroNombre)
+        eq(viajes.volqueteroId, volqueteroId)
       ];
       
       if (userId) {
@@ -4928,20 +4912,17 @@ export class DatabaseStorage implements IStorage {
       const viajesConditions = [
         eq(viajes.estado, 'completado'),
         sql`${viajes.fechaDescargue} IS NOT NULL`,
-        sql`${viajes.conductor} IS NOT NULL`
+        sql`${viajes.volqueteroId} IS NOT NULL`
       ];
       if (userId) {
         viajesConditions.push(eq(viajes.userId, userId));
       }
 
-      // Obtener nombres únicos de conductores de todos los volqueteros
-      const nombresConductores = allVolqueteros.map(v => v.nombre).filter((n, i, arr) => arr.indexOf(n) === i);
-
-      // QUERY 1: Estadísticas agregadas de viajes por conductor (1 query para todos los volqueteros)
+      // QUERY 1: Estadísticas agregadas de viajes por volqueteroId (1 query para todos los volqueteros)
       const viajesStatsStart = Date.now();
       const viajesStats = await db
         .select({
-          conductor: viajes.conductor,
+          volqueteroId: viajes.volqueteroId,
           viajesCount: sql<number>`COUNT(*)::int`,
           viajesUltimoMes: sql<number>`COUNT(CASE WHEN ${viajes.fechaDescargue} >= ${inicioMesPasadoISO}::timestamp AND ${viajes.fechaDescargue} <= ${finMesPasadoISO}::timestamp THEN 1 END)::int`,
           ingresosFletes: sql<number>`COALESCE(SUM(
@@ -4954,16 +4935,16 @@ export class DatabaseStorage implements IStorage {
         })
         .from(viajes)
         .where(and(...viajesConditions))
-        .groupBy(viajes.conductor);
+        .groupBy(viajes.volqueteroId);
       
       const viajesStatsTime = Date.now() - viajesStatsStart;
-      console.log(`⏱️  [PERF] Query agregada de viajes: ${viajesStatsTime}ms (${viajesStats.length} conductores)`);
+      console.log(`⏱️  [PERF] Query agregada de viajes: ${viajesStatsTime}ms (${viajesStats.length} volqueteros)`);
 
-      // Crear map de estadísticas de viajes por nombre de conductor
-      const viajesStatsMap = new Map<string, { viajesCount: number; viajesUltimoMes: number; ingresosFletes: number }>();
+      // Crear map de estadísticas de viajes por volqueteroId
+      const viajesStatsMap = new Map<number, { viajesCount: number; viajesUltimoMes: number; ingresosFletes: number }>();
       viajesStats.forEach(stat => {
-        if (stat.conductor) {
-          viajesStatsMap.set(stat.conductor, {
+        if (stat.volqueteroId) {
+          viajesStatsMap.set(stat.volqueteroId, {
             viajesCount: stat.viajesCount,
             viajesUltimoMes: stat.viajesUltimoMes,
             ingresosFletes: stat.ingresosFletes
@@ -5189,7 +5170,7 @@ export class DatabaseStorage implements IStorage {
 
       // Construir resultado final combinando balances y estadísticas
       for (const volquetero of allVolqueteros) {
-        const viajesStats = viajesStatsMap.get(volquetero.nombre) || { viajesCount: 0, viajesUltimoMes: 0, ingresosFletes: 0 };
+        const viajesStats = viajesStatsMap.get(volquetero.id) || { viajesCount: 0, viajesUltimoMes: 0, ingresosFletes: 0 };
         const transaccionesStats = transaccionesStatsMap.get(volquetero.id) || { ingresos: 0, egresos: 0 };
         
         // Verificar si hay ingresos en ingresosMap que no se están reflejando en transaccionesStats
@@ -5969,3 +5950,6 @@ export class DatabaseStorage implements IStorage {
     });
   }
 }
+
+
+

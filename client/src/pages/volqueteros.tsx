@@ -41,8 +41,8 @@ export default function Volqueteros() {
   };
 
   // Función para navegar a la página de detalles del volquetero
-  const handleViewVolquetero = (volqueteroNombre: string) => {
-    setLocation(`/volqueteros/${encodeURIComponent(volqueteroNombre)}`);
+  const handleViewVolquetero = (volqueteroId: number) => {
+    setLocation(`/volqueteros/${volqueteroId}`);
   };
 
   // Calcular suma de viajes individuales de volqueteros
@@ -316,7 +316,7 @@ export default function Volqueteros() {
             <Card 
               key={volquetero.id}
               className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => handleViewVolquetero(volquetero.nombre)}
+              onClick={() => handleViewVolquetero(volquetero.id)}
             >
               <CardContent className="p-3">
                 <div className="flex items-center space-x-3 flex-1">
@@ -351,7 +351,7 @@ export default function Volqueteros() {
                       <div className="flex flex-wrap gap-2">
                         {volquetero.placas.map((placaInfo) => (
                           <span 
-                            key={placaInfo.placa} 
+                            key={`${volquetero.id}-${placaInfo.placa}-${placaInfo.tipoCarro}`} 
                             className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-xs"
                           >
                             <span className="font-medium">{placaInfo.placa}</span>

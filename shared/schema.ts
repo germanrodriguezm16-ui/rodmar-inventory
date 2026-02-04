@@ -144,6 +144,7 @@ export const viajes = pgTable("viajes", {
   conductor: text("conductor").notNull(),
   tipoCarro: text("tipo_carro").notNull(),
   placa: text("placa").notNull(),
+  volqueteroId: integer("volquetero_id").references(() => volqueteros.id),
   minaId: integer("mina_id").references(() => minas.id),
   compradorId: integer("comprador_id").references(() => compradores.id),
   peso: decimal("peso", { precision: 8, scale: 2 }),
@@ -327,6 +328,7 @@ export const insertViajeSchema = z.object({
   conductor: z.string(),
   tipoCarro: z.string(),
   placa: z.string(),
+  volqueteroId: z.number().nullable().optional(),
   minaId: z.number().nullable().optional(),
   compradorId: z.number().nullable().optional(),
   // Temporary fields for Excel import
@@ -466,6 +468,7 @@ export const updateViajeSchema = z.object({
   fechaDescargue: z.string().optional(),
   conductor: z.string().optional(),
   placa: z.string().optional(),
+  volqueteroId: z.number().optional(),
   minaId: z.number().optional(),
   compradorId: z.number().optional(),
   volquetero: z.string().optional(),

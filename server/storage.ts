@@ -51,7 +51,7 @@ export interface IStorage {
   deleteViaje(id: string, userId?: string): Promise<boolean>;
   getViajesByMina(minaId: number, userId?: string): Promise<ViajeWithDetails[]>;
   getViajesByComprador(compradorId: number, userId?: string): Promise<ViajeWithDetails[]>;
-  getViajesByVolquetero(conductor: string, userId?: string): Promise<ViajeWithDetails[]>;
+  getViajesByVolqueteroId(volqueteroId: number, userId?: string): Promise<ViajeWithDetails[]>;
 
   // Transacciones
   getTransacciones(userId?: string): Promise<TransaccionWithSocio[]>;
@@ -107,7 +107,7 @@ export interface IStorage {
   
   // Métodos específicos para mostrar elementos ocultos de volqueteros
   showAllHiddenTransaccionesForVolquetero(volqueteroId: number, userId?: string): Promise<number>;
-  showAllHiddenViajesForVolquetero(volqueteroNombre: string, userId?: string): Promise<number>;
+  showAllHiddenViajesForVolquetero(volqueteroId: number, userId?: string): Promise<number>;
 
   // Inversiones
   getInversiones(userId?: string): Promise<Inversion[]>;
