@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Search, X, SortAsc, SortDesc, Merge, History, RefreshCw, Plus } from "lucide-react";
+import { Users, Search, X, SortAsc, SortDesc, Merge, History, RefreshCw, Plus, Trash2 } from "lucide-react";
 import type { VolqueteroConPlacas } from "@shared/schema";
 import { EditableTitle } from "@/components/EditableTitle";
 import { formatCurrency } from "@/lib/utils";
@@ -12,6 +12,7 @@ import { useVolqueterosBalance } from "@/hooks/useVolqueterosBalance";
 import MergeEntitiesModal from "@/components/fusion/MergeEntitiesModal";
 import FusionHistoryModal from "@/components/fusion/FusionHistoryModal";
 import AddVolqueteroModal from "@/components/modals/add-volquetero-modal";
+import DeleteVolqueteroModal from "@/components/modals/delete-volquetero-modal";
 import { usePermissions } from "@/hooks/usePermissions";
 
 export default function Volqueteros() {
@@ -23,6 +24,8 @@ export default function Volqueteros() {
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showAddVolquetero, setShowAddVolquetero] = useState(false);
+  const [showDeleteVolquetero, setShowDeleteVolquetero] = useState(false);
+  const [volqueteroToDelete, setVolqueteroToDelete] = useState<VolqueteroConPlacas | null>(null);
   const [, setLocation] = useLocation();
 
   // Usar hook compartido para balances de volqueteros
@@ -32,6 +35,12 @@ export default function Volqueteros() {
   const { data: volqueteros = [], isLoading } = useQuery({
     queryKey: ["/api/volqueteros/resumen"],
     staleTime: 30000,
+  });
+
+  const { data: allTransacciones = [] } = useQuery({
+    queryKey: ["/api/transacciones"],
+    enabled: false,
+    staleTime: 300000,
   });
 
   // Función optimizada para obtener balance (ahora usa hook compartido)
@@ -45,6 +54,11 @@ export default function Volqueteros() {
     setLocation(`/volqueteros/${volqueteroId}`);
   };
 
+  const handleDeleteVolquetero = (volquetero: VolqueteroConPlacas) => {
+    setVolqueteroToDelete(volquetero);
+    setShowDeleteVolquetero(true);
+  };
+
   // Calcular suma de viajes individuales de volqueteros
   const sumaViajesVolqueteros = (volqueteros as VolqueteroConPlacas[]).reduce((sum, volquetero) => {
     return sum + (volquetero.viajesCount || 0);
@@ -55,6 +69,20 @@ export default function Volqueteros() {
   // Función optimizada: usar estadísticas del hook (mapear por ID en lugar de nombre)
   const getViajesUltimoMes = (volqueteroId: number): number => {
     return viajesStats[volqueteroId]?.viajesUltimoMes || 0;
+  };
+
+  const canDeleteVolquetero = (volqueteroId: number): boolean => {
+    const tieneViajes = (viajesStats[volqueteroId]?.viajesCount || 0) > 0;
+    if (allTransacciones.length === 0) {
+      const balance = balancesVolqueteros[volqueteroId] || 0;
+      return !tieneViajes && balance === 0;
+    }
+    const tieneTransacciones = allTransacciones.some((t: any) =>
+      (t.deQuienTipo === "volquetero" && t.deQuienId === volqueteroId.toString()) ||
+      (t.paraQuienTipo === "volquetero" && t.paraQuienId === volqueteroId.toString()) ||
+      (t.tipoSocio === "volquetero" && t.socioId === volqueteroId)
+    );
+    return !tieneViajes && !tieneTransacciones;
   };
 
   // Filtrar y ordenar volqueteros con lógica inteligente
@@ -332,19 +360,34 @@ export default function Volqueteros() {
                         className="text-base font-medium"
                       />
                       <div 
-                        className="text-right"
-                        onClick={(e) => e.stopPropagation()} // Solo prevenir navegación en el área de balance
+                        className="flex items-center gap-2 text-right"
+                        onClick={(e) => e.stopPropagation()} // Solo prevenir navegación en el área de balance/botón
                       >
-                        <p className="text-xs text-muted-foreground">Balance</p>
-                        <p className={`text-sm font-semibold ${
-                          calcularBalanceDinamico(volquetero) > 0 
-                            ? 'text-green-600' 
-                            : calcularBalanceDinamico(volquetero) < 0 
-                            ? 'text-red-600' 
-                            : 'text-gray-600'
-                        }`}>
-                          {formatCurrency(calcularBalanceDinamico(volquetero).toString())}
-                        </p>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Balance</p>
+                          <p className={`text-sm font-semibold ${
+                            calcularBalanceDinamico(volquetero) > 0 
+                              ? 'text-green-600' 
+                              : calcularBalanceDinamico(volquetero) < 0 
+                              ? 'text-red-600' 
+                              : 'text-gray-600'
+                          }`}>
+                            {formatCurrency(calcularBalanceDinamico(volquetero).toString())}
+                          </p>
+                        </div>
+                        {canDeleteVolquetero(volquetero.id) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteVolquetero(volquetero);
+                            }}
+                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 flex-shrink-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-1">
@@ -425,6 +468,12 @@ export default function Volqueteros() {
       <AddVolqueteroModal 
         open={showAddVolquetero} 
         onOpenChange={setShowAddVolquetero} 
+      />
+
+      <DeleteVolqueteroModal
+        open={showDeleteVolquetero}
+        onOpenChange={setShowDeleteVolquetero}
+        volquetero={volqueteroToDelete}
       />
     </div>
   );

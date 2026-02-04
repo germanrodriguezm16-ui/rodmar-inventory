@@ -566,6 +566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userPermissions.includes("action.TRANSACCIONES.edit") ||
         userPermissions.includes("action.TRANSACCIONES.delete");
       
+      // Si tiene permisos de transacciones, no filtrar por userId (ver todos)
       const effectiveUserId = hasTransactionPermissions ? undefined : userId;
       
       const minas = hasTransactionPermissions 
@@ -3163,6 +3164,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Delete volquetero (only if no viajes or transacciones)
+  app.delete(
+    "/api/volqueteros/:id",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const volqueteroId = parseInt(req.params.id);
+        if (isNaN(volqueteroId)) {
+          return res.status(400).json({ error: "ID de volquetero inválido" });
+        }
+
+        const volquetero = await storage.getVolqueteroById(volqueteroId);
+        if (!volquetero) {
+          return res.status(404).json({ error: "Volquetero no encontrado" });
+        }
+
+        const viajes = await storage.getViajesByVolqueteroId(volqueteroId);
+        const viajesVisibles = viajes.filter((v) => !v.oculta);
+        if (viajesVisibles.length > 0) {
+          return res.status(400).json({
+            error: "No se puede eliminar el volquetero porque tiene viajes asociados",
+          });
+        }
+
+        const transacciones = await storage.getTransaccionesBySocio(
+          "volquetero",
+          volqueteroId,
+        );
+        if (transacciones.length > 0) {
+          return res.status(400).json({
+            error:
+              "No se puede eliminar el volquetero porque tiene transacciones asociadas",
+          });
+        }
+
+        const deleteResult = await storage.deleteVolquetero(volqueteroId);
+        if (deleteResult) {
+          try {
+            await deletePermissionByKey(`action.TRANSACCIONES.volquetero.${volqueteroId}.use`);
+            await deletePermissionByKey(`module.VOLQUETEROS.volquetero.${volqueteroId}.view`);
+          } catch (permError) {
+            console.warn("⚠️  No se pudo eliminar permiso use de volquetero:", permError);
+          }
+          return res.json({ message: "Volquetero eliminado exitosamente" });
+        }
+
+        res.status(500).json({ error: "Error al eliminar el volquetero" });
+      } catch (error) {
+        console.error("Error deleting volquetero:", error);
+        res.status(500).json({ error: "Failed to delete volquetero" });
+      }
+    },
+  );
+
   app.post("/api/volqueteros", requireAuth, async (req, res) => {
     try {
       const data = insertVolqueteroSchema.parse(req.body);
@@ -3328,6 +3383,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userPermissions.includes("action.TRANSACCIONES.completePending") ||
         userPermissions.includes("action.TRANSACCIONES.edit") ||
         userPermissions.includes("action.TRANSACCIONES.delete");
+      
+      // Si tiene permisos de transacciones, no filtrar por userId (ver todos)
+      const effectiveUserId = hasTransactionPermissions ? undefined : userId;
       
       // Si el ID es >= 1000, es un ID artificial (no existe en la base de datos)
       // En este caso, debemos obtener el nombre desde la lista de volqueteros
