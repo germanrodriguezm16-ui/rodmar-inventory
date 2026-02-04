@@ -464,8 +464,11 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(volqueteros.userId, userId));
     }
 
-    const result = await db.delete(volqueteros).where(and(...conditions));
-    return result.rowCount > 0;
+    // Usar .returning() para validar si realmente se eliminó
+    const deleted = await db.delete(volqueteros).where(and(...conditions)).returning();
+    const wasDeleted = deleted.length > 0;
+    console.log(`🔍 [deleteVolquetero] ID: ${id}, userId: ${userId || 'none'}, deleted.length: ${deleted.length}`);
+    return wasDeleted;
   }
 
   async updateVolqueteroNombre(id: number, nombre: string, userId?: string): Promise<Volquetero | undefined> {
