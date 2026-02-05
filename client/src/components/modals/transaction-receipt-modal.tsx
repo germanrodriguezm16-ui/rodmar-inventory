@@ -242,17 +242,51 @@ export function TransactionReceiptModal({
         </DialogHeader>
 
         {/* Comprobante - Este es el que se capturará como imagen */}
-        <div ref={receiptRef} className="bg-gradient-to-br from-blue-50 via-white to-green-50 p-3 sm:p-4 md:p-6 space-y-2 sm:space-y-3 md:space-y-4 border-2 sm:border-2 md:border-4 border-blue-300 rounded-lg sm:rounded-xl shadow-xl sm:shadow-2xl">
-          {/* Arriba: Nombre, Valor, Fecha */}
+        <div ref={receiptRef} className="relative bg-gradient-to-br from-blue-50 via-white to-green-50 p-3 sm:p-4 md:p-6 space-y-2 sm:space-y-3 md:space-y-4 border-2 sm:border-2 md:border-4 border-blue-300 rounded-lg sm:rounded-xl shadow-xl sm:shadow-2xl">
+          {/* Arriba: Nombre, Valor */}
           <div className="space-y-2 sm:space-y-3 border-b-2 border-blue-200 pb-3 sm:pb-4 bg-white/50 rounded-lg p-2 sm:p-3 md:p-4">
             <div className="text-base sm:text-lg md:text-xl font-bold text-blue-700">
               {socioDestinoNombre}
             </div>
-            <div className="flex justify-between items-center gap-2">
-              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-emerald-600">
+            <div className="grid grid-cols-3 items-center gap-2">
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-emerald-600 text-left">
                 {formatCurrency(transaction.valor)}
               </div>
-              <div className="text-xs sm:text-sm font-semibold text-blue-600 bg-blue-100 px-2.5 sm:px-3 md:px-3.5 py-1 sm:py-1.5 rounded-full border border-blue-300 whitespace-nowrap flex-shrink-0">
+              {/* Marca de agua RM en el centro */}
+              <div className="flex items-center justify-center">
+                <svg 
+                  className="text-lg sm:text-xl md:text-2xl font-black"
+                  width="60" 
+                  height="32" 
+                  viewBox="0 0 60 32"
+                  style={{ letterSpacing: '-0.05em' }}
+                >
+                  <defs>
+                    <linearGradient id="rmGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#1d4ed8" />
+                      <stop offset="50%" stopColor="#3b82f6" />
+                      <stop offset="100%" stopColor="#10b981" />
+                    </linearGradient>
+                  </defs>
+                  <text
+                    x="30"
+                    y="22"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="url(#rmGradient)"
+                    fontSize="24"
+                    fontWeight="900"
+                    fontFamily="system-ui, -apple-system, sans-serif"
+                    style={{ 
+                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                      letterSpacing: '-0.05em'
+                    }}
+                  >
+                    RM
+                  </text>
+                </svg>
+              </div>
+              <div className="text-xs sm:text-sm font-semibold text-emerald-600 text-right">
                 {formatDate(transaction.fecha)}
               </div>
             </div>
@@ -309,6 +343,13 @@ export function TransactionReceiptModal({
               )}
             </div>
           ) : null}
+
+          {/* Footer con marca de agua RodMar */}
+          <div className="pt-2 sm:pt-3 border-t border-gray-200/50">
+            <div className="flex items-center justify-center text-[10px] sm:text-xs text-gray-400">
+              <span>Generado desde <span className="font-semibold text-gray-500">RodMar</span></span>
+            </div>
+          </div>
         </div>
 
         {/* Botón de compartir */}
