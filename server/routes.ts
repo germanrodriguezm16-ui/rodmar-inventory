@@ -360,8 +360,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       </svg>
     `;
 
+    const fontBuffers = ROBOTO_REGULAR_BASE64
+      ? [Buffer.from(ROBOTO_REGULAR_BASE64, "base64")]
+      : [];
     const svgPng = new Resvg(svg, {
       fitTo: { mode: "width", value: width },
+      font: {
+        fontBuffers,
+        loadSystemFonts: false,
+      },
     })
       .render()
       .asPng();
