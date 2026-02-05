@@ -4058,8 +4058,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             requiredPermission: "action.VIAJES.descargue.view",
           });
         }
-        debugLog(`=== GET /api/viajes/pendientes - userId: ${userId}`);
-        const viajes = await storage.getViajesPendientes(userId);
+
+        // Multi-usuario: si el usuario puede REGISTRAR descargue, debe poder ver todos los pendientes
+        // (los pendientes usualmente los crean otros usuarios, p.ej. admin en cargue).
+        const canUseDescargue =
+          userPermissions.includes("action.VIAJES.descargue.use") ||
+          userPermissions.includes("action.VIAJES.edit") ||
+          userPermissions.includes("action.VIAJES.edit.use");
+
+        const effectiveUserIdForFilter = canUseDescargue ? undefined : userId;
+        debugLog(
+          `=== GET /api/viajes/pendientes - userId: ${userId}, filterUserId: ${effectiveUserIdForFilter || "none"} ===`,
+        );
+        const viajes = await storage.getViajesPendientes(effectiveUserIdForFilter);
         debugLog(`=== Found ${viajes.length} pending viajes`);
         res.json(viajes);
       } catch (error) {
