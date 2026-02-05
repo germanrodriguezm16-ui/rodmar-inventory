@@ -38,7 +38,7 @@ import { ViajeIdGenerator } from "./id-generator";
 import { normalizeNombreToCodigo, nombreToCodigoMap } from "./rodmar-utils";
 import { or } from "drizzle-orm";
 import sharp from "sharp";
-import opentype from "opentype.js";
+import * as opentype from "opentype.js";
 import fs from "fs/promises";
 import path from "path";
 
@@ -100,7 +100,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       if (!fontBuffer) {
-        throw new Error("No se encontró la fuente Roboto-Regular.ttf");
+        cachedReceiptFontError = true;
+        console.warn("⚠️ No se encontró la fuente Roboto-Regular.ttf");
+        return null;
       }
       const fontArrayBuffer = fontBuffer.buffer.slice(
         fontBuffer.byteOffset,
@@ -222,15 +224,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
     }
     if (cleanVoucher.startsWith("http")) {
-      const response = await fetch(cleanVoucher);
-      if (!response.ok) return null;
-      const contentType = response.headers.get("content-type") || "";
-      if (!contentType.startsWith("image/")) return null;
-      const arrayBuffer = await response.arrayBuffer();
-      return {
-        buffer: Buffer.from(arrayBuffer),
-        contentType,
-      };
+      try {
+        const response = await fetch(cleanVoucher);
+        if (!response.ok) return null;
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.startsWith("image/")) return null;
+        const arrayBuffer = await response.arrayBuffer();
+        return {
+          buffer: Buffer.from(arrayBuffer),
+          contentType,
+        };
+      } catch (error) {
+        console.warn("⚠️ Error cargando voucher remoto:", error);
+        return null;
+      }
     }
     return null;
   };
@@ -333,11 +340,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? `Voucher: ${voucher.trim().slice(0, 60)}`
             : "Sin voucher adjunto",
         );
-
-    const fontBase64 = await getReceiptFontBase64();
-    const fontFace = fontBase64
-      ? `@font-face { font-family: "RodMarSans"; src: url("data:font/ttf;base64,${fontBase64}") format("truetype"); font-weight: 400; font-style: normal; }`
-      : "";
 
     const font = await getReceiptFont();
     const headerTop = padding;
