@@ -53,7 +53,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const receiptImageCache = new Map<number, { expiresAt: number; buffer: Buffer; contentType: string }>();
   const RECEIPT_CACHE_TTL_MS = 1000 * 60 * 30;
   const MAX_RECEIPT_CACHE_ITEMS = 200;
-  const RECEIPT_FONT_PATH = path.join(process.cwd(), "server", "assets", "fonts", "Roboto-Regular.ttf");
+  const RECEIPT_FONT_PATHS = [
+    path.join(process.cwd(), "dist", "public", "Roboto-Regular.ttf"),
+    path.join(process.cwd(), "client", "public", "Roboto-Regular.ttf"),
+    path.join(process.cwd(), "server", "assets", "fonts", "Roboto-Regular.ttf"),
+  ];
   let cachedReceiptFont: opentype.Font | null = null;
   let cachedReceiptFontError = false;
 
@@ -86,7 +90,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return cachedReceiptFont;
     }
     try {
-      const fontBuffer = await fs.readFile(RECEIPT_FONT_PATH);
+      let fontBuffer: Buffer | null = null;
+      for (const candidatePath of RECEIPT_FONT_PATHS) {
+        try {
+          fontBuffer = await fs.readFile(candidatePath);
+          break;
+        } catch (error) {
+          continue;
+        }
+      }
+      if (!fontBuffer) {
+        throw new Error("No se encontró la fuente Roboto-Regular.ttf");
+      }
       const fontArrayBuffer = fontBuffer.buffer.slice(
         fontBuffer.byteOffset,
         fontBuffer.byteOffset + fontBuffer.byteLength,
