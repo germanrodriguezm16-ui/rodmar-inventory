@@ -41,6 +41,7 @@ import sharp from "sharp";
 import * as opentype from "opentype.js";
 import fs from "fs/promises";
 import path from "path";
+import { ROBOTO_REGULAR_BASE64 } from "./receipt-font";
 
 // Variable de debug - activar solo cuando se necesite diagnóstico
 const DEBUG = process.env.DEBUG_ROUTES === 'true';
@@ -90,6 +91,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return cachedReceiptFont;
     }
     try {
+      if (ROBOTO_REGULAR_BASE64) {
+        const fontBuffer = Buffer.from(ROBOTO_REGULAR_BASE64, "base64");
+        const fontArrayBuffer = fontBuffer.buffer.slice(
+          fontBuffer.byteOffset,
+          fontBuffer.byteOffset + fontBuffer.byteLength,
+        );
+        cachedReceiptFont = opentype.parse(fontArrayBuffer);
+        return cachedReceiptFont;
+      }
+
       let fontBuffer: Buffer | null = null;
       for (const candidatePath of RECEIPT_FONT_PATHS) {
         try {
