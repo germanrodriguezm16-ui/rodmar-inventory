@@ -3,6 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Share2, X } from "lucide-react";
 import { formatDateWithDaySpanish } from "@/lib/date-utils";
+import { apiUrl } from "@/lib/api";
+import { getAuthToken } from "@/hooks/useAuth";
 import type { TransaccionWithSocio } from "@shared/schema";
 import type { Mina, Comprador, Volquetero } from "@shared/schema";
 
@@ -24,9 +26,9 @@ export function TransactionReceiptModal({
 }: TransactionReceiptModalProps) {
   const [isPreparingImage, setIsPreparingImage] = useState(false);
   const [preparedFile, setPreparedFile] = useState<File | null>(null);
+  const [prepareError, setPrepareError] = useState<string | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [preloadedImageUrl, setPreloadedImageUrl] = useState<string | null>(null);
-  const receiptRef = useRef<HTMLDivElement>(null);
   const imagePreloadRef = useRef<HTMLImageElement | null>(null);
 
   // Validar que transaction existe y tiene los datos necesarios
@@ -67,9 +69,11 @@ export function TransactionReceiptModal({
     if (!open) {
       setPreparedFile(null);
       setIsPreparingImage(false);
+      setPrepareError(null);
       return;
     }
     setPreparedFile(null);
+    setPrepareError(null);
   }, [open, transaction?.id]);
 
   // Pre-cargar la imagen en memoria tan pronto como se detecta el voucher
@@ -141,74 +145,64 @@ export function TransactionReceiptModal({
     return formatted;
   };
 
-  // Generar imagen del comprobante usando Canvas (cacheada para evitar trabajo duplicado)
-  const generateReceiptImage = async (): Promise<File> => {
+  // Preparar comprobante desde el servidor (imagen lista para compartir)
+  const prepareReceiptFile = async (): Promise<File> => {
     if (preparedFile) return preparedFile;
-    if (!receiptRef.current) {
-      throw new Error('No se pudo generar el comprobante');
+    if (!transaction?.id) {
+      throw new Error('Transacción inválida');
     }
 
     setIsPreparingImage(true);
+    setPrepareError(null);
 
     try {
-      // Usar html2canvas para capturar el div del comprobante
-      const html2canvas = (await import('html2canvas')).default;
-      
-      // NOTA: En móvil/WhatsApp, un scale muy alto hace que se "congele" la UI y puede romper
-      // el gesto de usuario requerido por navigator.share(). Usamos un scale más moderado.
-      const scale = 2;
-      
-      const canvas = await html2canvas(receiptRef.current, {
-        backgroundColor: '#ffffff',
-        scale: scale,
-        logging: false,
-        useCORS: true,
-        allowTaint: false,
-      });
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const response = await fetch(
+        apiUrl(`/api/transacciones/${transaction.id}/comprobante.jpg`),
+        {
+          headers,
+          credentials: "include",
+        },
+      );
 
-      // Limitar ancho máximo a 2000px para evitar archivos muy grandes
-      // pero mantener alta calidad
-      const maxWidth = 2000;
-      let finalCanvas = canvas;
-      if (canvas.width > maxWidth) {
-        const ratio = maxWidth / canvas.width;
-        const newHeight = canvas.height * ratio;
-        finalCanvas = document.createElement('canvas');
-        finalCanvas.width = maxWidth;
-        finalCanvas.height = newHeight;
-        const ctx = finalCanvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(canvas, 0, 0, maxWidth, newHeight);
-        }
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}`);
       }
 
-      // Convertir canvas a blob en formato JPEG para mejor compatibilidad con WhatsApp
-      return new Promise((resolve, reject) => {
-        finalCanvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error('Error al generar la imagen'));
-              return;
-            }
-            const file = new File([blob], `comprobante-${transaction.id}.jpg`, {
-              type: 'image/jpeg',
-            });
-            setPreparedFile(file);
-            resolve(file);
-          },
-          'image/jpeg',
-          0.92 // Alta calidad JPEG (92%) - mejor balance calidad/tamaño para WhatsApp
-        );
+      const blob = await response.blob();
+      const fileType = blob.type || "image/jpeg";
+      const file = new File([blob], `comprobante-${transaction.id}.jpg`, {
+        type: fileType,
       });
+      setPreparedFile(file);
+      return file;
+    } catch (error) {
+      setPrepareError("No se pudo preparar el comprobante");
+      throw error;
     } finally {
       setIsPreparingImage(false);
     }
   };
 
+  useEffect(() => {
+    if (!open || !transaction?.id) return;
+    let active = true;
+    prepareReceiptFile().catch(() => {
+      if (!active) return;
+    });
+    return () => {
+      active = false;
+    };
+  }, [open, transaction?.id]);
+
   // Compartir comprobante usando Web Share API
   const handleShare = async () => {
     try {
-      const file = await generateReceiptImage();
+      const file = await prepareReceiptFile();
 
       // Verificar si Web Share API está disponible
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -232,13 +226,7 @@ export function TransactionReceiptModal({
       // Si el usuario cancela, no mostrar error
       if (error.name !== 'AbortError') {
         console.error('Error al compartir:', error);
-        // En móvil, navigator.share() puede fallar si ya no hay "user gesture".
-        // Como ya dejamos el archivo cacheado, el segundo toque suele funcionar.
-        if (error?.name === 'NotAllowedError') {
-          alert('Listo. Por seguridad del navegador, toca "Compartir Comprobante" una vez más.');
-        } else {
-          alert('Error al compartir el comprobante. Inténtalo de nuevo.');
-        }
+        alert('Error al compartir el comprobante. Inténtalo de nuevo.');
       }
     }
   };
@@ -260,7 +248,7 @@ export function TransactionReceiptModal({
         </DialogHeader>
 
         {/* Comprobante - Este es el que se capturará como imagen */}
-        <div ref={receiptRef} className="relative bg-gradient-to-br from-blue-50 via-white to-green-50 p-3 sm:p-4 md:p-6 space-y-2 sm:space-y-3 md:space-y-4 border-2 sm:border-2 md:border-4 border-blue-300 rounded-lg sm:rounded-xl shadow-xl sm:shadow-2xl">
+        <div className="relative bg-gradient-to-br from-blue-50 via-white to-green-50 p-3 sm:p-4 md:p-6 space-y-2 sm:space-y-3 md:space-y-4 border-2 sm:border-2 md:border-4 border-blue-300 rounded-lg sm:rounded-xl shadow-xl sm:shadow-2xl">
           {/* Arriba: Nombre, Valor */}
           <div className="space-y-2 sm:space-y-3 border-b-2 border-blue-200 pb-3 sm:pb-4 bg-white/50 rounded-lg p-2 sm:p-3 md:p-4">
             <div className="text-base sm:text-lg md:text-xl font-bold text-blue-700">
@@ -374,17 +362,16 @@ export function TransactionReceiptModal({
         <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4 border-t">
           <Button
             onClick={handleShare}
-            disabled={isPreparingImage || (voucherImage && !isImageLoaded)}
+            disabled={isPreparingImage || (!preparedFile && !prepareError)}
             className="w-full bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
             size="default"
           >
             <Share2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-            {isPreparingImage 
-              ? 'Preparando...' 
-              : (voucherImage && !isImageLoaded)
-                ? 'Cargando imagen...'
-                : 'Compartir Comprobante'
-            }
+            {isPreparingImage
+              ? 'Preparando...'
+              : prepareError
+                ? 'Reintentar comprobante'
+                : 'Compartir Comprobante'}
           </Button>
         </div>
       </DialogContent>

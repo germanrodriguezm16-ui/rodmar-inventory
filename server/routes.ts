@@ -8,7 +8,7 @@ import { canViewRodMarAccount } from "./rodmar-account-permissions";
 import { createTerceroPermission, getTerceroPermissionKey } from "./tercero-permissions";
 import { emitTransactionUpdate } from "./socket";
 import { db } from "./db";
-import { roles, permissions, rolePermissions, users, userPermissionsOverride, transacciones, terceroLoans, terceroLoanInterestRuns, terceroLoanPaymentAllocations, viajes, volqueteros as volqueterosTable } from "../shared/schema";
+import { roles, permissions, rolePermissions, users, userPermissionsOverride, transacciones, terceroLoans, terceroLoanInterestRuns, terceroLoanPaymentAllocations, viajes, volqueteros as volqueterosTable, minas, compradores, terceros } from "../shared/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { findUserByPhone, verifyPassword, updateLastLogin, hashPassword, generateToken, verifyToken } from "./middleware/auth-helpers";
@@ -37,6 +37,7 @@ import { parseColombiaDate } from "@shared/date-colombia";
 import { ViajeIdGenerator } from "./id-generator";
 import { normalizeNombreToCodigo, nombreToCodigoMap } from "./rodmar-utils";
 import { or } from "drizzle-orm";
+import sharp from "sharp";
 
 // Variable de debug - activar solo cuando se necesite diagnóstico
 const DEBUG = process.env.DEBUG_ROUTES === 'true';
@@ -46,6 +47,311 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cache ligera para amortiguar refetch duplicado en desarrollo (especialmente con latencia alta a DB remota)
   const devCacheEnabled = process.env.NODE_ENV !== "production";
   const volqueterosResumenCache = new Map<string, { expiresAt: number; data: any[] }>();
+  const receiptImageCache = new Map<number, { expiresAt: number; buffer: Buffer; contentType: string }>();
+  const RECEIPT_CACHE_TTL_MS = 1000 * 60 * 30;
+  const MAX_RECEIPT_CACHE_ITEMS = 200;
+
+  const getCachedReceiptImage = (transactionId: number) => {
+    const cached = receiptImageCache.get(transactionId);
+    if (!cached) return null;
+    if (cached.expiresAt <= Date.now()) {
+      receiptImageCache.delete(transactionId);
+      return null;
+    }
+    return cached;
+  };
+
+  const setCachedReceiptImage = (transactionId: number, buffer: Buffer, contentType: string) => {
+    receiptImageCache.set(transactionId, {
+      expiresAt: Date.now() + RECEIPT_CACHE_TTL_MS,
+      buffer,
+      contentType,
+    });
+    if (receiptImageCache.size > MAX_RECEIPT_CACHE_ITEMS) {
+      const firstKey = receiptImageCache.keys().next().value;
+      if (firstKey !== undefined) {
+        receiptImageCache.delete(firstKey);
+      }
+    }
+  };
+
+  const escapeXml = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+
+  const wrapText = (text: string, maxCharsPerLine: number, maxLines: number) => {
+    const words = text.split(/\s+/);
+    const lines: string[] = [];
+    let currentLine = "";
+    for (const word of words) {
+      const nextLine = currentLine ? `${currentLine} ${word}` : word;
+      if (nextLine.length > maxCharsPerLine) {
+        if (currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          lines.push(word.slice(0, maxCharsPerLine));
+          currentLine = word.slice(maxCharsPerLine);
+        }
+        if (lines.length >= maxLines) break;
+      } else {
+        currentLine = nextLine;
+      }
+    }
+    if (lines.length < maxLines && currentLine) {
+      lines.push(currentLine);
+    }
+    return lines.slice(0, maxLines);
+  };
+
+  const formatReceiptDate = (dateInput: string | Date | null | undefined) => {
+    if (!dateInput) return "";
+    const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+    if (Number.isNaN(date.getTime())) return "";
+    const formatted = new Intl.DateTimeFormat("es-CO", {
+      weekday: "short",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
+    return formatted.replace(",", "").replace(/^\w/, (c) => c.toUpperCase());
+  };
+
+  const formatReceiptCurrency = (value: string | number | null | undefined) => {
+    const numValue = typeof value === "string" ? parseFloat(value) : value ?? 0;
+    const safeValue = Number.isFinite(numValue) ? numValue : 0;
+    return new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency: "COP",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(safeValue);
+  };
+
+  const cleanVoucherString = (voucher: string) => {
+    let clean = voucher.trim();
+    if (clean.startsWith("IMAGE:")) {
+      clean = clean.substring("IMAGE:".length);
+    }
+    if (clean.startsWith("%7CIMAGE:")) {
+      clean = clean.substring("%7CIMAGE:".length);
+    } else if (clean.startsWith("|IMAGE:")) {
+      clean = clean.substring("|IMAGE:".length);
+    }
+    return clean;
+  };
+
+  const getVoucherImageBuffer = async (voucher: string): Promise<{ buffer: Buffer; contentType: string } | null> => {
+    const cleanVoucher = cleanVoucherString(voucher);
+    if (cleanVoucher.startsWith("data:image/")) {
+      const match = cleanVoucher.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/);
+      if (!match) return null;
+      return {
+        buffer: Buffer.from(match[2], "base64"),
+        contentType: match[1],
+      };
+    }
+    if (cleanVoucher.startsWith("http")) {
+      const response = await fetch(cleanVoucher);
+      if (!response.ok) return null;
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.startsWith("image/")) return null;
+      const arrayBuffer = await response.arrayBuffer();
+      return {
+        buffer: Buffer.from(arrayBuffer),
+        contentType,
+      };
+    }
+    return null;
+  };
+
+  const getSocioNombre = async (tipo: string | null | undefined, id: string | number | null | undefined) => {
+    if (!tipo || id === null || id === undefined) return "Socio";
+    const stringId = String(id);
+    switch (tipo) {
+      case "mina": {
+        const [result] = await db
+          .select({ nombre: minas.nombre })
+          .from(minas)
+          .where(eq(minas.id, Number(stringId)))
+          .limit(1);
+        return result?.nombre || "Mina";
+      }
+      case "comprador": {
+        const [result] = await db
+          .select({ nombre: compradores.nombre })
+          .from(compradores)
+          .where(eq(compradores.id, Number(stringId)))
+          .limit(1);
+        return result?.nombre || "Comprador";
+      }
+      case "volquetero": {
+        const [result] = await db
+          .select({ nombre: volqueterosTable.nombre })
+          .from(volqueterosTable)
+          .where(eq(volqueterosTable.id, Number(stringId)))
+          .limit(1);
+        return result?.nombre || "Volquetero";
+      }
+      case "tercero": {
+        const [result] = await db
+          .select({ nombre: terceros.nombre })
+          .from(terceros)
+          .where(eq(terceros.id, Number(stringId)))
+          .limit(1);
+        return result?.nombre || "Tercero";
+      }
+      case "rodmar": {
+        const numericId = Number(stringId);
+        const [result] = await db
+          .select({ nombre: rodmarCuentas.nombre })
+          .from(rodmarCuentas)
+          .where(
+            or(
+              isNaN(numericId) ? sql`false` : eq(rodmarCuentas.id, numericId),
+              eq(rodmarCuentas.codigo, stringId),
+            ),
+          )
+          .limit(1);
+        return result?.nombre || "RodMar";
+      }
+      case "banco":
+        return "Banco";
+      case "lcdm":
+        return "La Casa del Motero";
+      case "postobon":
+        return "Postobón";
+      default:
+        return "Socio";
+    }
+  };
+
+  const buildReceiptImage = async ({
+    socioDestinoNombre,
+    valor,
+    fecha,
+    comentario,
+    voucher,
+  }: {
+    socioDestinoNombre: string;
+    valor: string | number | null | undefined;
+    fecha: string | Date | null | undefined;
+    comentario: string | null | undefined;
+    voucher: string | null | undefined;
+  }) => {
+    const width = 900;
+    const padding = 32;
+    const headerHeight = 140;
+    const voucherHeight = 520;
+    const commentHeight = 140;
+    const footerHeight = 60;
+    const spacing = 20;
+    const height =
+      padding * 2 + headerHeight + voucherHeight + commentHeight + footerHeight + spacing * 3;
+
+    const safeSocio = escapeXml(socioDestinoNombre);
+    const safeComentario = escapeXml((comentario || "Sin comentarios").trim());
+    const comentarioLines = wrapText(safeComentario, 52, 2);
+    const formattedDate = escapeXml(formatReceiptDate(fecha));
+    const formattedValue = escapeXml(formatReceiptCurrency(valor));
+
+    const voucherBuffer = voucher ? await getVoucherImageBuffer(voucher) : null;
+    const voucherPlaceholderText = voucherBuffer
+      ? ""
+      : escapeXml(
+          voucher && voucher.trim()
+            ? `Voucher: ${voucher.trim().slice(0, 60)}`
+            : "Sin voucher adjunto",
+        );
+
+    const headerTop = padding;
+    const voucherTop = headerTop + headerHeight + spacing;
+    const commentTop = voucherTop + voucherHeight + spacing;
+    const footerTop = commentTop + commentHeight + spacing;
+
+    const svg = `
+      <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="rmGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#1d4ed8"/>
+            <stop offset="50%" stop-color="#3b82f6"/>
+            <stop offset="100%" stop-color="#10b981"/>
+          </linearGradient>
+        </defs>
+        <rect x="8" y="8" width="${width - 16}" height="${height - 16}" rx="24" fill="#ffffff" stroke="#93c5fd" stroke-width="6"/>
+        <rect x="${padding}" y="${headerTop}" width="${width - padding * 2}" height="${headerHeight}" rx="16" fill="#eef6ff" stroke="#bfdbfe" stroke-width="3"/>
+        <text x="${padding + 20}" y="${headerTop + 45}" font-size="28" font-weight="700" fill="#1d4ed8" font-family="system-ui, -apple-system, sans-serif">
+          ${safeSocio}
+        </text>
+        <text x="${padding + 20}" y="${headerTop + 100}" font-size="34" font-weight="800" fill="#059669" font-family="system-ui, -apple-system, sans-serif">
+          ${formattedValue}
+        </text>
+        <text x="${width / 2}" y="${headerTop + 100}" font-size="30" font-weight="900" fill="url(#rmGradient)" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">RM</text>
+        <text x="${width - padding - 20}" y="${headerTop + 100}" font-size="20" font-weight="700" fill="#059669" text-anchor="end" font-family="system-ui, -apple-system, sans-serif">
+          ${formattedDate}
+        </text>
+        <rect x="${padding}" y="${voucherTop}" width="${width - padding * 2}" height="${voucherHeight}" rx="18" fill="#ffffff" stroke="#86efac" stroke-width="4"/>
+        ${
+          voucherPlaceholderText
+            ? `<text x="${width / 2}" y="${voucherTop + voucherHeight / 2}" font-size="18" fill="#6b7280" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">${voucherPlaceholderText}</text>`
+            : ""
+        }
+        <rect x="${padding}" y="${commentTop}" width="${width - padding * 2}" height="${commentHeight}" rx="16" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
+        <text x="${padding + 20}" y="${commentTop + 38}" font-size="18" font-weight="700" fill="#2563eb" font-family="system-ui, -apple-system, sans-serif">Comentario:</text>
+        ${comentarioLines
+          .map(
+            (line, index) => `
+              <text x="${padding + 20}" y="${commentTop + 70 + index * 26}" font-size="18" fill="#111827" font-family="system-ui, -apple-system, sans-serif">
+                ${line}
+              </text>
+            `,
+          )
+          .join("")}
+        <text x="${width / 2}" y="${footerTop + 35}" font-size="16" fill="#9ca3af" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">
+          Generado desde <tspan font-weight="700" fill="#6b7280">RodMar</tspan>
+        </text>
+      </svg>
+    `;
+
+    const base = sharp({
+      create: {
+        width,
+        height,
+        channels: 4,
+        background: "#f8fbff",
+      },
+    });
+
+    const composites: { input: Buffer; top: number; left: number }[] = [];
+    // Dibujar primero el SVG (marcos/textos) y luego el voucher encima para que no quede tapado.
+    composites.push({ input: Buffer.from(svg), top: 0, left: 0 });
+
+    if (voucherBuffer) {
+      const imageWidth = width - padding * 2 - 40;
+      const imageHeight = voucherHeight - 40;
+      const resizedVoucher = await sharp(voucherBuffer.buffer)
+        .resize(imageWidth, imageHeight, {
+          fit: "contain",
+          background: "#ffffff",
+        })
+        .png()
+        .toBuffer();
+      composites.push({
+        input: resizedVoucher,
+        top: voucherTop + 20,
+        left: padding + 20,
+      });
+    }
+
+    return base
+      .composite(composites)
+      .jpeg({ quality: 90 })
+      .toBuffer();
+  };
 
   // Middleware global para prevenir caché del navegador
   app.use((req, res, next) => {
@@ -5232,6 +5538,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  // Endpoint para generar/servir comprobante como imagen JPG (server-side)
+  app.get("/api/transacciones/:id/comprobante.jpg", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const idParam = req.params.id;
+      const transaccionId = parseInt(idParam);
+
+      if (isNaN(transaccionId)) {
+        return res.status(400).json({ error: "ID de transacción inválido" });
+      }
+
+      const cached = getCachedReceiptImage(transaccionId);
+      if (cached) {
+        res.set({
+          "Content-Type": cached.contentType,
+          "Content-Disposition": `inline; filename="comprobante-${transaccionId}.jpg"`,
+        });
+        return res.send(cached.buffer);
+      }
+
+      const userPermissions = await getUserPermissions(userId);
+      const hasTransactionPermissions =
+        userPermissions.includes("action.TRANSACCIONES.create") ||
+        userPermissions.includes("action.TRANSACCIONES.completePending") ||
+        userPermissions.includes("action.TRANSACCIONES.edit") ||
+        userPermissions.includes("action.TRANSACCIONES.delete");
+
+      const effectiveUserId = hasTransactionPermissions ? undefined : userId;
+      const transaccion = await storage.getTransaccionById(transaccionId, effectiveUserId);
+
+      if (!transaccion) {
+        return res.status(404).json({ error: "Transacción no encontrada" });
+      }
+
+      const socioDestinoNombre = await getSocioNombre(transaccion.paraQuienTipo, transaccion.paraQuienId);
+      const imageBuffer = await buildReceiptImage({
+        socioDestinoNombre,
+        valor: transaccion.valor,
+        fecha: transaccion.fecha,
+        comentario: transaccion.comentario,
+        voucher: transaccion.voucher || undefined,
+      });
+
+      setCachedReceiptImage(transaccionId, imageBuffer, "image/jpeg");
+
+      res.set({
+        "Content-Type": "image/jpeg",
+        "Content-Disposition": `inline; filename="comprobante-${transaccionId}.jpg"`,
+      });
+      res.send(imageBuffer);
+    } catch (error) {
+      console.error("Error generating transaction receipt image:", error);
+      res.status(500).json({ error: "No se pudo generar el comprobante" });
+    }
+  });
 
   // Get transacciones by socio
   app.get(
