@@ -124,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const safeText = escapeXml(text);
     const anchorAttr =
       anchor === "middle" ? ` text-anchor="middle"` : anchor === "end" ? ` text-anchor="end"` : "";
-    return `<text x="${x}" y="${y}" font-size="${fontSize}" fill="${fill}" font-weight="${weight}"${anchorAttr} font-family="RodMarSans, sans-serif">${safeText}</text>`;
+    return `<text x="${x}" y="${y}" font-size="${fontSize}" fill="${fill}" font-weight="${weight}"${anchorAttr} font-family="Roboto, sans-serif">${safeText}</text>`;
   };
 
   const formatReceiptDate = (dateInput: string | Date | null | undefined) => {
@@ -330,7 +330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       : "";
 
     const fontFace = ROBOTO_REGULAR_BASE64
-      ? `@font-face { font-family: "RodMarSans"; src: url("data:font/ttf;base64,${ROBOTO_REGULAR_BASE64}") format("truetype"); font-weight: 400; font-style: normal; }`
+      ? `@font-face { font-family: "Roboto"; src: url("data:font/ttf;base64,${ROBOTO_REGULAR_BASE64}") format("truetype"); font-weight: 400; font-style: normal; }`
       : "";
 
     const svg = `
