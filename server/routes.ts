@@ -50,6 +50,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const receiptImageCache = new Map<number, { expiresAt: number; buffer: Buffer; contentType: string }>();
   const RECEIPT_CACHE_TTL_MS = 1000 * 60 * 30;
   const MAX_RECEIPT_CACHE_ITEMS = 200;
+  const RECEIPT_FONT_URL =
+    "https://github.com/google/fonts/raw/main/apache/roboto/Roboto-Regular.ttf";
+  let cachedReceiptFontBase64: string | null = null;
+  let cachedReceiptFontError = false;
 
   const getCachedReceiptImage = (transactionId: number) => {
     const cached = receiptImageCache.get(transactionId);
@@ -72,6 +76,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (firstKey !== undefined) {
         receiptImageCache.delete(firstKey);
       }
+    }
+  };
+
+  const getReceiptFontBase64 = async () => {
+    if (cachedReceiptFontBase64 || cachedReceiptFontError) {
+      return cachedReceiptFontBase64;
+    }
+    try {
+      const response = await fetch(RECEIPT_FONT_URL);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch font: ${response.status}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      cachedReceiptFontBase64 = Buffer.from(arrayBuffer).toString("base64");
+      return cachedReceiptFontBase64;
+    } catch (error) {
+      cachedReceiptFontError = true;
+      console.warn("⚠️ No se pudo cargar fuente para comprobantes:", error);
+      return null;
     }
   };
 
@@ -243,11 +266,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     comentario: string | null | undefined;
     voucher: string | null | undefined;
   }) => {
-    const width = 900;
+    const width = 1100;
     const padding = 32;
-    const headerHeight = 140;
-    const voucherHeight = 520;
-    const commentHeight = 140;
+    const headerHeight = 160;
+    const voucherHeight = 620;
+    const commentHeight = 160;
     const footerHeight = 60;
     const spacing = 20;
     const height =
@@ -268,6 +291,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : "Sin voucher adjunto",
         );
 
+    const fontBase64 = await getReceiptFontBase64();
+    const fontFace = fontBase64
+      ? `@font-face { font-family: "RodMarSans"; src: url("data:font/ttf;base64,${fontBase64}") format("truetype"); font-weight: 400; font-style: normal; }`
+      : "";
+
     const headerTop = padding;
     const voucherTop = headerTop + headerHeight + spacing;
     const commentTop = voucherTop + voucherHeight + spacing;
@@ -281,17 +309,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <stop offset="50%" stop-color="#3b82f6"/>
             <stop offset="100%" stop-color="#10b981"/>
           </linearGradient>
+          <style>
+            ${fontFace}
+          </style>
         </defs>
         <rect x="8" y="8" width="${width - 16}" height="${height - 16}" rx="24" fill="#ffffff" stroke="#93c5fd" stroke-width="6"/>
         <rect x="${padding}" y="${headerTop}" width="${width - padding * 2}" height="${headerHeight}" rx="16" fill="#eef6ff" stroke="#bfdbfe" stroke-width="3"/>
-        <text x="${padding + 20}" y="${headerTop + 45}" font-size="28" font-weight="700" fill="#1d4ed8" font-family="system-ui, -apple-system, sans-serif">
+        <text x="${padding + 20}" y="${headerTop + 50}" font-size="30" font-weight="700" fill="#1d4ed8" font-family="RodMarSans, system-ui, -apple-system, sans-serif">
           ${safeSocio}
         </text>
-        <text x="${padding + 20}" y="${headerTop + 100}" font-size="34" font-weight="800" fill="#059669" font-family="system-ui, -apple-system, sans-serif">
+        <text x="${padding + 20}" y="${headerTop + 115}" font-size="36" font-weight="800" fill="#059669" font-family="RodMarSans, system-ui, -apple-system, sans-serif">
           ${formattedValue}
         </text>
-        <text x="${width / 2}" y="${headerTop + 100}" font-size="30" font-weight="900" fill="url(#rmGradient)" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">RM</text>
-        <text x="${width - padding - 20}" y="${headerTop + 100}" font-size="20" font-weight="700" fill="#059669" text-anchor="end" font-family="system-ui, -apple-system, sans-serif">
+        <text x="${width / 2}" y="${headerTop + 115}" font-size="32" font-weight="900" fill="url(#rmGradient)" text-anchor="middle" font-family="RodMarSans, system-ui, -apple-system, sans-serif">RM</text>
+        <text x="${width - padding - 20}" y="${headerTop + 115}" font-size="22" font-weight="700" fill="#059669" text-anchor="end" font-family="RodMarSans, system-ui, -apple-system, sans-serif">
           ${formattedDate}
         </text>
         <rect x="${padding}" y="${voucherTop}" width="${width - padding * 2}" height="${voucherHeight}" rx="18" fill="#ffffff" stroke="#86efac" stroke-width="4"/>
@@ -301,17 +332,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : ""
         }
         <rect x="${padding}" y="${commentTop}" width="${width - padding * 2}" height="${commentHeight}" rx="16" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
-        <text x="${padding + 20}" y="${commentTop + 38}" font-size="18" font-weight="700" fill="#2563eb" font-family="system-ui, -apple-system, sans-serif">Comentario:</text>
+        <text x="${padding + 20}" y="${commentTop + 42}" font-size="20" font-weight="700" fill="#2563eb" font-family="RodMarSans, system-ui, -apple-system, sans-serif">Comentario:</text>
         ${comentarioLines
           .map(
             (line, index) => `
-              <text x="${padding + 20}" y="${commentTop + 70 + index * 26}" font-size="18" fill="#111827" font-family="system-ui, -apple-system, sans-serif">
+              <text x="${padding + 20}" y="${commentTop + 80 + index * 30}" font-size="19" fill="#111827" font-family="RodMarSans, system-ui, -apple-system, sans-serif">
                 ${line}
               </text>
             `,
           )
           .join("")}
-        <text x="${width / 2}" y="${footerTop + 35}" font-size="16" fill="#9ca3af" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">
+        <text x="${width / 2}" y="${footerTop + 35}" font-size="16" fill="#9ca3af" text-anchor="middle" font-family="RodMarSans, system-ui, -apple-system, sans-serif">
           Generado desde <tspan font-weight="700" fill="#6b7280">RodMar</tspan>
         </text>
       </svg>
@@ -349,7 +380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     return base
       .composite(composites)
-      .jpeg({ quality: 90 })
+      .jpeg({ quality: 92, mozjpeg: true })
       .toBuffer();
   };
 
