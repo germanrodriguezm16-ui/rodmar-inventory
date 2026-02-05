@@ -38,6 +38,9 @@ import { ViajeIdGenerator } from "./id-generator";
 import { normalizeNombreToCodigo, nombreToCodigoMap } from "./rodmar-utils";
 import { or } from "drizzle-orm";
 import sharp from "sharp";
+import opentype from "opentype.js";
+import fs from "fs/promises";
+import path from "path";
 
 // Variable de debug - activar solo cuando se necesite diagnóstico
 const DEBUG = process.env.DEBUG_ROUTES === 'true';
@@ -50,9 +53,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const receiptImageCache = new Map<number, { expiresAt: number; buffer: Buffer; contentType: string }>();
   const RECEIPT_CACHE_TTL_MS = 1000 * 60 * 30;
   const MAX_RECEIPT_CACHE_ITEMS = 200;
-  const RECEIPT_FONT_URL =
-    "https://github.com/google/fonts/raw/main/apache/roboto/Roboto-Regular.ttf";
-  let cachedReceiptFontBase64: string | null = null;
+  const RECEIPT_FONT_PATH = path.join(process.cwd(), "server", "assets", "fonts", "Roboto-Regular.ttf");
+  let cachedReceiptFont: opentype.Font | null = null;
   let cachedReceiptFontError = false;
 
   const getCachedReceiptImage = (transactionId: number) => {
@@ -79,18 +81,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  const getReceiptFontBase64 = async () => {
-    if (cachedReceiptFontBase64 || cachedReceiptFontError) {
-      return cachedReceiptFontBase64;
+  const getReceiptFont = async () => {
+    if (cachedReceiptFont || cachedReceiptFontError) {
+      return cachedReceiptFont;
     }
     try {
-      const response = await fetch(RECEIPT_FONT_URL);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch font: ${response.status}`);
-      }
-      const arrayBuffer = await response.arrayBuffer();
-      cachedReceiptFontBase64 = Buffer.from(arrayBuffer).toString("base64");
-      return cachedReceiptFontBase64;
+      const fontBuffer = await fs.readFile(RECEIPT_FONT_PATH);
+      const fontArrayBuffer = fontBuffer.buffer.slice(
+        fontBuffer.byteOffset,
+        fontBuffer.byteOffset + fontBuffer.byteLength,
+      );
+      cachedReceiptFont = opentype.parse(fontArrayBuffer);
+      return cachedReceiptFont;
     } catch (error) {
       cachedReceiptFontError = true;
       console.warn("⚠️ No se pudo cargar fuente para comprobantes:", error);
@@ -129,6 +131,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       lines.push(currentLine);
     }
     return lines.slice(0, maxLines);
+  };
+
+  const renderTextPath = (
+    font: opentype.Font | null,
+    text: string,
+    x: number,
+    y: number,
+    fontSize: number,
+    fill: string,
+    anchor: "start" | "middle" | "end" = "start",
+  ) => {
+    if (!text) return "";
+    if (!font) {
+      const safeText = escapeXml(text);
+      const anchorAttr = anchor === "middle" ? ` text-anchor="middle"` : anchor === "end" ? ` text-anchor="end"` : "";
+      return `<text x="${x}" y="${y}" font-size="${fontSize}" fill="${fill}"${anchorAttr} font-family="sans-serif">${safeText}</text>`;
+    }
+    const advanceWidth = font.getAdvanceWidth(text, fontSize);
+    let xPos = x;
+    if (anchor === "middle") {
+      xPos = x - advanceWidth / 2;
+    } else if (anchor === "end") {
+      xPos = x - advanceWidth;
+    }
+    const pathData = font.getPath(text, xPos, y, fontSize).toPathData(2);
+    return `<path d="${pathData}" fill="${fill}" />`;
   };
 
   const formatReceiptDate = (dateInput: string | Date | null | undefined) => {
@@ -276,11 +304,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const height =
       padding * 2 + headerHeight + voucherHeight + commentHeight + footerHeight + spacing * 3;
 
-    const safeSocio = escapeXml(socioDestinoNombre);
-    const safeComentario = escapeXml((comentario || "Sin comentarios").trim());
-    const comentarioLines = wrapText(safeComentario, 52, 2);
-    const formattedDate = escapeXml(formatReceiptDate(fecha));
-    const formattedValue = escapeXml(formatReceiptCurrency(valor));
+    const rawSocio = (socioDestinoNombre || "Socio").trim();
+    const rawComentario = (comentario || "Sin comentarios").trim();
+    const comentarioLines = wrapText(rawComentario, 52, 2);
+    const formattedDate = formatReceiptDate(fecha);
+    const formattedValue = formatReceiptCurrency(valor);
 
     const voucherBuffer = voucher ? await getVoucherImageBuffer(voucher) : null;
     const voucherPlaceholderText = voucherBuffer
@@ -296,10 +324,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ? `@font-face { font-family: "RodMarSans"; src: url("data:font/ttf;base64,${fontBase64}") format("truetype"); font-weight: 400; font-style: normal; }`
       : "";
 
+    const font = await getReceiptFont();
     const headerTop = padding;
     const voucherTop = headerTop + headerHeight + spacing;
     const commentTop = voucherTop + voucherHeight + spacing;
     const footerTop = commentTop + commentHeight + spacing;
+
+    const socioText = renderTextPath(font, rawSocio, padding + 20, headerTop + 55, 30, "#1d4ed8");
+    const valueText = renderTextPath(font, formattedValue, padding + 20, headerTop + 120, 38, "#059669");
+    const rmText = renderTextPath(font, "RM", width / 2, headerTop + 120, 34, "url(#rmGradient)", "middle");
+    const dateText = renderTextPath(font, formattedDate, width - padding - 20, headerTop + 120, 22, "#059669", "end");
+    const commentLabel = renderTextPath(font, "Comentario:", padding + 20, commentTop + 45, 20, "#2563eb");
+    const commentLinesSvg = comentarioLines
+      .map((line, index) =>
+        renderTextPath(font, line, padding + 20, commentTop + 80 + index * 30, 19, "#111827"),
+      )
+      .join("");
+    const footerText = renderTextPath(
+      font,
+      "Generado desde RodMar",
+      width / 2,
+      footerTop + 35,
+      16,
+      "#9ca3af",
+      "middle",
+    );
+
+    const voucherPlaceholderSvg = voucherPlaceholderText
+      ? renderTextPath(
+          font,
+          voucherPlaceholderText,
+          width / 2,
+          voucherTop + voucherHeight / 2,
+          18,
+          "#6b7280",
+          "middle",
+        )
+      : "";
 
     const svg = `
       <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
@@ -309,42 +370,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <stop offset="50%" stop-color="#3b82f6"/>
             <stop offset="100%" stop-color="#10b981"/>
           </linearGradient>
-          <style>
-            ${fontFace}
-          </style>
         </defs>
         <rect x="8" y="8" width="${width - 16}" height="${height - 16}" rx="24" fill="#ffffff" stroke="#93c5fd" stroke-width="6"/>
         <rect x="${padding}" y="${headerTop}" width="${width - padding * 2}" height="${headerHeight}" rx="16" fill="#eef6ff" stroke="#bfdbfe" stroke-width="3"/>
-        <text x="${padding + 20}" y="${headerTop + 50}" font-size="30" font-weight="700" fill="#1d4ed8" font-family="RodMarSans, system-ui, -apple-system, sans-serif">
-          ${safeSocio}
-        </text>
-        <text x="${padding + 20}" y="${headerTop + 115}" font-size="36" font-weight="800" fill="#059669" font-family="RodMarSans, system-ui, -apple-system, sans-serif">
-          ${formattedValue}
-        </text>
-        <text x="${width / 2}" y="${headerTop + 115}" font-size="32" font-weight="900" fill="url(#rmGradient)" text-anchor="middle" font-family="RodMarSans, system-ui, -apple-system, sans-serif">RM</text>
-        <text x="${width - padding - 20}" y="${headerTop + 115}" font-size="22" font-weight="700" fill="#059669" text-anchor="end" font-family="RodMarSans, system-ui, -apple-system, sans-serif">
-          ${formattedDate}
-        </text>
+        ${socioText}
+        ${valueText}
+        ${rmText}
+        ${dateText}
         <rect x="${padding}" y="${voucherTop}" width="${width - padding * 2}" height="${voucherHeight}" rx="18" fill="#ffffff" stroke="#86efac" stroke-width="4"/>
-        ${
-          voucherPlaceholderText
-            ? `<text x="${width / 2}" y="${voucherTop + voucherHeight / 2}" font-size="18" fill="#6b7280" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">${voucherPlaceholderText}</text>`
-            : ""
-        }
+        ${voucherPlaceholderSvg}
         <rect x="${padding}" y="${commentTop}" width="${width - padding * 2}" height="${commentHeight}" rx="16" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
-        <text x="${padding + 20}" y="${commentTop + 42}" font-size="20" font-weight="700" fill="#2563eb" font-family="RodMarSans, system-ui, -apple-system, sans-serif">Comentario:</text>
-        ${comentarioLines
-          .map(
-            (line, index) => `
-              <text x="${padding + 20}" y="${commentTop + 80 + index * 30}" font-size="19" fill="#111827" font-family="RodMarSans, system-ui, -apple-system, sans-serif">
-                ${line}
-              </text>
-            `,
-          )
-          .join("")}
-        <text x="${width / 2}" y="${footerTop + 35}" font-size="16" fill="#9ca3af" text-anchor="middle" font-family="RodMarSans, system-ui, -apple-system, sans-serif">
-          Generado desde <tspan font-weight="700" fill="#6b7280">RodMar</tspan>
-        </text>
+        ${commentLabel}
+        ${commentLinesSvg}
+        ${footerText}
       </svg>
     `;
 
