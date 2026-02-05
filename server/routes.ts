@@ -174,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!font) {
       const safeText = escapeXml(text);
       const anchorAttr = anchor === "middle" ? ` text-anchor="middle"` : anchor === "end" ? ` text-anchor="end"` : "";
-      return `<text x="${x}" y="${y}" font-size="${fontSize}" fill="${fill}"${anchorAttr} font-family="sans-serif">${safeText}</text>`;
+      return `<text x="${x}" y="${y}" font-size="${fontSize}" fill="${fill}"${anchorAttr} font-family="RodMarSans, sans-serif">${safeText}</text>`;
     }
     const advanceWidth = font.getAdvanceWidth(text, fontSize);
     let xPos = x;
@@ -390,6 +390,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
       : "";
 
+    const fontFace = ROBOTO_REGULAR_BASE64
+      ? `@font-face { font-family: "RodMarSans"; src: url("data:font/ttf;base64,${ROBOTO_REGULAR_BASE64}") format("truetype"); font-weight: 400; font-style: normal; }`
+      : "";
+
+    if (!font && !fontFace) {
+      console.warn("⚠️ Comprobante: sin fuente embebida ni fuente parseada.");
+    }
+
     const svg = `
       <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -398,6 +406,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <stop offset="50%" stop-color="#3b82f6"/>
             <stop offset="100%" stop-color="#10b981"/>
           </linearGradient>
+          <style>
+            ${fontFace}
+          </style>
         </defs>
         <rect x="8" y="8" width="${width - 16}" height="${height - 16}" rx="24" fill="#ffffff" stroke="#93c5fd" stroke-width="6"/>
         <rect x="${padding}" y="${headerTop}" width="${width - padding * 2}" height="${headerHeight}" rx="16" fill="#eef6ff" stroke="#bfdbfe" stroke-width="3"/>
