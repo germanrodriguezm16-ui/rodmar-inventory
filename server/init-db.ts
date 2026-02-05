@@ -64,6 +64,7 @@ export async function initializeRolesAndPermissions() {
       { key: 'action.VIAJES.cargue.use', descripcion: 'Usar registrar cargue', categoria: 'action' },
       { key: 'action.VIAJES.descargue.view', descripcion: 'Ver registrar descargue', categoria: 'action' },
       { key: 'action.VIAJES.descargue.use', descripcion: 'Usar registrar descargue', categoria: 'action' },
+      { key: 'action.VIAJES.descargue.calculos.view', descripcion: 'Ver sección de cálculos automáticos en registrar descargue', categoria: 'action' },
       { key: 'action.VIAJES.edit.view', descripcion: 'Ver editar viaje', categoria: 'action' },
       { key: 'action.VIAJES.edit.use', descripcion: 'Usar editar viaje', categoria: 'action' },
       { key: 'action.VIAJES.extendedFinancial.view', descripcion: 'Ver botón (ojo) de vista financiera extendida en tarjetas de viajes', categoria: 'action' },

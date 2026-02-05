@@ -44,13 +44,18 @@ interface RegisterCargueModalProps {
 
 // Función para formatear números con separadores de miles
 const formatNumber = (value: string): string => {
-  const numbers = value.replace(/\D/g, '');
+  const normalized = String(value ?? '').trim();
+  // Si viene de Postgres NUMERIC(10,2) típicamente llega como "80000.00" -> no debe multiplicar x100
+  const withoutDbDecimals = /^\d+\.\d{2}$/.test(normalized) ? normalized.split('.')[0] : normalized;
+  const numbers = withoutDbDecimals.replace(/[^\d]/g, '');
   return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 };
 
 // Función para obtener el valor numérico sin formato
 const getNumericValue = (formattedValue: string): string => {
-  return formattedValue.replace(/\./g, '');
+  const normalized = String(formattedValue ?? '').trim();
+  const withoutDbDecimals = /^\d+\.\d{2}$/.test(normalized) ? normalized.split('.')[0] : normalized;
+  return withoutDbDecimals.replace(/[^\d]/g, '');
 };
 
 export default function RegisterCargueModal({ open, onClose }: RegisterCargueModalProps) {
@@ -90,6 +95,18 @@ export default function RegisterCargueModal({ open, onClose }: RegisterCargueMod
       precioCompraTon: "",
     },
   });
+
+  const watchedMinaId = form.watch("minaId");
+
+  useEffect(() => {
+    if (!watchedMinaId) return;
+    const selectedMina = minas.find((m) => m.id.toString() === watchedMinaId);
+    if (!selectedMina) return;
+    const defaultValue = selectedMina.precioCompraTonDefault ?? "0";
+    form.setValue("precioCompraTon", getNumericValue(String(defaultValue)), {
+      shouldDirty: false,
+    });
+  }, [watchedMinaId, minas, form]);
 
   // Reset form when modal closes and force rerender
   useEffect(() => {
@@ -175,7 +192,24 @@ export default function RegisterCargueModal({ open, onClose }: RegisterCargueMod
       const response = await apiRequest("POST", "/api/viajes", viajeData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (_created, variables) => {
+      const selectedMina = minas.find((m) => m.id.toString() === variables.minaId);
+      const usedPrecio = getNumericValue(String(variables.precioCompraTon || "0"));
+      const currentDefault = getNumericValue(
+        String(selectedMina?.precioCompraTonDefault ?? "0"),
+      );
+      if (selectedMina && usedPrecio !== currentDefault) {
+        try {
+          await apiRequest("PATCH", `/api/minas/${selectedMina.id}/precios`, {
+            precioCompraTonDefault: usedPrecio,
+          });
+          queryClient.invalidateQueries({ queryKey: [`/api/minas/${selectedMina.id}`] });
+          queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
+        } catch (error) {
+          console.warn("No se pudo actualizar precio por defecto de mina:", error);
+        }
+      }
+
       // Invalidar TODAS las queries de viajes (incluyendo paginadas)
       queryClient.invalidateQueries({ 
         predicate: (query) => {

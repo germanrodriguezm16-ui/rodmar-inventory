@@ -10,6 +10,7 @@ import { emitTransactionUpdate } from "./socket";
 import { db } from "./db";
 import { roles, permissions, rolePermissions, users, userPermissionsOverride, transacciones, terceroLoans, terceroLoanInterestRuns, terceroLoanPaymentAllocations, viajes, volqueteros as volqueterosTable } from "../shared/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
+import { z } from "zod";
 import { findUserByPhone, verifyPassword, updateLastLogin, hashPassword, generateToken, verifyToken } from "./middleware/auth-helpers";
 import {
   insertMinaSchema,
@@ -42,6 +43,10 @@ const DEBUG = process.env.DEBUG_ROUTES === 'true';
 const debugLog = (...args: any[]) => DEBUG && console.log(...args);
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Cache ligera para amortiguar refetch duplicado en desarrollo (especialmente con latencia alta a DB remota)
+  const devCacheEnabled = process.env.NODE_ENV !== "production";
+  const volqueterosResumenCache = new Map<string, { expiresAt: number; data: any[] }>();
+
   // Middleware global para prevenir caché del navegador
   app.use((req, res, next) => {
     res.set({
@@ -159,6 +164,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return value;
   };
 
+  const prefetchPermissionExists = async (keys: string[], cache: Map<string, boolean>) => {
+    const unique = Array.from(new Set(keys)).filter((k) => !!k && !cache.has(k));
+    if (unique.length === 0) return;
+
+    // Proteger contra listas grandes: chunk para no superar límites de parámetros
+    const chunkSize = 500;
+    for (let i = 0; i < unique.length; i += chunkSize) {
+      const chunk = unique.slice(i, i + chunkSize);
+      const rows = await db
+        .select({ key: permissions.key })
+        .from(permissions)
+        .where(inArray(permissions.key, chunk));
+      const existing = new Set(rows.map((r) => r.key));
+      for (const k of chunk) {
+        cache.set(k, existing.has(k));
+      }
+    }
+  };
+
   const checkUsePermission = async (params: {
     userPermissions: string[];
     deniedPermissions: Set<string>;
@@ -268,14 +292,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { entities, userPermissions, deniedPermissions, permissionExistsCache, getPermissionKey } = params;
     const results: T[] = [];
 
-    for (const entity of entities) {
-      const key = getPermissionKey(entity);
+    const pairs = entities.map((entity) => ({ entity, key: getPermissionKey(entity) }));
+    await prefetchPermissionExists(
+      pairs.map((p) => p.key).filter(Boolean) as string[],
+      permissionExistsCache,
+    );
+
+    for (const { entity, key } of pairs) {
       if (!key) {
         results.push(entity);
         continue;
       }
 
-      const exists = await permissionExists(key, permissionExistsCache);
+      const exists = permissionExistsCache.get(key) ?? (await permissionExists(key, permissionExistsCache));
       if (!exists) {
         results.push(entity);
         continue;
@@ -747,6 +776,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userPermissions.includes("action.TRANSACCIONES.edit") ||
           userPermissions.includes("action.TRANSACCIONES.delete");
 
+        // TTL cache en desarrollo para evitar múltiple refetch inmediato
+        if (devCacheEnabled) {
+          const cacheKey = `${userId}:${hasTransactionPermissions ? 1 : 0}`;
+          const cached = volqueterosResumenCache.get(cacheKey);
+          const now = Date.now();
+          if (cached && cached.expiresAt > now) {
+            return res.json(cached.data);
+          }
+        }
+
         const volqueterosSource = hasTransactionPermissions
           ? await storage.getVolqueteros()
           : await storage.getVolqueteros(userId);
@@ -818,6 +857,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             saldo,
           };
         });
+
+        if (devCacheEnabled) {
+          const cacheKey = `${userId}:${hasTransactionPermissions ? 1 : 0}`;
+          // TTL corto: suficiente para amortiguar StrictMode/refetch sin generar staleness molesta
+          volqueterosResumenCache.set(cacheKey, { expiresAt: Date.now() + 10_000, data: result });
+        }
 
         res.json(result);
       } catch (error: any) {
@@ -3692,6 +3737,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Actualizar precios por defecto de mina (precarga en modales)
+  app.patch(
+    "/api/minas/:id/precios",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const userId = req.user!.id;
+        const minaId = parseInt(req.params.id);
+        if (isNaN(minaId)) {
+          return res.status(400).json({ error: "Invalid mina ID" });
+        }
+
+        const schema = z.object({
+          precioCompraTonDefault: z.string().min(1),
+        });
+        const data = schema.parse(req.body);
+
+        const updated = await storage.updateMina(
+          minaId,
+          { precioCompraTonDefault: data.precioCompraTonDefault },
+          userId,
+        );
+
+        if (!updated) {
+          return res.status(404).json({ error: "Mina not found or access denied" });
+        }
+
+        res.json(updated);
+      } catch (error: any) {
+        console.error("Error updating mina precios:", error);
+        if (error?.name === "ZodError") {
+          res.status(400).json({ error: "Invalid data format" });
+        } else {
+          res.status(500).json({ error: "Failed to update mina precios" });
+        }
+      }
+    },
+  );
+
   app.put(
     "/api/compradores/:id/nombre",
     requireAuth,
@@ -3743,6 +3827,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.error("Error updating comprador nombre:", error);
         res.status(500).json({ error: "Failed to update comprador nombre" });
+      }
+    },
+  );
+
+  // Actualizar precios por defecto de comprador (precarga en modales)
+  app.patch(
+    "/api/compradores/:id/precios",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const userId = req.user!.id;
+        const compradorId = parseInt(req.params.id);
+        if (isNaN(compradorId)) {
+          return res.status(400).json({ error: "Invalid comprador ID" });
+        }
+
+        const schema = z
+          .object({
+            ventaTonDefault: z.string().min(1).optional(),
+            fleteTonDefaultSencillo: z.string().min(1).optional(),
+            otgDefaultSencillo: z.string().min(1).optional(),
+            fleteTonDefaultDobleTroque: z.string().min(1).optional(),
+            otgDefaultDobleTroque: z.string().min(1).optional(),
+            quienPagaFleteDefault: z.enum(["comprador", "tu"]).optional(),
+          })
+          .refine(
+            (v) =>
+              v.ventaTonDefault !== undefined ||
+              v.fleteTonDefaultSencillo !== undefined ||
+              v.otgDefaultSencillo !== undefined ||
+              v.fleteTonDefaultDobleTroque !== undefined ||
+              v.otgDefaultDobleTroque !== undefined ||
+              v.quienPagaFleteDefault !== undefined,
+            { message: "Debe enviar al menos un campo para actualizar" },
+          );
+        const data = schema.parse(req.body);
+
+        const updated = await storage.updateComprador(
+          compradorId,
+          {
+            ...(data.ventaTonDefault !== undefined
+              ? { ventaTonDefault: data.ventaTonDefault }
+              : {}),
+            ...(data.fleteTonDefaultSencillo !== undefined
+              ? { fleteTonDefaultSencillo: data.fleteTonDefaultSencillo }
+              : {}),
+            ...(data.otgDefaultSencillo !== undefined
+              ? { otgDefaultSencillo: data.otgDefaultSencillo }
+              : {}),
+            ...(data.fleteTonDefaultDobleTroque !== undefined
+              ? { fleteTonDefaultDobleTroque: data.fleteTonDefaultDobleTroque }
+              : {}),
+            ...(data.otgDefaultDobleTroque !== undefined
+              ? { otgDefaultDobleTroque: data.otgDefaultDobleTroque }
+              : {}),
+            ...(data.quienPagaFleteDefault !== undefined
+              ? { quienPagaFleteDefault: data.quienPagaFleteDefault }
+              : {}),
+          },
+          userId,
+        );
+
+        if (!updated) {
+          return res.status(404).json({ error: "Comprador not found or access denied" });
+        }
+
+        res.json(updated);
+      } catch (error: any) {
+        console.error("Error updating comprador precios:", error);
+        if (error?.name === "ZodError") {
+          res.status(400).json({ error: "Invalid data format" });
+        } else {
+          res.status(500).json({ error: "Failed to update comprador precios" });
+        }
       }
     },
   );
@@ -3822,6 +3980,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  // NOTA: Se eliminó el endpoint de precios por defecto de volquetero.
+  // El flete/OTG se configura por comprador y tipo de carro.
 
   // Viajes routes
   app.get("/api/viajes", requireAuth, async (req, res) => {

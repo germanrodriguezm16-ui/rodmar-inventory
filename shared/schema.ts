@@ -79,6 +79,7 @@ export const userPermissionsOverride = pgTable("user_permissions_override", {
 export const minas = pgTable("minas", {
   id: serial("id").primaryKey(),
   nombre: text("nombre").notNull(),
+  precioCompraTonDefault: decimal("precio_compra_ton_default", { precision: 10, scale: 2 }).default("0"),
   saldo: decimal("saldo", { precision: 15, scale: 2 }).default("0"),
   balanceCalculado: decimal("balance_calculado", { precision: 15, scale: 2 }).default("0"),
   balanceDesactualizado: boolean("balance_desactualizado").default(false).notNull(),
@@ -91,6 +92,14 @@ export const minas = pgTable("minas", {
 export const compradores = pgTable("compradores", {
   id: serial("id").primaryKey(),
   nombre: text("nombre").notNull(),
+  ventaTonDefault: decimal("venta_ton_default", { precision: 10, scale: 2 }).default("0"),
+  // Defaults de flete/OTG por comprador, discriminado por tipo de carro (para precarga en descargue)
+  fleteTonDefaultSencillo: decimal("flete_ton_default_sencillo", { precision: 10, scale: 2 }).default("0"),
+  otgDefaultSencillo: decimal("otg_default_sencillo", { precision: 10, scale: 2 }).default("0"),
+  fleteTonDefaultDobleTroque: decimal("flete_ton_default_doble_troque", { precision: 10, scale: 2 }).default("0"),
+  otgDefaultDobleTroque: decimal("otg_default_doble_troque", { precision: 10, scale: 2 }).default("0"),
+  // Default de quién paga el flete al descargar (precarga en modal de descargue)
+  quienPagaFleteDefault: text("quien_paga_flete_default").default("comprador"),
   saldo: decimal("saldo", { precision: 15, scale: 2 }).default("0"),
   balanceCalculado: decimal("balance_calculado", { precision: 15, scale: 2 }).default("0"),
   balanceDesactualizado: boolean("balance_desactualizado").default(false).notNull(),

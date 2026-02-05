@@ -74,6 +74,7 @@ import { CompradorTransaccionesImageModal } from "@/components/modals/comprador-
 import { previewCompradorTripHistory, exportCompradorTripHistory } from '@/lib/excel-export-compradores';
 import { previewCompradorTransactionHistory, exportCompradorTransactionHistory } from '@/lib/excel-export-comprador-transacciones';
 import ExcelPreviewModal from '@/components/modals/excel-preview-modal';
+import PreciosCompradorModal from "@/components/modals/precios-comprador-modal";
 
 // Recharts components
 import {
@@ -1154,6 +1155,8 @@ function CompradorViajesTab({
   setShowRegisterDescargue: (value: boolean) => void;
   comprador: Comprador | undefined;
 }) {
+  const [showPreciosComprador, setShowPreciosComprador] = useState(false);
+
   return (
     <div className="space-y-4">
       {/* Filtro de fechas */}
@@ -1241,6 +1244,14 @@ function CompradorViajesTab({
           {/* Botones de descarga */}
           {viajes && viajes.length > 0 && (
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-xs text-indigo-600 border-indigo-600 hover:bg-indigo-50"
+                onClick={() => setShowPreciosComprador(true)}
+              >
+                Precios
+              </Button>
               {canViewCargue && (
                 <Button
                   variant="outline"
@@ -1340,6 +1351,12 @@ function CompradorViajesTab({
           ))}
         </div>
       )}
+
+      <PreciosCompradorModal
+        open={showPreciosComprador}
+        onOpenChange={setShowPreciosComprador}
+        comprador={comprador}
+      />
     </div>
   );
 }

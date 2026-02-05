@@ -53,6 +53,7 @@ import { TransactionDetailModal } from "@/components/modals/transaction-detail-m
 import { TransaccionesImageModal } from "@/components/modals/transacciones-image-modal";
 import ViajesImageModal from "@/components/modals/viajes-image-modal";
 import ExcelPreviewModal from '@/components/modals/excel-preview-modal';
+import PreciosMinaModal from "@/components/modals/precios-mina-modal";
 
 // Usar el tipo DateFilterType de date-filter-utils
 type DateFilterType = SharedDateFilterType;
@@ -192,6 +193,7 @@ export default function MinaDetail() {
   const [selectedTrip, setSelectedTrip] = useState<ViajeWithDetails | null>(null);
   const [showRegisterCargue, setShowRegisterCargue] = useState(false);
   const [showRegisterDescargue, setShowRegisterDescargue] = useState(false);
+  const [showPreciosMina, setShowPreciosMina] = useState(false);
   const [showPendingDetailModal, setShowPendingDetailModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showDeletePendingConfirm, setShowDeletePendingConfirm] = useState(false);
@@ -808,6 +810,14 @@ export default function MinaDetail() {
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        onClick={() => setShowPreciosMina(true)}
+                        size="sm"
+                        variant="outline"
+                        className="text-indigo-600 border-indigo-600 hover:bg-indigo-50 h-8 px-3 text-xs font-medium"
+                      >
+                        Precios
+                      </Button>
                       {canViewCargue && (
                         <Button
                           onClick={() => {
@@ -1751,6 +1761,12 @@ export default function MinaDetail() {
       <RegisterDescargueModal
         open={showRegisterDescargue}
         onClose={() => setShowRegisterDescargue(false)}
+      />
+
+      <PreciosMinaModal
+        open={showPreciosMina}
+        onOpenChange={setShowPreciosMina}
+        mina={mina}
       />
 
       {/* Navegación inferior */}
