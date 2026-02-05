@@ -86,6 +86,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
+  const parseFontBuffer = (fontBuffer: Buffer) => {
+    const parseFn =
+      (opentype as unknown as { parse?: (buffer: ArrayBuffer) => opentype.Font })?.parse ??
+      (opentype as unknown as { default?: { parse?: (buffer: ArrayBuffer) => opentype.Font } })?.default?.parse;
+    if (!parseFn) {
+      throw new Error("opentype.parse no está disponible");
+    }
+    const fontArrayBuffer = fontBuffer.buffer.slice(
+      fontBuffer.byteOffset,
+      fontBuffer.byteOffset + fontBuffer.byteLength,
+    );
+    return parseFn(fontArrayBuffer);
+  };
+
   const getReceiptFont = async () => {
     if (cachedReceiptFont || cachedReceiptFontError) {
       return cachedReceiptFont;
@@ -93,12 +107,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       if (ROBOTO_REGULAR_BASE64) {
         const fontBuffer = Buffer.from(ROBOTO_REGULAR_BASE64, "base64");
-        const fontArrayBuffer = fontBuffer.buffer.slice(
-          fontBuffer.byteOffset,
-          fontBuffer.byteOffset + fontBuffer.byteLength,
-        );
-        cachedReceiptFont = opentype.parse(fontArrayBuffer);
-        return cachedReceiptFont;
+        try {
+          cachedReceiptFont = parseFontBuffer(fontBuffer);
+          return cachedReceiptFont;
+        } catch (error) {
+          console.warn("⚠️ No se pudo parsear fuente embebida:", error);
+        }
       }
 
       let fontBuffer: Buffer | null = null;
@@ -115,11 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn("⚠️ No se encontró la fuente Roboto-Regular.ttf");
         return null;
       }
-      const fontArrayBuffer = fontBuffer.buffer.slice(
-        fontBuffer.byteOffset,
-        fontBuffer.byteOffset + fontBuffer.byteLength,
-      );
-      cachedReceiptFont = opentype.parse(fontArrayBuffer);
+      cachedReceiptFont = parseFontBuffer(fontBuffer);
       return cachedReceiptFont;
     } catch (error) {
       cachedReceiptFontError = true;
