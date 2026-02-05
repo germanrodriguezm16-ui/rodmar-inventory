@@ -38,9 +38,7 @@ import { ViajeIdGenerator } from "./id-generator";
 import { normalizeNombreToCodigo, nombreToCodigoMap } from "./rodmar-utils";
 import { or } from "drizzle-orm";
 import sharp from "sharp";
-import * as opentype from "opentype.js";
-import fs from "fs/promises";
-import path from "path";
+import { Resvg } from "@resvg/resvg-js";
 import { ROBOTO_REGULAR_BASE64 } from "./receipt-font";
 
 // Variable de debug - activar solo cuando se necesite diagnóstico
@@ -54,13 +52,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const receiptImageCache = new Map<number, { expiresAt: number; buffer: Buffer; contentType: string }>();
   const RECEIPT_CACHE_TTL_MS = 1000 * 60 * 30;
   const MAX_RECEIPT_CACHE_ITEMS = 200;
-  const RECEIPT_FONT_PATHS = [
-    path.join(process.cwd(), "dist", "public", "Roboto-Regular.ttf"),
-    path.join(process.cwd(), "client", "public", "Roboto-Regular.ttf"),
-    path.join(process.cwd(), "server", "assets", "fonts", "Roboto-Regular.ttf"),
-  ];
-  let cachedReceiptFont: opentype.Font | null = null;
-  let cachedReceiptFontError = false;
 
   const getCachedReceiptImage = (transactionId: number) => {
     const cached = receiptImageCache.get(transactionId);
@@ -86,57 +77,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  const parseFontBuffer = (fontBuffer: Buffer) => {
-    const parseFn =
-      (opentype as unknown as { parse?: (buffer: ArrayBuffer) => opentype.Font })?.parse ??
-      (opentype as unknown as { default?: { parse?: (buffer: ArrayBuffer) => opentype.Font } })?.default?.parse;
-    if (!parseFn) {
-      throw new Error("opentype.parse no está disponible");
-    }
-    const fontArrayBuffer = fontBuffer.buffer.slice(
-      fontBuffer.byteOffset,
-      fontBuffer.byteOffset + fontBuffer.byteLength,
-    );
-    return parseFn(fontArrayBuffer);
-  };
-
-  const getReceiptFont = async () => {
-    if (cachedReceiptFont || cachedReceiptFontError) {
-      return cachedReceiptFont;
-    }
-    try {
-      if (ROBOTO_REGULAR_BASE64) {
-        const fontBuffer = Buffer.from(ROBOTO_REGULAR_BASE64, "base64");
-        try {
-          cachedReceiptFont = parseFontBuffer(fontBuffer);
-          return cachedReceiptFont;
-        } catch (error) {
-          console.warn("⚠️ No se pudo parsear fuente embebida:", error);
-        }
-      }
-
-      let fontBuffer: Buffer | null = null;
-      for (const candidatePath of RECEIPT_FONT_PATHS) {
-        try {
-          fontBuffer = await fs.readFile(candidatePath);
-          break;
-        } catch (error) {
-          continue;
-        }
-      }
-      if (!fontBuffer) {
-        cachedReceiptFontError = true;
-        console.warn("⚠️ No se encontró la fuente Roboto-Regular.ttf");
-        return null;
-      }
-      cachedReceiptFont = parseFontBuffer(fontBuffer);
-      return cachedReceiptFont;
-    } catch (error) {
-      cachedReceiptFontError = true;
-      console.warn("⚠️ No se pudo cargar fuente para comprobantes:", error);
-      return null;
-    }
-  };
 
   const escapeXml = (value: string) =>
     value
@@ -171,30 +111,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return lines.slice(0, maxLines);
   };
 
-  const renderTextPath = (
-    font: opentype.Font | null,
+  const renderText = (
     text: string,
     x: number,
     y: number,
     fontSize: number,
     fill: string,
     anchor: "start" | "middle" | "end" = "start",
+    weight = 400,
   ) => {
     if (!text) return "";
-    if (!font) {
-      const safeText = escapeXml(text);
-      const anchorAttr = anchor === "middle" ? ` text-anchor="middle"` : anchor === "end" ? ` text-anchor="end"` : "";
-      return `<text x="${x}" y="${y}" font-size="${fontSize}" fill="${fill}"${anchorAttr} font-family="RodMarSans, sans-serif">${safeText}</text>`;
-    }
-    const advanceWidth = font.getAdvanceWidth(text, fontSize);
-    let xPos = x;
-    if (anchor === "middle") {
-      xPos = x - advanceWidth / 2;
-    } else if (anchor === "end") {
-      xPos = x - advanceWidth;
-    }
-    const pathData = font.getPath(text, xPos, y, fontSize).toPathData(2);
-    return `<path d="${pathData}" fill="${fill}" />`;
+    const safeText = escapeXml(text);
+    const anchorAttr =
+      anchor === "middle" ? ` text-anchor="middle"` : anchor === "end" ? ` text-anchor="end"` : "";
+    return `<text x="${x}" y="${y}" font-size="${fontSize}" fill="${fill}" font-weight="${weight}"${anchorAttr} font-family="RodMarSans, sans-serif">${safeText}</text>`;
   };
 
   const formatReceiptDate = (dateInput: string | Date | null | undefined) => {
@@ -362,51 +292,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : "Sin voucher adjunto",
         );
 
-    const font = await getReceiptFont();
     const headerTop = padding;
     const voucherTop = headerTop + headerHeight + spacing;
     const commentTop = voucherTop + voucherHeight + spacing;
     const footerTop = commentTop + commentHeight + spacing;
 
-    const socioText = renderTextPath(font, rawSocio, padding + 20, headerTop + 55, 30, "#1d4ed8");
-    const valueText = renderTextPath(font, formattedValue, padding + 20, headerTop + 120, 38, "#059669");
-    const rmText = renderTextPath(font, "RM", width / 2, headerTop + 120, 34, "url(#rmGradient)", "middle");
-    const dateText = renderTextPath(font, formattedDate, width - padding - 20, headerTop + 120, 22, "#059669", "end");
-    const commentLabel = renderTextPath(font, "Comentario:", padding + 20, commentTop + 45, 20, "#2563eb");
+    const socioText = renderText(rawSocio, padding + 20, headerTop + 55, 30, "#1d4ed8", "start", 700);
+    const valueText = renderText(formattedValue, padding + 20, headerTop + 120, 38, "#059669", "start", 800);
+    const rmText = renderText("RM", width / 2, headerTop + 120, 34, "url(#rmGradient)", "middle", 900);
+    const dateText = renderText(formattedDate, width - padding - 20, headerTop + 120, 22, "#059669", "end", 700);
+    const commentLabel = renderText("Comentario:", padding + 20, commentTop + 45, 20, "#2563eb", "start", 700);
     const commentLinesSvg = comentarioLines
       .map((line, index) =>
-        renderTextPath(font, line, padding + 20, commentTop + 80 + index * 30, 19, "#111827"),
+        renderText(line, padding + 20, commentTop + 80 + index * 30, 19, "#111827", "start", 400),
       )
       .join("");
-    const footerText = renderTextPath(
-      font,
+    const footerText = renderText(
       "Generado desde RodMar",
       width / 2,
       footerTop + 35,
       16,
       "#9ca3af",
       "middle",
+      500,
     );
 
     const voucherPlaceholderSvg = voucherPlaceholderText
-      ? renderTextPath(
-          font,
+      ? renderText(
           voucherPlaceholderText,
           width / 2,
           voucherTop + voucherHeight / 2,
           18,
           "#6b7280",
           "middle",
+          400,
         )
       : "";
 
     const fontFace = ROBOTO_REGULAR_BASE64
       ? `@font-face { font-family: "RodMarSans"; src: url("data:font/ttf;base64,${ROBOTO_REGULAR_BASE64}") format("truetype"); font-weight: 400; font-style: normal; }`
       : "";
-
-    if (!font && !fontFace) {
-      console.warn("⚠️ Comprobante: sin fuente embebida ni fuente parseada.");
-    }
 
     const svg = `
       <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
@@ -435,14 +360,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       </svg>
     `;
 
-    const base = sharp({
-      create: {
-        width,
-        height,
-        channels: 4,
-        background: "#f8fbff",
-      },
-    });
+    const svgPng = new Resvg(svg, {
+      fitTo: { mode: "width", value: width },
+    })
+      .render()
+      .asPng();
+
+    const base = sharp(svgPng);
 
     const composites: { input: Buffer; top: number; left: number }[] = [];
     // Dibujar primero el SVG (marcos/textos) y luego el voucher encima para que no quede tapado.
