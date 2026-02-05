@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Bell, Settings, Truck, Bug, Shield, LogOut } from "lucide-react";
+import { Bell, Settings, Bug, Shield, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -48,8 +48,12 @@ export default function AppHeader({ currentModule }: AppHeaderProps) {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Truck className="text-primary-foreground w-4 h-4" />
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center overflow-hidden">
+                <img 
+                  src="/rodmar-circular-192.png" 
+                  alt="RodMar" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-foreground">RodMar</h1>

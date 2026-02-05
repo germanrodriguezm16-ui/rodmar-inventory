@@ -78,6 +78,7 @@ function NewTransactionModal({
   // Estado para modal de comprobante
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [createdTransaction, setCreatedTransaction] = useState<any>(null);
+  const [isImagePreloading, setIsImagePreloading] = useState(false);
   
   // Hook súper optimizado para formularios móviles
   // const mobileForm = useOptimalMobileForm();
@@ -283,8 +284,50 @@ function NewTransactionModal({
         console.log("=== NewTransactionModal - paraQuienId:", result?.paraQuienId);
         
         if (result && result.paraQuienTipo) {
-          setCreatedTransaction(result);
-          setShowReceiptModal(true);
+          // Pre-cargar imagen del voucher antes de abrir el modal
+          const preloadImage = (voucher: string | null | undefined): Promise<void> => {
+            return new Promise((resolve) => {
+              if (!voucher) {
+                resolve();
+                return;
+              }
+              
+              // Limpiar prefijos
+              let cleanVoucher = voucher;
+              if (cleanVoucher.startsWith('IMAGE:')) {
+                cleanVoucher = cleanVoucher.substring(6);
+              }
+              if (cleanVoucher.startsWith('%7CIMAGE:')) {
+                cleanVoucher = cleanVoucher.substring(8);
+              } else if (cleanVoucher.startsWith('|IMAGE:')) {
+                cleanVoucher = cleanVoucher.substring(7);
+              }
+              
+              // Verificar si es una imagen válida
+              if (!cleanVoucher.startsWith('data:image') && !cleanVoucher.startsWith('http')) {
+                resolve();
+                return;
+              }
+              
+              setIsImagePreloading(true);
+              const img = new Image();
+              img.onload = () => {
+                setIsImagePreloading(false);
+                resolve();
+              };
+              img.onerror = () => {
+                setIsImagePreloading(false);
+                resolve(); // Continuar aunque haya error
+              };
+              img.src = cleanVoucher;
+            });
+          };
+          
+          // Pre-cargar imagen y luego abrir modal
+          preloadImage(result.voucher).then(() => {
+            setCreatedTransaction(result);
+            setShowReceiptModal(true);
+          });
         } else {
           console.warn("=== NewTransactionModal - No se puede mostrar comprobante: falta paraQuienTipo en result");
         }

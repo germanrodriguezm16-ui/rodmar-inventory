@@ -27,37 +27,37 @@
   ],
   "icons": [
     {
-      "src": "rodmar-icon-72-1751394032734.png",
+      "src": "rodmar-icon-72.png",
       "sizes": "72x72",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "rodmar-icon-96-1751394032734.png",
+      "src": "rodmar-icon-96.png",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "rodmar-icon-128-1751394032734.png",
+      "src": "rodmar-icon-128.png",
       "sizes": "128x128",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "rodmar-android-chrome-144-1751394032734.png",
+      "src": "rodmar-android-chrome-144.png",
       "sizes": "144x144",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "rodmar-apple-touch-152-1751394032734.png",
+      "src": "rodmar-apple-touch-152.png",
       "sizes": "152x152",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "rodmar-apple-touch-180-1751394032734.png",
+      "src": "rodmar-apple-touch-180.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
@@ -75,7 +75,7 @@
       "purpose": "any"
     },
     {
-      "src": "rodmar-icon-384-1751394032734.png",
+      "src": "rodmar-icon-384.png",
       "sizes": "384x384",
       "type": "image/png",
       "purpose": "any"

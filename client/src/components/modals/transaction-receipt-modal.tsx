@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Share2, X } from "lucide-react";
@@ -23,7 +23,10 @@ export function TransactionReceiptModal({
   socioDestinoNombre,
 }: TransactionReceiptModalProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [preloadedImageUrl, setPreloadedImageUrl] = useState<string | null>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
+  const imagePreloadRef = useRef<HTMLImageElement | null>(null);
 
   // Validar que transaction existe y tiene los datos necesarios
   if (!transaction || !transaction.paraQuienTipo) {
@@ -57,6 +60,48 @@ export function TransactionReceiptModal({
   };
 
   const voucherImage = getVoucherImage();
+
+  // Pre-cargar la imagen en memoria tan pronto como se detecta el voucher
+  useEffect(() => {
+    if (!voucherImage || !open) {
+      setIsImageLoaded(false);
+      setPreloadedImageUrl(null);
+      return;
+    }
+
+    // Limpiar imagen anterior si existe
+    if (imagePreloadRef.current) {
+      imagePreloadRef.current.onload = null;
+      imagePreloadRef.current.onerror = null;
+      imagePreloadRef.current = null;
+    }
+
+    // Resetear estado
+    setIsImageLoaded(false);
+
+    // Crear imagen en memoria para pre-cargar
+    const img = new Image();
+    img.onload = () => {
+      setIsImageLoaded(true);
+      setPreloadedImageUrl(voucherImage);
+    };
+    img.onerror = () => {
+      console.warn('Error pre-cargando imagen del voucher');
+      setIsImageLoaded(true); // Permitir continuar aunque haya error
+      setPreloadedImageUrl(voucherImage);
+    };
+    img.src = voucherImage;
+    imagePreloadRef.current = img;
+
+    // Cleanup
+    return () => {
+      if (imagePreloadRef.current) {
+        imagePreloadRef.current.onload = null;
+        imagePreloadRef.current.onerror = null;
+        imagePreloadRef.current = null;
+      }
+    };
+  }, [voucherImage, open]);
 
   // Formatear valor como moneda
   const formatCurrency = (value: string | number): string => {
@@ -216,12 +261,19 @@ export function TransactionReceiptModal({
           {/* Voucher como protagonista */}
           {voucherImage ? (
             <div className="flex justify-center bg-white rounded-lg sm:rounded-xl p-2 sm:p-2.5 md:p-3 border-2 sm:border-2 md:border-4 border-green-300 shadow-md sm:shadow-lg">
-              <img
-                src={voucherImage}
-                alt="Voucher"
-                className="max-w-full h-auto rounded-md sm:rounded-lg"
-                style={{ maxHeight: 'clamp(250px, 30vh, 400px)' }}
-              />
+              {!isImageLoaded ? (
+                <div className="flex items-center justify-center h-32 sm:h-40 md:h-48">
+                  <div className="text-sm text-gray-500">Cargando imagen...</div>
+                </div>
+              ) : (
+                <img
+                  src={preloadedImageUrl || voucherImage}
+                  alt="Voucher"
+                  className="max-w-full h-auto rounded-md sm:rounded-lg"
+                  style={{ maxHeight: 'clamp(250px, 30vh, 400px)' }}
+                  onLoad={() => setIsImageLoaded(true)}
+                />
+              )}
             </div>
           ) : (
             <div className="flex justify-center items-center h-32 sm:h-40 md:h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg sm:rounded-xl border-2 border-dashed border-gray-300">
@@ -263,12 +315,17 @@ export function TransactionReceiptModal({
         <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4 border-t">
           <Button
             onClick={handleShare}
-            disabled={isGenerating}
-            className="w-full bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base"
+            disabled={isGenerating || (voucherImage && !isImageLoaded)}
+            className="w-full bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
             size="default"
           >
             <Share2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-            {isGenerating ? 'Generando...' : 'Compartir Comprobante'}
+            {isGenerating 
+              ? 'Generando...' 
+              : (voucherImage && !isImageLoaded)
+                ? 'Cargando imagen...'
+                : 'Compartir Comprobante'
+            }
           </Button>
         </div>
       </DialogContent>

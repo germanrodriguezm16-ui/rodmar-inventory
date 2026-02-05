@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReceiptImageUpload } from "@/components/ui/receipt-image-upload";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateTripRelatedQueries, type TripChangeInfo } from "@/lib/invalidate-trip-queries";
@@ -73,6 +74,12 @@ export default function RegisterDescargueModal({ open, onClose }: RegisterDescar
     queryKey: ["/api/compradores"],
     enabled: open, // Only run query when modal is open
   });
+
+  // Convertir compradores a formato para SearchableSelect
+  const compradoresOptions = compradores.map((comprador) => ({
+    value: comprador.id.toString(),
+    label: comprador.nombre,
+  }));
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -406,20 +413,17 @@ export default function RegisterDescargueModal({ open, onClose }: RegisterDescar
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs">Comprador</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Seleccionar" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {compradores.map((comprador) => (
-                            <SelectItem key={comprador.id} value={comprador.id.toString()}>
-                              {comprador.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <SearchableSelect
+                          options={compradoresOptions}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="Seleccionar comprador"
+                          searchPlaceholder="Buscar comprador..."
+                          emptyMessage="No se encontraron compradores"
+                          className="h-8 text-xs"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

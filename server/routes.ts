@@ -587,27 +587,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       const permissionExistsCache = new Map<string, boolean>();
 
-      // Si el usuario tiene permisos de transacciones, devolver TODAS las minas
-      // (sin filtrar por userId) para que pueda seleccionarlas en transacciones
+      // Si el usuario tiene permisos de transacciones o de cargue, devolver TODAS las minas
+      // (sin filtrar por userId) para que pueda seleccionarlas en transacciones o en registrar cargue
       const hasTransactionPermissions = 
         userPermissions.includes("action.TRANSACCIONES.create") ||
         userPermissions.includes("action.TRANSACCIONES.completePending") ||
         userPermissions.includes("action.TRANSACCIONES.edit") ||
         userPermissions.includes("action.TRANSACCIONES.delete");
       
-      // Si tiene permisos de transacciones, no filtrar por userId (ver todos)
-      const effectiveUserId = hasTransactionPermissions ? undefined : userId;
+      const hasCarguePermissions = 
+        userPermissions.includes("action.VIAJES.cargue.use") ||
+        userPermissions.includes("action.VIAJES.create");
       
-      const minas = hasTransactionPermissions 
+      // Si tiene permisos de transacciones o de cargue, no filtrar por userId (ver todos)
+      const shouldShowAll = hasTransactionPermissions || hasCarguePermissions;
+      const effectiveUserId = shouldShowAll ? undefined : userId;
+      
+      const minas = shouldShowAll 
         ? await storage.getMinas() // Sin userId = todas las minas
         : await storage.getMinas(userId); // Con userId = solo las del usuario
-      const minasPermitidas = await filterEntitiesByUsePermission({
-        entities: minas,
-        userPermissions,
-        deniedPermissions,
-        permissionExistsCache,
-        getPermissionKey: (mina) => buildViewPermissionKey("mina", mina.id),
-      });
+      
+      // Si tiene permisos de cargue, no filtrar por permisos individuales (ver todas)
+      // Si solo tiene permisos de transacciones, aplicar filtro de permisos individuales
+      const minasPermitidas = hasCarguePermissions
+        ? minas // Sin filtro de permisos individuales para usuarios con cargue
+        : await filterEntitiesByUsePermission({
+            entities: minas,
+            userPermissions,
+            deniedPermissions,
+            permissionExistsCache,
+            getPermissionKey: (mina) => buildViewPermissionKey("mina", mina.id),
+          });
       res.json(minasPermitidas);
     } catch (error: any) {
       console.error("Error fetching minas:", error.message);
@@ -1306,24 +1316,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         const permissionExistsCache = new Map<string, boolean>();
 
-        // Si el usuario tiene permisos de transacciones, devolver TODOS los compradores
-        // (sin filtrar por userId) para que pueda seleccionarlos en transacciones
+        // Si el usuario tiene permisos de transacciones o de descargue, devolver TODOS los compradores
+        // (sin filtrar por userId) para que pueda seleccionarlos en transacciones o en registrar descargue
         const hasTransactionPermissions = 
           userPermissions.includes("action.TRANSACCIONES.create") ||
           userPermissions.includes("action.TRANSACCIONES.completePending") ||
           userPermissions.includes("action.TRANSACCIONES.edit") ||
           userPermissions.includes("action.TRANSACCIONES.delete");
         
-        const compradores = hasTransactionPermissions 
+        const hasDescarguePermissions = 
+          userPermissions.includes("action.VIAJES.descargue.use");
+        
+        // Si tiene permisos de transacciones o de descargue, no filtrar por userId (ver todos)
+        const shouldShowAll = hasTransactionPermissions || hasDescarguePermissions;
+        
+        const compradores = shouldShowAll 
           ? await storage.getCompradores() // Sin userId = todos los compradores
           : await storage.getCompradores(userId); // Con userId = solo los del usuario
-        const compradoresPermitidos = await filterEntitiesByUsePermission({
-          entities: compradores,
-          userPermissions,
-          deniedPermissions,
-          permissionExistsCache,
-          getPermissionKey: (comprador) => buildViewPermissionKey("comprador", comprador.id),
-        });
+        
+        // Si tiene permisos de descargue, no filtrar por permisos individuales (ver todos)
+        // Si solo tiene permisos de transacciones, aplicar filtro de permisos individuales
+        const compradoresPermitidos = hasDescarguePermissions
+          ? compradores // Sin filtro de permisos individuales para usuarios con descargue
+          : await filterEntitiesByUsePermission({
+              entities: compradores,
+              userPermissions,
+              deniedPermissions,
+              permissionExistsCache,
+              getPermissionKey: (comprador) => buildViewPermissionKey("comprador", comprador.id),
+            });
         res.json(compradoresPermitidos);
       } catch (error: any) {
         console.error("Error fetching compradores:", error.message);

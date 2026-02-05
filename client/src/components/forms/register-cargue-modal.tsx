@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { X, ChevronDown } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -83,6 +84,12 @@ export default function RegisterCargueModal({ open, onClose }: RegisterCargueMod
     queryKey: ["/api/volqueteros"],
     enabled: open, // Only run query when modal is open
   });
+
+  // Convertir minas a formato para SearchableSelect
+  const minasOptions = minas.map((mina) => ({
+    value: mina.id.toString(),
+    label: mina.nombre,
+  }));
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -439,20 +446,17 @@ export default function RegisterCargueModal({ open, onClose }: RegisterCargueMod
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm font-medium">Mina</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Seleccionar mina" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {minas.map((mina) => (
-                            <SelectItem key={mina.id} value={mina.id.toString()}>
-                              {mina.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <SearchableSelect
+                          options={minasOptions}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="Seleccionar mina"
+                          searchPlaceholder="Buscar mina..."
+                          emptyMessage="No se encontraron minas"
+                          className="h-9"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
