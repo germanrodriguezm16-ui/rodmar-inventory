@@ -60,7 +60,6 @@ export function CompleteTransactionModal({
   // Estado para modal de comprobante
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [completedTransaction, setCompletedTransaction] = useState<any>(null);
-  const [isImagePreloading, setIsImagePreloading] = useState(false);
 
   // Fetch entities
   const { data: minas = [] } = useQuery<Mina[]>({
@@ -187,50 +186,10 @@ export function CompleteTransactionModal({
         description: "La transacción pendiente se ha completado exitosamente.",
       });
       
-      // Pre-cargar imagen del voucher antes de abrir el modal
-      const preloadImage = (voucher: string | null | undefined): Promise<void> => {
-        return new Promise((resolve) => {
-          if (!voucher) {
-            resolve();
-            return;
-          }
-          
-          // Limpiar prefijos
-          let cleanVoucher = voucher;
-          if (cleanVoucher.startsWith('IMAGE:')) {
-            cleanVoucher = cleanVoucher.substring(6);
-          }
-          if (cleanVoucher.startsWith('%7CIMAGE:')) {
-            cleanVoucher = cleanVoucher.substring(8);
-          } else if (cleanVoucher.startsWith('|IMAGE:')) {
-            cleanVoucher = cleanVoucher.substring(7);
-          }
-          
-          // Verificar si es una imagen válida
-          if (!cleanVoucher.startsWith('data:image') && !cleanVoucher.startsWith('http')) {
-            resolve();
-            return;
-          }
-          
-          setIsImagePreloading(true);
-          const img = new Image();
-          img.onload = () => {
-            setIsImagePreloading(false);
-            resolve();
-          };
-          img.onerror = () => {
-            setIsImagePreloading(false);
-            resolve(); // Continuar aunque haya error
-          };
-          img.src = cleanVoucher;
-        });
-      };
-      
-      // Pre-cargar imagen y luego abrir modal
-      preloadImage(result.voucher).then(() => {
-        setCompletedTransaction(result);
-        setShowReceiptModal(true);
-      });
+      // Abrir modal de comprobante. La precarga del voucher se maneja adentro del modal
+      // para evitar duplicar trabajo/red en distintos componentes.
+      setCompletedTransaction(result);
+      setShowReceiptModal(true);
       
       // Invalidar queries
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });

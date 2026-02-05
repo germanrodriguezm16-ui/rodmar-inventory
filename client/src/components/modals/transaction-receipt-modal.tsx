@@ -22,7 +22,8 @@ export function TransactionReceiptModal({
   transaction,
   socioDestinoNombre,
 }: TransactionReceiptModalProps) {
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isPreparingImage, setIsPreparingImage] = useState(false);
+  const [preparedFile, setPreparedFile] = useState<File | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [preloadedImageUrl, setPreloadedImageUrl] = useState<string | null>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
@@ -60,6 +61,16 @@ export function TransactionReceiptModal({
   };
 
   const voucherImage = getVoucherImage();
+
+  // Resetear el archivo preparado cuando cambia la transacción o se abre/cierra el modal
+  useEffect(() => {
+    if (!open) {
+      setPreparedFile(null);
+      setIsPreparingImage(false);
+      return;
+    }
+    setPreparedFile(null);
+  }, [open, transaction?.id]);
 
   // Pre-cargar la imagen en memoria tan pronto como se detecta el voucher
   useEffect(() => {
@@ -130,26 +141,26 @@ export function TransactionReceiptModal({
     return formatted;
   };
 
-  // Generar imagen del comprobante usando Canvas
+  // Generar imagen del comprobante usando Canvas (cacheada para evitar trabajo duplicado)
   const generateReceiptImage = async (): Promise<File> => {
+    if (preparedFile) return preparedFile;
     if (!receiptRef.current) {
       throw new Error('No se pudo generar el comprobante');
     }
 
-    setIsGenerating(true);
+    setIsPreparingImage(true);
 
     try {
       // Usar html2canvas para capturar el div del comprobante
       const html2canvas = (await import('html2canvas')).default;
       
-      // Calcular scale dinámicamente para pantallas Retina y alta resolución
-      // Usar devicePixelRatio para pantallas de alta densidad, mínimo 3 para buena calidad
-      const deviceScale = window.devicePixelRatio || 1;
-      const scale = Math.max(3, deviceScale * 2);
+      // NOTA: En móvil/WhatsApp, un scale muy alto hace que se "congele" la UI y puede romper
+      // el gesto de usuario requerido por navigator.share(). Usamos un scale más moderado.
+      const scale = 2;
       
       const canvas = await html2canvas(receiptRef.current, {
         backgroundColor: '#ffffff',
-        scale: scale, // Alta resolución para mejor calidad (3x o más en pantallas Retina)
+        scale: scale,
         logging: false,
         useCORS: true,
         allowTaint: false,
@@ -182,6 +193,7 @@ export function TransactionReceiptModal({
             const file = new File([blob], `comprobante-${transaction.id}.jpg`, {
               type: 'image/jpeg',
             });
+            setPreparedFile(file);
             resolve(file);
           },
           'image/jpeg',
@@ -189,7 +201,7 @@ export function TransactionReceiptModal({
         );
       });
     } finally {
-      setIsGenerating(false);
+      setIsPreparingImage(false);
     }
   };
 
@@ -220,7 +232,13 @@ export function TransactionReceiptModal({
       // Si el usuario cancela, no mostrar error
       if (error.name !== 'AbortError') {
         console.error('Error al compartir:', error);
-        alert('Error al compartir el comprobante. Inténtalo de nuevo.');
+        // En móvil, navigator.share() puede fallar si ya no hay "user gesture".
+        // Como ya dejamos el archivo cacheado, el segundo toque suele funcionar.
+        if (error?.name === 'NotAllowedError') {
+          alert('Listo. Por seguridad del navegador, toca "Compartir Comprobante" una vez más.');
+        } else {
+          alert('Error al compartir el comprobante. Inténtalo de nuevo.');
+        }
       }
     }
   };
@@ -356,13 +374,13 @@ export function TransactionReceiptModal({
         <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4 border-t">
           <Button
             onClick={handleShare}
-            disabled={isGenerating || (voucherImage && !isImageLoaded)}
+            disabled={isPreparingImage || (voucherImage && !isImageLoaded)}
             className="w-full bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
             size="default"
           >
             <Share2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-            {isGenerating 
-              ? 'Generando...' 
+            {isPreparingImage 
+              ? 'Preparando...' 
               : (voucherImage && !isImageLoaded)
                 ? 'Cargando imagen...'
                 : 'Compartir Comprobante'
