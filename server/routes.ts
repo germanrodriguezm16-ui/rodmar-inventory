@@ -39,6 +39,7 @@ import { normalizeNombreToCodigo, nombreToCodigoMap } from "./rodmar-utils";
 import { or } from "drizzle-orm";
 import sharp from "sharp";
 import { Resvg } from "@resvg/resvg-js";
+import opentype from "opentype.js";
 import { ROBOTO_REGULAR_BASE64 } from "./receipt-font";
 
 // Variable de debug - activar solo cuando se necesite diagnóstico
@@ -111,6 +112,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return lines.slice(0, maxLines);
   };
 
+  let cachedReceiptFont: any | null = null;
+  let receiptFontTried = false;
+
+  const getReceiptFont = () => {
+    if (receiptFontTried) return cachedReceiptFont;
+    receiptFontTried = true;
+    if (!ROBOTO_REGULAR_BASE64) return null;
+    try {
+      const buffer = Buffer.from(ROBOTO_REGULAR_BASE64, "base64");
+      const arrayBuffer = buffer.buffer.slice(
+        buffer.byteOffset,
+        buffer.byteOffset + buffer.byteLength,
+      );
+      const parser = (opentype as any).parse ?? (opentype as any)?.default?.parse;
+      if (!parser) return null;
+      cachedReceiptFont = parser(arrayBuffer);
+      return cachedReceiptFont;
+    } catch {
+      return null;
+    }
+  };
+
   const renderText = (
     text: string,
     x: number,
@@ -125,6 +148,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const anchorAttr =
       anchor === "middle" ? ` text-anchor="middle"` : anchor === "end" ? ` text-anchor="end"` : "";
     return `<text x="${x}" y="${y}" font-size="${fontSize}" fill="${fill}" font-weight="${weight}"${anchorAttr} font-family="Roboto">${safeText}</text>`;
+  };
+
+  const renderTextPath = (
+    text: string,
+    x: number,
+    y: number,
+    fontSize: number,
+    fill: string,
+    anchor: "start" | "middle" | "end" = "start",
+  ) => {
+    if (!text) return "";
+    const font = getReceiptFont();
+    if (!font) {
+      return renderText(text, x, y, fontSize, fill, anchor, 400);
+    }
+    const rawText = String(text);
+    const textWidth = font.getAdvanceWidth(rawText, fontSize);
+    const adjustedX =
+      anchor === "middle" ? x - textWidth / 2 : anchor === "end" ? x - textWidth : x;
+    const path = font.getPath(rawText, adjustedX, y, fontSize);
+    return `<path d="${path.toPathData(2)}" fill="${fill}" />`;
   };
 
   const formatReceiptDate = (dateInput: string | Date | null | undefined) => {
@@ -297,35 +341,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const commentTop = voucherTop + voucherHeight + spacing;
     const footerTop = commentTop + commentHeight + spacing;
 
-    const socioText = renderText(rawSocio, padding + 20, headerTop + 55, 30, "#1d4ed8", "start", 700);
-    const valueText = renderText(formattedValue, padding + 20, headerTop + 120, 38, "#059669", "start", 800);
-    const rmText = renderText("RM", width / 2, headerTop + 120, 34, "url(#rmGradient)", "middle", 900);
-    const dateText = renderText(formattedDate, width - padding - 20, headerTop + 120, 22, "#059669", "end", 700);
-    const commentLabel = renderText("Comentario:", padding + 20, commentTop + 45, 20, "#2563eb", "start", 700);
+    const socioText = renderTextPath(rawSocio, padding + 20, headerTop + 55, 30, "#1d4ed8", "start");
+    const valueText = renderTextPath(formattedValue, padding + 20, headerTop + 120, 38, "#059669", "start");
+    const rmText = renderTextPath("RM", width / 2, headerTop + 120, 34, "url(#rmGradient)", "middle");
+    const dateText = renderTextPath(formattedDate, width - padding - 20, headerTop + 120, 22, "#059669", "end");
+    const commentLabel = renderTextPath("Comentario:", padding + 20, commentTop + 45, 20, "#2563eb", "start");
     const commentLinesSvg = comentarioLines
       .map((line, index) =>
-        renderText(line, padding + 20, commentTop + 80 + index * 30, 19, "#111827", "start", 400),
+        renderTextPath(line, padding + 20, commentTop + 80 + index * 30, 19, "#111827", "start"),
       )
       .join("");
-    const footerText = renderText(
+    const footerText = renderTextPath(
       "Generado desde RodMar",
       width / 2,
       footerTop + 35,
       16,
       "#9ca3af",
       "middle",
-      500,
     );
 
     const voucherPlaceholderSvg = voucherPlaceholderText
-      ? renderText(
+      ? renderTextPath(
           voucherPlaceholderText,
           width / 2,
           voucherTop + voucherHeight / 2,
           18,
           "#6b7280",
           "middle",
-          400,
         )
       : "";
 
