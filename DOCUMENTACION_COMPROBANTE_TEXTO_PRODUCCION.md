@@ -31,3 +31,94 @@ Archivos claves:
 
 ## Razon tecnica del cambio
 El render de texto en SVG no es determinista entre motores y entornos. Convertir a paths elimina la dependencia de fuentes y garantiza consistencia visual.
+
+---
+
+## Mejoras de Diseño y Calidad (Commit a681595)
+
+### Tamaños de Texto Aumentados
+Para dar mayor protagonismo a los textos del comprobante, se aumentaron los tamaños base:
+
+- **Nombre del socio**: 30px → 44px
+- **Valor**: 38px → 56px
+- **RM (marca de agua)**: 34px → 42px
+- **Fecha**: 22px → 32px
+- **Comentario label**: 20px → 28px
+- **Comentario texto**: 19px → 26px
+- **Footer**: 16px → 18px
+
+### Textos del Encabezado Más Gruesos
+Para hacer los textos del encabezado más gruesos sin cambiar su tamaño, se implementó stroke en los paths:
+
+- Se agregó parámetro `strokeWidth` a `renderTextPath()` (por defecto 0)
+- Textos del encabezado (nombre, valor, RM, fecha) usan `strokeWidth: 1.5px`
+- Footer usa `strokeWidth: 1.2px` para negrita
+- El stroke se aplica al mismo color del fill para mantener consistencia visual
+
+**Implementación técnica:**
+```typescript
+const renderTextPath = (
+  text: string,
+  x: number,
+  y: number,
+  fontSize: number,
+  fill: string,
+  anchor: "start" | "middle" | "end" = "start",
+  strokeWidth: number = 0, // Nuevo parámetro
+) => {
+  // ...
+  const strokeAttr = strokeWidth > 0 
+    ? ` stroke="${fill}" stroke-width="${strokeWidth}" stroke-linejoin="round"` 
+    : "";
+  return `<path d="${path.toPathData(2)}" fill="${fill}"${strokeAttr} />`;
+}
+```
+
+### Dimensiones Adaptativas del Voucher
+El comprobante se adapta al tamaño y orientación del voucher adjunto:
+
+- **Ancho fijo**: 1200px (aumentado de 1100px para más espacio)
+- **Alturas controladas**:
+  - Vouchers verticales: máximo 900px, mínimo 450px
+  - Vouchers horizontales: máximo 650px, mínimo 450px
+  - Sin voucher: 350px
+- **Cálculo adaptativo**: Se detecta la orientación del voucher y se calcula la altura del área del voucher basándose en su aspect ratio, pero siempre dentro de los límites establecidos
+- **Header más alto**: 180px (aumentado de 160px) para dar más espacio a los textos más grandes
+
+**Lógica de adaptación:**
+```typescript
+if (voucherMetadata) {
+  const voucherAspectRatio = voucherMetadata.width / voucherMetadata.height;
+  const isVertical = voucherMetadata.height > voucherMetadata.width;
+  const availableWidth = baseWidth - basePadding * 2 - 40;
+  
+  if (isVertical) {
+    const calculatedHeight = Math.ceil(availableWidth / voucherAspectRatio) + 40;
+    voucherHeight = Math.min(maxVoucherHeightVertical, Math.max(minVoucherHeight, calculatedHeight));
+  } else {
+    const calculatedHeight = Math.ceil(availableWidth / voucherAspectRatio) + 40;
+    voucherHeight = Math.min(maxVoucherHeightHorizontal, Math.max(minVoucherHeight, calculatedHeight));
+  }
+}
+```
+
+### Calidad de Imagen
+- **Calidad JPG**: 100 (aumentada de 92) para evitar pérdida de calidad
+- Se mantiene formato JPG con `mozjpeg: true` para mejor compresión
+
+### Consideraciones de Diseño
+- Los textos nunca se sobreponen: se mantiene un ancho mínimo y se verifica el espacio requerido
+- El voucher no domina el comprobante: tiene límites máximos razonables
+- Balance visual: los textos tienen protagonismo adecuado sin que el voucher pierda importancia
+- Coherencia: un voucher vertical puede estar en un comprobante más horizontal (rectángulo horizontal con espacio a los lados)
+
+### Archivos Modificados
+- `server/routes.ts`:
+  - `renderTextPath()`: agregado parámetro `strokeWidth`
+  - `buildReceiptImage()`: tamaños aumentados, stroke aplicado, dimensiones adaptativas
+
+### Validación
+1. Verificar que los textos se vean con el tamaño y grosor correctos
+2. Probar con vouchers verticales y horizontales para validar adaptación
+3. Confirmar que no hay solapamiento de textos en el encabezado
+4. Verificar calidad de imagen en el comprobante compartido
