@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiUrl } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 interface User {
   id: string;
@@ -77,7 +78,6 @@ export function useAuth() {
   // Mutación para login
   const loginMutation = useMutation({
     mutationFn: async ({ phone, password }: { phone: string; password: string }) => {
-      console.log("🔐 Intentando login con:", { phone: phone.substring(0, 3) + "***" });
       const response = await fetch(apiUrl("/api/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,43 +85,36 @@ export function useAuth() {
         body: JSON.stringify({ phone, password }),
       });
 
-      console.log("📡 Respuesta del login:", response.status, response.statusText);
-
       if (!response.ok) {
         let errorMessage = "Error al iniciar sesión";
         try {
           const error = await response.json();
           errorMessage = error.error || errorMessage;
-          console.error("❌ Error del servidor:", errorMessage);
+          logger.error("AUTH", "Error del servidor:", errorMessage);
         } catch (e) {
-          console.error("❌ Error parseando respuesta:", e);
+          logger.error("AUTH", "Error parseando respuesta:", e);
           errorMessage = `Error ${response.status}: ${response.statusText}`;
         }
         throw new Error(errorMessage);
       }
 
       const data = await response.json();
-      console.log("✅ Login exitoso:", data.user?.id);
       
       // Guardar token en localStorage
       if (data.token) {
         setAuthToken(data.token);
-        console.log("🔑 Token guardado en localStorage:", data.token.substring(0, 20) + "...");
         // Verificar que se guardó correctamente
         const savedToken = getAuthToken();
-        if (savedToken) {
-          console.log("✅ Token verificado en localStorage:", savedToken.substring(0, 20) + "...");
-        } else {
-          console.error("❌ Error: Token no se guardó correctamente en localStorage");
+        if (!savedToken) {
+          logger.error("AUTH", "Error: Token no se guardó correctamente en localStorage");
         }
       } else {
-        console.error("❌ Error: No se recibió token en la respuesta del login");
+        logger.error("AUTH", "Error: No se recibió token en la respuesta del login");
       }
       
       return data as AuthResponse;
     },
     onSuccess: (data) => {
-      console.log("✅ Login completado, actualizando caché");
       // Invalidar y actualizar caché
       queryClient.setQueryData(["auth", "me"], data);
       queryClient.setQueryData(["/api/user/permissions"], { permissions: data.permissions });
@@ -133,7 +126,7 @@ export function useAuth() {
       }, 100);
     },
     onError: (error) => {
-      console.error("❌ Error en login mutation:", error);
+      logger.error("AUTH", "Error en login mutation:", error);
     },
   });
 
@@ -165,13 +158,11 @@ export function useAuth() {
   });
 
   const login = async (phone: string, password: string) => {
-    console.log("🔐 [useAuth] login() llamado");
     try {
       const result = await loginMutation.mutateAsync({ phone, password });
-      console.log("✅ [useAuth] login() completado exitosamente");
       return result;
     } catch (error) {
-      console.error("❌ [useAuth] login() falló:", error);
+      logger.error("AUTH", "login() falló:", error);
       throw error;
     }
   };

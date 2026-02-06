@@ -1,6 +1,7 @@
 import { Server as HttpServer } from "http";
 import { Server as SocketServer, Socket } from "socket.io";
 import type { DefaultEventsMap } from "socket.io/dist/typed-events";
+import { logger } from "./logger";
 
 let io: SocketServer | null = null;
 
@@ -22,7 +23,7 @@ export function initializeSocket(httpServer: HttpServer): SocketServer {
   });
 
   io.on("connection", (socket: Socket) => {
-    console.log(`🔌 Cliente conectado: ${socket.id}`);
+    logger.debug(`🔌 Cliente conectado: ${socket.id}`);
 
     // Escuchar eventos de invalidación de caché de clientes
     socket.on("cache-invalidate", (data: {
@@ -32,23 +33,23 @@ export function initializeSocket(httpServer: HttpServer): SocketServer {
       // Reenviar a todos los demás clientes (excepto al que lo envió)
       socket.broadcast.emit("cache-invalidate", data);
       
-      console.log(`📡 [CacheSync] Invalidación reenviada a otros clientes:`, {
+      logger.debug(`📡 [CacheSync] Invalidación reenviada a otros clientes:`, {
         invalidationsCount: data.invalidations.length,
         from: socket.id
       });
     });
 
     socket.on("disconnect", () => {
-      console.log(`🔌 Cliente desconectado: ${socket.id}`);
+      logger.debug(`🔌 Cliente desconectado: ${socket.id}`);
     });
 
     // Manejar errores de conexión
     socket.on("error", (error) => {
-      console.error(`❌ Error de Socket.io:`, error);
+      logger.error(`❌ Error de Socket.io:`, error);
     });
   });
 
-  console.log("✅ Socket.io inicializado");
+  logger.debug("✅ Socket.io inicializado");
   return io;
 }
 
@@ -63,7 +64,7 @@ export function emitTransactionUpdate(data: {
   affectedAccounts?: string[];
 }) {
   if (!io) {
-    console.warn("⚠️ Socket.io no está inicializado");
+    logger.warn("⚠️ Socket.io no está inicializado");
     return;
   }
 
@@ -78,7 +79,7 @@ export function emitTransactionUpdate(data: {
     timestamp: new Date().toISOString(),
   });
 
-  console.log(`📡 Evento emitido: transaction-updated`, {
+  logger.debug(`📡 Evento emitido: transaction-updated`, {
     type: data.type,
     transactionId: data.transactionId,
     affectedEntityTypes,
@@ -97,7 +98,7 @@ export function emitTransactionSpecificUpdates(data: {
   nuevoBalanceDestino?: string;
 }) {
   if (!io) {
-    console.warn("⚠️ Socket.io no está inicializado");
+    logger.warn("⚠️ Socket.io no está inicializado");
     return;
   }
 
@@ -162,7 +163,7 @@ export function emitTransactionSpecificUpdates(data: {
     });
   }
 
-  console.log(`📡 Eventos emitidos para transacción ${transactionId}:`, {
+  logger.debug(`📡 Eventos emitidos para transacción ${transactionId}:`, {
     origen: `${origenTipo}:${origenId}`,
     destino: `${destinoTipo}:${destinoId}`,
   });

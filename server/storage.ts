@@ -222,11 +222,11 @@ export class MemStorage implements IStorage {
   constructor() {
     // Initialize with minimal clean data only
     this.initializeCleanDefaults();
-    console.log("=== STORAGE: Initialized with clean defaults only");
+    // Log removido - solo en desarrollo si es necesario
   }
 
   private initializeCleanDefaults() {
-    console.log("=== STORAGE: Starting clean initialization");
+    // Log removido - solo en desarrollo si es necesario
     
     // Reset all counters
     this.minaIdCounter = 1;
@@ -315,7 +315,7 @@ export class MemStorage implements IStorage {
     this.transacciones.set(1, cleanTransaction);
     this.transaccionIdCounter = 2;
     
-    console.log("=== STORAGE: Clean initialization completed - TRP001 only");
+    // Log removido - solo en desarrollo si es necesario
   }
 
   private trackFileHash(hash: string): void {
@@ -364,7 +364,7 @@ export class MemStorage implements IStorage {
     
     // Verificar si ya existe una mina con este ID
     if (this.minas.has(id)) {
-      console.log(`=== Mina with ID ${id} already exists, skipping creation`);
+      // Log removido - solo en desarrollo si es necesario
       return this.minas.get(id)!;
     }
     

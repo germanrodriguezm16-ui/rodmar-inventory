@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { setupCacheSync, setupCacheSyncListener } from "@/lib/cacheSync";
+import { logger } from "@/lib/logger";
 
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
@@ -17,7 +18,7 @@ export function useSocket() {
     
     // Solo conectar si tenemos una URL válida
     if (!apiUrl) {
-      console.warn("⚠️ VITE_API_URL no configurada, Socket.io no se conectará");
+      logger.warn("SOCKET", "VITE_API_URL no configurada, Socket.io no se conectará");
       return;
     }
     
@@ -259,18 +260,18 @@ export function useSocket() {
 
     // Manejar eventos de conexión
     socket.on("connect", () => {
-      console.log("✅ Conectado a Socket.io");
+      logger.debug("SOCKET", "Conectado a Socket.io");
     });
 
     socket.on("disconnect", () => {
-      console.log("❌ Desconectado de Socket.io");
+      logger.debug("SOCKET", "Desconectado de Socket.io");
     });
 
     socket.on("connect_error", (error) => {
       // Solo mostrar error si no es un error de DNS (ERR_NAME_NOT_RESOLVED)
       // Estos errores son esperados si Railway está pausado
       if (error.message && !error.message.includes("ERR_NAME_NOT_RESOLVED")) {
-        console.error("❌ Error de conexión Socket.io:", error);
+        logger.error("SOCKET", "Error de conexión Socket.io:", error);
       }
     });
 

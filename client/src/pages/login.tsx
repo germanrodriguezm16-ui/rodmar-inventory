@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 export default function LoginPage() {
   const [phone, setPhone] = useState("");
@@ -17,30 +18,17 @@ export default function LoginPage() {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log("📝 [LOGIN] handleSubmit llamado", { phone: phone.substring(0, 3) + "***", hasPassword: !!password });
-    
     if (!phone || !password) {
-      console.warn("⚠️ [LOGIN] Formulario incompleto", { phone: !!phone, password: !!password });
       return;
     }
 
-    console.log("📝 [LOGIN] Enviando formulario de login");
     try {
-      const result = await login(phone, password);
-      console.log("✅ [LOGIN] Login exitoso en handleSubmit:", result);
+      await login(phone, password);
     } catch (error) {
-      // El error ya se maneja en useAuth, pero lo logueamos para debug
-      console.error("❌ [LOGIN] Error capturado en handleSubmit:", error);
+      // El error ya se maneja en useAuth
       // No necesitamos hacer nada más, el error se muestra en loginError
     }
   };
-
-  // Debug: mostrar estado del error
-  useEffect(() => {
-    if (loginError) {
-      console.log("🔴 [LOGIN] loginError detectado:", loginError);
-    }
-  }, [loginError]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -96,7 +84,7 @@ export default function LoginPage() {
               className="w-full"
               disabled={isLoggingIn || !phone || !password}
               onClick={(e) => {
-                console.log("🖱️ [LOGIN] Botón clickeado", { phone: phone.substring(0, 3) + "***", hasPassword: !!password, isLoggingIn });
+                // Log removido - solo en desarrollo si es necesario
               }}
             >
               {isLoggingIn ? (

@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../shared/schema';
+import { logger } from './logger';
 
 // Lazy connection - solo se conecta cuando se usa
 let sql: ReturnType<typeof postgres> | null = null;
@@ -28,7 +29,7 @@ function getDb() {
         max_lifetime: 60 * 30,
       });
       dbInstance = drizzle(sql, { schema });
-      console.log('✅ Conexión a base de datos configurada');
+      logger.debug('✅ Conexión a base de datos configurada');
       
       // Probar la conexión de forma asíncrona (se hará en la primera query)
       // No podemos hacer await aquí porque getDb() no es async
