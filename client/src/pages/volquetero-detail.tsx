@@ -933,7 +933,9 @@ export default function VolqueteroDetail() {
   // Función para crear transacción temporal
   const handleCreateTemporalTransaction = (data: any) => {
     const temporalId = `temporal-${Date.now()}`;
-    const fechaTransaccion = new Date(data.fecha);
+    // Parsear fecha correctamente para horaInterna (usando componentes locales)
+    const [year, month, day] = data.fecha.split('-').map(Number);
+    const fechaTransaccion = new Date(year, month - 1, day);
     const horaInternaFija = new Date(fechaTransaccion);
     horaInternaFija.setHours(0, 0, 1, 0);
     
@@ -941,7 +943,7 @@ export default function VolqueteroDetail() {
       id: parseInt(temporalId.replace('temporal-', '')) || 0,
       concepto: data.concepto,
       valor: data.valor.toString(),
-      fecha: fechaTransaccion,
+      fecha: data.fecha, // Guardar string directamente (como en minas) para evitar problemas de zona horaria
       horaInterna: horaInternaFija,
       formaPago: data.formaPago,
       voucher: data.voucher || null,
