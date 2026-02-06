@@ -8693,15 +8693,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // OPTIMIZACIÓN: Filtrar solo transacciones que involucran cuentas RodMar en la BD
       // Esto reduce significativamente el tiempo de carga al evitar procesar todas las transacciones
-      const transaccionesRodMarRaw = await db
-        .select()
-        .from(transacciones)
-        .where(
-          or(
-            eq(transacciones.deQuienTipo, 'rodmar'),
-            eq(transacciones.paraQuienTipo, 'rodmar')
-          )
+      // Incluye tanto el sistema nuevo (deQuienTipo/paraQuienTipo) como el legacy (tipoSocio)
+      let transaccionesRodMarRaw;
+      try {
+        transaccionesRodMarRaw = await db
+          .select()
+          .from(transacciones)
+          .where(
+            or(
+              eq(transacciones.deQuienTipo, 'rodmar'),
+              eq(transacciones.paraQuienTipo, 'rodmar'),
+              eq(transacciones.tipoSocio, 'rodmar') // Incluir transacciones legacy
+            )
+          );
+      } catch (queryError: any) {
+        console.error('[RODMAR-ACCOUNTS] Error en query de transacciones:', queryError);
+        console.error('[RODMAR-ACCOUNTS] Stack:', queryError.stack);
+        // Fallback: usar storage.getTransacciones() si la query falla
+        console.log('[RODMAR-ACCOUNTS] Usando fallback: storage.getTransacciones()');
+        const allTransacciones = await storage.getTransacciones();
+        transaccionesRodMarRaw = allTransacciones.filter((t: any) => 
+          t.deQuienTipo === 'rodmar' || 
+          t.paraQuienTipo === 'rodmar' || 
+          t.tipoSocio === 'rodmar'
         );
+      }
+      
+      // Logs solo en modo debug
+      if (process.env.DEBUG_RODMAR === 'true') {
+        console.log(`[RODMAR-ACCOUNTS] Transacciones filtradas: ${transaccionesRodMarRaw.length}`);
+      }
       
       // Convertir a formato compatible con la lógica existente
       // La lógica de cálculo se mantiene exactamente igual, solo optimizamos el filtrado previo
@@ -8725,7 +8746,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // Obtener TODAS las cuentas de la BD
-      const todasLasCuentas = await db.select().from(rodmarCuentas);
+      let todasLasCuentas;
+      try {
+        todasLasCuentas = await db.select().from(rodmarCuentas);
+      } catch (error: any) {
+        console.error('[RODMAR-ACCOUNTS] Error obteniendo cuentas de BD:', error);
+        throw error; // Re-lanzar para que se capture en el catch general
+      }
+      
+      // Logs solo en modo debug
+      if (process.env.DEBUG_RODMAR === 'true') {
+        console.log(`[RODMAR-ACCOUNTS] Cuentas en BD: ${todasLasCuentas.length}`);
+      }
 
       // Filtrar cuentas según permisos del usuario (usando código, no nombre)
       // module.RODMAR.accounts.view SOLO habilita la pestaña; el acceso real es por
@@ -8778,8 +8810,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Logs solo en modo debug
       if (process.env.DEBUG_RODMAR === 'true') {
-        console.log(`[RODMAR-ACCOUNTS] Total cuentas: ${todasLasCuentas.length}, Cuentas permitidas: ${cuentasRodMar.length}`);
+        console.log(`[RODMAR-ACCOUNTS] Total cuentas en BD: ${todasLasCuentas.length}`);
+        console.log(`[RODMAR-ACCOUNTS] Cuentas permitidas: ${cuentasRodMar.length}`);
+        if (cuentasRodMar.length === 0 && todasLasCuentas.length > 0) {
+          console.log(`[RODMAR-ACCOUNTS] ⚠️  Ninguna cuenta permitida. Total permisos usuario: ${userPermissions.length}`);
+          console.log(`[RODMAR-ACCOUNTS] Permisos RODMAR del usuario:`, userPermissions.filter(p => p.includes('RODMAR')));
+        }
         console.log(`[RODMAR-ACCOUNTS] Cuentas permitidas:`, cuentasRodMar.map(c => c.nombre));
+      }
+
+      // Si no hay cuentas permitidas, devolver array vacío (pero loguear para debugging)
+      if (cuentasRodMar.length === 0) {
+        console.log(`[RODMAR-ACCOUNTS] ⚠️  ADVERTENCIA: No hay cuentas permitidas después del filtrado por permisos`);
+        console.log(`[RODMAR-ACCOUNTS] Total cuentas en BD: ${todasLasCuentas.length}`);
+        console.log(`[RODMAR-ACCOUNTS] Permisos del usuario:`, userPermissions.filter(p => p.includes('RODMAR')).slice(0, 10));
+        return res.json([]);
       }
 
       // Calcular balance de cada cuenta permitida
@@ -8816,19 +8861,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transacciones.forEach((transaccion: any) => {
           const valor = parseFloat(transaccion.valor || "0");
 
-          // Verificar si la transacción sale de RodMar desde esta cuenta específica (EGRESO)
-          // Debe verificar solo deQuienId, no usar || paraQuienId
+          // Sistema nuevo: Verificar si la transacción sale de RodMar desde esta cuenta específica (EGRESO)
           if (transaccion.deQuienTipo === "rodmar" && transaccion.deQuienId) {
             if (referenciasPosibles.includes(transaccion.deQuienId)) {
               egresos += valor;
             }
           }
 
-          // Verificar si la transacción llega a RodMar a esta cuenta específica (INGRESO)
-          // Debe verificar solo paraQuienId, no usar || deQuienId
+          // Sistema nuevo: Verificar si la transacción llega a RodMar a esta cuenta específica (INGRESO)
           if (transaccion.paraQuienTipo === "rodmar" && transaccion.paraQuienId) {
             if (referenciasPosibles.includes(transaccion.paraQuienId)) {
               ingresos += valor;
+            }
+          }
+
+          // Sistema legacy: Transacciones con tipoSocio = 'rodmar' y socioId = cuenta.id
+          // En el sistema legacy, si tipoSocio = 'rodmar', la transacción involucra RodMar
+          // El socioId debería corresponder al ID de la cuenta RodMar
+          if (transaccion.tipoSocio === "rodmar" && transaccion.socioId) {
+            const socioIdStr = transaccion.socioId.toString();
+            // Si el socioId coincide con el ID de la cuenta, es una transacción que afecta esta cuenta
+            // En el sistema legacy, no está claro si es ingreso o egreso, pero por compatibilidad
+            // asumimos que si tiene tipoSocio = 'rodmar', es un egreso (RodMar paga)
+            if (socioIdStr === idString) {
+              egresos += valor;
             }
           }
         });
@@ -8843,12 +8899,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
+      // Logs solo en modo debug
+      if (process.env.DEBUG_RODMAR === 'true') {
+        console.log(`[RODMAR-ACCOUNTS] Respuesta final: ${balancesCuentas.length} cuentas`);
+      }
+      
       res.json(balancesCuentas);
-    } catch (error) {
-      console.error("Error calculating RodMar account balances:", error);
+    } catch (error: any) {
+      console.error("[RODMAR-ACCOUNTS] Error calculating RodMar account balances:", error);
+      console.error("[RODMAR-ACCOUNTS] Error message:", error?.message);
+      console.error("[RODMAR-ACCOUNTS] Error stack:", error?.stack);
       res
         .status(500)
-        .json({ error: "Failed to fetch RodMar account balances" });
+        .json({ error: "Failed to fetch RodMar account balances", details: error?.message });
     }
   });
 
