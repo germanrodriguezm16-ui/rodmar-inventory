@@ -376,8 +376,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const base = sharp(svgPng);
 
     const composites: { input: Buffer; top: number; left: number }[] = [];
-    // Dibujar primero el SVG (marcos/textos) y luego el voucher encima para que no quede tapado.
-    composites.push({ input: Buffer.from(svg), top: 0, left: 0 });
 
     if (voucherBuffer) {
       const imageWidth = width - padding * 2 - 40;
