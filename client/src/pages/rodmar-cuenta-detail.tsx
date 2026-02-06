@@ -302,18 +302,21 @@ export default function RodMarCuentaDetail() {
   // Contar transacciones ocultas localmente (solo visual)
   const hiddenCuentaCount = getHiddenTransactionsCount();
 
-  // Inferir identificador real de la cuenta desde transacciones (id numérico o código)
+  // Inferir el identificador real de la cuenta (ID numérico "4"/"5" o código tipo "BANCOLOMBIA_JHON")
+  // a partir de las transacciones que el backend ya filtró para ESTA cuenta.
+  // Esto evita depender de /api/rodmar-cuentas (puede venir vacío por permisos) y hace que
+  // resumen + imagen usen el mismo identificador que viene en deQuienId/paraQuienId.
   const cuentaCodigoInferido = useMemo(() => {
     const conteo = new Map<string, number>();
     const list = (allTransaccionesReales || []) as any[];
     for (const t of list) {
       if (t?.deQuienTipo === "rodmar" && t?.deQuienId) {
-        const k = String(t.deQuienId);
-        conteo.set(k, (conteo.get(k) || 0) + 1);
+        const key = String(t.deQuienId);
+        conteo.set(key, (conteo.get(key) || 0) + 1);
       }
       if (t?.paraQuienTipo === "rodmar" && t?.paraQuienId) {
-        const k = String(t.paraQuienId);
-        conteo.set(k, (conteo.get(k) || 0) + 1);
+        const key = String(t.paraQuienId);
+        conteo.set(key, (conteo.get(key) || 0) + 1);
       }
     }
     let best: string | null = null;
@@ -326,7 +329,6 @@ export default function RodMarCuentaDetail() {
     }
     return best;
   }, [allTransaccionesReales]);
-
 
   // Filtrado client-side sobre la página activa
   const transaccionesReales = useMemo(() => {
@@ -475,7 +477,7 @@ export default function RodMarCuentaDetail() {
   const cuentaIdentificadores = useMemo(() => {
     const ids: string[] = [];
     
-    // Siempre incluir el slug si es numérico (ej: /rodmar/cuenta/4)
+    // Siempre incluir el slug si es numérico
     const cuentaIdNum = parseInt(cuentaSlug);
     if (!isNaN(cuentaIdNum)) {
       ids.push(cuentaIdNum.toString());
@@ -486,7 +488,7 @@ export default function RodMarCuentaDetail() {
       if (cuentaEncontrada.id) {
         ids.push(cuentaEncontrada.id.toString());
       }
-      // Código (persistente)
+      // Código (ej: 'BEMOVIL')
       if (cuentaEncontrada.codigo) {
         ids.push(cuentaEncontrada.codigo);
         ids.push(cuentaEncontrada.codigo.toLowerCase());
@@ -511,7 +513,7 @@ export default function RodMarCuentaDetail() {
       ids.push(cuentaNombre.toLowerCase());
     }
 
-    // Incluir el identificador real inferido desde transacciones
+    // Incluir el identificador real inferido desde transacciones (clave para que la imagen no quede gris/0)
     if (cuentaCodigoInferido) {
       ids.push(cuentaCodigoInferido);
       ids.push(cuentaCodigoInferido.toLowerCase());
@@ -538,7 +540,7 @@ export default function RodMarCuentaDetail() {
     let filtered = todasTransacciones.filter(t => {
       // Solo filtrar transacciones manuales (las temporales e inversiones se mantienen visibles)
       if (t.tipo === "Manual" && typeof t.id === 'number') {
-        return !hiddenTransactions.has(t.id);
+        return !hiddenTransactions.has(String(t.id));
       }
       return true; // Mantener temporales e inversiones visibles
     });
@@ -577,6 +579,27 @@ export default function RodMarCuentaDetail() {
 
     return filtered;
   }, [todasTransacciones, hiddenTransactions, balanceFilter, cuentaIdentificadores, coincideConCuenta]);
+
+  const transaccionesParaImagen = useMemo(() => {
+    return transaccionesFiltradas.map((transaccion: any) => {
+      const esIngresoACuenta = transaccion.esIngresoACuenta ?? (
+        transaccion.paraQuienTipo === 'rodmar' && coincideConCuenta(transaccion.paraQuienId)
+      );
+      const esEgresoDeEstaCuenta = transaccion.esEgresoDeEstaCuenta ?? (
+        transaccion.deQuienTipo === 'rodmar' && coincideConCuenta(transaccion.deQuienId)
+      );
+      const esEgresoTemporal = transaccion.esEgresoTemporal ?? (
+        transaccion.esTemporal && transaccion.deQuienTipo === 'rodmar' && coincideConCuenta(transaccion.deQuienId)
+      );
+
+      return {
+        ...transaccion,
+        esIngresoACuenta,
+        esEgresoDeEstaCuenta,
+        esEgresoTemporal,
+      };
+    });
+  }, [transaccionesFiltradas, coincideConCuenta]);
 
   // Calcular balances dinámicos
   const calcularBalances = () => {
@@ -1147,7 +1170,7 @@ export default function RodMarCuentaDetail() {
       <RodMarCuentasImageModal
         open={isImageModalOpen}
         onOpenChange={setIsImageModalOpen}
-        transacciones={transaccionesFiltradas}
+        transacciones={transaccionesParaImagen}
         cuentaNombre={cuentaNombre}
         cuentaCodigo={cuentaEncontrada?.codigo || cuentaCodigoInferido || undefined}
         cuentaIdentificadores={cuentaIdentificadores}

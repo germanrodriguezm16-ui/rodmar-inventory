@@ -645,7 +645,7 @@ export default function TerceroDetail() {
     let filtered = todasTransacciones.filter(t => {
       // Solo filtrar transacciones manuales (las temporales se mantienen visibles)
       if (t.tipo === "Manual" && typeof t.id === 'number') {
-        return !hiddenTransactions.has(t.id);
+        return !hiddenTransactions.has(String(t.id));
       }
       return true; // Mantener temporales visibles
     });
