@@ -38,6 +38,7 @@ import { db } from "./db";
 import { eq, desc, and, or, sql, isNull, inArray, ne } from "drizzle-orm";
 import type { IStorage } from "./storage";
 import { parseColombiaDate } from "../shared/date-colombia";
+import { logger } from "./logger";
 
 // Helper para capturar errores de conexión y propagarlos correctamente
 async function wrapDbOperation<T>(operation: () => Promise<T>): Promise<T> {
@@ -529,7 +530,7 @@ export class DatabaseStorage implements IStorage {
   async getViajes(userId?: string): Promise<ViajeWithDetails[]> {
     return wrapDbOperation(async () => {
       const startTime = Date.now();
-      console.log('🔵 [PERF] getViajes() - INICIANDO');
+      // Log de performance removido - solo en desarrollo si es necesario
       
       // OPTIMIZACIÓN: Solo seleccionar campos necesarios de minas y compradores para reducir payload
       // Esto reduce significativamente el tamaño de la respuesta (de ~14MB a ~2-3MB)
@@ -588,7 +589,7 @@ export class DatabaseStorage implements IStorage {
         ? await query.where(eq(viajes.userId, userId))
         : await query;
       const queryTime = Date.now() - queryStart;
-      console.log(`⏱️  [PERF] Query de viajes: ${queryTime}ms (${results.length} registros)`);
+      logger.debug(`⏱️  [PERF] Query de viajes: ${queryTime}ms (${results.length} registros)`);
 
       const mapStart = Date.now();
       const mapped = results.map(result => ({
@@ -602,8 +603,8 @@ export class DatabaseStorage implements IStorage {
       }));
       const mapTime = Date.now() - mapStart;
       const totalTime = Date.now() - startTime;
-      console.log(`⏱️  [PERF] Mapeo de viajes: ${mapTime}ms`);
-      console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getViajes: ${totalTime}ms (Query: ${queryTime}ms, Map: ${mapTime}ms)`);
+      logger.debug(`⏱️  [PERF] Mapeo de viajes: ${mapTime}ms`);
+      logger.debug(`⏱️  [PERF] ⚡ TIEMPO TOTAL getViajes: ${totalTime}ms (Query: ${queryTime}ms, Map: ${mapTime}ms)`);
       
       return mapped;
     });
@@ -626,7 +627,7 @@ export class DatabaseStorage implements IStorage {
   }> {
     return wrapDbOperation(async () => {
       const startTime = Date.now();
-      console.log(`🔵 [PERF] getViajesPaginated() - INICIANDO (page: ${page}, limit: ${limit})`);
+      logger.debug(`🔵 [PERF] getViajesPaginated() - INICIANDO (page: ${page}, limit: ${limit})`);
       
       // Validar parámetros
       const validPage = Math.max(1, Math.floor(page));
@@ -696,7 +697,7 @@ export class DatabaseStorage implements IStorage {
       
       const total = countResult[0]?.count || 0;
       const countTime = Date.now() - countStart;
-      console.log(`⏱️  [PERF] Count de viajes: ${countTime}ms (total: ${total})`);
+      logger.debug(`⏱️  [PERF] Count de viajes: ${countTime}ms (total: ${total})`);
 
       // Query paginada
       const queryStart = Date.now();
@@ -708,7 +709,7 @@ export class DatabaseStorage implements IStorage {
       
       const results = await query.limit(validLimit).offset(offset);
       const queryTime = Date.now() - queryStart;
-      console.log(`⏱️  [PERF] Query paginada de viajes: ${queryTime}ms (${results.length} registros)`);
+      logger.debug(`⏱️  [PERF] Query paginada de viajes: ${queryTime}ms (${results.length} registros)`);
 
       // Mapear resultados
       const mapStart = Date.now();
@@ -726,8 +727,8 @@ export class DatabaseStorage implements IStorage {
       const totalPages = Math.ceil(total / validLimit);
       const totalTime = Date.now() - startTime;
       
-      console.log(`⏱️  [PERF] Mapeo de viajes: ${mapTime}ms`);
-      console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL getViajesPaginated: ${totalTime}ms (Count: ${countTime}ms, Query: ${queryTime}ms, Map: ${mapTime}ms)`);
+      logger.debug(`⏱️  [PERF] Mapeo de viajes: ${mapTime}ms`);
+      logger.debug(`⏱️  [PERF] ⚡ TIEMPO TOTAL getViajesPaginated: ${totalTime}ms (Count: ${countTime}ms, Query: ${queryTime}ms, Map: ${mapTime}ms)`);
 
       return {
         data: mapped,
@@ -899,7 +900,7 @@ export class DatabaseStorage implements IStorage {
       const startTime = Date.now();
       const DEBUG_TRANSACCIONES = process.env.DEBUG_TRANSACCIONES === 'true';
       if (DEBUG_TRANSACCIONES) {
-        console.log('🔵 [PERF] getTransacciones() - INICIANDO');
+        logger.debug('🔵 [PERF] getTransacciones() - INICIANDO');
       }
       
       const conditions: any[] = [];
@@ -942,7 +943,7 @@ export class DatabaseStorage implements IStorage {
 
       const queryTime = Date.now() - queryStart;
       if (DEBUG_TRANSACCIONES) {
-        console.log(`⏱️  [PERF] Query de transacciones: ${queryTime}ms (${results.length} registros)`);
+        logger.debug(`⏱️  [PERF] Query de transacciones: ${queryTime}ms (${results.length} registros)`);
       }
 
       // OPTIMIZACIÓN: Batch loading de nombres - cargar todos los nombres en 5 queries en lugar de N queries
@@ -957,7 +958,7 @@ export class DatabaseStorage implements IStorage {
 
       const batchTime = Date.now() - batchStart;
       if (DEBUG_TRANSACCIONES) {
-        console.log(`⏱️  [PERF] Batch loading de nombres: ${batchTime}ms`);
+        logger.debug(`⏱️  [PERF] Batch loading de nombres: ${batchTime}ms`);
       }
 
       // Crear Maps para lookup O(1)
@@ -1018,7 +1019,7 @@ export class DatabaseStorage implements IStorage {
       const mapTime = Date.now() - mapStart;
       if (DEBUG_TRANSACCIONES) {
         console.log(`✅ Nombres cargados: ${minasMap.size} minas, ${compradoresMap.size} compradores, ${volqueterosMap.size} volqueteros, ${rodmarCuentasMap.size} referencias RodMar`);
-        console.log(`⏱️  [PERF] Creación de Maps: ${mapTime}ms`);
+        logger.debug(`⏱️  [PERF] Creación de Maps: ${mapTime}ms`);
       }
 
       // Resolver nombres de socios y actualizar conceptos dinámicamente (usando Maps en lugar de queries)

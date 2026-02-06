@@ -19,7 +19,7 @@ export async function apiRequest(
   const fullUrl = apiUrl(url);
   
   if (isDev) {
-    console.log(`Making ${method} request to ${fullUrl}`, data);
+    // Solo loggear en desarrollo
   }
   
   const token = getAuthToken();
@@ -31,11 +31,6 @@ export async function apiRequest(
   
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
-    if (isDev) {
-      console.log('🔑 [API] Token incluido en petición:', method, url.substring(0, 50));
-    }
-  } else if (isDev) {
-    console.warn('⚠️ [API] No hay token disponible para:', method, url.substring(0, 50));
   }
   
   const res = await fetch(fullUrl, {
@@ -44,10 +39,6 @@ export async function apiRequest(
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
-
-  if (isDev) {
-    console.log(`Response: ${res.status} ${res.statusText}`);
-  }
   
   await throwIfResNotOk(res);
   return res;
@@ -85,13 +76,7 @@ export const getQueryFn: <T>(options: {
     
     // Debug solo si está habilitado explícitamente
     const DEBUG_QUERIES = import.meta.env.VITE_DEBUG_QUERIES === 'true';
-    if (isDev && DEBUG_QUERIES && (queryKey[0] === '/api/transacciones' || queryKey[0] === '/api/minas' || queryKey[0] === '/api/compradores')) {
-      console.log('🌐 API Request:', {
-        originalUrl: url,
-        fullUrl,
-        VITE_API_URL: import.meta.env.VITE_API_URL
-      });
-    }
+    // Los logs de debug solo se muestran si DEBUG_QUERIES está activado
     
     const token = getAuthToken();
     const headers: Record<string, string> = {
@@ -102,11 +87,6 @@ export const getQueryFn: <T>(options: {
     
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-      if (isDev && DEBUG_QUERIES) {
-        console.log('🔑 [QUERY] Token incluido en petición:', url.substring(0, 50));
-      }
-    } else if (isDev && DEBUG_QUERIES) {
-      console.warn('⚠️ [QUERY] No hay token disponible para:', url.substring(0, 50));
     }
     
     const res = await fetch(fullUrl, {
@@ -158,7 +138,5 @@ export const queryClient = new QueryClient({
 // Función para limpiar completamente el caché
 export const clearCache = () => {
   queryClient.clear();
-  if (isDev) {
-    console.log("🗑️ Cache completamente limpiado");
-  }
+  // Log removido - solo en desarrollo si es necesario
 };

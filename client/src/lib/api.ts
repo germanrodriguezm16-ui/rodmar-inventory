@@ -9,19 +9,8 @@ export function getApiUrl(): string {
   // Solo usar VITE_API_URL en producción
   const baseUrl = import.meta.env.PROD ? (import.meta.env.VITE_API_URL || '') : '';
   
-  // Debug solo si está habilitado explícitamente
-  if (isDev && import.meta.env.VITE_DEBUG_API_URL === 'true') {
-    console.log('🔍 DEBUG getApiUrl:', {
-      VITE_API_URL: import.meta.env.VITE_API_URL,
-      baseUrl,
-      PROD: import.meta.env.PROD,
-      MODE: import.meta.env.MODE,
-      windowOrigin: window.location.origin,
-      usingProxy: !baseUrl && isDev
-    });
-  }
-  
   // Debug en producción si no está configurada (siempre mostrar error crítico)
+  // Los errores críticos siempre se muestran, incluso en producción
   if (!baseUrl && import.meta.env.PROD) {
     console.error('❌ VITE_API_URL no está configurada en producción!');
     console.error('   Las peticiones irán a:', window.location.origin, '(incorrecto)');

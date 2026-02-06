@@ -54,13 +54,20 @@ class Logger {
       this.notifyListeners();
     }
 
-    // También loggear en consola (siempre, no solo en desarrollo)
+    // Solo loggear en consola en desarrollo (excepto errores que siempre se muestran)
+    const isDev = import.meta.env.DEV;
     const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
     
     // Agregar emojis para que el debug logger los capture
     const emoji = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : level === 'success' ? '✅' : level === 'debug' ? '🔍' : '📱';
     const logMessage = `${emoji} [${category}] ${message}`;
-    console[consoleMethod](logMessage, data || '');
+    
+    // Errores siempre se muestran, el resto solo en desarrollo
+    if (level === 'error') {
+      console[consoleMethod](logMessage, data || '');
+    } else if (isDev) {
+      console[consoleMethod](logMessage, data || '');
+    }
     
     // También enviar directamente al debug logger si está disponible
     if (debugLoggerInstance && debugLoggerInstance.addManualLog) {

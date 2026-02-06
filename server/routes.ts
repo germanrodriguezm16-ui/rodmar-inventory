@@ -41,10 +41,11 @@ import sharp from "sharp";
 import { Resvg } from "@resvg/resvg-js";
 import opentype from "opentype.js";
 import { ROBOTO_REGULAR_BASE64 } from "./receipt-font";
+import { logger } from "./logger";
 
 // Variable de debug - activar solo cuando se necesite diagnóstico
 const DEBUG = process.env.DEBUG_ROUTES === 'true';
-const debugLog = (...args: any[]) => DEBUG && console.log(...args);
+const debugLog = (...args: any[]) => DEBUG && logger.debug(...args);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Cache ligera para amortiguar refetch duplicado en desarrollo (especialmente con latencia alta a DB remota)
@@ -1385,7 +1386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const userId = req.user!.id;
         const resumen = await storage.getMinasResumen(userId);
-        console.log(
+        logger.debug(
           `=== Endpoint /api/minas/resumen - Returning ${resumen.length} minas with pre-calculated data ===`,
         );
         res.json(resumen);
@@ -1648,7 +1649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const minaId = parseInt(req.params.id);
 
-        console.log(
+        logger.debug(
           `=== DELETE MINA REQUEST - ID: ${minaId} ===`,
         );
 
@@ -3666,13 +3667,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         debugLog("=== VOLQUETEROS ENDPOINT DEBUG ===");
-        console.log(
+        logger.debug(
           "Volqueteros con IDs reales:",
           volqueterosConPlacas
             .filter((v) => v.isRealId)
             .map((v) => `${v.nombre} (ID: ${v.id})`),
         );
-        console.log(
+        logger.debug(
           "Volqueteros con IDs artificiales:",
           volqueterosConPlacas
             .filter((v) => !v.isRealId)
@@ -4436,14 +4437,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "Nombre is required" });
         }
 
-        console.log(
+        logger.debug(
           `🔧 PUT VOLQUETERO NOMBRE CON SINCRONIZACIÓN INTELIGENTE: ID ${volqueteroId}, nuevo nombre: "${nombre.trim()}"`,
         );
 
         // LÓGICA COMPLETA CON SINCRONIZACIÓN: Solo manejar volqueteros reales (no IDs artificiales)
         // Los IDs artificiales se manejan en el endpoint GET, no aquí
         if (volqueteroId >= 1000) {
-          console.log(
+          logger.debug(
             `❌ ID artificial ${volqueteroId} - No se puede editar volquetero artificial`,
           );
           return res.status(400).json({
@@ -4464,7 +4465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .json({ error: "Volquetero not found or access denied" });
         }
 
-        console.log(
+        logger.debug(
           `✅ VOLQUETERO NOMBRE ACTUALIZADO CON SINCRONIZACIÓN: ID ${updatedVolquetero.id} -> "${updatedVolquetero.nombre}"`,
         );
         try {
@@ -4520,7 +4521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Modo sin paginación (compatibilidad hacia atrás)
         const viajes = await storage.getViajes(userId);
-        console.log(
+        logger.debug(
           `=== GET /api/viajes - Found ${viajes.length} viajes with IDs:`,
           viajes.slice(0, 10).map((v) => v.id), // Solo mostrar primeros 10 IDs para no saturar logs
         );
@@ -4886,7 +4887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const BATCH_SIZE = 50;
       for (let i = 0; i < viajes.length; i += BATCH_SIZE) {
         const batch = viajes.slice(i, i + BATCH_SIZE);
-        console.log(
+        logger.debug(
           `Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(viajes.length / BATCH_SIZE)}`,
         );
 
@@ -5033,12 +5034,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 ) {
                   // Special handling for date fields
                   if (key === "fechaDescargue") {
-                    console.log(
+                    logger.debug(
                       `🔧 FIXING DATE ${key}: "${parsedData[key]}" → null`,
                     );
                     parsedData[key] = null;
                   } else if (key.includes("fecha")) {
-                    console.log(
+                    logger.debug(
                       `🔧 FIXING DATE ${key}: "${parsedData[key]}" → new Date()`,
                     );
                     parsedData[key] = new Date();
@@ -5075,7 +5076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   value === "" ||
                   isNaN(parseFloat(value))
                 ) {
-                  console.log(
+                  logger.debug(
                     `🔧 NUMERIC FIXING field ${field}: "${value}" → "0"`,
                   );
                   (parsedData as any)[field] = "0";
@@ -5170,7 +5171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If this request includes a fileHash, register it to prevent future duplicates
       if (req.body.fileHash) {
         storage.addFileHash(req.body.fileHash);
-        console.log(
+        logger.debug(
           "=== Registered file hash for duplicate prevention:",
           req.body.fileHash,
         );
@@ -5228,12 +5229,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               nombre: minaNombre.trim(), // Eliminar espacios extras
             });
           } else {
-            console.log(
+            logger.debug(
               `=== Found existing mina after re-check: "${mina.nombre}" with ID ${mina.id}`,
             );
           }
         } else {
-          console.log(
+          logger.debug(
             `=== Found existing mina: "${mina.nombre}" with ID ${mina.id}`,
           );
         }
@@ -5270,12 +5271,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               nombre: compradorNombre.trim(), // Eliminar espacios extras
             });
           } else {
-            console.log(
+            logger.debug(
               `=== Found existing comprador after re-check: "${comprador.nombre}" with ID ${comprador.id}`,
             );
           }
         } else {
-          console.log(
+          logger.debug(
             `=== Found existing comprador: "${comprador.nombre}" with ID ${comprador.id}`,
           );
         }
@@ -5335,13 +5336,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       debugLog("=== Raw viaje data:", JSON.stringify(viaje, null, 2));
 
       if (viaje) {
-        console.log(
+        logger.debug(
           "=== fechaCargue:",
           viaje.fechaCargue,
           "Type:",
           typeof viaje.fechaCargue,
         );
-        console.log(
+        logger.debug(
           "=== fechaDescargue:",
           viaje.fechaDescargue,
           "Type:",
@@ -5456,15 +5457,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Logging condicional para reducir overhead (solo en debug)
         const DEBUG_TRANSACCIONES = process.env.DEBUG_TRANSACCIONES === 'true';
         if (DEBUG_TRANSACCIONES) {
-          console.log('');
-          console.log('═══════════════════════════════════════════════════════════');
-          console.log(`⏱️  [PERF] GET /api/transacciones - Iniciando request...`);
-          console.log(`   Usuario: ${userId}`);
-          console.log(`   Permisos de transacciones: ${hasTransactionPermissions ? 'SÍ' : 'NO'}`);
-          console.log(`   Filtrando por userId: ${effectiveUserId || 'NINGUNO (todas las transacciones)'}`);
-          console.log(`   Paginación: ${page ? `page=${page}, limit=${limit}` : 'sin paginación'}`);
-          console.log(`   Timestamp: ${new Date().toISOString()}`);
-          console.log('═══════════════════════════════════════════════════════════');
+          logger.debug('');
+          logger.debug('═══════════════════════════════════════════════════════════');
+          logger.debug(`⏱️  [PERF] GET /api/transacciones - Iniciando request...`);
+          logger.debug(`   Usuario: ${userId}`);
+          logger.debug(`   Permisos de transacciones: ${hasTransactionPermissions ? 'SÍ' : 'NO'}`);
+          logger.debug(`   Filtrando por userId: ${effectiveUserId || 'NINGUNO (todas las transacciones)'}`);
+          logger.debug(`   Paginación: ${page ? `page=${page}, limit=${limit}` : 'sin paginación'}`);
+          logger.debug(`   Timestamp: ${new Date().toISOString()}`);
+          logger.debug('═══════════════════════════════════════════════════════════');
         }
         
         // Leer parámetros de filtro
@@ -5657,10 +5658,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const filterTime = Date.now() - filterStart;
 
           const totalRouteTime = Date.now() - routeStartTime;
-          console.log(
+          logger.debug(
             `=== GET /api/transacciones - Returning ${filteredTransacciones.length} transactions ===`,
           );
-          console.log(`⏱️  [PERF] ⚡ TIEMPO TOTAL RUTA /api/transacciones: ${totalRouteTime}ms (Filtrado: ${filterTime}ms)`);
+          logger.debug(`⏱️  [PERF] ⚡ TIEMPO TOTAL RUTA /api/transacciones: ${totalRouteTime}ms (Filtrado: ${filterTime}ms)`);
 
           res.json(filteredTransacciones);
         }
@@ -6262,7 +6263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           valor: data.valor,
           codigoSolicitud: transaccion.codigo_solicitud || undefined
         });
-        console.log(`📱 Notificación push enviada: ${result.sent} exitosas, ${result.failed} fallidas`);
+        logger.debug(`📱 Notificación push enviada: ${result.sent} exitosas, ${result.failed} fallidas`);
       } catch (pushError) {
         console.error('⚠️  Error al enviar notificación push (no crítico):', pushError);
       }
@@ -6626,7 +6627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             valor: originalTransaction.valor || '0',
             codigoSolicitud: originalTransaction.codigo_solicitud || undefined
           });
-          console.log(`📱 Notificación push de completado enviada: ${result.sent} exitosas, ${result.failed} fallidas`);
+          logger.debug(`📱 Notificación push de completado enviada: ${result.sent} exitosas, ${result.failed} fallidas`);
         } catch (pushError) {
           console.error('⚠️  Error al enviar notificación push de completado (no crítico):', pushError);
         }
@@ -6866,7 +6867,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Logging condicional para reducir overhead en desarrollo
       if (process.env.DEBUG_RODMAR === 'true') {
-        console.log(`[Postobón] Request recibido - userId: ${userId}, permisos de transacciones: ${hasTransactionPermissions ? 'SÍ' : 'NO'}, effectiveUserId: ${effectiveUserId || 'ALL'}, page: ${page}, limit: ${limit}, filterType: ${filterType}`);
+        logger.debug(`[Postobón] Request recibido - userId: ${userId}, permisos de transacciones: ${hasTransactionPermissions ? 'SÍ' : 'NO'}, effectiveUserId: ${effectiveUserId || 'ALL'}, page: ${page}, limit: ${limit}, filterType: ${filterType}`);
       }
       
       // Leer parámetros de filtro
@@ -7419,7 +7420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             valor: transaccion.valor || '0',
             codigoSolicitud: transaccion.codigo_solicitud || undefined
           });
-          console.log(`📱 Notificación push de edición enviada: ${result.sent} exitosas, ${result.failed} fallidas`);
+          logger.debug(`📱 Notificación push de edición enviada: ${result.sent} exitosas, ${result.failed} fallidas`);
         } catch (pushError) {
           console.error('⚠️  Error al enviar notificación push de edición (no crítico):', pushError);
         }
@@ -7526,7 +7527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Transaction ID parsed:", transactionId);
 
       if (isNaN(transactionId)) {
-        console.log("ERROR: Invalid transaction ID");
+        logger.debug("ERROR: Invalid transaction ID");
         return res.status(400).json({ error: "ID de transacción inválido" });
       }
 
@@ -8687,8 +8688,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Logs solo en modo debug (reducir overhead en producción)
       if (process.env.DEBUG_RODMAR === 'true') {
-        console.log(`[RODMAR-ACCOUNTS] Usuario: ${req.user.id}`);
-        console.log(`[RODMAR-ACCOUNTS] Permisos del usuario (${userPermissions.length}):`, userPermissions.filter(p => p.includes('RODMAR')));
+        logger.debug(`[RODMAR-ACCOUNTS] Usuario: ${req.user.id}`);
+        logger.debug(`[RODMAR-ACCOUNTS] Permisos del usuario (${userPermissions.length}):`, userPermissions.filter(p => p.includes('RODMAR')));
       }
 
       // OPTIMIZACIÓN: Filtrar solo transacciones que involucran cuentas RodMar en la BD
@@ -8708,7 +8709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('[RODMAR-ACCOUNTS] Error en query de transacciones:', queryError);
         console.error('[RODMAR-ACCOUNTS] Stack:', queryError.stack);
         // Fallback: usar storage.getTransacciones() si la query falla
-        console.log('[RODMAR-ACCOUNTS] Usando fallback: storage.getTransacciones()');
+        logger.debug('[RODMAR-ACCOUNTS] Usando fallback: storage.getTransacciones()');
         const allTransacciones = await storage.getTransacciones();
         transaccionesRodMarRaw = allTransacciones.filter((t: any) => 
           t.deQuienTipo === 'rodmar' || 
@@ -8718,7 +8719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Logs solo en modo debug
       if (process.env.DEBUG_RODMAR === 'true') {
-        console.log(`[RODMAR-ACCOUNTS] Transacciones filtradas: ${transaccionesRodMarRaw.length}`);
+        logger.debug(`[RODMAR-ACCOUNTS] Transacciones filtradas: ${transaccionesRodMarRaw.length}`);
       }
       
       // Convertir a formato compatible con la lógica existente
@@ -8753,7 +8754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Logs solo en modo debug
       if (process.env.DEBUG_RODMAR === 'true') {
-        console.log(`[RODMAR-ACCOUNTS] Cuentas en BD: ${todasLasCuentas.length}`);
+        logger.debug(`[RODMAR-ACCOUNTS] Cuentas en BD: ${todasLasCuentas.length}`);
       }
 
       // Filtrar cuentas según permisos del usuario (usando código, no nombre)
@@ -8765,7 +8766,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Verificar si tiene un override "deny"
         if (deniedPermissions.has(permisoCuenta)) {
           if (process.env.DEBUG_RODMAR === 'true') {
-            console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): DENEGADA por override`);
+            logger.debug(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): DENEGADA por override`);
           }
           return false;
         }
@@ -8773,7 +8774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Verificar si tiene el permiso específico con el código nuevo
         if (userPermissions.includes(permisoCuenta)) {
           if (process.env.DEBUG_RODMAR === 'true') {
-            console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): PERMITIDA (permiso específico por código)`);
+            logger.debug(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): PERMITIDA (permiso específico por código)`);
           }
           return true;
         }
@@ -8782,7 +8783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const permisoAntiguoPorNombre = `module.RODMAR.account.${cuenta.nombre}.view`;
         if (userPermissions.includes(permisoAntiguoPorNombre)) {
           if (process.env.DEBUG_RODMAR === 'true') {
-            console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): PERMITIDA (permiso antiguo por nombre - mapeado)`);
+            logger.debug(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): PERMITIDA (permiso antiguo por nombre - mapeado)`);
           }
           return true;
         }
@@ -8793,34 +8794,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const permisoMapeado = `module.RODMAR.account.${cuenta.nombre}.view`;
           if (userPermissions.includes(permisoMapeado)) {
             if (process.env.DEBUG_RODMAR === 'true') {
-              console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): PERMITIDA (permiso mapeado)`);
+              logger.debug(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): PERMITIDA (permiso mapeado)`);
             }
             return true;
           }
         }
         
         if (process.env.DEBUG_RODMAR === 'true') {
-          console.log(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): DENEGADA (sin permiso)`);
+          logger.debug(`[RODMAR-ACCOUNTS] Cuenta "${cuenta.nombre}" (${cuenta.codigo}): DENEGADA (sin permiso)`);
         }
         return false;
       });
       
       // Logs solo en modo debug
       if (process.env.DEBUG_RODMAR === 'true') {
-        console.log(`[RODMAR-ACCOUNTS] Total cuentas en BD: ${todasLasCuentas.length}`);
-        console.log(`[RODMAR-ACCOUNTS] Cuentas permitidas: ${cuentasRodMar.length}`);
+        logger.debug(`[RODMAR-ACCOUNTS] Total cuentas en BD: ${todasLasCuentas.length}`);
+        logger.debug(`[RODMAR-ACCOUNTS] Cuentas permitidas: ${cuentasRodMar.length}`);
         if (cuentasRodMar.length === 0 && todasLasCuentas.length > 0) {
-          console.log(`[RODMAR-ACCOUNTS] ⚠️  Ninguna cuenta permitida. Total permisos usuario: ${userPermissions.length}`);
-          console.log(`[RODMAR-ACCOUNTS] Permisos RODMAR del usuario:`, userPermissions.filter(p => p.includes('RODMAR')));
+          logger.debug(`[RODMAR-ACCOUNTS] ⚠️  Ninguna cuenta permitida. Total permisos usuario: ${userPermissions.length}`);
+          logger.debug(`[RODMAR-ACCOUNTS] Permisos RODMAR del usuario:`, userPermissions.filter(p => p.includes('RODMAR')));
         }
-        console.log(`[RODMAR-ACCOUNTS] Cuentas permitidas:`, cuentasRodMar.map(c => c.nombre));
+        logger.debug(`[RODMAR-ACCOUNTS] Cuentas permitidas:`, cuentasRodMar.map(c => c.nombre));
       }
 
       // Si no hay cuentas permitidas, devolver array vacío (pero loguear para debugging)
       if (cuentasRodMar.length === 0) {
-        console.log(`[RODMAR-ACCOUNTS] ⚠️  ADVERTENCIA: No hay cuentas permitidas después del filtrado por permisos`);
-        console.log(`[RODMAR-ACCOUNTS] Total cuentas en BD: ${todasLasCuentas.length}`);
-        console.log(`[RODMAR-ACCOUNTS] Permisos del usuario:`, userPermissions.filter(p => p.includes('RODMAR')).slice(0, 10));
+        logger.debug(`[RODMAR-ACCOUNTS] ⚠️  ADVERTENCIA: No hay cuentas permitidas después del filtrado por permisos`);
+        logger.debug(`[RODMAR-ACCOUNTS] Total cuentas en BD: ${todasLasCuentas.length}`);
+        logger.debug(`[RODMAR-ACCOUNTS] Permisos del usuario:`, userPermissions.filter(p => p.includes('RODMAR')).slice(0, 10));
         return res.json([]);
       }
 
@@ -8885,7 +8886,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Logs solo en modo debug
       if (process.env.DEBUG_RODMAR === 'true') {
-        console.log(`[RODMAR-ACCOUNTS] Respuesta final: ${balancesCuentas.length} cuentas`);
+        logger.debug(`[RODMAR-ACCOUNTS] Respuesta final: ${balancesCuentas.length} cuentas`);
       }
       
       res.json(balancesCuentas);
@@ -9148,7 +9149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
         );
 
-        console.log(
+        logger.debug(
           `🔄 Mostrando ${updatedCount} transacciones ocultas de mina ${minaId}`,
         );
 
@@ -9217,7 +9218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
         );
 
-        console.log(
+        logger.debug(
           `🔄 Mostrando ${updatedCount} transacciones ocultas de volquetero ${volqueteroId}`,
         );
 
@@ -9418,7 +9419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
         );
 
-        console.log(
+        logger.debug(
           `🔄 Fusión de volqueteros: ${origenId} → ${destinoId} completada`,
         );
         res.json({
@@ -9452,7 +9453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const result = await storage.mergeMinas(origenId, destinoId, userId);
 
-        console.log(
+        logger.debug(
           `🔄 Fusión de minas: ${origenId} → ${destinoId} completada`,
         );
         res.json({
@@ -9475,34 +9476,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireAuth,
     async (req, res) => {
       try {
-        console.log("🔄 INICIO - Fusión de compradores solicitada");
-        console.log("📝 Request body:", req.body);
+        logger.debug("🔄 INICIO - Fusión de compradores solicitada");
+        logger.debug("📝 Request body:", req.body);
 
         const { origenId, destinoId } = fusionSchema.parse(req.body);
         const userId = req.user!.id;
 
-        console.log(
+        logger.debug(
           `📊 Parámetros de fusión: origen=${origenId}, destino=${destinoId}, userId=${userId}`,
         );
 
         if (origenId === destinoId) {
-          console.log("❌ Error: Intentando fusionar entidad consigo misma");
+          logger.debug("❌ Error: Intentando fusionar entidad consigo misma");
           return res
             .status(400)
             .json({ error: "No se puede fusionar una entidad consigo misma" });
         }
 
-        console.log("🏗️ Iniciando proceso de fusión en storage...");
+        logger.debug("🏗️ Iniciando proceso de fusión en storage...");
         const result = await storage.mergeCompradores(
           origenId,
           destinoId,
           userId,
         );
 
-        console.log(
+        logger.debug(
           `✅ Fusión de compradores completada: ${origenId} → ${destinoId}`,
         );
-        console.log("📊 Resultado:", result);
+        logger.debug("📊 Resultado:", result);
 
         res.json({
           success: true,
@@ -9561,7 +9562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const result = await storage.revertFusion(fusionId, userId);
 
-        console.log(`🔄 Reversión de fusión ID ${fusionId} completada`);
+        logger.debug(`🔄 Reversión de fusión ID ${fusionId} completada`);
         res.json({
           success: true,
           message: `Fusión revertida exitosamente`,
@@ -9683,7 +9684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       if (shouldLog) {
-        console.log("🔎 Diagnóstico terceros visibles:", result);
+        logger.debug("🔎 Diagnóstico terceros visibles:", result);
       }
 
       res.json(result);
