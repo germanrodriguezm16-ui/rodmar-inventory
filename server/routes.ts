@@ -157,18 +157,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     fontSize: number,
     fill: string,
     anchor: "start" | "middle" | "end" = "start",
+    strokeWidth: number = 0,
   ) => {
     if (!text) return "";
     const font = getReceiptFont();
     if (!font) {
-      return renderText(text, x, y, fontSize, fill, anchor, 400);
+      const weight = strokeWidth > 0 ? 700 : 400;
+      return renderText(text, x, y, fontSize, fill, anchor, weight);
     }
     const rawText = String(text);
     const textWidth = font.getAdvanceWidth(rawText, fontSize);
     const adjustedX =
       anchor === "middle" ? x - textWidth / 2 : anchor === "end" ? x - textWidth : x;
     const path = font.getPath(rawText, adjustedX, y, fontSize);
-    return `<path d="${path.toPathData(2)}" fill="${fill}" />`;
+    const strokeAttr = strokeWidth > 0 ? ` stroke="${fill}" stroke-width="${strokeWidth}" stroke-linejoin="round"` : "";
+    return `<path d="${path.toPathData(2)}" fill="${fill}"${strokeAttr} />`;
   };
 
   const formatReceiptDate = (dateInput: string | Date | null | undefined) => {
@@ -313,19 +316,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }) => {
     // Constantes base
     const basePadding = 32;
-    const baseHeaderHeight = 160;
+    const baseHeaderHeight = 180; // Aumentado para dar más espacio
     const baseCommentHeight = 160;
     const baseFooterHeight = 60;
     const spacing = 20;
     
-    // Tamaños de texto base (para referencia de escala)
-    const baseSocioSize = 30;
-    const baseValueSize = 38;
-    const baseRMSize = 34;
-    const baseDateSize = 22;
-    const baseCommentLabelSize = 20;
-    const baseCommentSize = 19;
-    const baseFooterSize = 16;
+    // Tamaños de texto base - AUMENTADOS para mayor protagonismo
+    const baseSocioSize = 44;
+    const baseValueSize = 56;
+    const baseRMSize = 42;
+    const baseDateSize = 32; // Aumentado
+    const baseCommentLabelSize = 28; // Aumentado
+    const baseCommentSize = 26; // Aumentado
+    const baseFooterSize = 18;
 
     const rawSocio = (socioDestinoNombre || "Socio").trim();
     const rawComentario = (comentario || "Sin comentarios").trim();
@@ -347,37 +350,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
 
-    // Calcular ancho mínimo basado en el encabezado (valor + RM + fecha no deben chocar)
-    // Estimación: valor ~300px, RM ~60px, fecha ~150px, padding ~100px = ~610px mínimo
-    // Pero usamos un mínimo más seguro de 900px para asegurar espacio
-    const minWidth = 900;
-    const baseWidth = 1100;
+    // Ancho fijo razonable para mantener coherencia
+    const baseWidth = 1200; // Aumentado ligeramente
+    const width = baseWidth;
     
-    // Determinar dimensiones adaptativas según el voucher
-    let width = baseWidth;
-    let voucherHeight = 620; // Altura base para voucher horizontal
+    // Alturas máximas y mínimas para el área del voucher (controladas)
+    const maxVoucherHeightVertical = 900; // Máximo para vouchers verticales
+    const maxVoucherHeightHorizontal = 650; // Máximo para vouchers horizontales
+    const minVoucherHeight = 450; // Mínimo para cualquier voucher
+    const baseVoucherHeight = 550; // Altura base cuando no hay voucher o es horizontal
+    
+    let voucherHeight = baseVoucherHeight;
     
     if (voucherMetadata) {
       const voucherAspectRatio = voucherMetadata.width / voucherMetadata.height;
       const isVertical = voucherMetadata.height > voucherMetadata.width;
       
-      if (isVertical) {
-        // Voucher vertical: mantener ancho, aumentar altura del área del voucher
-        // Calcular altura basada en el ancho disponible y el aspect ratio del voucher
-        const availableWidth = baseWidth - basePadding * 2 - 40;
-        voucherHeight = Math.max(620, Math.ceil(availableWidth / voucherAspectRatio) + 40);
-      } else {
-        // Voucher horizontal: mantener ancho, ajustar altura del área del voucher
-        const availableWidth = baseWidth - basePadding * 2 - 40;
-        voucherHeight = Math.max(400, Math.ceil(availableWidth / voucherAspectRatio) + 40);
-      }
+      // Ancho disponible para el voucher (con padding)
+      const availableWidth = baseWidth - basePadding * 2 - 40;
       
-      // Asegurar que el ancho sea suficiente para el encabezado
-      width = Math.max(minWidth, baseWidth);
+      if (isVertical) {
+        // Voucher vertical: calcular altura pero limitarla
+        const calculatedHeight = Math.ceil(availableWidth / voucherAspectRatio) + 40;
+        // Limitar entre mínimo y máximo, pero de forma conservadora
+        voucherHeight = Math.min(
+          maxVoucherHeightVertical,
+          Math.max(minVoucherHeight, calculatedHeight)
+        );
+      } else {
+        // Voucher horizontal: calcular altura pero limitarla
+        const calculatedHeight = Math.ceil(availableWidth / voucherAspectRatio) + 40;
+        // Limitar entre mínimo y máximo
+        voucherHeight = Math.min(
+          maxVoucherHeightHorizontal,
+          Math.max(minVoucherHeight, calculatedHeight)
+        );
+      }
     } else {
-      // Sin voucher: usar dimensiones base
-      width = baseWidth;
-      voucherHeight = 400; // Altura reducida si no hay voucher
+      // Sin voucher: usar altura base reducida
+      voucherHeight = 350;
     }
 
     // Calcular altura total
@@ -387,34 +398,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const height =
       basePadding * 2 + headerHeight + voucherHeight + commentHeight + footerHeight + spacing * 3;
 
-    // Calcular escala de texto basada en el ancho (mantener proporciones)
-    const widthScale = width / baseWidth;
-    const socioSize = Math.round(baseSocioSize * widthScale);
-    const valueSize = Math.round(baseValueSize * widthScale);
-    const rmSize = Math.round(baseRMSize * widthScale);
-    const dateSize = Math.round(baseDateSize * widthScale);
-    const commentLabelSize = Math.round(baseCommentLabelSize * widthScale);
-    const commentSize = Math.round(baseCommentSize * widthScale);
-    const footerSize = Math.round(baseFooterSize * widthScale);
+    // Usar tamaños de texto directamente (sin escalado, ya que el ancho es fijo)
+    const socioSize = baseSocioSize;
+    const valueSize = baseValueSize;
+    const rmSize = baseRMSize;
+    const dateSize = baseDateSize;
+    const commentLabelSize = baseCommentLabelSize;
+    const commentSize = baseCommentSize;
+    const footerSize = baseFooterSize;
 
-    // Asegurar que los textos del encabezado no choquen
-    // Valor a la izquierda, RM en el centro, Fecha a la derecha
+    // Posiciones del encabezado (valor, RM, fecha) - con espacio generoso
     const valueX = basePadding + 20;
     const rmX = width / 2;
     const dateX = width - basePadding - 20;
-    
-    // Verificar que haya espacio suficiente entre elementos
-    const estimatedValueWidth = formattedValue.length * (valueSize * 0.6); // Estimación aproximada
-    const estimatedRMWidth = 60; // RM es corto
-    const estimatedDateWidth = formattedDate.length * (dateSize * 0.5); // Estimación aproximada
-    
-    const minSpacing = 40; // Espacio mínimo entre elementos
-    const requiredWidth = estimatedValueWidth + minSpacing + estimatedRMWidth + minSpacing + estimatedDateWidth + basePadding * 2 + 40;
-    
-    if (requiredWidth > width) {
-      // Ajustar ancho si es necesario, pero nunca reducir por debajo del mínimo
-      width = Math.max(minWidth, Math.ceil(requiredWidth));
-    }
 
     const padding = basePadding;
     const headerTop = padding;
@@ -426,16 +422,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const commentMaxChars = Math.floor((width - padding * 2 - 40) / (commentSize * 0.6));
     const comentarioLines = wrapText(rawComentario, commentMaxChars, 2);
 
-    const socioText = renderTextPath(rawSocio, padding + 20, headerTop + 55, socioSize, "#1d4ed8", "start");
-    const valueText = renderTextPath(formattedValue, valueX, headerTop + 120, valueSize, "#059669", "start");
-    const rmText = renderTextPath("RM", rmX, headerTop + 120, rmSize, "url(#rmGradient)", "middle");
-    const dateText = renderTextPath(formattedDate, dateX, headerTop + 120, dateSize, "#059669", "end");
+    // Textos del encabezado con stroke para hacerlos más gruesos (sin cambiar tamaño)
+    const strokeWidthHeader = 1.5; // Grosor del stroke para textos del encabezado
+    const socioText = renderTextPath(rawSocio, padding + 20, headerTop + 60, socioSize, "#1d4ed8", "start", strokeWidthHeader);
+    const valueText = renderTextPath(formattedValue, valueX, headerTop + 130, valueSize, "#059669", "start", strokeWidthHeader);
+    const rmText = renderTextPath("RM", rmX, headerTop + 130, rmSize, "url(#rmGradient)", "middle", strokeWidthHeader);
+    const dateText = renderTextPath(formattedDate, dateX, headerTop + 130, dateSize, "#059669", "end", strokeWidthHeader);
     const commentLabel = renderTextPath("Comentario:", padding + 20, commentTop + 45, commentLabelSize, "#2563eb", "start");
+    // Ajustar espaciado entre líneas según el tamaño de fuente aumentado
+    const lineSpacing = Math.round(commentSize * 1.3);
     const commentLinesSvg = comentarioLines
       .map((line, index) =>
-        renderTextPath(line, padding + 20, commentTop + 80 + index * 30, commentSize, "#111827", "start"),
+        renderTextPath(line, padding + 20, commentTop + 80 + index * lineSpacing, commentSize, "#111827", "start"),
       )
       .join("");
+    // Footer en negrita (con stroke)
     const footerText = renderTextPath(
       "Generado desde RodMar",
       width / 2,
@@ -443,6 +444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       footerSize,
       "#9ca3af",
       "middle",
+      1.2, // Stroke para hacerlo más grueso
     );
 
     const voucherPlaceholderText = voucherBuffer
@@ -458,7 +460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           voucherPlaceholderText,
           width / 2,
           voucherTop + voucherHeight / 2,
-          Math.round(18 * widthScale),
+          20,
           "#6b7280",
           "middle",
         )
