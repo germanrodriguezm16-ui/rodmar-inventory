@@ -8693,7 +8693,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // OPTIMIZACIÓN: Filtrar solo transacciones que involucran cuentas RodMar en la BD
       // Esto reduce significativamente el tiempo de carga al evitar procesar todas las transacciones
-      // Incluye tanto el sistema nuevo (deQuienTipo/paraQuienTipo) como el legacy (tipoSocio)
       let transaccionesRodMarRaw;
       try {
         transaccionesRodMarRaw = await db
@@ -8702,8 +8701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(
             or(
               eq(transacciones.deQuienTipo, 'rodmar'),
-              eq(transacciones.paraQuienTipo, 'rodmar'),
-              eq(transacciones.tipoSocio, 'rodmar') // Incluir transacciones legacy
+              eq(transacciones.paraQuienTipo, 'rodmar')
             )
           );
       } catch (queryError: any) {
@@ -8714,8 +8712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const allTransacciones = await storage.getTransacciones();
         transaccionesRodMarRaw = allTransacciones.filter((t: any) => 
           t.deQuienTipo === 'rodmar' || 
-          t.paraQuienTipo === 'rodmar' || 
-          t.tipoSocio === 'rodmar'
+          t.paraQuienTipo === 'rodmar'
         );
       }
       
@@ -8868,23 +8865,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
-          // Sistema nuevo: Verificar si la transacción llega a RodMar a esta cuenta específica (INGRESO)
+          // Verificar si la transacción llega a RodMar a esta cuenta específica (INGRESO)
           if (transaccion.paraQuienTipo === "rodmar" && transaccion.paraQuienId) {
             if (referenciasPosibles.includes(transaccion.paraQuienId)) {
               ingresos += valor;
-            }
-          }
-
-          // Sistema legacy: Transacciones con tipoSocio = 'rodmar' y socioId = cuenta.id
-          // En el sistema legacy, si tipoSocio = 'rodmar', la transacción involucra RodMar
-          // El socioId debería corresponder al ID de la cuenta RodMar
-          if (transaccion.tipoSocio === "rodmar" && transaccion.socioId) {
-            const socioIdStr = transaccion.socioId.toString();
-            // Si el socioId coincide con el ID de la cuenta, es una transacción que afecta esta cuenta
-            // En el sistema legacy, no está claro si es ingreso o egreso, pero por compatibilidad
-            // asumimos que si tiene tipoSocio = 'rodmar', es un egreso (RodMar paga)
-            if (socioIdStr === idString) {
-              egresos += valor;
             }
           }
         });
