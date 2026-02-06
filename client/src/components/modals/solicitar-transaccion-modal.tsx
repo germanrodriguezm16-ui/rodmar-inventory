@@ -370,8 +370,10 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
       queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
       
       // Invalidar módulo general de transacciones
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
-      // React Query refetchea automáticamente si la query está activa
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/transacciones"],
+        refetchType: 'active' // Forzar refetch de queries activas
+      });
       
       // Si es una edición, invalidar también las queries del destino anterior
       if (initialData?.id && initialData.paraQuienTipo && initialData.paraQuienId) {
@@ -382,11 +384,15 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
         if (initialData.paraQuienTipo !== nuevoParaQuienTipo || initialData.paraQuienId !== nuevoParaQuienId) {
           if (initialData.paraQuienTipo === 'comprador') {
             const compradorId = typeof initialData.paraQuienId === 'string' ? parseInt(initialData.paraQuienId) : initialData.paraQuienId;
+            queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+            queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] });
             queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
             queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
           }
           if (initialData.paraQuienTipo === 'mina') {
             const minaIdStr = String(initialData.paraQuienId);
+            queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+            queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] });
             queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}`] });
             queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}/all`] });
             queryClient.refetchQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}`] });
@@ -394,6 +400,8 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
           }
           if (initialData.paraQuienTipo === 'volquetero') {
             const volqueteroId = typeof initialData.paraQuienId === 'string' ? parseInt(initialData.paraQuienId) : initialData.paraQuienId;
+            queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+            queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] });
             queryClient.invalidateQueries({
               predicate: (query) => {
                 const queryKey = query.queryKey;
@@ -417,6 +425,12 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
               },
             });
           }
+          if (initialData.paraQuienTipo === 'rodmar') {
+            queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/balances/rodmar"] });
+            queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
+            queryClient.refetchQueries({ queryKey: ["/api/balances/rodmar"] });
+          }
         }
       }
       
@@ -426,11 +440,20 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
       
       if (paraQuienTipo === 'comprador' && paraQuienId) {
         const compradorId = typeof paraQuienId === 'string' ? parseInt(paraQuienId) : paraQuienId;
-        queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/transacciones/comprador", compradorId],
+          refetchType: 'active'
+        });
         queryClient.refetchQueries({ queryKey: ["/api/transacciones/comprador", compradorId] });
       }
       if (paraQuienTipo === 'mina' && paraQuienId) {
         const minaIdStr = String(paraQuienId);
+        queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] }); // Refetch inmediato
         queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}`] });
         queryClient.invalidateQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}/all`] });
         queryClient.refetchQueries({ queryKey: [`/api/transacciones/socio/mina/${minaIdStr}`] });
@@ -438,6 +461,10 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
       }
       if (paraQuienTipo === 'volquetero' && paraQuienId) {
         const volqueteroId = typeof paraQuienId === 'string' ? parseInt(paraQuienId) : paraQuienId;
+        queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/volqueteros/resumen"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
         queryClient.invalidateQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
@@ -458,6 +485,23 @@ export function SolicitarTransaccionModal({ open, onClose, initialData }: Solici
               queryKey[0] === "/api/volqueteros" &&
               queryKey[1] === volqueteroId &&
               queryKey[2] === "transacciones";
+          },
+        });
+      }
+      
+      // Invalidar queries de cuentas RodMar si están involucradas
+      if (paraQuienTipo === 'rodmar' && paraQuienId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/rodmar"] });
+        queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/rodmar"] });
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            return Array.isArray(queryKey) &&
+              queryKey.length > 0 &&
+              typeof queryKey[0] === "string" &&
+              queryKey[0].startsWith("/api/transacciones/cuenta/");
           },
         });
       }

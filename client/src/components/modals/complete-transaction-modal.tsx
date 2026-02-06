@@ -191,28 +191,74 @@ export function CompleteTransactionModal({
       setCompletedTransaction(result);
       setShowReceiptModal(true);
       
-      // Invalidar queries
+      // Invalidar queries de pendientes
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
+      queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes"] });
+      queryClient.refetchQueries({ queryKey: ["/api/transacciones/pendientes/count"] });
+      
+      // Invalidar transacciones principales
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/transacciones"],
+        refetchType: 'active' // Forzar refetch de queries activas
+      });
       
       // Invalidar queries del socio destino
       if (paraQuienTipo && paraQuienId) {
         if (paraQuienTipo === 'comprador') {
-          queryClient.invalidateQueries({ queryKey: ["/api/transacciones/comprador", parseInt(paraQuienId)] });
+          const compradorId = typeof paraQuienId === 'string' ? parseInt(paraQuienId) : paraQuienId;
+          queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
+          queryClient.invalidateQueries({ 
+            queryKey: ["/api/transacciones/comprador", compradorId],
+            refetchType: 'active'
+          });
         }
         if (paraQuienTipo === 'mina') {
-          queryClient.invalidateQueries({ queryKey: ["/api/transacciones/mina", parseInt(paraQuienId)] });
+          const minaId = typeof paraQuienId === 'string' ? parseInt(paraQuienId) : paraQuienId;
+          queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] }); // Refetch inmediato
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/transacciones/socio/mina/${minaId}`],
+            refetchType: 'active'
+          });
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/transacciones/socio/mina/${minaId}/all`],
+            refetchType: 'active'
+          });
         }
         if (paraQuienTipo === 'volquetero') {
+          const volqueteroId = typeof paraQuienId === 'string' ? parseInt(paraQuienId) : paraQuienId;
+          queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/volqueteros/resumen"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
           queryClient.invalidateQueries({
             predicate: (query) => {
               const queryKey = query.queryKey;
               return Array.isArray(queryKey) &&
                 queryKey.length > 0 &&
                 typeof queryKey[0] === "string" &&
-                queryKey[0] === "/api/transacciones/volquetero" &&
-                queryKey[1] === paraQuienId;
+                queryKey[0] === "/api/volqueteros" &&
+                queryKey[1] === volqueteroId &&
+                queryKey[2] === "transacciones";
+            },
+          });
+        }
+        if (paraQuienTipo === 'rodmar') {
+          queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/balances/rodmar"] });
+          queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
+          queryClient.refetchQueries({ queryKey: ["/api/balances/rodmar"] });
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0].startsWith("/api/transacciones/cuenta/");
             },
           });
         }

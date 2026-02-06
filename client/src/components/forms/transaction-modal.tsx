@@ -119,20 +119,90 @@ export default function TransactionModal({ open, onClose }: TransactionModalProp
       const response = await apiRequest("POST", "/api/transacciones", transactionData);
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/transacciones"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] }); // Refresh volqueteros list
-      queryClient.invalidateQueries({ queryKey: ["/api/volqueteros/resumen"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/minas"] }); // Refresh minas list
-      queryClient.invalidateQueries({ queryKey: ["/api/compradores"] }); // Refresh compradores list
-      // Invalidate specific socio transactions
+    onSuccess: (result, data) => {
+      // Invalidar transacciones principales
       queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          return query.queryKey[0] && 
-                 typeof query.queryKey[0] === 'string' && 
-                 query.queryKey[0].includes('/api/transacciones/socio/');
-        }
+        queryKey: ["/api/transacciones"],
+        refetchType: 'active' // Forzar refetch de queries activas
       });
+      
+      // Invalidar solo las entidades específicas afectadas
+      if (data.deQuienTipo === 'mina' || data.paraQuienTipo === 'mina') {
+        queryClient.invalidateQueries({ queryKey: ["/api/minas"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/minas"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/minas"] }); // Refetch inmediato
+        
+        // Invalidar queries específicas de la mina afectada
+        const minaIdAffected = data.deQuienTipo === 'mina' ? data.deQuienId : data.paraQuienId;
+        if (minaIdAffected) {
+          const minaId = typeof minaIdAffected === 'string' ? parseInt(minaIdAffected) : minaIdAffected;
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/transacciones/socio/mina/${minaId}`],
+            refetchType: 'active'
+          });
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/transacciones/socio/mina/${minaId}/all`],
+            refetchType: 'active'
+          });
+        }
+      }
+      
+      if (data.deQuienTipo === 'comprador' || data.paraQuienTipo === 'comprador') {
+        queryClient.invalidateQueries({ queryKey: ["/api/compradores"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/compradores"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/compradores"] }); // Refetch inmediato
+        
+        // Invalidar queries específicas del comprador afectado
+        const compradorIdAffected = data.deQuienTipo === 'comprador' ? data.deQuienId : data.paraQuienId;
+        if (compradorIdAffected) {
+          const compradorId = typeof compradorIdAffected === 'string' ? parseInt(compradorIdAffected) : compradorIdAffected;
+          queryClient.invalidateQueries({ 
+            queryKey: ["/api/transacciones/comprador", compradorId],
+            refetchType: 'active'
+          });
+        }
+      }
+      
+      if (data.deQuienTipo === 'volquetero' || data.paraQuienTipo === 'volquetero') {
+        queryClient.invalidateQueries({ queryKey: ["/api/volqueteros"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/volqueteros/resumen"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/volqueteros"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/volqueteros"] }); // Refetch inmediato
+        
+        // Invalidar queries específicas del volquetero afectado
+        const volqueteroIdAffected = data.deQuienTipo === 'volquetero' ? data.deQuienId : data.paraQuienId;
+        if (volqueteroIdAffected) {
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              return Array.isArray(queryKey) &&
+                queryKey.length > 0 &&
+                typeof queryKey[0] === "string" &&
+                queryKey[0] === "/api/volqueteros" &&
+                queryKey[1] === volqueteroIdAffected &&
+                queryKey[2] === "transacciones";
+            },
+          });
+        }
+      }
+      
+      // Invalidar queries de cuentas RodMar si están involucradas
+      if (data.deQuienTipo === 'rodmar' || data.paraQuienTipo === 'rodmar') {
+        queryClient.invalidateQueries({ queryKey: ["/api/rodmar-accounts"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/balances/rodmar"] });
+        queryClient.refetchQueries({ queryKey: ["/api/rodmar-accounts"] });
+        queryClient.refetchQueries({ queryKey: ["/api/balances/rodmar"] });
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            return Array.isArray(queryKey) &&
+              queryKey.length > 0 &&
+              typeof queryKey[0] === "string" &&
+              queryKey[0].startsWith("/api/transacciones/cuenta/");
+          },
+        });
+      }
+      
       form.reset();
       onClose();
       toast({
