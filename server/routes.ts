@@ -8691,7 +8691,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[RODMAR-ACCOUNTS] Permisos del usuario (${userPermissions.length}):`, userPermissions.filter(p => p.includes('RODMAR')));
       }
 
-      const transacciones = await storage.getTransacciones();
+      // OPTIMIZACIÓN: Filtrar solo transacciones que involucran cuentas RodMar en la BD
+      // Esto reduce significativamente el tiempo de carga al evitar procesar todas las transacciones
+      const transaccionesRodMarRaw = await db
+        .select()
+        .from(transacciones)
+        .where(
+          or(
+            eq(transacciones.deQuienTipo, 'rodmar'),
+            eq(transacciones.paraQuienTipo, 'rodmar')
+          )
+        );
+      
+      // Convertir a formato compatible con la lógica existente
+      // La lógica de cálculo se mantiene exactamente igual, solo optimizamos el filtrado previo
+      const transacciones = transaccionesRodMarRaw.map((t: any) => ({
+        ...t,
+        valor: t.valor?.toString() || "0",
+      }));
 
       // Obtener overrides del usuario para verificar denegaciones específicas
       const userOverrides = await db

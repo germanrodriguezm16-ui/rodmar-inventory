@@ -206,7 +206,16 @@ export const transacciones = pgTable("transacciones", {
   // Campos compatibilidad (mantener existentes)
   tipoSocio: text("tipo_socio"), // Mantenemos para compatibilidad
   socioId: integer("socio_id"), // Mantenemos para compatibilidad
-});
+}, (table) => [
+  // Índices para optimizar queries de cuentas RodMar y balances
+  index("idx_transacciones_de_quien_tipo").on(table.deQuienTipo),
+  index("idx_transacciones_para_quien_tipo").on(table.paraQuienTipo),
+  index("idx_transacciones_de_quien_id").on(table.deQuienId),
+  index("idx_transacciones_para_quien_id").on(table.paraQuienId),
+  // Índice compuesto para queries comunes de filtrado por tipo e ID
+  index("idx_transacciones_de_quien").on(table.deQuienTipo, table.deQuienId),
+  index("idx_transacciones_para_quien").on(table.paraQuienTipo, table.paraQuienId),
+]);
 
 // Préstamos explícitos por tercero (MVP: solo terceros)
 export const terceroLoans = pgTable("tercero_loans", {
